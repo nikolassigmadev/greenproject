@@ -1,0 +1,173 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Eco-conscious color palette */
+    --background: 45 30% 97%;
+    --foreground: 150 25% 15%;
+
+    --card: 45 25% 99%;
+    --card-foreground: 150 25% 15%;
+
+    --popover: 45 25% 99%;
+    --popover-foreground: 150 25% 15%;
+
+    /* Forest green primary */
+    --primary: 152 45% 28%;
+    --primary-foreground: 45 30% 97%;
+
+    /* Warm earth secondary */
+    --secondary: 35 45% 92%;
+    --secondary-foreground: 150 25% 20%;
+
+    --muted: 45 20% 93%;
+    --muted-foreground: 150 10% 45%;
+
+    /* Amber accent */
+    --accent: 38 92% 50%;
+    --accent-foreground: 150 25% 15%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 45 30% 97%;
+
+    --border: 45 20% 88%;
+    --input: 45 20% 88%;
+    --ring: 152 45% 28%;
+
+    --radius: 0.75rem;
+
+    /* Custom eco colors */
+    --eco-forest: 152 45% 28%;
+    --eco-leaf: 142 55% 42%;
+    --eco-sage: 145 30% 65%;
+    --eco-cream: 45 30% 97%;
+    --eco-sand: 35 35% 85%;
+    --eco-amber: 38 92% 50%;
+    --eco-terracotta: 18 65% 55%;
+    --eco-ocean: 195 70% 45%;
+
+    /* Score colors */
+    --score-excellent: 152 60% 40%;
+    --score-good: 80 55% 45%;
+    --score-fair: 45 90% 50%;
+    --score-poor: 25 80% 50%;
+    --score-critical: 0 70% 50%;
+
+    /* Gradients */
+    --gradient-hero: linear-gradient(135deg, hsl(152 45% 28%) 0%, hsl(142 55% 35%) 50%, hsl(145 40% 45%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(45 25% 99%) 0%, hsl(45 30% 96%) 100%);
+    --gradient-score: linear-gradient(90deg, hsl(0 70% 50%) 0%, hsl(45 90% 50%) 50%, hsl(152 60% 40%) 100%);
+
+    /* Shadows */
+    --shadow-soft: 0 4px 20px -4px hsl(150 20% 20% / 0.08);
+    --shadow-card: 0 8px 30px -8px hsl(150 20% 20% / 0.12);
+    --shadow-elevated: 0 20px 50px -12px hsl(150 20% 20% / 0.2);
+
+    --sidebar-background: 45 25% 98%;
+    --sidebar-foreground: 150 25% 20%;
+    --sidebar-primary: 152 45% 28%;
+    --sidebar-primary-foreground: 45 30% 97%;
+    --sidebar-accent: 145 30% 92%;
+    --sidebar-accent-foreground: 150 25% 20%;
+    --sidebar-border: 45 20% 88%;
+    --sidebar-ring: 152 45% 28%;
+  }
+
+  .dark {
+    --background: 150 25% 8%;
+    --foreground: 45 30% 95%;
+
+    --card: 150 20% 12%;
+    --card-foreground: 45 30% 95%;
+
+    --popover: 150 20% 12%;
+    --popover-foreground: 45 30% 95%;
+
+    --primary: 145 50% 50%;
+    --primary-foreground: 150 25% 8%;
+
+    --secondary: 150 15% 18%;
+    --secondary-foreground: 45 30% 95%;
+
+    --muted: 150 15% 18%;
+    --muted-foreground: 45 20% 60%;
+
+    --accent: 38 85% 55%;
+    --accent-foreground: 150 25% 8%;
+
+    --destructive: 0 62% 45%;
+    --destructive-foreground: 45 30% 95%;
+
+    --border: 150 15% 20%;
+    --input: 150 15% 20%;
+    --ring: 145 50% 50%;
+
+    --sidebar-background: 150 20% 10%;
+    --sidebar-foreground: 45 30% 95%;
+    --sidebar-primary: 145 50% 50%;
+    --sidebar-primary-foreground: 150 25% 8%;
+    --sidebar-accent: 150 15% 18%;
+    --sidebar-accent-foreground: 45 30% 95%;
+    --sidebar-border: 150 15% 20%;
+    --sidebar-ring: 145 50% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display font-bold tracking-tight;
+  }
+}
+
+@layer utilities {
+  .text-gradient-hero {
+    @apply bg-clip-text text-transparent;
+    background-image: var(--gradient-hero);
+  }
+
+  .bg-gradient-hero {
+    background-image: var(--gradient-hero);
+  }
+
+  .shadow-soft {
+    box-shadow: var(--shadow-soft);
+  }
+
+  .shadow-card {
+    box-shadow: var(--shadow-card);
+  }
+
+  .shadow-elevated {
+    box-shadow: var(--shadow-elevated);
+  }
+
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  .animate-pulse-soft {
+    animation: pulse-soft 3s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+
+  @keyframes pulse-soft {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+}
