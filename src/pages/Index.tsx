@@ -183,7 +183,7 @@ const Index = () => {
         <section className="py-16 bg-gradient-hero text-primary-foreground">
           <div className="container text-center">
             <h2 className="text-3xl sm:text-4xl font-display font-bold mb-6">
-              Ready to Shop Consciously?
+              Ready to Shopp Consciously?
             </h2>
             <p className="text-lg text-primary-foreground/90 mb-8 max-w-2xl mx-auto leading-relaxed">
               Start scanning products today to join thousands making more sustainable choices for a better future.
