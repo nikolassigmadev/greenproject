@@ -12,6 +12,361 @@ import { calculateScore, Product } from "@/data/products";
 import { ScoreBreakdownSlider } from "@/components/ScoreBreakdownSlider";
 import Tesseract from "tesseract.js";
 
+ type OcrWord = {
+   text?: string;
+   confidence?: number;
+ };
+
+ type OcrResult = {
+   data?: {
+     text?: string;
+     confidence?: number;
+     words?: OcrWord[];
+   };
+ };
+
+ type TesseractProgress = {
+   status?: string;
+ };
+
+ const normalizeOcrText = (text: string) => {
+   return text
+     .replace(/[^\x20-\x7E\n]+/g, " ")
+     .replace(/[ \t]+/g, " ")
+     .replace(/\n{3,}/g, "\n\n")
+     .trim();
+ };
+
+ const uniqPreserveOrder = (values: string[]) => {
+   const seen = new Set<string>();
+   const result: string[] = [];
+   for (const v of values) {
+     if (!v) continue;
+     if (seen.has(v)) continue;
+     seen.add(v);
+     result.push(v);
+   }
+   return result;
+ };
+
+ const shortOcrTokenAllowlist = new Set<string>([
+   "bank",
+   "beef",
+   "milk",
+   "egg",
+   "eggs",
+   "soy",
+   "tea",
+   "ham",
+   "pork",
+   "lamb",
+   "fish",
+   "rice",
+ ]);
+
+ const isAcceptableOcrToken = (token: string) => {
+   const t = token.toLowerCase();
+   if (t.length < 3) return false;
+   if (/(.)\1{2,}/.test(t)) return false;
+   if (!/^[a-z]+$/.test(t)) return false;
+
+   const vowels = (t.match(/[aeiouy]/g) || []).length;
+   if (vowels === 0) return false;
+
+   if (t.length === 3) {
+     return shortOcrTokenAllowlist.has(t);
+   }
+
+   if (t.length === 4) {
+     if (shortOcrTokenAllowlist.has(t)) return true;
+     return vowels / t.length >= 0.5;
+   }
+
+   if (/[b-df-hj-np-tv-z]{5,}/.test(t)) return false;
+   return vowels / t.length >= 0.18;
+ };
+
+ const cleanupOcrTextForDisplay = (text: string) => {
+   const normalized = normalizeOcrText(text).toLowerCase();
+   const words = normalized.match(/\b[a-z]{3,}(?:[-'][a-z]{2,})*\b/g) || [];
+   const filtered = words.filter(isAcceptableOcrToken);
+   return normalizeOcrText(uniqPreserveOrder(filtered).join(" "));
+ };
+
+ const cleanupOcrTextForSearch = (text: string) => {
+   const normalized = normalizeOcrText(text).toLowerCase();
+   const words = normalized.match(/\b[a-z]{3,}(?:[-'][a-z]{2,})*\b/g) || [];
+   const numericCodes = normalized.match(/\b\d{8,}\b/g) || [];
+   const filtered = words.filter(isAcceptableOcrToken);
+   return normalizeOcrText(uniqPreserveOrder([...filtered, ...numericCodes]).join(" "));
+ };
+
+ const shouldTreatAsNoText = (text: string, result: OcrResult) => {
+   const visible = text.replace(/\s/g, "");
+   if (visible.length < 6) return true;
+
+   const letters = (visible.match(/[a-z]/gi) || []).length;
+   const digits = (visible.match(/[0-9]/g) || []).length;
+   const alnum = (visible.match(/[a-z0-9]/gi) || []).length;
+   const nonAlnum = Math.max(0, visible.length - alnum);
+   const alnumRatio = visible.length ? alnum / visible.length : 0;
+   const nonAlnumRatio = visible.length ? nonAlnum / visible.length : 1;
+
+   const overallConfidence = Number(result?.data?.confidence);
+   const confidenceScore = Number.isFinite(overallConfidence) ? overallConfidence : 0;
+
+   const words = Array.isArray(result?.data?.words) ? result.data.words : [];
+   const wordConfs = words
+     .map((w) => Number(w?.confidence))
+     .filter((c) => Number.isFinite(c) && c >= 0 && c <= 100) as number[];
+   const avgWordConfidence = wordConfs.length
+     ? wordConfs.reduce((sum, c) => sum + c, 0) / wordConfs.length
+     : 0;
+
+   const lengthScore = Math.min(visible.length, 20);
+   const letterScore = Math.min(letters * 2, 40);
+   const digitScore = Math.min(digits, 15);
+
+   const reliableBonus = Math.min(30, 30);
+   const goodWordBonus = Math.min(60, 60);
+   const noisyPenalty = nonAlnumRatio > 0.25 ? (nonAlnumRatio - 0.25) * 120 : 0;
+   const lowAlnumPenalty = alnumRatio < 0.7 ? (0.7 - alnumRatio) * 120 : 0;
+   const gibberishPenalty = isLikelyGibberish(text) ? 45 : 0;
+
+   return (
+     confidenceScore +
+     avgWordConfidence * 0.6 +
+     lengthScore +
+     letterScore +
+     digitScore +
+     reliableBonus +
+     goodWordBonus -
+     noisyPenalty -
+     lowAlnumPenalty -
+     gibberishPenalty
+   );
+ };
+
+ const getReliableOcrText = (result: OcrResult) => {
+   const words = Array.isArray(result?.data?.words) ? result.data.words : [];
+   const goodWords = words.filter((w) => {
+     const t = String(w?.text || "").trim();
+     const c = Number(w?.confidence);
+     if (!Number.isFinite(c)) return false;
+     const lettersInWord = (t.match(/[a-z]/gi) || []).length;
+     return t.length >= 3 && lettersInWord >= 1 && c >= 50;
+   });
+
+   const reliableText = cleanupOcrTextForSearch(
+     normalizeOcrText(goodWords.map((w) => String(w?.text || "").trim()).join(" "))
+   );
+   return { reliableText, goodWordsCount: goodWords.length, wordsCount: words.length };
+ };
+
+ const isLikelyGibberish = (text: string) => {
+   const visible = text.replace(/\s/g, "");
+   if (visible.length < 6) return true;
+
+   const digits = (visible.match(/[0-9]/g) || []).length;
+   const letters = (visible.match(/[a-z]/gi) || []).length;
+   const total = visible.length;
+
+   const digitRatio = total ? digits / total : 0;
+   const letterRatio = total ? letters / total : 0;
+
+   // If it looks like a numeric code/barcode, allow it.
+   if (digits >= 8 && digitRatio >= 0.6) return false;
+
+   if (letters < 4) return true;
+   if (letterRatio < 0.35) return true;
+   if (/(.)\1{3,}/.test(visible)) return true;
+
+   const vowels = (visible.match(/[aeiou]/gi) || []).length;
+   const vowelRatio = letters ? vowels / letters : 0;
+   if (vowelRatio < 0.12) return true;
+
+   const tokens = text.split(/\s+/).map((t) => t.trim()).filter(Boolean);
+   if (tokens.length === 0) return true;
+
+   const avgTokenLen = tokens.reduce((sum, t) => sum + t.length, 0) / tokens.length;
+   if (tokens.length < 2 && avgTokenLen < 3) return true;
+
+   return false;
+ };
+
+ const preprocessImageDataUrl = async (imageDataUrl: string) => {
+   const img = new Image();
+   img.decoding = "async";
+   img.src = imageDataUrl;
+   await new Promise<void>((resolve, reject) => {
+     img.onload = () => resolve();
+     img.onerror = () => reject(new Error("Failed to load image"));
+   });
+
+   const maxWidth = 1600;
+   const scale = img.width > maxWidth ? maxWidth / img.width : 1;
+   const width = Math.max(1, Math.round(img.width * scale));
+   const height = Math.max(1, Math.round(img.height * scale));
+
+   const canvas = document.createElement("canvas");
+   canvas.width = width;
+   canvas.height = height;
+   const ctx = canvas.getContext("2d", { willReadFrequently: true });
+   if (!ctx) return imageDataUrl;
+
+   ctx.drawImage(img, 0, 0, width, height);
+   const imageData = ctx.getImageData(0, 0, width, height);
+   const data = imageData.data;
+
+   const contrast = 1.2;
+   const intercept = 128 * (1 - contrast);
+   for (let i = 0; i < data.length; i += 4) {
+     const r = data[i];
+     const g = data[i + 1];
+     const b = data[i + 2];
+     const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+     const adjusted = Math.max(0, Math.min(255, gray * contrast + intercept));
+     data[i] = adjusted;
+     data[i + 1] = adjusted;
+     data[i + 2] = adjusted;
+   }
+
+   ctx.putImageData(imageData, 0, 0);
+   return canvas.toDataURL("image/png");
+ };
+
+ const normalizeForTokens = (value: string) =>
+   value
+     .toLowerCase()
+     .replace(/[^a-z0-9]+/g, " ")
+     .replace(/\s+/g, " ")
+     .trim();
+
+ const toTokens = (value: string) => {
+   const normalized = normalizeForTokens(value);
+   return normalized ? normalized.split(" ").filter(Boolean) : [];
+ };
+
+ const preprocessImageThresholdDataUrl = async (imageDataUrl: string) => {
+   const img = new Image();
+   img.decoding = "async";
+   img.src = imageDataUrl;
+   await new Promise<void>((resolve, reject) => {
+     img.onload = () => resolve();
+     img.onerror = () => reject(new Error("Failed to load image"));
+   });
+
+   const maxWidth = 1600;
+   const scale = img.width > maxWidth ? maxWidth / img.width : 1;
+   const width = Math.max(1, Math.round(img.width * scale));
+   const height = Math.max(1, Math.round(img.height * scale));
+
+   const canvas = document.createElement("canvas");
+   canvas.width = width;
+   canvas.height = height;
+   const ctx = canvas.getContext("2d", { willReadFrequently: true });
+   if (!ctx) return imageDataUrl;
+
+   ctx.drawImage(img, 0, 0, width, height);
+   const imageData = ctx.getImageData(0, 0, width, height);
+   const data = imageData.data;
+
+   const contrast = 1.25;
+   const intercept = 128 * (1 - contrast);
+   const threshold = 160;
+
+   for (let i = 0; i < data.length; i += 4) {
+     const r = data[i];
+     const g = data[i + 1];
+     const b = data[i + 2];
+     const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+     const adjusted = Math.max(0, Math.min(255, gray * contrast + intercept));
+     const bw = adjusted > threshold ? 255 : 0;
+     data[i] = bw;
+     data[i + 1] = bw;
+     data[i + 2] = bw;
+   }
+
+   ctx.putImageData(imageData, 0, 0);
+   return canvas.toDataURL("image/png");
+ };
+
+ const cropImageDataUrl = async (
+   imageDataUrl: string,
+   crop: { x: number; y: number; w: number; h: number }
+ ) => {
+   const img = new Image();
+   img.decoding = "async";
+   img.src = imageDataUrl;
+   await new Promise<void>((resolve, reject) => {
+     img.onload = () => resolve();
+     img.onerror = () => reject(new Error("Failed to load image"));
+   });
+
+   const sx = Math.max(0, Math.min(img.width, Math.round(img.width * crop.x)));
+   const sy = Math.max(0, Math.min(img.height, Math.round(img.height * crop.y)));
+   const sw = Math.max(1, Math.min(img.width - sx, Math.round(img.width * crop.w)));
+   const sh = Math.max(1, Math.min(img.height - sy, Math.round(img.height * crop.h)));
+
+   const canvas = document.createElement("canvas");
+   canvas.width = sw;
+   canvas.height = sh;
+   const ctx = canvas.getContext("2d");
+   if (!ctx) return imageDataUrl;
+
+   ctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+   return canvas.toDataURL("image/png");
+ };
+
+ const scoreOcrCandidate = (
+   candidateText: string,
+   reliableText: string,
+   reliableStats: { goodWordsCount: number; wordsCount: number },
+   result: OcrResult
+ ) => {
+   const visible = candidateText.replace(/\s/g, "");
+   const letters = (visible.match(/[a-z]/gi) || []).length;
+   const digits = (visible.match(/[0-9]/g) || []).length;
+   const alnum = (visible.match(/[a-z0-9]/gi) || []).length;
+   const nonAlnum = Math.max(0, visible.length - alnum);
+   const alnumRatio = visible.length ? alnum / visible.length : 0;
+   const nonAlnumRatio = visible.length ? nonAlnum / visible.length : 1;
+
+   const overallConfidence = Number(result?.data?.confidence);
+   const confidenceScore = Number.isFinite(overallConfidence) ? overallConfidence : 0;
+
+   const words = Array.isArray(result?.data?.words) ? result.data.words : [];
+   const wordConfs = words
+     .map((w) => Number(w?.confidence))
+     .filter((c) => Number.isFinite(c) && c >= 0 && c <= 100) as number[];
+   const avgWordConfidence = wordConfs.length
+     ? wordConfs.reduce((sum, c) => sum + c, 0) / wordConfs.length
+     : 0;
+
+   const lengthScore = Math.min(visible.length, 20);
+   const letterScore = Math.min(letters * 2, 40);
+   const digitScore = Math.min(digits, 15);
+
+   const reliableBonus = Math.min(reliableText.replace(/\s/g, "").length, 30);
+   const goodWordBonus = Math.min(reliableStats.goodWordsCount * 12, 60);
+   const noisyPenalty = nonAlnumRatio > 0.25 ? (nonAlnumRatio - 0.25) * 120 : 0;
+   const lowAlnumPenalty = alnumRatio < 0.7 ? (0.7 - alnumRatio) * 120 : 0;
+   const gibberishPenalty = isLikelyGibberish(candidateText) ? 45 : 0;
+
+   return (
+     confidenceScore +
+     avgWordConfidence * 0.6 +
+     lengthScore +
+     letterScore +
+     digitScore +
+     reliableBonus +
+     goodWordBonus -
+     noisyPenalty -
+     lowAlnumPenalty -
+     gibberishPenalty
+   );
+ };
+
 const Scan = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -25,14 +380,15 @@ const Scan = () => {
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraInitializing, setCameraInitializing] = useState(false);
   const [extractedText, setExtractedText] = useState("");
+  const [ocrMessage, setOcrMessage] = useState<string | null>(null);
   const [manualSearch, setManualSearch] = useState("");
   const [searchResults, setSearchResults] = useState<Product[]>([]);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
 
   // Debug: Check if video element is mounted
   useEffect(() => {
-    console.log('Video ref status:', !!videoRef.current);
-    console.log('Canvas ref status:', !!canvasRef.current);
+    console.log('Video ref status:', Boolean(videoRef.current));
+    console.log('Canvas ref status:', Boolean(canvasRef.current));
   }, [cameraActive, cameraInitializing]);
 
   // Start camera
@@ -54,9 +410,9 @@ const Scan = () => {
       
       // Debug: Log what's available in navigator
       console.log('Navigator object:', navigator);
-      console.log('MediaDevices available:', !!navigator.mediaDevices);
-      console.log('getUserMedia available:', !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia));
-      console.log('Video element exists:', !!videoRef.current);
+      console.log('MediaDevices available:', Boolean(navigator.mediaDevices));
+      console.log('getUserMedia available:', Boolean(navigator.mediaDevices && navigator.mediaDevices.getUserMedia));
+      console.log('Video element exists:', Boolean(videoRef.current));
       
       // Check if mediaDevices is supported
       if (!navigator.mediaDevices) {
@@ -180,18 +536,23 @@ const Scan = () => {
           });
         }
       }, 10000); // 10 second timeout
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Camera error:', error);
       setCameraInitializing(false);
+
+      const errName =
+        typeof error === "object" && error !== null && "name" in error
+          ? String((error as { name?: unknown }).name)
+          : "";
       
       let errorMessage = "Unable to access camera. Please check permissions.";
-      if (error.name === 'NotAllowedError') {
+      if (errName === 'NotAllowedError') {
         errorMessage = "Camera permission denied. Please allow camera access in your browser settings.";
-      } else if (error.name === 'NotFoundError') {
+      } else if (errName === 'NotFoundError') {
         errorMessage = "No camera found. Please connect a camera and try again.";
-      } else if (error.name === 'NotReadableError') {
+      } else if (errName === 'NotReadableError') {
         errorMessage = "Camera is already in use by another application.";
-      } else if (error.name === 'OverconstrainedError') {
+      } else if (errName === 'OverconstrainedError') {
         errorMessage = "Camera constraints not supported. Trying with default settings...";
         // Fallback to basic video constraints
         try {
@@ -201,7 +562,7 @@ const Scan = () => {
             videoRef.current.play();
             setCameraActive(true);
           }
-        } catch (fallbackError) {
+        } catch {
           errorMessage = "Unable to access camera with any settings.";
         }
       }
@@ -224,92 +585,63 @@ const Scan = () => {
     }
   }, []);
 
-  // Capture photo from camera
-  const capturePhoto = useCallback(() => {
-    if (!videoRef.current || !canvasRef.current) return;
-
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext("2d");
-    if (ctx) {
-      ctx.drawImage(video, 0, 0);
-      processImage(canvas.toDataURL("image/jpeg"));
-    }
-    stopCamera();
-  }, [stopCamera]);
-
-  // Handle file upload
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const imageData = e.target?.result as string;
-        setUploadedImage(imageData);
-        processImage(imageData);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  // Process image with OCR
-  const processImage = async (imageData: string) => {
-    setIsProcessing(true);
-    setExtractedText("");
-
-    try {
-      const result = await Tesseract.recognize(imageData, "eng", {
-        logger: (m) => {
-          if (m.status === "recognizing text") {
-            setIsScanning(true);
-          }
-        },
-      });
-
-      const text = result.data.text;
-      setExtractedText(text);
-      setIsScanning(false);
-
-      // Search for products based on extracted text
-      searchProducts(text);
-    } catch (error) {
-      toast({
-        title: "Processing Error",
-        description: "Failed to process the image. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsProcessing(false);
-      setIsScanning(false);
-    }
-  };
-
   // Search products with improved name-first matching
-  const searchProducts = (query: string) => {
-    const cleanQuery = query.toLowerCase().trim();
-    const searchTerms = cleanQuery.split(/\s+/).filter((t) => t.length > 2);
-    
+  const searchProducts = useCallback((query: string) => {
+    const normalizedQuery = normalizeForTokens(query);
+    const queryTokens = toTokens(query);
+
     const results = products
       .map((product) => {
-        const name = product.name.toLowerCase();
-        const brand = product.brand.toLowerCase();
-        const keywords = product.keywords.join(" ").toLowerCase();
-        const id = product.id.toLowerCase();
-        const barcode = (product.barcode || "").toLowerCase();
-        const allText = `${name} ${brand} ${id} ${barcode} ${keywords}`;
+        const nameNorm = normalizeForTokens(product.name);
+        const brandNorm = normalizeForTokens(product.brand);
+        const idNorm = normalizeForTokens(product.id);
+        const idNoHash = idNorm.replace(/^#/, "");
+        const barcodeNorm = normalizeForTokens(product.barcode || "");
+        const keywordNorm = normalizeForTokens(product.keywords.join(" "));
 
-        // Prioritize name matches
+        const nameTokens = new Set(toTokens(product.name));
+        const brandTokens = new Set(toTokens(product.brand));
+        const keywordTokens = new Set(toTokens(product.keywords.join(" ")));
+
+        const allTokens = new Set<string>([
+          ...nameTokens,
+          ...brandTokens,
+          ...keywordTokens,
+          ...toTokens(product.id),
+          ...toTokens(product.barcode || ""),
+        ]);
+
         let score = 0;
-        if (name.includes(cleanQuery)) score += 100;
-        else if (cleanQuery.includes(name)) score += 90;
-        else if (searchTerms.some((term) => name.includes(term))) score += 50;
-        else if (searchTerms.every((term) => name.includes(term))) score += 40;
-        else if (brand.includes(cleanQuery)) score += 30;
-        else if (searchTerms.some((term) => brand.includes(term))) score += 20;
-        else if (searchTerms.some((term) => allText.includes(term))) score += 10;
-        
+
+        // Exact matches first (ID / barcode)
+        if (normalizedQuery && (normalizedQuery === idNorm || normalizedQuery === idNoHash)) {
+          score += 1000;
+        }
+
+        if (normalizedQuery && barcodeNorm && normalizedQuery === barcodeNorm) {
+          score += 900;
+        }
+
+        // Exact full-field match (normalized)
+        if (normalizedQuery && normalizedQuery === nameNorm) score += 200;
+        if (normalizedQuery && normalizedQuery === brandNorm) score += 120;
+        if (normalizedQuery && normalizedQuery === keywordNorm) score += 80;
+
+        // Whole-token matching (prevents 'bee' matching 'beef')
+        if (queryTokens.length === 1) {
+          const t = queryTokens[0];
+          if (nameTokens.has(t)) score += 110;
+          if (brandTokens.has(t)) score += 70;
+          if (keywordTokens.has(t)) score += 40;
+          if (allTokens.has(t)) score += 10;
+        } else if (queryTokens.length > 1) {
+          const allPresent = queryTokens.every((t) => allTokens.has(t));
+          if (allPresent) {
+            const inNameCount = queryTokens.filter((t) => nameTokens.has(t)).length;
+            score += 60 + inNameCount * 15;
+          }
+        }
+
         return { product, score };
       })
       .filter(({ score }) => score > 0)
@@ -332,7 +664,115 @@ const Scan = () => {
         description: "Try a different search or add the product to our database.",
       });
     }
-  };
+  }, [navigate, products, toast]);
+
+  // Process image with OCR
+  const processImage = useCallback(async (imageData: string) => {
+    setIsProcessing(true);
+    setExtractedText("");
+    setOcrMessage(null);
+    setSearchResults([]);
+
+    try {
+      const preprocessedGray = await preprocessImageDataUrl(imageData);
+      const preprocessedThreshold = await preprocessImageThresholdDataUrl(imageData);
+
+      const cropCenter = await cropImageDataUrl(imageData, { x: 0.15, y: 0.18, w: 0.7, h: 0.64 });
+      const cropTop = await cropImageDataUrl(imageData, { x: 0.05, y: 0.0, w: 0.9, h: 0.55 });
+      const cropCenterThreshold = await preprocessImageThresholdDataUrl(cropCenter);
+      const cropTopThreshold = await preprocessImageThresholdDataUrl(cropTop);
+
+      const inputs: Array<{ label: string; dataUrl: string }> = [
+        { label: "original", dataUrl: imageData },
+        { label: "gray", dataUrl: preprocessedGray },
+        { label: "threshold", dataUrl: preprocessedThreshold },
+        { label: "crop_center_threshold", dataUrl: cropCenterThreshold },
+        { label: "crop_top_threshold", dataUrl: cropTopThreshold },
+      ];
+
+      let best: { candidateText: string; score: number } | null = null;
+
+      for (let i = 0; i < inputs.length; i++) {
+        const input = inputs[i];
+        const result = (await Tesseract.recognize(input.dataUrl, "eng", {
+          logger: (m: unknown) => {
+            if (i !== 0) return;
+            const status =
+              typeof m === "object" && m !== null && "status" in m
+                ? String((m as TesseractProgress).status)
+                : "";
+            if (status === "recognizing text") {
+              setIsScanning(true);
+            }
+          },
+        })) as OcrResult;
+
+        const text = normalizeOcrText(String(result?.data?.text || ""));
+        const reliable = getReliableOcrText(result);
+        const candidateText = reliable.reliableText.length >= 4 ? reliable.reliableText : text;
+
+        const score = scoreOcrCandidate(candidateText, reliable.reliableText, reliable, result);
+        if (!best || score > best.score) {
+          best = { candidateText, score };
+        }
+     }
+
+     const chosenText = normalizeOcrText(best?.candidateText || "");
+     const cleanedForDisplay = cleanupOcrTextForDisplay(chosenText);
+     const cleanedForSearch = cleanupOcrTextForSearch(chosenText);
+     const shouldReject = cleanedForSearch.length < 4 || isLikelyGibberish(cleanedForSearch);
+
+     if (shouldReject) {
+       setExtractedText("");
+       setOcrMessage("No text recognized. Try manual search.");
+       setIsScanning(false);
+       return;
+     }
+
+     setExtractedText(cleanedForDisplay || cleanedForSearch);
+     setIsScanning(false);
+     searchProducts(cleanedForSearch);
+   } catch (error) {
+     toast({
+       title: "Processing Error",
+       description: "Failed to process the image. Please try again.",
+       variant: "destructive",
+     });
+    } finally {
+      setIsProcessing(false);
+      setIsScanning(false);
+    }
+  }, [searchProducts, toast]);
+
+  // Capture photo from camera
+  const capturePhoto = useCallback(() => {
+    if (!videoRef.current || !canvasRef.current) return;
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext("2d");
+    if (ctx) {
+      ctx.drawImage(video, 0, 0);
+      processImage(canvas.toDataURL("image/jpeg"));
+    }
+    stopCamera();
+  }, [processImage, stopCamera]);
+
+  // Handle file upload
+  const handleFileUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const imageData = e.target?.result as string;
+        setUploadedImage(imageData);
+        processImage(imageData);
+      };
+      reader.readAsDataURL(file);
+    }
+  }, [processImage]);
 
   // Manual search
   const handleManualSearch = (e: React.FormEvent) => {
@@ -482,7 +922,7 @@ const Scan = () => {
                           console.log('Debug - Camera initializing:', cameraInitializing);
                           toast({
                             title: "Debug Info",
-                            description: `Video ref: ${!!videoRef.current ? '✅' : '❌'}, Canvas ref: ${!!canvasRef.current ? '✅' : '❌'}`,
+                            description: `Video ref: ${videoRef.current ? '✅' : '❌'}, Canvas ref: ${canvasRef.current ? '✅' : '❌'}`,
                           });
                         }}
                         variant="outline"
@@ -530,13 +970,17 @@ const Scan = () => {
               )}
 
               {/* Extracted Text */}
-              {extractedText && (
+              {(extractedText || ocrMessage) && (
                 <div className="p-4 rounded-lg bg-muted/50 border border-border">
                   <p className="text-xs text-muted-foreground mb-2">Extracted Text:</p>
-                  <p className="text-sm font-mono whitespace-pre-wrap">
-                    {extractedText.slice(0, 200)}
-                    {extractedText.length > 200 && "..."}
-                  </p>
+                  {extractedText ? (
+                    <p className="text-sm font-mono whitespace-pre-wrap">
+                      {extractedText.slice(0, 200)}
+                      {extractedText.length > 200 && "..."}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">{ocrMessage}</p>
+                  )}
                 </div>
               )}
             </CardContent>
@@ -632,7 +1076,7 @@ const Scan = () => {
                   <p><strong>Browser:</strong> {navigator.userAgent.split(' ').slice(-2).join(' ')}</p>
                   <p><strong>Protocol:</strong> {location.protocol}</p>
                   <p><strong>Hostname:</strong> {location.hostname}</p>
-                  <p><strong>Navigator has mediaDevices:</strong> {!!navigator.mediaDevices ? '✅ Yes' : '❌ No'}</p>
+                  <p><strong>Navigator has mediaDevices:</strong> {navigator.mediaDevices ? '✅ Yes' : '❌ No'}</p>
                   <p><strong>getUserMedia available:</strong> {!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) ? '❌ No' : '✅ Yes'}</p>
                   <p><strong>Secure Context:</strong> {location.protocol === 'https:' || location.hostname === 'localhost' ? '✅ Yes' : '❌ No'}</p>
                   <p><strong>HTTPS required:</strong> {location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1' ? '❌ Yes (missing)' : '✅ No'}</p>
