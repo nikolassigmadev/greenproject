@@ -186,7 +186,7 @@ const Index = () => {
               Ready to Shop Consciously?
             </h2>
             <p className="text-lg text-primary-foreground/90 mb-8 max-w-2xl mx-auto leading-relaxed">
-              Start scanning products today and join thousands making more sustainable choices for a better future.
+              Start scanning products today to join thousands making more sustainable choices for a better future.
             </p>
             <Button asChild size="lg" variant="secondary" className="shadow-card text-lg px-8 py-3">
               <Link to="/scan">
