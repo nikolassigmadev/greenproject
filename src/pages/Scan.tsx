@@ -12,360 +12,360 @@ import { calculateScore, Product } from "@/data/products";
 import { ScoreBreakdownSlider } from "@/components/ScoreBreakdownSlider";
 import Tesseract from "tesseract.js";
 
- type OcrWord = {
-   text?: string;
-   confidence?: number;
- };
+type OcrWord = {
+  text?: string;
+  confidence?: number;
+};
 
- type OcrResult = {
-   data?: {
-     text?: string;
-     confidence?: number;
-     words?: OcrWord[];
-   };
- };
+type OcrResult = {
+  data?: {
+    text?: string;
+    confidence?: number;
+    words?: OcrWord[];
+  };
+};
 
- type TesseractProgress = {
-   status?: string;
- };
+type TesseractProgress = {
+  status?: string;
+};
 
- const normalizeOcrText = (text: string) => {
-   return text
-     .replace(/[^\x20-\x7E\n]+/g, " ")
-     .replace(/[ \t]+/g, " ")
-     .replace(/\n{3,}/g, "\n\n")
-     .trim();
- };
+const normalizeOcrText = (text: string) => {
+  return text
+    .replace(/[^\x20-\x7E\n]+/g, " ")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+};
 
- const uniqPreserveOrder = (values: string[]) => {
-   const seen = new Set<string>();
-   const result: string[] = [];
-   for (const v of values) {
-     if (!v) continue;
-     if (seen.has(v)) continue;
-     seen.add(v);
-     result.push(v);
-   }
-   return result;
- };
+const uniqPreserveOrder = (values: string[]) => {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const v of values) {
+    if (!v) continue;
+    if (seen.has(v)) continue;
+    seen.add(v);
+    result.push(v);
+  }
+  return result;
+};
 
- const shortOcrTokenAllowlist = new Set<string>([
-   "bank",
-   "beef",
-   "milk",
-   "egg",
-   "eggs",
-   "soy",
-   "tea",
-   "ham",
-   "pork",
-   "lamb",
-   "fish",
-   "rice",
- ]);
+const shortOcrTokenAllowlist = new Set<string>([
+  "bank",
+  "beef",
+  "milk",
+  "egg",
+  "eggs",
+  "soy",
+  "tea",
+  "ham",
+  "pork",
+  "lamb",
+  "fish",
+  "rice",
+]);
 
- const isAcceptableOcrToken = (token: string) => {
-   const t = token.toLowerCase();
-   if (t.length < 3) return false;
-   if (/(.)\1{2,}/.test(t)) return false;
-   if (!/^[a-z]+$/.test(t)) return false;
+const isAcceptableOcrToken = (token: string) => {
+  const t = token.toLowerCase();
+  if (t.length < 3) return false;
+  if (/(.)\1{2,}/.test(t)) return false;
+  if (!/^[a-z]+$/.test(t)) return false;
 
-   const vowels = (t.match(/[aeiouy]/g) || []).length;
-   if (vowels === 0) return false;
+  const vowels = (t.match(/[aeiouy]/g) || []).length;
+  if (vowels === 0) return false;
 
-   if (t.length === 3) {
-     return shortOcrTokenAllowlist.has(t);
-   }
+  if (t.length === 3) {
+    return shortOcrTokenAllowlist.has(t);
+  }
 
-   if (t.length === 4) {
-     if (shortOcrTokenAllowlist.has(t)) return true;
-     return vowels / t.length >= 0.5;
-   }
+  if (t.length === 4) {
+    if (shortOcrTokenAllowlist.has(t)) return true;
+    return vowels / t.length >= 0.5;
+  }
 
-   if (/[b-df-hj-np-tv-z]{5,}/.test(t)) return false;
-   return vowels / t.length >= 0.18;
- };
+  if (/[b-df-hj-np-tv-z]{5,}/.test(t)) return false;
+  return vowels / t.length >= 0.18;
+};
 
- const cleanupOcrTextForDisplay = (text: string) => {
-   const normalized = normalizeOcrText(text).toLowerCase();
-   const words = normalized.match(/\b[a-z]{3,}(?:[-'][a-z]{2,})*\b/g) || [];
-   const filtered = words.filter(isAcceptableOcrToken);
-   return normalizeOcrText(uniqPreserveOrder(filtered).join(" "));
- };
+const cleanupOcrTextForDisplay = (text: string) => {
+  const normalized = normalizeOcrText(text).toLowerCase();
+  const words = normalized.match(/\b[a-z]{3,}(?:[-'][a-z]{2,})*\b/g) || [];
+  const filtered = words.filter(isAcceptableOcrToken);
+  return normalizeOcrText(uniqPreserveOrder(filtered).join(" "));
+};
 
- const cleanupOcrTextForSearch = (text: string) => {
-   const normalized = normalizeOcrText(text).toLowerCase();
-   const words = normalized.match(/\b[a-z]{3,}(?:[-'][a-z]{2,})*\b/g) || [];
-   const numericCodes = normalized.match(/\b\d{8,}\b/g) || [];
-   const filtered = words.filter(isAcceptableOcrToken);
-   return normalizeOcrText(uniqPreserveOrder([...filtered, ...numericCodes]).join(" "));
- };
+const cleanupOcrTextForSearch = (text: string) => {
+  const normalized = normalizeOcrText(text).toLowerCase();
+  const words = normalized.match(/\b[a-z]{3,}(?:[-'][a-z]{2,})*\b/g) || [];
+  const numericCodes = normalized.match(/\b\d{8,}\b/g) || [];
+  const filtered = words.filter(isAcceptableOcrToken);
+  return normalizeOcrText(uniqPreserveOrder([...filtered, ...numericCodes]).join(" "));
+};
 
- const shouldTreatAsNoText = (text: string, result: OcrResult) => {
-   const visible = text.replace(/\s/g, "");
-   if (visible.length < 6) return true;
+const shouldTreatAsNoText = (text: string, result: OcrResult) => {
+  const visible = text.replace(/\s/g, "");
+  if (visible.length < 6) return true;
 
-   const letters = (visible.match(/[a-z]/gi) || []).length;
-   const digits = (visible.match(/[0-9]/g) || []).length;
-   const alnum = (visible.match(/[a-z0-9]/gi) || []).length;
-   const nonAlnum = Math.max(0, visible.length - alnum);
-   const alnumRatio = visible.length ? alnum / visible.length : 0;
-   const nonAlnumRatio = visible.length ? nonAlnum / visible.length : 1;
+  const letters = (visible.match(/[a-z]/gi) || []).length;
+  const digits = (visible.match(/[0-9]/g) || []).length;
+  const alnum = (visible.match(/[a-z0-9]/gi) || []).length;
+  const nonAlnum = Math.max(0, visible.length - alnum);
+  const alnumRatio = visible.length ? alnum / visible.length : 0;
+  const nonAlnumRatio = visible.length ? nonAlnum / visible.length : 1;
 
-   const overallConfidence = Number(result?.data?.confidence);
-   const confidenceScore = Number.isFinite(overallConfidence) ? overallConfidence : 0;
+  const overallConfidence = Number(result?.data?.confidence);
+  const confidenceScore = Number.isFinite(overallConfidence) ? overallConfidence : 0;
 
-   const words = Array.isArray(result?.data?.words) ? result.data.words : [];
-   const wordConfs = words
-     .map((w) => Number(w?.confidence))
-     .filter((c) => Number.isFinite(c) && c >= 0 && c <= 100) as number[];
-   const avgWordConfidence = wordConfs.length
-     ? wordConfs.reduce((sum, c) => sum + c, 0) / wordConfs.length
-     : 0;
+  const words = Array.isArray(result?.data?.words) ? result.data.words : [];
+  const wordConfs = words
+    .map((w) => Number(w?.confidence))
+    .filter((c) => Number.isFinite(c) && c >= 0 && c <= 100) as number[];
+  const avgWordConfidence = wordConfs.length
+    ? wordConfs.reduce((sum, c) => sum + c, 0) / wordConfs.length
+    : 0;
 
-   const lengthScore = Math.min(visible.length, 20);
-   const letterScore = Math.min(letters * 2, 40);
-   const digitScore = Math.min(digits, 15);
+  const lengthScore = Math.min(visible.length, 20);
+  const letterScore = Math.min(letters * 2, 40);
+  const digitScore = Math.min(digits, 15);
 
-   const reliableBonus = Math.min(30, 30);
-   const goodWordBonus = Math.min(60, 60);
-   const noisyPenalty = nonAlnumRatio > 0.25 ? (nonAlnumRatio - 0.25) * 120 : 0;
-   const lowAlnumPenalty = alnumRatio < 0.7 ? (0.7 - alnumRatio) * 120 : 0;
-   const gibberishPenalty = isLikelyGibberish(text) ? 45 : 0;
+  const reliableBonus = Math.min(30, 30);
+  const goodWordBonus = Math.min(60, 60);
+  const noisyPenalty = nonAlnumRatio > 0.25 ? (nonAlnumRatio - 0.25) * 120 : 0;
+  const lowAlnumPenalty = alnumRatio < 0.7 ? (0.7 - alnumRatio) * 120 : 0;
+  const gibberishPenalty = isLikelyGibberish(text) ? 45 : 0;
 
-   return (
-     confidenceScore +
-     avgWordConfidence * 0.6 +
-     lengthScore +
-     letterScore +
-     digitScore +
-     reliableBonus +
-     goodWordBonus -
-     noisyPenalty -
-     lowAlnumPenalty -
-     gibberishPenalty
-   );
- };
+  return (
+    confidenceScore +
+    avgWordConfidence * 0.6 +
+    lengthScore +
+    letterScore +
+    digitScore +
+    reliableBonus +
+    goodWordBonus -
+    noisyPenalty -
+    lowAlnumPenalty -
+    gibberishPenalty
+  );
+};
 
- const getReliableOcrText = (result: OcrResult) => {
-   const words = Array.isArray(result?.data?.words) ? result.data.words : [];
-   const goodWords = words.filter((w) => {
-     const t = String(w?.text || "").trim();
-     const c = Number(w?.confidence);
-     if (!Number.isFinite(c)) return false;
-     const lettersInWord = (t.match(/[a-z]/gi) || []).length;
-     return t.length >= 3 && lettersInWord >= 1 && c >= 50;
-   });
+const getReliableOcrText = (result: OcrResult) => {
+  const words = Array.isArray(result?.data?.words) ? result.data.words : [];
+  const goodWords = words.filter((w) => {
+    const t = String(w?.text || "").trim();
+    const c = Number(w?.confidence);
+    if (!Number.isFinite(c)) return false;
+    const lettersInWord = (t.match(/[a-z]/gi) || []).length;
+    return t.length >= 3 && lettersInWord >= 1 && c >= 50;
+  });
 
-   const reliableText = cleanupOcrTextForSearch(
-     normalizeOcrText(goodWords.map((w) => String(w?.text || "").trim()).join(" "))
-   );
-   return { reliableText, goodWordsCount: goodWords.length, wordsCount: words.length };
- };
+  const reliableText = cleanupOcrTextForSearch(
+    normalizeOcrText(goodWords.map((w) => String(w?.text || "").trim()).join(" "))
+  );
+  return { reliableText, goodWordsCount: goodWords.length, wordsCount: words.length };
+};
 
- const isLikelyGibberish = (text: string) => {
-   const visible = text.replace(/\s/g, "");
-   if (visible.length < 6) return true;
+const isLikelyGibberish = (text: string) => {
+  const visible = text.replace(/\s/g, "");
+  if (visible.length < 6) return true;
 
-   const digits = (visible.match(/[0-9]/g) || []).length;
-   const letters = (visible.match(/[a-z]/gi) || []).length;
-   const total = visible.length;
+  const digits = (visible.match(/[0-9]/g) || []).length;
+  const letters = (visible.match(/[a-z]/gi) || []).length;
+  const total = visible.length;
 
-   const digitRatio = total ? digits / total : 0;
-   const letterRatio = total ? letters / total : 0;
+  const digitRatio = total ? digits / total : 0;
+  const letterRatio = total ? letters / total : 0;
 
-   // If it looks like a numeric code/barcode, allow it.
-   if (digits >= 8 && digitRatio >= 0.6) return false;
+  // If it looks like a numeric code/barcode, allow it.
+  if (digits >= 8 && digitRatio >= 0.6) return false;
 
-   if (letters < 4) return true;
-   if (letterRatio < 0.35) return true;
-   if (/(.)\1{3,}/.test(visible)) return true;
+  if (letters < 4) return true;
+  if (letterRatio < 0.35) return true;
+  if (/(.)\1{3,}/.test(visible)) return true;
 
-   const vowels = (visible.match(/[aeiou]/gi) || []).length;
-   const vowelRatio = letters ? vowels / letters : 0;
-   if (vowelRatio < 0.12) return true;
+  const vowels = (visible.match(/[aeiou]/gi) || []).length;
+  const vowelRatio = letters ? vowels / letters : 0;
+  if (vowelRatio < 0.12) return true;
 
-   const tokens = text.split(/\s+/).map((t) => t.trim()).filter(Boolean);
-   if (tokens.length === 0) return true;
+  const tokens = text.split(/\s+/).map((t) => t.trim()).filter(Boolean);
+  if (tokens.length === 0) return true;
 
-   const avgTokenLen = tokens.reduce((sum, t) => sum + t.length, 0) / tokens.length;
-   if (tokens.length < 2 && avgTokenLen < 3) return true;
+  const avgTokenLen = tokens.reduce((sum, t) => sum + t.length, 0) / tokens.length;
+  if (tokens.length < 2 && avgTokenLen < 3) return true;
 
-   return false;
- };
+  return false;
+};
 
- const preprocessImageDataUrl = async (imageDataUrl: string) => {
-   const img = new Image();
-   img.decoding = "async";
-   img.src = imageDataUrl;
-   await new Promise<void>((resolve, reject) => {
-     img.onload = () => resolve();
-     img.onerror = () => reject(new Error("Failed to load image"));
-   });
+const preprocessImageDataUrl = async (imageDataUrl: string) => {
+  const img = new Image();
+  img.decoding = "async";
+  img.src = imageDataUrl;
+  await new Promise<void>((resolve, reject) => {
+    img.onload = () => resolve();
+    img.onerror = () => reject(new Error("Failed to load image"));
+  });
 
-   const maxWidth = 1600;
-   const scale = img.width > maxWidth ? maxWidth / img.width : 1;
-   const width = Math.max(1, Math.round(img.width * scale));
-   const height = Math.max(1, Math.round(img.height * scale));
+  const maxWidth = 1600;
+  const scale = img.width > maxWidth ? maxWidth / img.width : 1;
+  const width = Math.max(1, Math.round(img.width * scale));
+  const height = Math.max(1, Math.round(img.height * scale));
 
-   const canvas = document.createElement("canvas");
-   canvas.width = width;
-   canvas.height = height;
-   const ctx = canvas.getContext("2d", { willReadFrequently: true });
-   if (!ctx) return imageDataUrl;
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  if (!ctx) return imageDataUrl;
 
-   ctx.drawImage(img, 0, 0, width, height);
-   const imageData = ctx.getImageData(0, 0, width, height);
-   const data = imageData.data;
+  ctx.drawImage(img, 0, 0, width, height);
+  const imageData = ctx.getImageData(0, 0, width, height);
+  const data = imageData.data;
 
-   const contrast = 1.2;
-   const intercept = 128 * (1 - contrast);
-   for (let i = 0; i < data.length; i += 4) {
-     const r = data[i];
-     const g = data[i + 1];
-     const b = data[i + 2];
-     const gray = 0.299 * r + 0.587 * g + 0.114 * b;
-     const adjusted = Math.max(0, Math.min(255, gray * contrast + intercept));
-     data[i] = adjusted;
-     data[i + 1] = adjusted;
-     data[i + 2] = adjusted;
-   }
+  const contrast = 1.2;
+  const intercept = 128 * (1 - contrast);
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i];
+    const g = data[i + 1];
+    const b = data[i + 2];
+    const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+    const adjusted = Math.max(0, Math.min(255, gray * contrast + intercept));
+    data[i] = adjusted;
+    data[i + 1] = adjusted;
+    data[i + 2] = adjusted;
+  }
 
-   ctx.putImageData(imageData, 0, 0);
-   return canvas.toDataURL("image/png");
- };
+  ctx.putImageData(imageData, 0, 0);
+  return canvas.toDataURL("image/png");
+};
 
- const normalizeForTokens = (value: string) =>
-   value
-     .toLowerCase()
-     .replace(/[^a-z0-9]+/g, " ")
-     .replace(/\s+/g, " ")
-     .trim();
+const normalizeForTokens = (value: string) =>
+  value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 
- const toTokens = (value: string) => {
-   const normalized = normalizeForTokens(value);
-   return normalized ? normalized.split(" ").filter(Boolean) : [];
- };
+const toTokens = (value: string) => {
+  const normalized = normalizeForTokens(value);
+  return normalized ? normalized.split(" ").filter(Boolean) : [];
+};
 
- const preprocessImageThresholdDataUrl = async (imageDataUrl: string) => {
-   const img = new Image();
-   img.decoding = "async";
-   img.src = imageDataUrl;
-   await new Promise<void>((resolve, reject) => {
-     img.onload = () => resolve();
-     img.onerror = () => reject(new Error("Failed to load image"));
-   });
+const preprocessImageThresholdDataUrl = async (imageDataUrl: string) => {
+  const img = new Image();
+  img.decoding = "async";
+  img.src = imageDataUrl;
+  await new Promise<void>((resolve, reject) => {
+    img.onload = () => resolve();
+    img.onerror = () => reject(new Error("Failed to load image"));
+  });
 
-   const maxWidth = 1600;
-   const scale = img.width > maxWidth ? maxWidth / img.width : 1;
-   const width = Math.max(1, Math.round(img.width * scale));
-   const height = Math.max(1, Math.round(img.height * scale));
+  const maxWidth = 1600;
+  const scale = img.width > maxWidth ? maxWidth / img.width : 1;
+  const width = Math.max(1, Math.round(img.width * scale));
+  const height = Math.max(1, Math.round(img.height * scale));
 
-   const canvas = document.createElement("canvas");
-   canvas.width = width;
-   canvas.height = height;
-   const ctx = canvas.getContext("2d", { willReadFrequently: true });
-   if (!ctx) return imageDataUrl;
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  if (!ctx) return imageDataUrl;
 
-   ctx.drawImage(img, 0, 0, width, height);
-   const imageData = ctx.getImageData(0, 0, width, height);
-   const data = imageData.data;
+  ctx.drawImage(img, 0, 0, width, height);
+  const imageData = ctx.getImageData(0, 0, width, height);
+  const data = imageData.data;
 
-   const contrast = 1.25;
-   const intercept = 128 * (1 - contrast);
-   const threshold = 160;
+  const contrast = 1.25;
+  const intercept = 128 * (1 - contrast);
+  const threshold = 160;
 
-   for (let i = 0; i < data.length; i += 4) {
-     const r = data[i];
-     const g = data[i + 1];
-     const b = data[i + 2];
-     const gray = 0.299 * r + 0.587 * g + 0.114 * b;
-     const adjusted = Math.max(0, Math.min(255, gray * contrast + intercept));
-     const bw = adjusted > threshold ? 255 : 0;
-     data[i] = bw;
-     data[i + 1] = bw;
-     data[i + 2] = bw;
-   }
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i];
+    const g = data[i + 1];
+    const b = data[i + 2];
+    const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+    const adjusted = Math.max(0, Math.min(255, gray * contrast + intercept));
+    const bw = adjusted > threshold ? 255 : 0;
+    data[i] = bw;
+    data[i + 1] = bw;
+    data[i + 2] = bw;
+  }
 
-   ctx.putImageData(imageData, 0, 0);
-   return canvas.toDataURL("image/png");
- };
+  ctx.putImageData(imageData, 0, 0);
+  return canvas.toDataURL("image/png");
+};
 
- const cropImageDataUrl = async (
-   imageDataUrl: string,
-   crop: { x: number; y: number; w: number; h: number }
- ) => {
-   const img = new Image();
-   img.decoding = "async";
-   img.src = imageDataUrl;
-   await new Promise<void>((resolve, reject) => {
-     img.onload = () => resolve();
-     img.onerror = () => reject(new Error("Failed to load image"));
-   });
+const cropImageDataUrl = async (
+  imageDataUrl: string,
+  crop: { x: number; y: number; w: number; h: number }
+) => {
+  const img = new Image();
+  img.decoding = "async";
+  img.src = imageDataUrl;
+  await new Promise<void>((resolve, reject) => {
+    img.onload = () => resolve();
+    img.onerror = () => reject(new Error("Failed to load image"));
+  });
 
-   const sx = Math.max(0, Math.min(img.width, Math.round(img.width * crop.x)));
-   const sy = Math.max(0, Math.min(img.height, Math.round(img.height * crop.y)));
-   const sw = Math.max(1, Math.min(img.width - sx, Math.round(img.width * crop.w)));
-   const sh = Math.max(1, Math.min(img.height - sy, Math.round(img.height * crop.h)));
+  const sx = Math.max(0, Math.min(img.width, Math.round(img.width * crop.x)));
+  const sy = Math.max(0, Math.min(img.height, Math.round(img.height * crop.y)));
+  const sw = Math.max(1, Math.min(img.width - sx, Math.round(img.width * crop.w)));
+  const sh = Math.max(1, Math.min(img.height - sy, Math.round(img.height * crop.h)));
 
-   const canvas = document.createElement("canvas");
-   canvas.width = sw;
-   canvas.height = sh;
-   const ctx = canvas.getContext("2d");
-   if (!ctx) return imageDataUrl;
+  const canvas = document.createElement("canvas");
+  canvas.width = sw;
+  canvas.height = sh;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return imageDataUrl;
 
-   ctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
-   return canvas.toDataURL("image/png");
- };
+  ctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+  return canvas.toDataURL("image/png");
+};
 
- const scoreOcrCandidate = (
-   candidateText: string,
-   reliableText: string,
-   reliableStats: { goodWordsCount: number; wordsCount: number },
-   result: OcrResult
- ) => {
-   const visible = candidateText.replace(/\s/g, "");
-   const letters = (visible.match(/[a-z]/gi) || []).length;
-   const digits = (visible.match(/[0-9]/g) || []).length;
-   const alnum = (visible.match(/[a-z0-9]/gi) || []).length;
-   const nonAlnum = Math.max(0, visible.length - alnum);
-   const alnumRatio = visible.length ? alnum / visible.length : 0;
-   const nonAlnumRatio = visible.length ? nonAlnum / visible.length : 1;
+const scoreOcrCandidate = (
+  candidateText: string,
+  reliableText: string,
+  reliableStats: { goodWordsCount: number; wordsCount: number },
+  result: OcrResult
+) => {
+  const visible = candidateText.replace(/\s/g, "");
+  const letters = (visible.match(/[a-z]/gi) || []).length;
+  const digits = (visible.match(/[0-9]/g) || []).length;
+  const alnum = (visible.match(/[a-z0-9]/gi) || []).length;
+  const nonAlnum = Math.max(0, visible.length - alnum);
+  const alnumRatio = visible.length ? alnum / visible.length : 0;
+  const nonAlnumRatio = visible.length ? nonAlnum / visible.length : 1;
 
-   const overallConfidence = Number(result?.data?.confidence);
-   const confidenceScore = Number.isFinite(overallConfidence) ? overallConfidence : 0;
+  const overallConfidence = Number(result?.data?.confidence);
+  const confidenceScore = Number.isFinite(overallConfidence) ? overallConfidence : 0;
 
-   const words = Array.isArray(result?.data?.words) ? result.data.words : [];
-   const wordConfs = words
-     .map((w) => Number(w?.confidence))
-     .filter((c) => Number.isFinite(c) && c >= 0 && c <= 100) as number[];
-   const avgWordConfidence = wordConfs.length
-     ? wordConfs.reduce((sum, c) => sum + c, 0) / wordConfs.length
-     : 0;
+  const words = Array.isArray(result?.data?.words) ? result.data.words : [];
+  const wordConfs = words
+    .map((w) => Number(w?.confidence))
+    .filter((c) => Number.isFinite(c) && c >= 0 && c <= 100) as number[];
+  const avgWordConfidence = wordConfs.length
+    ? wordConfs.reduce((sum, c) => sum + c, 0) / wordConfs.length
+    : 0;
 
-   const lengthScore = Math.min(visible.length, 20);
-   const letterScore = Math.min(letters * 2, 40);
-   const digitScore = Math.min(digits, 15);
+  const lengthScore = Math.min(visible.length, 20);
+  const letterScore = Math.min(letters * 2, 40);
+  const digitScore = Math.min(digits, 15);
 
-   const reliableBonus = Math.min(reliableText.replace(/\s/g, "").length, 30);
-   const goodWordBonus = Math.min(reliableStats.goodWordsCount * 12, 60);
-   const noisyPenalty = nonAlnumRatio > 0.25 ? (nonAlnumRatio - 0.25) * 120 : 0;
-   const lowAlnumPenalty = alnumRatio < 0.7 ? (0.7 - alnumRatio) * 120 : 0;
-   const gibberishPenalty = isLikelyGibberish(candidateText) ? 45 : 0;
+  const reliableBonus = Math.min(reliableText.replace(/\s/g, "").length, 30);
+  const goodWordBonus = Math.min(reliableStats.goodWordsCount * 12, 60);
+  const noisyPenalty = nonAlnumRatio > 0.25 ? (nonAlnumRatio - 0.25) * 120 : 0;
+  const lowAlnumPenalty = alnumRatio < 0.7 ? (0.7 - alnumRatio) * 120 : 0;
+  const gibberishPenalty = isLikelyGibberish(candidateText) ? 45 : 0;
 
-   return (
-     confidenceScore +
-     avgWordConfidence * 0.6 +
-     lengthScore +
-     letterScore +
-     digitScore +
-     reliableBonus +
-     goodWordBonus -
-     noisyPenalty -
-     lowAlnumPenalty -
-     gibberishPenalty
-   );
- };
+  return (
+    confidenceScore +
+    avgWordConfidence * 0.6 +
+    lengthScore +
+    letterScore +
+    digitScore +
+    reliableBonus +
+    goodWordBonus -
+    noisyPenalty -
+    lowAlnumPenalty -
+    gibberishPenalty
+  );
+};
 
 const Scan = () => {
   const navigate = useNavigate();
@@ -674,6 +674,7 @@ const Scan = () => {
     setSearchResults([]);
 
     try {
+      setIsScanning(true);
       const preprocessedGray = await preprocessImageDataUrl(imageData);
       const preprocessedThreshold = await preprocessImageThresholdDataUrl(imageData);
 
@@ -715,29 +716,29 @@ const Scan = () => {
         if (!best || score > best.score) {
           best = { candidateText, score };
         }
-     }
+      }
 
-     const chosenText = normalizeOcrText(best?.candidateText || "");
-     const cleanedForDisplay = cleanupOcrTextForDisplay(chosenText);
-     const cleanedForSearch = cleanupOcrTextForSearch(chosenText);
-     const shouldReject = cleanedForSearch.length < 4 || isLikelyGibberish(cleanedForSearch);
+      const chosenText = normalizeOcrText(best?.candidateText || "");
+      const cleanedForDisplay = cleanupOcrTextForDisplay(chosenText);
+      const cleanedForSearch = cleanupOcrTextForSearch(chosenText);
+      const shouldReject = cleanedForSearch.length < 4 || isLikelyGibberish(cleanedForSearch);
 
-     if (shouldReject) {
-       setExtractedText("");
-       setOcrMessage("No text recognized. Try manual search.");
-       setIsScanning(false);
-       return;
-     }
+      if (shouldReject) {
+        setExtractedText("");
+        setOcrMessage("No text recognized. Try manual search.");
+        setIsScanning(false);
+        return;
+      }
 
-     setExtractedText(cleanedForDisplay || cleanedForSearch);
-     setIsScanning(false);
-     searchProducts(cleanedForSearch);
-   } catch (error) {
-     toast({
-       title: "Processing Error",
-       description: "Failed to process the image. Please try again.",
-       variant: "destructive",
-     });
+      setExtractedText(cleanedForDisplay || cleanedForSearch);
+      setIsScanning(false);
+      searchProducts(cleanedForSearch);
+    } catch (error) {
+      toast({
+        title: "Processing Error",
+        description: "Failed to process the image. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsProcessing(false);
       setIsScanning(false);
