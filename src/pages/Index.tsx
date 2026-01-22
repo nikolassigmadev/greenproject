@@ -127,7 +127,7 @@ const Index = () => {
               <div className="flex items-end justify-between gap-4 mb-10">
                 <div>
                   <h2 className="text-3xl sm:text-4xl font-display font-bold mb-2">
-                    Alternative
+                    The Alternative
                   </h2>
                   <p className="text-lg text-muted-foreground leading-relaxed">
                     Products with a sustainability score of 97 or higher.
