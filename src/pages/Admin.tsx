@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
@@ -11,17 +12,15 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { defaultProducts, Product, calculateScore, getScoreRating } from '@/data/products';
 import { saveProducts, loadProducts } from '@/utils/storage';
-import { Lock, Plus, Pencil, Trash2, Upload, ImageIcon, X, Download } from 'lucide-react';
+import { Plus, Pencil, Trash2, Upload, ImageIcon, X, Download, LogOut } from 'lucide-react';
 import { ScoreDisplay } from '@/components/ScoreDisplay';
 import { SimpleLivestockForm, SimpleLivestockData } from '@/components/SimpleLivestockForm';
 import { downloadProductsFile, copySingleProductCode } from '@/utils/productExporter';
-
-const ADMIN_PASSWORD = 'pass';
+import { clearAdminAuthenticated, isAdminAuthenticated } from '@/utils/adminAuth';
 
 const Admin = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const navigate = useNavigate();
+  const location = useLocation();
   const [productList, setProductList] = useState<Product[]>(defaultProducts);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -39,6 +38,14 @@ const Admin = () => {
       setProductList(storedProducts);
     }
   }, []);
+
+  useEffect(() => {
+    if (!isAdminAuthenticated()) {
+      navigate('/admin/login', { replace: true, state: { from: location } });
+    }
+  }, [location, navigate]);
+
+  const authenticated = isAdminAuthenticated();
 
   // Save products to localStorage whenever productList changes
   useEffect(() => {
@@ -88,16 +95,6 @@ const Admin = () => {
     updateEditingProduct('imageUrl', undefined);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
-    }
-  };
-
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (password === ADMIN_PASSWORD) {
-      setIsAuthenticated(true);
-      setError('');
-    } else {
-      setError('Incorrect password');
     }
   };
 
@@ -194,43 +191,7 @@ const Admin = () => {
     return value.split(',').map(s => s.trim()).filter(s => s.length > 0);
   };
 
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen flex flex-col bg-background">
-        <Header />
-        <main className="flex-1 flex items-center justify-center p-6">
-          <Card className="w-full max-w-md">
-            <CardHeader className="text-center">
-              <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-                <Lock className="w-8 h-8 text-primary" />
-              </div>
-              <CardTitle>Admin Access</CardTitle>
-              <p className="text-muted-foreground">Enter password to access the admin panel</p>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter admin password"
-                  />
-                </div>
-                {error && <p className="text-destructive text-sm">{error}</p>}
-                <Button type="submit" className="w-full">
-                  Unlock Admin Panel
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-        </main>
-        <Footer />
-      </div>
-    );
-  }
+  if (!authenticated) return null;
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -245,6 +206,17 @@ const Admin = () => {
             <Button onClick={handleExportProducts} variant="outline" className="gap-2">
               <Download className="w-4 h-4" />
               Export Products
+            </Button>
+            <Button
+              onClick={() => {
+                clearAdminAuthenticated();
+                navigate('/admin/login', { replace: true });
+              }}
+              variant="outline"
+              className="gap-2"
+            >
+              <LogOut className="w-4 h-4" />
+              Logout
             </Button>
             <Button onClick={handleAddNew} className="gap-2">
               <Plus className="w-4 h-4" />
