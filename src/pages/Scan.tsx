@@ -809,7 +809,7 @@ const Scan = () => {
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Camera View */}
-              <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 aspect-video shadow-lg border border-slate-200 dark:border-slate-700">
+              <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 aspect-[3/4] sm:aspect-video max-h-[72vh] sm:max-h-none shadow-lg border border-slate-200 dark:border-slate-700">
                 {/* Always render video element, control visibility with CSS */}
                 <video
                   ref={videoRef}
@@ -817,8 +817,7 @@ const Scan = () => {
                   playsInline
                   muted
                   className={`w-full h-full object-cover ${cameraActive ? 'block' : 'hidden'}`}
-                  style={{ 
-                    transform: 'scaleX(-1)',
+                  style={{
                     backgroundColor: '#000'
                   }}
                   onError={(e) => {
@@ -838,9 +837,9 @@ const Scan = () => {
                     {/* Scanning overlay with improved design */}
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                       <div className="relative">
-                        <div className="w-56 h-56 border-2 border-primary rounded-2xl animate-pulse-soft shadow-lg" />
+                        <div className="w-[min(78vw,26rem)] aspect-square border-2 border-primary rounded-2xl animate-pulse-soft shadow-lg" />
                         <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="w-48 h-48 border border-primary/50 rounded-xl" />
+                          <div className="absolute inset-4 border border-primary/50 rounded-xl" />
                         </div>
                         {/* Corner indicators */}
                         <div className="absolute top-2 left-2 w-8 h-8 border-t-2 border-l-2 border-primary rounded-tl-lg" />
