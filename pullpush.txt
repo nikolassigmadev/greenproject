@@ -1,6 +1,10 @@
 git add .
 git commit -m "Your commit message"
+git pushgit add .
+git commit -m "Your commit message"
+git pushgit add .
+git commit -m "Your commit message"
 git push
 
 git pulldd
-cckd
+cckdc
