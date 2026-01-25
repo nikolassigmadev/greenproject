@@ -1,6 +1,6 @@
 const ADMIN_AUTH_STORAGE_KEY = "greenstone_admin_authenticated";
 
-export const ADMIN_PASSWORD = "pass";
+export const ADMIN_PASSWORD = "geo";
 
 export function isAdminAuthenticated(): boolean {
   return localStorage.getItem(ADMIN_AUTH_STORAGE_KEY) === "true";
