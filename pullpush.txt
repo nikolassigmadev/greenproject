@@ -7,4 +7,13 @@ git commit -m "Your commit message"
 git push
 
 git pulldd
+cckdcgit add .
+git commit -m "Your commit message"
+git pushgit add .
+git commit -m "Your commit message"
+git pushgit add .
+git commit -m "Your commit message"
+git push
+
+git pulldd
 cckdc
