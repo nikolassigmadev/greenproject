@@ -761,8 +761,23 @@ export const defaultProducts: Product[] = [
     keywords: [],
     barcode: '',
     imageUrl: undefined,
+  },
+  {
+    id: '#p0048',
+    name: 'euifheuf',
+    brand: '',
+    category: '',
+    origin: { country: '' },
+    materials: ['Standard Production'],
+    laborRisk: 'medium',
+    transportDistance: 0,
+    certifications: [],
+    carbonFootprint: 0,
+    keywords: [],
+    barcode: '',
+    imageUrl: undefined,
+    
   }
-
   
 ];
 
