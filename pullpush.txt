@@ -124,3 +124,13 @@ git add .
 git commit -m "feature done"
 git push -u origin feature
 ---------------------------------------------------------------------------------------
+🔐 Admin Toggle Commands
+🔒 Hide Admin (Disable Admin Functionality)
+bash
+mkdir -p .admin_files_hidden && mv src/pages/Admin.tsx src/pages/AdminLogin.tsx src/utils/adminAuth.ts src/utils/bcryptHasher.ts .admin_files_hidden/
+🔓 Show Admin (Enable Admin Functionality)
+bash
+mv .admin_files_hidden/* src/pages/ && mv .admin_files_hidden/bcryptHasher.ts .admin_files_hidden/adminAuth.ts src/utils/
+📊 Check Status
+bash
+ls -la src/pages/Admin* src/utils/adminAuth.ts src/utils/bcryptHasher.ts 2>/dev/null && echo "🟢 ADMIN: ENABLED" || echo "🔴 ADMIN: DISABLED"

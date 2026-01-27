@@ -730,57 +730,22 @@ export const defaultProducts: Product[] = [
     keywords: ['jerky', 'meat', 'snack', 'protein'],
     barcode: '3456789012349',
   },
-
-   {
-    id: '#p0046',
-    name: 'ghgh',
-    brand: '',
+ {
+    id: '#p0049',
+    name: 'testets77383',
+    brand: 'SweetFruit',
     category: 'Meat, Dairy & Eggs',
-    origin: { country: '' },
-    materials: ['Good Space', 'Standard Execution', 'Conventional Diet'],
+    origin: { country: 'Germany', region: 'Bavaria' },
+    materials: ['Sugar', 'Corn Syrup', 'Artificial Flavors', 'Food Coloring'],
     laborRisk: 'medium',
-    transportDistance: 0,
-    certifications: [],
-    carbonFootprint: 0,
-    keywords: [],
-    barcode: '',
-    imageUrl: undefined,
-    
-  },
-    {
-    id: '#p0047',
-    name: 'test test test test',
-    brand: '',
-    category: 'Meat, Dairy & Eggs',
-    origin: { country: '' },
-    materials: ['Excellent Space', 'Humane Execution', 'Natural Diet'],
-    laborRisk: 'medium',
-    transportDistance: 0,
-    certifications: [],
-    carbonFootprint: 0,
-    keywords: [],
-    barcode: '',
-    imageUrl: undefined,
-  },
-  {
-    id: '#p0048',
-    name: 'euifheuf',
-    brand: '',
-    category: '',
-    origin: { country: '' },
-    materials: ['Standard Production'],
-    laborRisk: 'medium',
-    transportDistance: 0,
-    certifications: [],
-    carbonFootprint: 0,
-    keywords: [],
-    barcode: '',
-    imageUrl: undefined,
-    
+    transportDistance: 9000,
+    certifications: ['USDA Organic', 'Non-GMO', 'Fair Trade'],
+    carbonFootprint: 5.8,
+    keywords: ['gummies', 'candy', 'snack', 'fruit'],
+    barcode: '2345678901238',
   }
-  
 ];
 
 
-// Export products that loads from localStorage first, falls back to default products
-export const products: Product[] = loadProducts() || defaultProducts;
+// Export products that always uses the file data
+export const products: Product[] = defaultProducts;
