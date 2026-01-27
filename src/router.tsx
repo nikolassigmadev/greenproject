@@ -6,8 +6,8 @@ import Scan from "./pages/Scan";
 import NotFound from "./pages/NotFound";
 
 // Import admin components - uncomment to enable
-import Admin from "./pages/Admin";
- import AdminLogin from "./pages/AdminLogin";
+//import Admin from "./pages/Admin";
+//import AdminLogin from "./pages/AdminLogin";
 
 export const router = createBrowserRouter([
   {
@@ -27,16 +27,12 @@ export const router = createBrowserRouter([
     element: <Scan />,
   },
   // Uncomment admin routes to enable
-   {
-     path: "/admin",
-     element: <Admin />,
-   },
-   {
-     path: "/admin/login",
-     element: <AdminLogin />,
-   },
-  {
-    path: "*",
-    element: <NotFound />,
-  },
+  // {
+//   path: "/admin",
+//   element: <Admin />,
+// },
+// {
+//   path: "/admin/login",
+//   element: <AdminLogin />,
+// },
 ]);
