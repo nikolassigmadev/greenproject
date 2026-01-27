@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Lock } from "lucide-react";
 
-import { ADMIN_PASSWORD, isAdminAuthenticated, setAdminAuthenticated } from "@/utils/adminAuth";
+import { ADMIN_PASSWORD_HASH, isAdminAuthenticated, setAdminAuthenticated, verifyPassword } from "@/utils/adminAuth";
 
 type LocationState = {
   from?: { pathname?: string };
@@ -28,17 +28,23 @@ const AdminLogin = () => {
     }
   }, [navigate]);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (password.trim() === ADMIN_PASSWORD) {
-      setAdminAuthenticated(true);
-      setError("");
+    try {
+      const isValid = await verifyPassword(password.trim(), ADMIN_PASSWORD_HASH);
+      
+      if (isValid) {
+        setAdminAuthenticated(true);
+        setError("");
 
-      const state = location.state as LocationState | null;
-      const to = state?.from?.pathname || "/admin";
-      navigate(to, { replace: true });
-      return;
+        const state = location.state as LocationState | null;
+        const to = state?.from?.pathname || "/admin";
+        navigate(to, { replace: true });
+        return;
+      }
+    } catch (error) {
+      console.error('Login error:', error);
     }
 
     setError("Incorrect password");
