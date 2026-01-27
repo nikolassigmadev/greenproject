@@ -743,6 +743,22 @@ export const defaultProducts: Product[] = [
     carbonFootprint: 5.8,
     keywords: ['gummies', 'candy', 'snack', 'fruit'],
     barcode: '2345678901238',
+  },
+    {
+    id: '#p0050',
+    name: 'Surfboard',
+    brand: 'ALMERIXK',
+    category: 'Clothing',
+    origin: { country: 'Spain' },
+    materials: ['Standard Production'],
+    laborRisk: 'low',
+    transportDistance: 11000,
+    certifications: [],
+    carbonFootprint: 1.822,
+    keywords: [],
+    barcode: '',
+    imageUrl: undefined,
+    
   }
 ];
 
