@@ -124,11 +124,43 @@ git add .
 git commit -m "feature done"
 git push -u origin feature
 ---------------------------------------------------------------------------------------
-Hide Admin (One Command):
+---------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------
 
-bash
-mkdir -p .admin_files_hidden && mv src/pages/Admin.tsx src/pages/AdminLogin.tsx src/utils/adminAuth.ts src/utils/bcryptHasher.ts .admin_files_hidden/
-Show Admin (One Command):
 
-bash
-mv .admin_files_hidden/Admin.tsx .admin_files_hidden/AdminLogin.tsx src/pages/ && mv .admin_files_hidden/adminAuth.ts .admin_files_hidden/bcryptHasher.ts src/utils/
+9-10
+// Change from:
+// import Admin from "./pages/Admin";
+// import AdminLogin from "./pages/AdminLogin";
+
+// To:
+import Admin from "./pages/Admin";
+import AdminLogin from "./pages/AdminLogin";
+
+
+30-37
+
+// Change from:
+// {
+//   path: "/admin",
+//   element: <Admin />,
+// },
+// {
+//   path: "/admin/login",
+//   element: <AdminLogin />,
+// },
+
+// To:
+{
+  path: "/admin",
+  element: <Admin />,
+},
+{
+  path: "/admin/login",
+  element: <AdminLogin />,
+},
