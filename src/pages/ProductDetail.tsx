@@ -48,9 +48,7 @@ const ProductDetail = () => {
     high: { label: 'High Risk', color: 'text-score-critical', bg: 'bg-score-critical/10', progress: 90 },
   };
 
-  const materialsLabel = product.category === 'Food & Beverage' || product.category === 'Snacks & Packaged Foods'
-    ? 'Contents'
-    : 'Materials';
+  const materialsLabel = 'Contents';
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -124,6 +122,25 @@ const ProductDetail = () => {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Product Comments */}
+              {product.comments && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Award className="w-5 h-5 text-primary" />
+                      Product Information
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="prose prose-sm max-w-none">
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                        {product.comments}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Impact Metrics */}
               <div className="grid sm:grid-cols-2 gap-6">

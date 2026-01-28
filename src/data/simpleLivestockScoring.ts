@@ -6,34 +6,6 @@ export interface SimpleLivestockFactors {
   animalDiet: 'natural' | 'organic' | 'conventional' | 'processed';
 }
 
-// Score mappings for each factor
-const factorScores: { [key: string]: { [value: string]: number } } = {
-  animalSpace: {
-    'excellent': 95,
-    'good': 75,
-    'poor': 40,
-    'terrible': 15,
-  },
-  animalExecution: {
-    'humane': 90,
-    'standard': 60,
-    'inhumane': 20,
-  },
-  animalDiet: {
-    'natural': 85,
-    'organic': 80,
-    'conventional': 45,
-    'processed': 25,
-  },
-};
-
-// Factor weights (sum to 100)
-const factorWeights = {
-  animalSpace: 35, // 35% weight
-  animalExecution: 35, // 35% weight
-  animalDiet: 30, // 30% weight
-};
-
 // Extract simple livestock factors from product materials
 export function extractSimpleLivestockFactors(product: Product): SimpleLivestockFactors {
   const materials = product.materials.map(m => m.toLowerCase());
@@ -84,39 +56,34 @@ export function calculateSimpleLivestockScore(product: Product): number {
   }
   
   const factors = extractSimpleLivestockFactors(product);
-  let totalScore = 0;
   
-  // Calculate weighted score for each factor
-  Object.keys(factorWeights).forEach(factor => {
-    const weight = factorWeights[factor as keyof typeof factorWeights];
-    const factorKey = factor as keyof typeof factorScores;
-    const factorValue = factors[factorKey] as string;
-    const factorScore = factorScores[factorKey]?.[factorValue] || 50; // Default to 50 if unknown
-    
-    totalScore += (factorScore * weight) / 100;
-  });
+  // Start with base score of 50 for meat, dairy, and eggs
+  let totalScore = 50;
   
-  // Add standard scoring factors (30% of total)
-  let standardScore = 100;
+  // Labor risk adjustments
+  if (product.laborRisk === 'high') totalScore -= 10;
+  else if (product.laborRisk === 'medium') totalScore -= 5;
+  else if (product.laborRisk === 'low') totalScore += 5;
   
-  // Labor risk penalty
-  if (product.laborRisk === 'high') standardScore -= 50;
-  else if (product.laborRisk === 'medium') standardScore -= 20;
+  // Animal space adjustments
+  if (factors.animalSpace === 'excellent') totalScore += 20;
+  else if (factors.animalSpace === 'good') totalScore += 10;
+  else if (factors.animalSpace === 'poor') totalScore -= 10;
+  else if (factors.animalSpace === 'terrible') totalScore -= 20;
   
-  // Transport distance penalty
-  if (product.transportDistance > 10000) standardScore -= 35;
-  else if (product.transportDistance > 5000) standardScore -= 20;
-  else if (product.transportDistance > 2000) standardScore -= 5;
+  // Animal execution adjustments
+  if (factors.animalExecution === 'humane') totalScore += 15;
+  else if (factors.animalExecution === 'standard') totalScore += 0; // No change
+  else if (factors.animalExecution === 'inhumane') totalScore -= 15;
   
-  // Carbon footprint penalty
-  if (product.carbonFootprint > 50) standardScore -= 30;
-  else if (product.carbonFootprint > 20) standardScore -= 20;
-  else if (product.carbonFootprint > 10) standardScore -= 10;
+  // Animal diet adjustments
+  if (factors.animalDiet === 'natural') totalScore += 15;
+  else if (factors.animalDiet === 'organic') totalScore += 10;
+  else if (factors.animalDiet === 'conventional') totalScore -= 5;
+  else if (factors.animalDiet === 'processed') totalScore -= 15;
   
-  // Certification bonus
-  standardScore += Math.min(product.certifications.length * 5, 15);
-  
-  totalScore += (standardScore * 0.3); // 30% weight for standard factors
+  // Certification adjustments (3 points each)
+  totalScore += product.certifications.length * 3;
   
   return Math.max(0, Math.min(100, Math.round(totalScore)));
 }

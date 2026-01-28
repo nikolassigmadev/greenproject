@@ -6,6 +6,7 @@ export const exportProductsToCode = (products: Product[]): string => {
     const imageUrlField = product.imageUrl ? `imageUrl: '${product.imageUrl}'` : 'imageUrl: undefined';
     const regionField = product.origin.region ? `region: '${product.origin.region}'` : '';
     const manualScoreField = product.manualScore !== undefined ? `manualScore: ${product.manualScore}` : '';
+    const commentsField = product.comments ? `comments: '${product.comments.replace(/'/g, "\\'")}'` : '';
     
     return `  {
     id: '${product.id}',
@@ -22,6 +23,7 @@ export const exportProductsToCode = (products: Product[]): string => {
     barcode: '${product.barcode}',
     ${imageUrlField},
     ${manualScoreField}
+    ${commentsField ? `,${commentsField}` : ''}
   }`;
   }).join(',\n');
 
@@ -38,6 +40,7 @@ export const exportSingleProductToCode = (product: Product): string => {
   const imageUrlField = product.imageUrl ? `imageUrl: '${product.imageUrl}'` : 'imageUrl: undefined';
   const regionField = product.origin.region ? `region: '${product.origin.region}'` : '';
   const manualScoreField = product.manualScore !== undefined ? `manualScore: ${product.manualScore}` : '';
+  const commentsField = product.comments ? `comments: '${product.comments.replace(/'/g, "\\'")}'` : '';
   
   return `  {
     id: '${product.id}',
@@ -54,6 +57,7 @@ export const exportSingleProductToCode = (product: Product): string => {
     barcode: '${product.barcode}',
     ${imageUrlField},
     ${manualScoreField}
+    ${commentsField ? `,${commentsField}` : ''}
   }`;
 };
 
