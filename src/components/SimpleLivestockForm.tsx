@@ -4,6 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export interface SimpleLivestockData {
+  productType: 'BEEF' | 'CHICKEN' | 'EGGS' | 'VENISON' | 'PORK' | 'FISH' | 'COW_MILK' | 'GOAT_MILK' | 'SHEEP_MILK' | 'BUFFALO_MILK' | 'CHEESE' | 'YOGURT' | 'BUTTER' | 'ICE_CREAM';
   animalSpace: 'excellent' | 'good' | 'poor' | 'terrible';
   animalExecution: 'humane' | 'standard' | 'inhumane';
   animalDiet: 'natural' | 'organic' | 'conventional' | 'processed';
@@ -14,6 +15,23 @@ interface SimpleLivestockFormProps {
   livestockData: SimpleLivestockData;
   onChange: (data: SimpleLivestockData) => void;
 }
+
+const productTypeOptions = [
+  { value: 'BEEF', label: 'Beef', description: 'Cattle meat' },
+  { value: 'CHICKEN', label: 'Chicken', description: 'Poultry meat' },
+  { value: 'EGGS', label: 'Eggs', description: 'Chicken eggs' },
+  { value: 'VENISON', label: 'Venison', description: 'Deer meat' },
+  { value: 'PORK', label: 'Pork', description: 'Pig meat' },
+  { value: 'FISH', label: 'Fish', description: 'Various fish species' },
+  { value: 'COW_MILK', label: 'Cow Milk', description: 'Dairy milk from cows' },
+  { value: 'GOAT_MILK', label: 'Goat Milk', description: 'Dairy milk from goats' },
+  { value: 'SHEEP_MILK', label: 'Sheep Milk', description: 'Dairy milk from sheep' },
+  { value: 'BUFFALO_MILK', label: 'Buffalo Milk', description: 'Dairy milk from buffalo' },
+  { value: 'CHEESE', label: 'Cheese', description: 'Dairy cheese products' },
+  { value: 'YOGURT', label: 'Yogurt', description: 'Dairy yogurt products' },
+  { value: 'BUTTER', label: 'Butter', description: 'Dairy butter products' },
+  { value: 'ICE_CREAM', label: 'Ice Cream', description: 'Dairy ice cream products' },
+];
 
 const animalSpaceOptions = [
   { value: 'excellent', label: 'Excellent', description: 'Ample space, natural environment' },
@@ -55,6 +73,26 @@ export function SimpleLivestockForm({ category, livestockData, onChange }: Simpl
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Product Type */}
+        <div className="space-y-2">
+          <Label>Product Type *</Label>
+          <Select value={livestockData.productType} onValueChange={(value) => updateField('productType', value)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select product type" />
+            </SelectTrigger>
+            <SelectContent>
+              {productTypeOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  <div>
+                    <div className="font-medium">{option.label}</div>
+                    <div className="text-xs text-muted-foreground">{option.description}</div>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
         {/* Animal Space */}
         <div className="space-y-2">
           <Label>Animal Space *</Label>

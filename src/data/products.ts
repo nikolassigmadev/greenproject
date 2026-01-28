@@ -22,6 +22,7 @@ export interface Product {
   barcode?: string;
   keywords: string[]; // For finding alternatives
   manualScore?: number; // Optional manual score override (0-100)
+  comments?: string; // Comments that appear on the product page
 }
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
@@ -759,7 +760,40 @@ export const defaultProducts: Product[] = [
     barcode: '',
     imageUrl: undefined,
     
+  },
+      {
+    id: '#p0055',
+    name: 'organicccccc',
+    brand: '',
+    category: 'Meat, Dairy & Eggs',
+    origin: { country: '' },
+    materials: ['BEEF', 'Good Space', 'Standard Execution', 'Conventional Diet'],
+    laborRisk: 'high',
+    transportDistance: 0,
+    certifications: [],
+    carbonFootprint: 0,
+    keywords: [],
+    barcode: '',
+    imageUrl: undefined,
+    
+  },
+  {
+    id: '#p0056',
+    name: 'geogeogeo',
+    brand: 'geogeo',
+    category: 'Meat, Dairy & Eggs',
+    origin: { country: '' },
+    materials: ['COW_MILK', 'Poor Space', 'Humane Execution', 'Processed Diet'],
+    laborRisk: 'medium',
+    transportDistance: 4444444424,
+    certifications: [],
+    carbonFootprint: 0,
+    keywords: [],
+    barcode: '',
+    imageUrl: undefined,
+   comments: 'gggggggggggg'
   }
+
 ];
 
 

@@ -5,14 +5,17 @@ import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
 import { defaultProducts, Product, calculateScore, getScoreRating } from '@/data/products';
 import { saveProducts, loadProducts } from '@/utils/storage';
-import { Plus, Pencil, Trash2, Upload, ImageIcon, X, Download, LogOut } from 'lucide-react';
+import { Plus, Pencil, Trash2, Upload, ImageIcon, X, Download, LogOut, ChevronsUpDown } from 'lucide-react';
 import { ScoreDisplay } from '@/components/ScoreDisplay';
 import { SimpleLivestockForm, SimpleLivestockData } from '@/components/SimpleLivestockForm';
 import { downloadProductsFile, copySingleProductCode } from '@/utils/productExporter';
@@ -25,11 +28,35 @@ const Admin = () => {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [livestockData, setLivestockData] = useState<SimpleLivestockData>({
+    productType: 'BEEF',
     animalSpace: 'good',
     animalExecution: 'standard',
     animalDiet: 'conventional',
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Livestock certification options (3 points each)
+  const livestockCertifications = [
+    'Certified Humane',
+    'Animal Welfare Approved',
+    'Global Animal Partnership (GAP) 5+',
+    'Global Animal Partnership (GAP) 4',
+    'Global Animal Partnership (GAP) 3',
+    'Global Animal Partnership (GAP) 2',
+    'Global Animal Partnership (GAP) 1',
+    'USDA Organic',
+    'EU Organic',
+    'Pasture for Life',
+    'Regenerative Organic Certified',
+    'Demeter Biodynamic',
+    'MSC Certified',
+    'Sustainable Seafood',
+    'Non-GMO',
+    'Grass-fed Certified',
+    'Free-Range Certified',
+    'Carbon Neutral',
+    'Fair Trade',
+  ];
 
   // Load products from localStorage on component mount
   useEffect(() => {
@@ -62,6 +89,7 @@ const Admin = () => {
       
       // Build materials array from livestock data with appropriate labels
       const livestockMaterials = [
+        livestockData.productType,
         livestockData.animalSpace === 'excellent' ? 'Excellent Space' :
         livestockData.animalSpace === 'good' ? 'Good Space' :
         livestockData.animalSpace === 'poor' ? 'Poor Space' : 'Terrible Space',
@@ -118,11 +146,13 @@ const Admin = () => {
     keywords: [],
     barcode: '',
     manualScore: undefined,
+    comments: '',
   };
 
   const handleAddNew = () => {
     setEditingProduct({ ...emptyProduct, id: generateNextId() });
     setLivestockData({
+      productType: 'BEEF',
       animalSpace: 'good',
       animalExecution: 'standard',
       animalDiet: 'conventional',
@@ -134,6 +164,7 @@ const Admin = () => {
     setEditingProduct({ ...product });
     // Reset livestock data to defaults
     setLivestockData({
+      productType: 'BEEF',
       animalSpace: 'good',
       animalExecution: 'standard',
       animalDiet: 'conventional',
@@ -399,23 +430,94 @@ const Admin = () => {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label>Materials (comma-separated) *</Label>
-                  <Input 
-                    value={editingProduct.materials.join(', ')} 
-                    onChange={(e) => updateEditingProduct('materials', parseArrayInput(e.target.value))}
-                    placeholder="e.g., Organic Cotton, Natural Dyes"
-                  />
-                </div>
+                {/* Hide materials field for livestock products since they use the SimpleLivestockForm */}
+                {!editingProduct.category.includes('Meat') && 
+                 !editingProduct.category.includes('Dairy') && 
+                 !editingProduct.category.includes('Eggs') && (
+                  <div className="space-y-2">
+                    <Label>Materials (comma-separated) *</Label>
+                    <Input 
+                      value={editingProduct.materials.join(', ')} 
+                      onChange={(e) => updateEditingProduct('materials', parseArrayInput(e.target.value))}
+                      placeholder="e.g., Organic Cotton, Natural Dyes"
+                    />
+                  </div>
+                )}
 
-                <div className="space-y-2">
-                  <Label>Certifications (comma-separated)</Label>
-                  <Input 
-                    value={editingProduct.certifications.join(', ')} 
-                    onChange={(e) => updateEditingProduct('certifications', parseArrayInput(e.target.value))}
-                    placeholder="e.g., Fair Trade, Organic, B-Corp"
-                  />
-                </div>
+                {/* Multi-select certifications for livestock products */}
+                {editingProduct.category.includes('Meat') || 
+                 editingProduct.category.includes('Dairy') || 
+                 editingProduct.category.includes('Eggs') ? (
+                  <div className="space-y-2">
+                    <Label>Certifications (3 points each)</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          className="w-full justify-between"
+                        >
+                          {editingProduct.certifications.length > 0 
+                            ? `${editingProduct.certifications.length} selected`
+                            : "Select certifications..."
+                          }
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Search certifications..." />
+                          <CommandEmpty>No certification found.</CommandEmpty>
+                          <CommandGroup className="max-h-64 overflow-auto">
+                            {livestockCertifications.map((certification) => (
+                              <CommandItem
+                                key={certification}
+                                onSelect={() => {
+                                  const currentCerts = editingProduct.certifications;
+                                  if (currentCerts.includes(certification)) {
+                                    updateEditingProduct('certifications', currentCerts.filter(c => c !== certification));
+                                  } else {
+                                    updateEditingProduct('certifications', [...currentCerts, certification]);
+                                  }
+                                }}
+                              >
+                                <Checkbox
+                                  checked={editingProduct.certifications.includes(certification)}
+                                  className="mr-2"
+                                />
+                                {certification}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                    {editingProduct.certifications.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {editingProduct.certifications.map((cert) => (
+                          <Badge key={cert} variant="secondary" className="text-xs">
+                            {cert}
+                            <button
+                              className="ml-1 hover:text-destructive"
+                              onClick={() => updateEditingProduct('certifications', editingProduct.certifications.filter(c => c !== cert))}
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Label>Certifications (comma-separated)</Label>
+                    <Input 
+                      value={editingProduct.certifications.join(', ')} 
+                      onChange={(e) => updateEditingProduct('certifications', parseArrayInput(e.target.value))}
+                      placeholder="e.g., Fair Trade, Organic, B-Corp"
+                    />
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   <Label>Keywords (comma-separated) *</Label>
@@ -424,6 +526,19 @@ const Admin = () => {
                     onChange={(e) => updateEditingProduct('keywords', parseArrayInput(e.target.value))}
                     placeholder="e.g., shirt, tshirt, cotton, apparel"
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Product Comments</Label>
+                  <Textarea 
+                    value={editingProduct.comments || ''} 
+                    onChange={(e) => updateEditingProduct('comments', e.target.value)}
+                    placeholder="Add comments that will appear on the product page..."
+                    rows={3}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    These comments will be displayed on the front of the product page for all users to see.
+                  </p>
                 </div>
 
                 <div className="space-y-2">
