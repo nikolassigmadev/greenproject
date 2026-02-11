@@ -1,0 +1,298 @@
+==============================================================
+  GIT COMMANDS REFERENCE
+==============================================================
+
+
+--------------------------------------------------------------
+  1. UNDO / REVERSE CHANGES
+--------------------------------------------------------------
+
+# Discard unstaged changes in a specific file
+git checkout -- <file>
+
+# Discard ALL unstaged changes in the working directory
+git checkout -- .
+
+# Unstage a file (keep changes in working directory)
+git reset HEAD <file>
+
+# Unstage ALL files (keep changes in working directory)
+git reset HEAD .
+
+# Undo the last commit but KEEP changes staged
+git reset --soft HEAD~1
+
+# Undo the last commit but KEEP changes unstaged
+git reset HEAD~1
+
+# Undo the last commit AND DISCARD all changes
+git reset --hard HEAD~1
+
+# Undo a specific number of commits (e.g. last 3)
+git reset --hard HEAD~3
+
+# Revert a commit by creating a NEW undo commit (safe for shared branches)
+git revert <commit-hash>
+
+# Revert a commit without auto-committing (lets you review first)
+git revert --no-commit <commit-hash>
+
+# Restore a single file from a specific commit
+git checkout <commit-hash> -- <file>
+
+
+--------------------------------------------------------------
+  2. PUSH
+--------------------------------------------------------------
+
+# Push current branch to remote
+git push
+
+# Push and set upstream tracking (use for first push of a new branch)
+git push -u origin <branch-name>
+
+# Force push (CAUTION: overwrites remote history)
+git push --force origin <branch-name>
+
+# Force push with safety check (fails if someone else pushed first)
+git push --force-with-lease origin <branch-name>
+
+# Push a specific branch
+git push origin <branch-name>
+
+# Push all branches
+git push --all origin
+
+# Push tags to remote
+git push origin --tags
+
+
+--------------------------------------------------------------
+  3. PULL / FETCH
+--------------------------------------------------------------
+
+# Pull latest changes from remote (fetch + merge)
+git pull
+
+# Pull from a specific remote branch
+git pull origin <branch-name>
+
+# Pull with rebase instead of merge (cleaner history)
+git pull --rebase origin <branch-name>
+
+# Fetch updates from remote WITHOUT merging
+git fetch origin
+
+# Fetch a specific branch
+git fetch origin <branch-name>
+
+# Fetch all remotes
+git fetch --all
+
+
+--------------------------------------------------------------
+  4. BRANCHING
+--------------------------------------------------------------
+
+# List all local branches (* marks current branch)
+git branch
+
+# List all branches including remote
+git branch -a
+
+# Create a new branch
+git branch <branch-name>
+
+# Create a new branch AND switch to it
+git checkout -b <branch-name>
+
+# Switch to an existing branch
+git checkout <branch-name>
+
+# Rename the current branch
+git branch -m <new-name>
+
+# Delete a local branch (only if fully merged)
+git branch -d <branch-name>
+
+# Force delete a local branch (even if not merged)
+git branch -D <branch-name>
+
+# Delete a remote branch
+git push origin --delete <branch-name>
+
+
+--------------------------------------------------------------
+  5. STASHING
+--------------------------------------------------------------
+
+# Save current changes to stash (working directory becomes clean)
+git stash
+
+# Save with a description
+git stash save "description of changes"
+
+# List all stashes
+git stash list
+
+# Apply the most recent stash (keeps it in stash list)
+git stash apply
+
+# Apply a specific stash
+git stash apply stash@{2}
+
+# Apply the most recent stash AND remove it from stash list
+git stash pop
+
+# Drop a specific stash
+git stash drop stash@{0}
+
+# Clear all stashes
+git stash clear
+
+# Show what's in the most recent stash
+git stash show -p
+
+
+--------------------------------------------------------------
+  6. VIEWING HISTORY / STATUS
+--------------------------------------------------------------
+
+# Show working tree status (modified, staged, untracked files)
+git status
+
+# Show compact status
+git status -s
+
+# Show unstaged changes
+git diff
+
+# Show staged changes (ready to commit)
+git diff --staged
+
+# Show changes between two commits
+git diff <commit1>..<commit2>
+
+# Show commit history
+git log
+
+# Show compact one-line history
+git log --oneline
+
+# Show last N commits
+git log --oneline -10
+
+# Show history with file change stats
+git log --stat
+
+# Show history with dates
+git log --format="%h %ad %s" --date=relative
+
+# Show visual branch graph
+git log --oneline --graph --all
+
+# Show details of a specific commit
+git show <commit-hash>
+
+# Show who changed each line of a file
+git blame <file>
+
+
+--------------------------------------------------------------
+  7. STAGING / COMMITTING
+--------------------------------------------------------------
+
+# Stage a specific file
+git add <file>
+
+# Stage multiple files
+git add <file1> <file2>
+
+# Stage all changes (new, modified, deleted)
+git add -A
+
+# Stage all changes in current directory
+git add .
+
+# Commit staged changes with a message
+git commit -m "your message"
+
+# Amend the last commit (change message or add files)
+git commit --amend -m "updated message"
+
+
+--------------------------------------------------------------
+  8. MERGING
+--------------------------------------------------------------
+
+# Merge a branch into your current branch
+git merge <branch-name>
+
+# Abort a merge in progress (if there are conflicts)
+git merge --abort
+
+# After resolving conflicts, mark file as resolved
+git add <resolved-file>
+
+# Then complete the merge
+git commit
+
+# Merge with no fast-forward (creates a merge commit even if not needed)
+git merge --no-ff <branch-name>
+
+
+--------------------------------------------------------------
+  9. REMOTE MANAGEMENT
+--------------------------------------------------------------
+
+# Show remote repositories
+git remote -v
+
+# Add a new remote
+git remote add <name> <url>
+
+# Remove a remote
+git remote remove <name>
+
+# Change a remote's URL
+git remote set-url origin <new-url>
+
+
+--------------------------------------------------------------
+  10. TAGGING
+--------------------------------------------------------------
+
+# List all tags
+git tag
+
+# Create a lightweight tag
+git tag <tag-name>
+
+# Create an annotated tag with message
+git tag -a <tag-name> -m "tag message"
+
+# Tag a specific commit
+git tag <tag-name> <commit-hash>
+
+# Delete a local tag
+git tag -d <tag-name>
+
+# Delete a remote tag
+git push origin --delete <tag-name>
+
+
+--------------------------------------------------------------
+  11. CLEANUP
+--------------------------------------------------------------
+
+# Remove untracked files (dry run -- shows what would be deleted)
+git clean -n
+
+# Remove untracked files (actually delete them)
+git clean -f
+
+# Remove untracked files AND directories
+git clean -fd
+
+# Prune remote tracking branches that no longer exist
+git remote prune origin
