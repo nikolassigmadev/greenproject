@@ -42,16 +42,37 @@ export function ProductCard({ product }: ProductCardProps) {
         </div>
         
         <CardContent className="p-0">
-          {/* Image placeholder with enhanced effects */}
+          {/* Product Image with fallback to leaf icon */}
           <div className="h-40 bg-gradient-to-br from-eco-sage/20 via-eco-leaf/10 to-eco-amber/10 flex items-center justify-center relative overflow-hidden">
             {/* Animated background pattern */}
             <div className="absolute inset-0 opacity-20">
               <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-primary/20 to-transparent animate-pulse-slow" />
             </div>
             
-            <Leaf className={`w-16 h-16 text-primary/40 transition-all duration-500 ${
-              isHovered ? 'scale-125 rotate-12 text-primary/60' : 'scale-100 rotate-0'
-            }`} />
+            {/* Product Image or Leaf Icon */}
+            {product.imageUrl ? (
+              <img 
+                src={product.imageUrl} 
+                alt={product.name}
+                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                onError={(e) => {
+                  // Fallback to leaf icon if image fails to load
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                  const parent = target.parentElement;
+                  if (parent) {
+                    const leafIcon = document.createElement('div');
+                    leafIcon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-16 h-16 text-primary/40 transition-all duration-500 scale-100 rotate-0"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8c0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6c0 0 .01.01.03.01C7 15.08 7 15.14 7 15.2c0 2.08-1.07 3.28-1 5.3c0 0-1.93.5-4 .5Z"/></svg>';
+                    leafIcon.className = 'absolute inset-0 flex items-center justify-center';
+                    parent.appendChild(leafIcon);
+                  }
+                }}
+              />
+            ) : (
+              <Leaf className={`w-16 h-16 text-primary/40 transition-all duration-500 ${
+                isHovered ? 'scale-125 rotate-12 text-primary/60' : 'scale-100 rotate-0'
+              }`} />
+            )}
             
             {/* Score badge with enhanced animation */}
             <div className={`absolute top-3 right-3 transition-all duration-300 ${

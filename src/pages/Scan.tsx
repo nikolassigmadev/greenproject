@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Camera, Upload, Search, Loader2, AlertCircle, X, ScanLine, Image as ImageIcon } from "lucide-react";
+import { Camera, Upload, Search, Loader2, AlertCircle, X, ScanLine, Image as ImageIcon, Plus } from "lucide-react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { calculateScore, Product } from "@/data/products";
 import { ScoreBreakdownSlider } from "@/components/ScoreBreakdownSlider";
 import { recognizeImageWithOpenAI } from "@/services/ocr/openai-service";
 import { advancedProductOCR, extractBrandName, extractProductName, extractCertifications, checkOpenAIHealth } from "@/services/ocr/advanced-openai-ocr";
+import { copySingleProductCode } from "@/utils/productExporter";
 import Tesseract from "tesseract.js";
 
 type OcrWord = {
@@ -714,6 +715,82 @@ const Scan = () => {
     }
   }, [navigate, products, toast]);
 
+  // Create new product from OCR data
+  const createProductFromOCR = useCallback(async () => {
+    if (!uploadedImage || !extractedText) {
+      toast({
+        title: "Missing Information",
+        description: "Please scan an image first to extract product information.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Get OCR data for detailed extraction
+      const ocrData = await advancedProductOCR(uploadedImage);
+      
+      if (!ocrData.success) {
+        toast({
+          title: "OCR Failed",
+          description: "Could not extract product information. Try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Generate new product ID
+      const newProductId = `#p${String(products.length + 1).padStart(4, '0')}`;
+      
+      // Create new product object with extracted data
+      const newProduct: Product = {
+        id: newProductId,
+        name: ocrData.productName || extractedText.split(' ').slice(-2).join(' '), // Use last 2 words as fallback name
+        brand: ocrData.brandName || 'Unknown Brand',
+        category: 'General', // Default category
+        origin: {
+          country: 'Unknown', // Default origin
+        },
+        materials: ocrData.ingredients || [], // Use ingredients as materials
+        laborRisk: 'medium', // Default risk level
+        transportDistance: 500, // Default distance
+        certifications: ocrData.certifications || [],
+        carbonFootprint: 2.5, // Default footprint
+        keywords: [...extractedText.split(' '), ...(ocrData.certifications || [])], // Combine text and certifications
+        barcode: ocrData.barcode || '',
+        imageUrl: uploadedImage, // Include the uploaded image
+      };
+
+      // Copy product code to clipboard
+      const success = await copySingleProductCode(newProduct);
+      
+      if (success) {
+        toast({
+          title: "Product Code Copied! 📋",
+          description: `Product "${newProduct.name}" code copied to clipboard. Paste it in products.ts file.`,
+        });
+        
+        // Navigate to admin page for easy editing
+        setTimeout(() => {
+          navigate('/admin');
+        }, 2000);
+      } else {
+        toast({
+          title: "Copy Failed",
+          description: "Could not copy product code. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error creating product:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create product. Please try again.",
+        variant: "destructive",
+      });
+    }
+  }, [uploadedImage, extractedText, products, toast, navigate]);
+
   // Process image with OCR - Try OpenAI first, fallback to Tesseract
   const processImage = useCallback(async (imageData: string) => {
     setIsProcessing(true);
@@ -1207,6 +1284,52 @@ const Scan = () => {
                       </div>
                     </button>
                   ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* No Results Found - Add Product Option */}
+          {searchResults.length === 0 && extractedText && uploadedImage && (
+            <Card>
+              <CardHeader>
+                <CardTitle>No Products Found</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <p className="text-muted-foreground">
+                    No products match "{extractedText}". Would you like to add this product to the database?
+                  </p>
+                  
+                  {/* Show extracted info */}
+                  <div className="p-3 rounded-lg bg-muted/50 border">
+                    <p className="text-sm font-medium mb-2">Extracted Information:</p>
+                    <p className="text-sm text-muted-foreground">{extractedText}</p>
+                  </div>
+                  
+                  {/* Show uploaded image */}
+                  <div className="flex items-center gap-4">
+                    <div className="w-20 h-20 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                      <img 
+                        src={uploadedImage} 
+                        alt="Scanned product" 
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <Button 
+                        onClick={createProductFromOCR}
+                        className="w-full bg-gradient-hero gap-2"
+                        disabled={isProcessing}
+                      >
+                        <Plus className="w-4 h-4" />
+                        {isProcessing ? 'Processing...' : 'Add Product with Image'}
+                      </Button>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        This will copy product code to clipboard with the image included
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
