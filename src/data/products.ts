@@ -10,12 +10,12 @@ export interface Product {
   name: string;
   brand: string;
   category: string;
-  origin: {
+  origin?: {
     country: string;
     region?: string;
   };
   materials: string[]; // e.g., ['Organic Cotton', 'Recycled Polyester']
-  laborRisk: 'low' | 'medium' | 'high';
+  laborRisk?: 'low' | 'medium' | 'high'; // Optional for backward compatibility
   transportDistance: number; // km from origin to user (estimated)
   certifications: string[]; // e.g., Fair Trade, Organic, B-Corp
   carbonFootprint: number; // kg CO2 equivalent
@@ -24,6 +24,17 @@ export interface Product {
   keywords: string[]; // For finding alternatives
   manualScore?: number; // Optional manual score override (0-100)
   comments?: string; // Comments that appear on the product page
+  
+  // New detailed scoring fields
+  laborViolations?: string;
+  laborBonuses?: string[];
+  laborManualPoints?: number; // Manual override for labor scoring (0-35)
+  animalWelfareConditions?: string;
+  animalWelfareItems?: string[];
+  animalWelfareManualPoints?: number; // Manual override for animal welfare (0-30)
+  transportMode?: string;
+  transportManualPoints?: number; // Manual override for transportation (0-10)
+  certificationManualPoints?: number; // Manual override for certifications (0-10)
 }
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));

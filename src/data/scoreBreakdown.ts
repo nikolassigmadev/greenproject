@@ -12,6 +12,7 @@ export interface ScoreFactorBreakdown {
   direction: ScoreFactorDirection;
   inputLabel: string;
   inputValue: string;
+  description?: string; // Optional description of how the score was calculated
 }
 
 export interface ScoreBreakdown {
@@ -26,31 +27,116 @@ const clamp = (value: number, min: number, max: number) => Math.max(min, Math.mi
 // ============================================================
 // LABOR (35 points max) — Start at 35, deduct violations, add bonuses
 // ============================================================
-const laborScore = (laborRisk: Product["laborRisk"], certifications: string[]): number => {
-  let score = 35;
-
-  if (laborRisk === "high") {
-    // High risk = no living wage (-15) + unsafe conditions (-12)
-    score -= 27;
-  } else if (laborRisk === "medium") {
-    // Medium risk = no union rights (-8) + limited transparency (-5)
-    score -= 13;
+const laborScore = (product: Product): number => {
+  // Use manual points if provided, otherwise calculate normally
+  if (product.laborManualPoints !== undefined) {
+    console.log('Using manual labor points:', product.laborManualPoints);
+    return clamp(product.laborManualPoints, 0, 35);
   }
-  // low = no violations
 
-  // Bonuses from certifications
-  const certs = certifications.map((c) => c.toLowerCase());
-  if (certs.some((c) => c.includes("fair trade"))) score += 5;
-  if (certs.some((c) => c.includes("b-corp"))) score += 3;
-  if (certs.some((c) => c.includes("living wage"))) score += 2;
+  let score = 35;
+  console.log('=== LABOR SCORING START ===');
+  console.log('Initial score:', score);
 
-  return clamp(score, 0, 35);
+  // Use detailed labor violations if available, otherwise fall back to laborRisk
+  if (product.laborViolations && product.laborViolations !== 'none') {
+    console.log('Processing labor violations:', product.laborViolations);
+    switch (product.laborViolations) {
+      case 'no-third-party-audit':
+        score -= 3;
+        console.log('After no-third-party-audit deduction:', score);
+        break;
+      case 'limited-transparency':
+        score -= 5;
+        console.log('After limited-transparency deduction:', score);
+        break;
+      case 'no-union-rights':
+        score -= 8;
+        console.log('After no-union-rights deduction:', score);
+        break;
+      case 'excessive-hours':
+        score -= 10;
+        console.log('After excessive-hours deduction:', score);
+        break;
+      case 'unsafe-conditions':
+        score -= 12;
+        console.log('After unsafe-conditions deduction:', score);
+        break;
+      case 'no-living-wage':
+        score -= 15;
+        console.log('After no-living-wage deduction:', score);
+        break;
+      case 'slavery-forced-child-labor':
+        score = 0; // instant fail
+        console.log('After slavery-forced-child-labor deduction:', score);
+        break;
+      case 'none':
+        console.log('No violations, score remains:', score);
+        break;
+    }
+  } else if (product.laborRisk) {
+    console.log('Using fallback laborRisk:', product.laborRisk);
+    // Fall back to original laborRisk logic for backward compatibility
+    if (product.laborRisk === "high") {
+      score -= 27; // High risk = no living wage (-15) + unsafe conditions (-12)
+    } else if (product.laborRisk === "medium") {
+      score -= 13; // Medium risk = no union rights (-8) + limited transparency (-5)
+    }
+    console.log('After laborRisk fallback:', score);
+  } else {
+    console.log('No labor data provided, score remains:', score);
+  }
+
+  // Add labor bonuses from detailed criteria
+  if (product.laborBonuses && product.laborBonuses.length > 0) {
+    console.log('Processing labor bonuses:', product.laborBonuses);
+    const bonuses = product.laborBonuses;
+    if (bonuses.includes('Fair Trade certified (+5)')) {
+      score += 5;
+      console.log('Added Fair Trade bonus, score now:', score);
+    }
+    if (bonuses.includes('B-Corp certified (+3)')) {
+      score += 3;
+      console.log('Added B-Corp bonus, score now:', score);
+    }
+    if (bonuses.includes('Living wage plus (+2)')) {
+      score += 2;
+      console.log('Added Living wage bonus, score now:', score);
+    }
+  } else {
+    console.log('No labor bonuses to process');
+    // Fall back to checking certifications for backward compatibility
+    const certs = product.certifications.map((c) => c.toLowerCase());
+    if (certs.some((c) => c.includes("fair trade"))) {
+      score += 5;
+      console.log('Added Fair Trade from certifications, score now:', score);
+    }
+    if (certs.some((c) => c.includes("b-corp"))) {
+      score += 3;
+      console.log('Added B-Corp from certifications, score now:', score);
+    }
+    if (certs.some((c) => c.includes("living wage"))) {
+      score += 2;
+      console.log('Added Living wage from certifications, score now:', score);
+    }
+  }
+
+  const finalScore = clamp(score, 0, 35);
+  console.log('Final labor score:', finalScore);
+  console.log('=== LABOR SCORING END ===');
+  return finalScore;
 };
 
 // ============================================================
 // ANIMAL WELFARE (30 points max) — Start at 30, deduct violations, add bonuses
 // ============================================================
 const animalWelfareScore = (product: Product): number => {
+  // Use manual points if provided, otherwise calculate normally
+  if (product.animalWelfareManualPoints !== undefined) {
+    console.log('Using manual animal welfare points:', product.animalWelfareManualPoints);
+    return clamp(product.animalWelfareManualPoints, 0, 30);
+  }
+
   let score = 30;
   const materials = product.materials.map((m) => m.toLowerCase());
   const certs = product.certifications.map((c) => c.toLowerCase());
@@ -59,7 +145,27 @@ const animalWelfareScore = (product: Product): number => {
     product.category.includes("Dairy") ||
     product.category.includes("Eggs");
 
-  if (isLivestock) {
+  // Use detailed animal welfare conditions if available
+  if (product.animalWelfareConditions) {
+    switch (product.animalWelfareConditions) {
+      case 'plant-based':
+        score = 30; // Plant-based/vegan gets full points
+        break;
+      case 'organic-humane':
+        score = 25; // Organic + humane
+        break;
+      case 'free-range-cage-free':
+        score = 18; // Free-range/cage-free
+        break;
+      case 'intensive-farming':
+        score = 8; // Intensive farming
+        break;
+      case 'factory-farmed':
+        score = 0; // Factory farmed - instant fail
+        break;
+    }
+  } else if (isLivestock) {
+    // Fall back to simple livestock scoring for backward compatibility
     const factors = extractSimpleLivestockFactors(product);
 
     // Map animal space to farming type violations
@@ -72,11 +178,6 @@ const animalWelfareScore = (product: Product): number => {
     } else if (factors.animalSpace === "excellent") {
       score -= 5; // organic + humane
     }
-
-    // Animal testing penalty
-    if (materials.some((m) => m.includes("animal testing") || m.includes("tested on animals"))) {
-      score -= 15;
-    }
   } else {
     // Non-livestock: check for animal-derived materials or testing
     if (materials.some((m) => m.includes("animal testing") || m.includes("tested on animals"))) {
@@ -87,11 +188,21 @@ const animalWelfareScore = (product: Product): number => {
     }
   }
 
-  // Bonuses from certifications
-  if (certs.some((c) => c.includes("certified humane"))) score += 3;
-  if (certs.some((c) => c.includes("animal welfare approved") || c === "awa")) score += 3;
-  if (certs.some((c) => c.includes("grass-fed") || c.includes("grass fed"))) score += 2;
-  if (certs.some((c) => c.includes("cruelty-free") || c.includes("cruelty free") || c.includes("vegan"))) score += 2;
+  // Add animal welfare bonuses/violations from detailed criteria
+  if (product.animalWelfareItems && product.animalWelfareItems.length > 0) {
+    const items = product.animalWelfareItems;
+    if (items.includes('Certified Humane (+3)')) score += 3;
+    if (items.includes('Animal Welfare Approved (+3)')) score += 3;
+    if (items.includes('Grass-fed (+2)')) score += 2;
+    if (items.includes('Cruelty-free (vegan) (+2)')) score += 2;
+    if (items.includes('Animal testing (-15)')) score -= 15;
+  } else {
+    // Fall back to checking certifications for backward compatibility
+    if (certs.some((c) => c.includes("certified humane"))) score += 3;
+    if (certs.some((c) => c.includes("animal welfare approved") || c === "awa")) score += 3;
+    if (certs.some((c) => c.includes("grass-fed") || c.includes("grass fed"))) score += 2;
+    if (certs.some((c) => c.includes("cruelty-free") || c.includes("cruelty free") || c.includes("vegan"))) score += 2;
+  }
 
   return clamp(score, 0, 30);
 };
@@ -119,29 +230,61 @@ const transportBaseScore = (distance: number): number => {
   return 1;
 };
 
-const inferTransportMode = (distance: number): { mode: string; multiplier: number } => {
-  if (distance <= 100) return { mode: "Local", multiplier: 1.2 };
-  if (distance <= 2000) return { mode: "Truck", multiplier: 0.8 };
-  if (distance <= 10000) return { mode: "Ship", multiplier: 0.9 };
+const getTransportMode = (product: Product): { mode: string; multiplier: number } => {
+  // Use detailed transport mode if available, otherwise infer from distance
+  if (product.transportMode) {
+    switch (product.transportMode) {
+      case 'local':
+        return { mode: "Local", multiplier: 1.2 };
+      case 'rail':
+        return { mode: "Rail", multiplier: 1.0 };
+      case 'ship':
+        return { mode: "Ship", multiplier: 0.9 };
+      case 'truck':
+        return { mode: "Truck", multiplier: 0.8 };
+      case 'air':
+        return { mode: "Air", multiplier: 0.5 };
+      default:
+        return { mode: "Truck", multiplier: 0.8 };
+    }
+  }
+  
+  // Fall back to distance-based inference for backward compatibility
+  if (product.transportDistance <= 100) return { mode: "Local", multiplier: 1.2 };
+  if (product.transportDistance <= 2000) return { mode: "Truck", multiplier: 0.8 };
+  if (product.transportDistance <= 10000) return { mode: "Ship", multiplier: 0.9 };
   return { mode: "Air", multiplier: 0.5 };
 };
 
-const transportScore = (distance: number): number => {
-  const base = transportBaseScore(distance);
-  const { multiplier } = inferTransportMode(distance);
+const transportScore = (product: Product): number => {
+  // Use manual points if provided, otherwise calculate normally
+  if (product.transportManualPoints !== undefined) {
+    console.log('Using manual transport points:', product.transportManualPoints);
+    return clamp(product.transportManualPoints, 0, 10);
+  }
+
+  const base = transportBaseScore(product.transportDistance);
+  const { multiplier } = getTransportMode(product);
   return clamp(Math.round(base * multiplier * 10) / 10, 0, 10);
 };
 
 // ============================================================
-// CERTIFICATIONS (5 points max) — Tiered certification scoring
+// CERTIFICATIONS (10 points max) — Tiered certification scoring
 // ============================================================
 const TIER_1 = ["b-corp", "fair trade", "certified humane", "rainforest alliance", "animal welfare approved", "awa"];
 const TIER_2 = ["usda organic", "eu organic", "gots certified", "organic", "non-gmo", "carbon neutral", "leaping bunny"];
 const TIER_3 = ["cage-free", "cage free", "free-range", "free range", "grass-fed", "grass fed", "recyclable"];
 const BONUS_CERTS = ["supply chain disclosure", "third-party audit", "third party audit", "sustainability report"];
 
-const certificationScore = (certifications: string[]): number => {
-  const certs = certifications.map((c) => c.toLowerCase());
+const certificationScore = (product: Product): number => {
+  // Use manual points if provided, otherwise calculate normally
+  if (product.certificationManualPoints !== undefined) {
+    console.log('Using manual certification points:', product.certificationManualPoints);
+    return clamp(product.certificationManualPoints, 0, 10);
+  }
+
+  // Add null check to prevent undefined error
+  const certs = (product.certifications || []).map((c) => c.toLowerCase());
   let score = 0;
 
   for (const cert of certs) {
@@ -161,13 +304,23 @@ const certificationScore = (certifications: string[]): number => {
     }
   }
 
-  return clamp(score, 0, 5);
+  return clamp(score, 0, 10);
 };
 
 // ============================================================
 // MAIN: getScoreBreakdown
 // ============================================================
 export const getScoreBreakdown = (product: Product): ScoreBreakdown => {
+  // Debug: Log the entire product object
+  console.log('=== SCORING DEBUG ===');
+  console.log('Product object:', product);
+  console.log('Labor violations:', product.laborViolations);
+  console.log('Labor bonuses:', product.laborBonuses);
+  console.log('Animal welfare conditions:', product.animalWelfareConditions);
+  console.log('Animal welfare items:', product.animalWelfareItems);
+  console.log('Transport mode:', product.transportMode);
+  console.log('Certifications:', product.certifications);
+  
   // Manual override — untouched
   if (product.manualScore !== undefined && product.manualScore >= 0 && product.manualScore <= 100) {
     return {
@@ -188,15 +341,28 @@ export const getScoreBreakdown = (product: Product): ScoreBreakdown => {
     };
   }
 
-  const labor = laborScore(product.laborRisk, product.certifications);
+  const labor = laborScore(product);
+  console.log('Labor score result:', labor);
+  
   const animal = animalWelfareScore(product);
+  console.log('Animal welfare score result:', animal);
+  
   const carbon = carbonScore(product.carbonFootprint);
-  const transport = transportScore(product.transportDistance);
-  const certs = certificationScore(product.certifications);
+  console.log('Carbon score result:', carbon);
+  
+  const transport = transportScore(product);
+  console.log('Transport score result:', transport);
+  
+  // Add null check to prevent undefined error
+  const certs = (product.certifications || []).map((c) => c.toLowerCase());
+  const certsScore = certificationScore(product);
+  console.log('Certifications score result:', certsScore);
 
-  const finalScore = clamp(Math.round(labor + animal + carbon + transport + certs), 0, 100);
+  const finalScore = clamp(Math.round(labor + animal + carbon + transport + certsScore), 0, 100);
+  console.log('Final total score:', finalScore);
+  console.log('=== END SCORING DEBUG ===');
 
-  const { mode } = inferTransportMode(product.transportDistance);
+  const { mode } = getTransportMode(product);
   const isLivestock =
     product.category.includes("Meat") ||
     product.category.includes("Dairy") ||
@@ -214,7 +380,14 @@ export const getScoreBreakdown = (product: Product): ScoreBreakdown => {
         impact: labor,
         direction: "bonus",
         inputLabel: "Labor risk",
-        inputValue: product.laborRisk,
+        inputValue: product.laborViolations || product.laborRisk || 'Not specified',
+        description: product.laborManualPoints !== undefined 
+          ? `Manually set to ${product.laborManualPoints}/35 points`
+          : product.laborViolations && product.laborViolations !== 'none'
+            ? `Violation: ${product.laborViolations} (${35 - labor} points deducted)`
+            : product.laborRisk
+            ? `Risk level: ${product.laborRisk}`
+            : 'No violations specified',
       },
       {
         key: "animalWelfare",
@@ -223,9 +396,15 @@ export const getScoreBreakdown = (product: Product): ScoreBreakdown => {
         impact: animal,
         direction: "bonus",
         inputLabel: isLivestock ? "Farming conditions" : "Animal impact",
-        inputValue: isLivestock
-          ? extractSimpleLivestockFactors(product).animalSpace
-          : "Non-animal product",
+        inputValue: product.animalWelfareConditions || 
+          (isLivestock
+            ? extractSimpleLivestockFactors(product).animalSpace
+            : "Non-animal product"),
+        description: product.animalWelfareManualPoints !== undefined 
+          ? `Manually set to ${product.animalWelfareManualPoints}/30 points`
+          : product.animalWelfareConditions
+            ? `Farming: ${product.animalWelfareConditions} (${30 - animal} points)`
+            : 'Non-animal product',
       },
       {
         key: "carbon",
@@ -235,6 +414,7 @@ export const getScoreBreakdown = (product: Product): ScoreBreakdown => {
         direction: "bonus",
         inputLabel: "CO₂ emissions",
         inputValue: `${product.carbonFootprint} kg CO₂`,
+        description: `${product.carbonFootprint} kg CO₂ = ${carbon} points (${carbon <= 0.5 ? '≤0.5kg = 20pts' : carbon <= 2 ? '0.5-2kg = 16pts' : carbon <= 5 ? '2-5kg = 11pts' : carbon <= 10 ? '5-10kg = 6pts' : '>10kg = 2pts'})`,
       },
       {
         key: "transport",
@@ -244,15 +424,21 @@ export const getScoreBreakdown = (product: Product): ScoreBreakdown => {
         direction: "bonus",
         inputLabel: "Distance & mode",
         inputValue: `${product.transportDistance.toLocaleString()} km (${mode})`,
+        description: product.transportManualPoints !== undefined 
+          ? `Manually set to ${product.transportManualPoints}/10 points`
+          : `${product.transportDistance.toLocaleString()} km by ${mode} = ${transport} points`,
       },
       {
         key: "certifications",
         label: "Certifications",
-        cap: 5,
+        cap: 10,
         impact: certs,
         direction: "bonus",
         inputLabel: "Certifications",
         inputValue: product.certifications.length > 0 ? product.certifications.join(", ") : "None",
+        description: product.certificationManualPoints !== undefined 
+          ? `Manually set to ${product.certificationManualPoints}/10 points`
+          : `${product.certifications.length} certifications = ${certs} points (${certs} pts total)`,
       },
     ],
   };

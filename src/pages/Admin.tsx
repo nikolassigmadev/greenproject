@@ -20,6 +20,7 @@ import { ScoreDisplay } from '@/components/ScoreDisplay';
 import { SimpleLivestockForm, SimpleLivestockData } from '@/components/SimpleLivestockForm';
 import { downloadProductsFile, copySingleProductCode } from '@/utils/productExporter';
 import { clearAdminAuthenticated, isAdminAuthenticated } from '@/utils/adminAuth';
+import { toast } from 'sonner';
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -150,13 +151,34 @@ const Admin = () => {
   };
 
   const handleAddNew = () => {
-    setEditingProduct({ ...emptyProduct, id: generateNextId() });
-    setLivestockData({
-      productType: 'BEEF',
-      animalSpace: 'good',
-      animalExecution: 'standard',
-      animalDiet: 'conventional',
-    });
+    const newProduct: Product = {
+      id: `#p${(productList.length + 1).toString().padStart(4, '0')}`,
+      name: '',
+      brand: '',
+      category: '',
+      origin: { country: '' },
+      materials: [''],
+      laborRisk: 'low',
+      transportDistance: 0,
+      certifications: [],
+      carbonFootprint: 0,
+      keywords: [''],
+      imageUrl: undefined,
+      barcode: '',
+      comments: '',
+      manualScore: undefined,
+      // Initialize new detailed scoring fields with defaults
+      laborViolations: 'none',
+      laborBonuses: [],
+      laborManualPoints: undefined,
+      animalWelfareConditions: 'plant-based',
+      animalWelfareItems: [],
+      animalWelfareManualPoints: undefined,
+      transportMode: 'truck',
+      transportManualPoints: undefined,
+      certificationManualPoints: undefined,
+    };
+    setEditingProduct(newProduct);
     setIsDialogOpen(true);
   };
 
@@ -201,24 +223,13 @@ const Admin = () => {
     try {
       const success = await copySingleProductCode(product);
       if (success) {
-        toast({
-          title: "Success",
-          description: `Product code for "${product.name}" copied to clipboard!`,
-        });
+        toast.success(`Product code for "${product.name}" copied to clipboard!`);
       } else {
-        toast({
-          title: "Copy Failed",
-          description: "Could not copy to clipboard. Please try again.",
-          variant: "destructive",
-        });
+        toast.error("Could not copy to clipboard. Please try again.");
       }
     } catch (error) {
       console.error('Export error:', error);
-      toast({
-        title: "Error",
-        description: "Failed to export product code.",
-        variant: "destructive",
-      });
+      toast.error("Failed to export product code.");
     }
   };
 
@@ -392,65 +403,300 @@ const Admin = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Labor Risk *</Label>
-                    <Select 
-                      value={editingProduct.laborRisk} 
-                      onValueChange={(v) => updateEditingProduct('laborRisk', v)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="low">Low Risk</SelectItem>
-                        <SelectItem value="medium">Medium Risk</SelectItem>
-                        <SelectItem value="high">High Risk</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
+                                  </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Origin Country *</Label>
-                    <Input 
-                      value={editingProduct.origin.country} 
-                      onChange={(e) => updateEditingProduct('origin.country', e.target.value)}
-                      placeholder="e.g., Portugal"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Origin Region</Label>
-                    <Input 
-                      value={editingProduct.origin.region || ''} 
-                      onChange={(e) => updateEditingProduct('origin.region', e.target.value)}
-                      placeholder="e.g., Porto"
-                    />
-                  </div>
-                </div>
+                
+                {/* LABOR SCORING CRITERIA */}
+                <Card className="border-2">
+                  <CardHeader>
+                    <CardTitle className="text-lg">Labor Scoring Criteria (35 points max)</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Labor Violations</Label>
+                        <Select 
+                          value={editingProduct.laborViolations || 'none'} 
+                          onValueChange={(v) => updateEditingProduct('laborViolations', v)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select labor violations" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">No violations</SelectItem>
+                            <SelectItem value="no-third-party-audit">No third-party audit (-3)</SelectItem>
+                            <SelectItem value="limited-transparency">Limited transparency (-5)</SelectItem>
+                            <SelectItem value="no-union-rights">No union rights (-8)</SelectItem>
+                            <SelectItem value="excessive-hours">Excessive hours &gt;60/week (-10)</SelectItem>
+                            <SelectItem value="unsafe-conditions">Unsafe conditions (-12)</SelectItem>
+                            <SelectItem value="no-living-wage">No living wage (-15)</SelectItem>
+                            <SelectItem value="slavery-forced-child-labor">Slavery/Forced labor/Child labor (-35)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Labor Manual Points</Label>
+                        <Input 
+                          type="number"
+                          value={editingProduct.laborManualPoints || 0} 
+                          onChange={(e) => updateEditingProduct('laborManualPoints', Number(e.target.value))}
+                          placeholder="Manual labor points (0-35)"
+                          min="0"
+                          max="35"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Override labor score. Use this to manually set labor points instead of using violations/bonuses.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Labor Bonuses</Label>
+                        <div className="space-y-2">
+                          {['Fair Trade certified (+5)', 'B-Corp certified (+3)', 'Living wage plus (+2)'].map((bonus) => (
+                            <div key={bonus} className="flex items-center space-x-2">
+                              <Checkbox 
+                                id={bonus}
+                                checked={editingProduct.laborBonuses?.includes(bonus) || false}
+                                onCheckedChange={(checked) => {
+                                  const current = editingProduct.laborBonuses || [];
+                                  if (checked) {
+                                    updateEditingProduct('laborBonuses', [...current, bonus]);
+                                  } else {
+                                    updateEditingProduct('laborBonuses', current.filter(b => b !== bonus));
+                                  }
+                                }}
+                              />
+                              <Label htmlFor={bonus} className="text-sm">{bonus}</Label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Current Labor Score</Label>
+                        <div className="text-lg font-mono bg-muted/50 p-2 rounded">
+                          {editingProduct.laborManualPoints !== undefined ? editingProduct.laborManualPoints : 'Auto-calculated'}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {editingProduct.laborManualPoints !== undefined 
+                            ? `Manually set to ${editingProduct.laborManualPoints}/35 points`
+                            : 'Calculated from violations and bonuses'
+                          }
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Transport Distance (km) *</Label>
-                    <Input 
-                      type="number"
-                      value={editingProduct.transportDistance} 
-                      onChange={(e) => updateEditingProduct('transportDistance', Number(e.target.value))}
-                      placeholder="e.g., 5000"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Carbon Footprint (kg CO₂) *</Label>
-                    <Input 
-                      type="number"
-                      step="0.1"
-                      value={editingProduct.carbonFootprint} 
-                      onChange={(e) => updateEditingProduct('carbonFootprint', Number(e.target.value))}
-                      placeholder="e.g., 8.5"
-                    />
-                  </div>
-                </div>
+                {/* ANIMAL WELFARE SCORING CRITERIA */}
+                <Card className="border-2">
+                  <CardHeader>
+                    <CardTitle className="text-lg">Animal Welfare Scoring Criteria (30 points max)</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Farming Conditions</Label>
+                        <Select 
+                          value={editingProduct.animalWelfareConditions || 'plant-based'} 
+                          onValueChange={(v) => updateEditingProduct('animalWelfareConditions', v)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select farming conditions" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="plant-based">Plant-based/vegan (30 points)</SelectItem>
+                            <SelectItem value="organic-humane">Organic + humane (25 points)</SelectItem>
+                            <SelectItem value="free-range-cage-free">Free-range/cage-free (18 points)</SelectItem>
+                            <SelectItem value="intensive-farming">Intensive farming (8 points)</SelectItem>
+                            <SelectItem value="factory-farmed">Factory farmed (0 points)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Animal Welfare Manual Points</Label>
+                        <Input 
+                          type="number"
+                          value={editingProduct.animalWelfareManualPoints || 0} 
+                          onChange={(e) => updateEditingProduct('animalWelfareManualPoints', Number(e.target.value))}
+                          placeholder="Manual animal welfare points (0-30)"
+                          min="0"
+                          max="30"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Override animal welfare score manually.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Animal Welfare Bonuses/Violations</Label>
+                        <div className="space-y-2">
+                          {['Certified Humane (+3)', 'Animal Welfare Approved (+3)', 'Grass-fed (+2)', 'Cruelty-free (vegan) (+2)', 'Animal testing (-15)'].map((item) => (
+                            <div key={item} className="flex items-center space-x-2">
+                              <Checkbox 
+                                id={item}
+                                checked={editingProduct.animalWelfareItems?.includes(item) || false}
+                                onCheckedChange={(checked) => {
+                                  const current = editingProduct.animalWelfareItems || [];
+                                  if (checked) {
+                                    updateEditingProduct('animalWelfareItems', [...current, item]);
+                                  } else {
+                                    updateEditingProduct('animalWelfareItems', current.filter(i => i !== item));
+                                  }
+                                }}
+                              />
+                              <Label htmlFor={item} className="text-sm">{item}</Label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Current Animal Welfare Score</Label>
+                        <div className="text-lg font-mono bg-muted/50 p-2 rounded">
+                          {editingProduct.animalWelfareManualPoints !== undefined ? editingProduct.animalWelfareManualPoints : 'Auto-calculated'}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {editingProduct.animalWelfareManualPoints !== undefined 
+                            ? `Manually set to ${editingProduct.animalWelfareManualPoints}/30 points`
+                            : 'Calculated from farming conditions and bonuses'
+                          }
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
 
+                {/* CARBON FOOTPRINT SCORING */}
+                <Card className="border-2">
+                  <CardHeader>
+                    <CardTitle className="text-lg">Carbon Footprint Scoring (20 points max)</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>CO2 Emissions (kg) *</Label>
+                        <Input 
+                          type="number"
+                          step="0.1"
+                          value={editingProduct.carbonFootprint} 
+                          onChange={(e) => updateEditingProduct('carbonFootprint', Number(e.target.value))}
+                          placeholder="e.g., 8.5"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          &le;0.5kg: 20pts | 0.5-2kg: 16pts | 2-5kg: 11pts | 5-10kg: 6pts | &gt;10kg: 2pts
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* CERTIFICATIONS SCORING */}
+                <Card className="border-2">
+                  <CardHeader>
+                    <CardTitle className="text-lg">Certifications Scoring (10 points max)</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label>Tier 1 (2 points each)</Label>
+                        <div className="space-y-1">
+                          {['B-Corp', 'Fair Trade', 'Certified Humane', 'Rainforest Alliance', 'AWA'].map((cert) => (
+                            <div key={cert} className="flex items-center space-x-2">
+                              <Checkbox 
+                                id={cert}
+                                checked={editingProduct.certifications.includes(cert)}
+                                onCheckedChange={(checked) => {
+                                  const current = editingProduct.certifications;
+                                  if (checked) {
+                                    updateEditingProduct('certifications', [...current, cert]);
+                                  } else {
+                                    updateEditingProduct('certifications', current.filter(c => c !== cert));
+                                  }
+                                }}
+                              />
+                              <Label htmlFor={cert} className="text-sm">{cert}</Label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Tier 2 (1 point each)</Label>
+                        <div className="space-y-1">
+                          {['USDA Organic', 'EU Organic', 'Non-GMO', 'Carbon Neutral', 'Leaping Bunny'].map((cert) => (
+                            <div key={cert} className="flex items-center space-x-2">
+                              <Checkbox 
+                                id={cert}
+                                checked={editingProduct.certifications.includes(cert)}
+                                onCheckedChange={(checked) => {
+                                  const current = editingProduct.certifications;
+                                  if (checked) {
+                                    updateEditingProduct('certifications', [...current, cert]);
+                                  } else {
+                                    updateEditingProduct('certifications', current.filter(c => c !== cert));
+                                  }
+                                }}
+                              />
+                              <Label htmlFor={cert} className="text-sm">{cert}</Label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Tier 3 (0.5 points each) + Bonuses</Label>
+                        <div className="space-y-1">
+                          {['Cage-free', 'Free-range', 'Grass-fed', 'Recyclable', 'Supply chain disclosure (+2)', 'Third-party audit (+1)', 'Sustainability report (+1)'].map((cert) => (
+                            <div key={cert} className="flex items-center space-x-2">
+                              <Checkbox 
+                                id={cert}
+                                checked={editingProduct.certifications.includes(cert)}
+                                onCheckedChange={(checked) => {
+                                  const current = editingProduct.certifications;
+                                  if (checked) {
+                                    updateEditingProduct('certifications', [...current, cert]);
+                                  } else {
+                                    updateEditingProduct('certifications', current.filter(c => c !== cert));
+                                  }
+                                }}
+                              />
+                              <Label htmlFor={cert} className="text-sm">{cert}</Label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Certification Manual Points</Label>
+                          <Input 
+                            type="number"
+                            value={editingProduct.certificationManualPoints || 0} 
+                            onChange={(e) => updateEditingProduct('certificationManualPoints', Number(e.target.value))}
+                            placeholder="Manual certification points (0-10)"
+                            min="0"
+                            max="10"
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Override certification score manually.
+                          </p>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Current Certification Score</Label>
+                          <div className="text-lg font-mono bg-muted/50 p-2 rounded">
+                            {editingProduct.certificationManualPoints !== undefined ? editingProduct.certificationManualPoints : 'Auto-calculated'}
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {editingProduct.certificationManualPoints !== undefined 
+                              ? `Manually set to ${editingProduct.certificationManualPoints}/10 points`
+                              : 'Calculated from selected certifications'
+                            }
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                
                 {/* Hide materials field for livestock products since they use the SimpleLivestockForm */}
                 {!editingProduct.category.includes('Meat') && 
                  !editingProduct.category.includes('Dairy') && 
@@ -465,81 +711,7 @@ const Admin = () => {
                   </div>
                 )}
 
-                {/* Multi-select certifications for livestock products */}
-                {editingProduct.category.includes('Meat') || 
-                 editingProduct.category.includes('Dairy') || 
-                 editingProduct.category.includes('Eggs') ? (
-                  <div className="space-y-2">
-                    <Label>Certifications (3 points each)</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          role="combobox"
-                          className="w-full justify-between"
-                        >
-                          {editingProduct.certifications.length > 0 
-                            ? `${editingProduct.certifications.length} selected`
-                            : "Select certifications..."
-                          }
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-full p-0" align="start">
-                        <Command>
-                          <CommandInput placeholder="Search certifications..." />
-                          <CommandEmpty>No certification found.</CommandEmpty>
-                          <CommandGroup className="max-h-64 overflow-auto">
-                            {livestockCertifications.map((certification) => (
-                              <CommandItem
-                                key={certification}
-                                onSelect={() => {
-                                  const currentCerts = editingProduct.certifications;
-                                  if (currentCerts.includes(certification)) {
-                                    updateEditingProduct('certifications', currentCerts.filter(c => c !== certification));
-                                  } else {
-                                    updateEditingProduct('certifications', [...currentCerts, certification]);
-                                  }
-                                }}
-                              >
-                                <Checkbox
-                                  checked={editingProduct.certifications.includes(certification)}
-                                  className="mr-2"
-                                />
-                                {certification}
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                    {editingProduct.certifications.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {editingProduct.certifications.map((cert) => (
-                          <Badge key={cert} variant="secondary" className="text-xs">
-                            {cert}
-                            <button
-                              className="ml-1 hover:text-destructive"
-                              onClick={() => updateEditingProduct('certifications', editingProduct.certifications.filter(c => c !== cert))}
-                            >
-                              <X className="h-3 w-3" />
-                            </button>
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <Label>Certifications (comma-separated)</Label>
-                    <Input 
-                      value={editingProduct.certifications.join(', ')} 
-                      onChange={(e) => updateEditingProduct('certifications', parseArrayInput(e.target.value))}
-                      placeholder="e.g., Fair Trade, Organic, B-Corp"
-                    />
-                  </div>
-                )}
-
+                
                 <div className="space-y-2">
                   <Label>Keywords (comma-separated) *</Label>
                   <Input 
