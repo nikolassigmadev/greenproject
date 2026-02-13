@@ -100,7 +100,7 @@ export const advancedProductOCR = async (imageDataUrl: string): Promise<Advanced
 
     // Call OpenAI GPT-4 Vision API with optimized parameters
     const response = await client.chat.completions.create({
-      model: 'gpt-4-vision-preview',
+      model: 'gpt-4o', // Updated to use GPT-4o which supports vision
       max_tokens: 2048, // Increased for detailed extraction
       messages: [
         {
@@ -207,7 +207,7 @@ export const extractBrandName = async (imageDataUrl: string): Promise<string | n
     }
 
     const response = await client.chat.completions.create({
-      model: 'gpt-4-vision-preview',
+      model: 'gpt-4o', // Updated to use GPT-4o
       max_tokens: 100,
       messages: [
         {
@@ -255,7 +255,7 @@ export const extractProductName = async (imageDataUrl: string): Promise<string |
     }
 
     const response = await client.chat.completions.create({
-      model: 'gpt-4-vision-preview',
+      model: 'gpt-4o', // Updated to use GPT-4o
       max_tokens: 100,
       messages: [
         {
@@ -303,7 +303,7 @@ export const extractCertifications = async (imageDataUrl: string): Promise<strin
     }
 
     const response = await client.chat.completions.create({
-      model: 'gpt-4-vision-preview',
+      model: 'gpt-4o', // Updated to use GPT-4o
       max_tokens: 200,
       messages: [
         {
@@ -369,7 +369,7 @@ export const checkOpenAIHealth = async (): Promise<boolean> => {
   try {
     console.log('🏥 Checking OpenAI API health...');
     const response = await client.chat.completions.create({
-      model: 'gpt-4-vision-preview',
+      model: 'gpt-4o', // Updated to use GPT-4o
       max_tokens: 10,
       messages: [
         {
@@ -399,7 +399,7 @@ export const getOCRStats = (): {
 } => {
   return {
     apiConfigured: !!client,
-    model: 'gpt-4-vision-preview',
+    model: 'gpt-4o', // Updated to current model
     temperature: 0.3,
     maxTokens: 2048,
   };
