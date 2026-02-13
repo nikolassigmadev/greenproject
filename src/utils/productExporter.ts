@@ -74,12 +74,38 @@ export const downloadProductsFile = (products: Product[]) => {
   URL.revokeObjectURL(url);
 };
 
-export const copySingleProductCode = (product: Product): void => {
+export const copySingleProductCode = (product: Product): Promise<boolean> => {
   const code = exportSingleProductToCode(product);
-  navigator.clipboard.writeText(code).then(() => {
-    // Optional: Show success message
+
+  // Check if clipboard API is available
+  if (!navigator.clipboard) {
+    console.warn('Clipboard API not available, using fallback');
+    return fallbackCopy(code);
+  }
+
+  return navigator.clipboard.writeText(code).then(() => {
     console.log('Product code copied to clipboard!');
+    return true;
   }).catch(err => {
     console.error('Failed to copy product code:', err);
+    // Fallback to manual copy method
+    return fallbackCopy(code);
   });
+};
+
+const fallbackCopy = (text: string): Promise<boolean> => {
+  try {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    const success = document.execCommand('copy');
+    document.body.removeChild(textarea);
+    return Promise.resolve(success);
+  } catch (err) {
+    console.error('Fallback copy failed:', err);
+    return Promise.resolve(false);
+  }
 };

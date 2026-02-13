@@ -197,8 +197,29 @@ const Admin = () => {
     downloadProductsFile(productList);
   };
 
-  const handleExportSingleProduct = (product: Product) => {
-    copySingleProductCode(product);
+  const handleExportSingleProduct = async (product: Product) => {
+    try {
+      const success = await copySingleProductCode(product);
+      if (success) {
+        toast({
+          title: "Success",
+          description: `Product code for "${product.name}" copied to clipboard!`,
+        });
+      } else {
+        toast({
+          title: "Copy Failed",
+          description: "Could not copy to clipboard. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Export error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to export product code.",
+        variant: "destructive",
+      });
+    }
   };
 
   const updateEditingProduct = (field: string, value: any) => {
