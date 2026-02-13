@@ -3,6 +3,7 @@
 
 import { loadProducts } from '@/utils/storage';
 import { calculateSimpleLivestockScore } from './simpleLivestockScoring';
+import { getScoreBreakdown } from './scoreBreakdown';
 
 export interface Product {
   id: string; // Format: #p0001
@@ -54,45 +55,18 @@ export function calculateScore(product: Product): number {
     return product.manualScore;
   }
   
-  // Use simple livestock scoring for meat, dairy, and eggs
-  if (product.category.includes('Meat') || 
-      product.category.includes('Dairy') || 
-      product.category.includes('Eggs')) {
-    return calculateSimpleLivestockScore(product);
-  }
-  
-  // Use standard scoring for other products
-  let score = 100;
-
-  // Labor risk penalty
-  if (product.laborRisk === 'high') score -= 50;
-  else if (product.laborRisk === 'medium') score -= 20;
-
-  // Carbon footprint penalty (higher = worse)
-  if (product.carbonFootprint > 50) score -= 30;
-  else if (product.carbonFootprint > 20) score -= 20;
-  else if (product.carbonFootprint > 10) score -= 10;
-
-  // Transport distance penalty
-  if (product.transportDistance > 10000) score -= 35;
-  else if (product.transportDistance > 5000) score -= 20;
-  else if (product.transportDistance > 2000) score -= 5;
-
-  score += getMaterialsImpact(product.materials);
-
-  // Certification bonus
-  score += Math.min(product.certifications.length * 5, 15);
-
-  return Math.max(0, Math.min(100, score));
+  // Use the new ethical scoring system
+  const breakdown = getScoreBreakdown(product);
+  return breakdown.finalScore;
 }
 
 // Get score rating label
 export function getScoreRating(score: number): { label: string; color: string } {
-  if (score >= 80) return { label: 'Excellent', color: 'text-emerald-600' };
-  if (score >= 60) return { label: 'Good', color: 'text-lime-600' };
-  if (score >= 40) return { label: 'Fair', color: 'text-amber-600' };
-  if (score >= 20) return { label: 'Poor', color: 'text-orange-600' };
-  return { label: 'Critical', color: 'text-red-600' };
+  if (score >= 90) return { label: 'EXCELLENT', color: 'text-emerald-600' };
+  if (score >= 75) return { label: 'GOOD', color: 'text-lime-600' };
+  if (score >= 60) return { label: 'FAIR', color: 'text-amber-600' };
+  if (score >= 40) return { label: 'POOR', color: 'text-orange-600' };
+  return { label: 'CRITICAL', color: 'text-red-600' };
 }
 
 // Find alternative products based on keywords and category
