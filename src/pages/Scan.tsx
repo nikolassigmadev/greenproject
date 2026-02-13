@@ -391,185 +391,191 @@ const Scan = () => {
     console.log('Canvas ref status:', Boolean(canvasRef.current));
   }, [cameraActive, cameraInitializing]);
 
-  // Start camera
+  // Start camera with improved browser and mobile compatibility
   const startCamera = useCallback(async () => {
     try {
       setCameraInitializing(true);
-      
-      // Check if video ref exists before proceeding
+
+      // Verify video element exists
       if (!videoRef.current) {
-        console.error('Video ref is null at start');
-        setCameraInitializing(false);
-        toast({
-          title: "Camera Error",
-          description: "Video element not ready. Please refresh the page.",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      // Debug: Log what's available in navigator
-      console.log('Navigator object:', navigator);
-      console.log('MediaDevices available:', Boolean(navigator.mediaDevices));
-      console.log('getUserMedia available:', Boolean(navigator.mediaDevices && navigator.mediaDevices.getUserMedia));
-      console.log('Video element exists:', Boolean(videoRef.current));
-      
-      // Check if mediaDevices is supported
-      if (!navigator.mediaDevices) {
-        console.error('navigator.mediaDevices is not available');
-        toast({
-          title: "Browser Not Supported",
-          description: "Camera access is not supported in this browser. Please try Chrome, Firefox, or Safari.",
-          variant: "destructive",
-        });
-        setCameraInitializing(false);
-        return;
+        throw new Error('Video element not ready');
       }
 
-      if (!navigator.mediaDevices.getUserMedia) {
-        console.error('navigator.mediaDevices.getUserMedia is not available');
-        toast({
-          title: "Browser Not Supported",
-          description: "Camera access is not supported in this browser. Please try Chrome, Firefox, or Safari.",
-          variant: "destructive",
-        });
-        setCameraInitializing(false);
-        return;
-      }
+      // Check browser support with fallbacks for different browser APIs
+      const getMediaDevices = async () => {
+        if (navigator.mediaDevices?.getUserMedia) {
+          return navigator.mediaDevices;
+        }
+        // Fallback for older browsers
+        if ((navigator as any).webkitGetUserMedia) {
+          return {
+            getUserMedia: (constraints: any) => new Promise((resolve, reject) => {
+              (navigator as any).webkitGetUserMedia(constraints, resolve, reject);
+            })
+          };
+        }
+        throw new Error('Browser does not support camera access');
+      };
 
-      // Check if we're in a secure context
-      if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
-        toast({
-          title: "Secure Context Required",
-          description: "Camera access requires HTTPS. Please use a secure connection or localhost.",
-          variant: "destructive",
-        });
-        setCameraInitializing(false);
-        return;
-      }
+      const mediaDevices = await getMediaDevices();
+      console.log('Camera API available');
 
-      console.log('Requesting camera access...');
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { 
-          facingMode: "environment",
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        } 
-      });
-      
-      console.log('Camera access granted, setting up video stream...');
-      
-      // Double-check video ref still exists
-      if (!videoRef.current) {
-        console.error('Video ref became null during async operation');
-        setCameraInitializing(false);
-        toast({
-          title: "Camera Error",
-          description: "Video element not found. Please refresh the page.",
-          variant: "destructive",
+      // Try to get camera with progressive fallback
+      let stream: MediaStream | null = null;
+
+      // First try: rear camera with optimal settings (mobile)
+      try {
+        stream = await mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: 'environment' },
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          },
+          audio: false
         });
-        return;
-      }
-      
-      const video = videoRef.current;
-      
-      // Clear any existing stream
-      if (video.srcObject) {
-        const oldStream = video.srcObject as MediaStream;
-        oldStream.getTracks().forEach(track => track.stop());
-      }
-      
-      video.srcObject = stream;
-      
-      // Force video to load the new stream
-      video.load();
-      
-      // Wait for video to be ready to play
-      video.onloadedmetadata = () => {
-        console.log('Video metadata loaded, playing video...');
-        // Ensure video dimensions are set
-        video.style.width = '100%';
-        video.style.height = '100%';
-        video.style.objectFit = 'cover';
-        
-        video.play()
-          .then(() => {
-            console.log('Video playing successfully');
-            console.log('Video dimensions:', video.videoWidth, 'x', video.videoHeight);
-            setCameraActive(true);
-            setCameraInitializing(false);
-            toast({
-              title: "Camera Active",
-              description: "Camera is ready to scan products.",
-            });
-          })
-          .catch((error) => {
-            console.error('Error playing video:', error);
-            setCameraInitializing(false);
-            toast({
-              title: "Camera Error",
-              description: "Failed to start video stream. Please try again.",
-              variant: "destructive",
-            });
+        console.log('Camera access granted with optimal settings');
+      } catch (err) {
+        console.log('Optimal settings failed, trying standard settings:', err);
+
+        // Second try: basic video without constraints
+        try {
+          stream = await mediaDevices.getUserMedia({
+            video: true,
+            audio: false
           });
-      };
-      
-      video.onerror = (error) => {
-        console.error('Video error:', error);
+          console.log('Camera access granted with basic settings');
+        } catch (err2) {
+          console.log('Basic settings failed too:', err2);
+          throw err;
+        }
+      }
+
+      if (!stream) {
+        throw new Error('Failed to get media stream');
+      }
+
+      // Verify video ref still exists
+      if (!videoRef.current) {
+        stream.getTracks().forEach(track => track.stop());
+        throw new Error('Video element was removed');
+      }
+
+      const video = videoRef.current;
+
+      // Stop any existing stream
+      if (video.srcObject instanceof MediaStream) {
+        video.srcObject.getTracks().forEach(track => track.stop());
+      }
+
+      // Assign new stream
+      video.srcObject = stream;
+
+      // Setup handlers
+      const onCanPlay = () => {
+        console.log('Video can play, dimensions:', video.videoWidth, 'x', video.videoHeight);
+        setCameraActive(true);
         setCameraInitializing(false);
+
+        // Clean up event listener
+        video.removeEventListener('canplay', onCanPlay);
+
+        toast({
+          title: "Camera Active",
+          description: "Ready to scan. Position product in frame.",
+        });
+      };
+
+      const onError = () => {
+        console.error('Video stream error');
+        video.removeEventListener('error', onError);
+        video.removeEventListener('canplay', onCanPlay);
+        setCameraInitializing(false);
+
         toast({
           title: "Camera Error",
-          description: "Video stream failed to load. Please try again.",
+          description: "Failed to load video stream. Try again.",
           variant: "destructive",
         });
       };
 
-      // Add timeout for video loading
-      setTimeout(() => {
-        if (!cameraActive && cameraInitializing) {
-          console.error('Video loading timeout');
+      video.addEventListener('canplay', onCanPlay);
+      video.addEventListener('error', onError);
+
+      // Start playback - iOS requires user gesture but we're already in one
+      try {
+        // Ensure attributes are set before playing
+        video.setAttribute('playsinline', '');
+        video.setAttribute('webkit-playsinline', '');
+
+        const playPromise = video.play();
+        if (playPromise !== undefined) {
+          await playPromise;
+          console.log('Video playback started');
+        }
+      } catch (err) {
+        console.error('Play error:', err);
+        // Continue - it might work with the canplay event
+      }
+
+      // Timeout safety
+      const timeoutId = setTimeout(() => {
+        if (cameraInitializing) {
+          console.error('Camera initialization timeout');
+          video.removeEventListener('canplay', onCanPlay);
+          video.removeEventListener('error', onError);
           setCameraInitializing(false);
+
+          // Stop the stream
+          if (video.srcObject instanceof MediaStream) {
+            video.srcObject.getTracks().forEach(track => track.stop());
+          }
+
           toast({
             title: "Camera Error",
-            description: "Camera initialization timed out. Please try again.",
+            description: "Camera setup took too long. Try again.",
             variant: "destructive",
           });
         }
-      }, 10000); // 10 second timeout
+      }, 8000);
+
+      return () => clearTimeout(timeoutId);
+
     } catch (error: unknown) {
-      console.error('Camera error:', error);
+      console.error('Camera initialization error:', error);
       setCameraInitializing(false);
 
       const errName =
         typeof error === "object" && error !== null && "name" in error
           ? String((error as { name?: unknown }).name)
           : "";
-      
-      let errorMessage = "Unable to access camera. Please check permissions.";
-      if (errName === 'NotAllowedError') {
-        errorMessage = "Camera permission denied. Please allow camera access in your browser settings.";
-      } else if (errName === 'NotFoundError') {
-        errorMessage = "No camera found. Please connect a camera and try again.";
-      } else if (errName === 'NotReadableError') {
-        errorMessage = "Camera is already in use by another application.";
+
+      const message = typeof error === "object" && error !== null && "message" in error
+        ? String((error as { message?: unknown }).message)
+        : String(error);
+
+      let errorMessage = "Unable to access camera.";
+      let suggestion = "Check permissions and try again.";
+
+      if (errName === 'NotAllowedError' || message.includes('Permission')) {
+        errorMessage = "Camera permission denied";
+        suggestion = "Allow camera access in browser settings.";
+      } else if (errName === 'NotFoundError' || message.includes('Requested device')) {
+        errorMessage = "No camera found";
+        suggestion = "Connect a camera and try again.";
+      } else if (errName === 'NotReadableError' || message.includes('Could not start')) {
+        errorMessage = "Camera is in use";
+        suggestion = "Close other apps using the camera.";
       } else if (errName === 'OverconstrainedError') {
-        errorMessage = "Camera constraints not supported. Trying with default settings...";
-        // Fallback to basic video constraints
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-          if (videoRef.current) {
-            videoRef.current.srcObject = stream;
-            videoRef.current.play();
-            setCameraActive(true);
-          }
-        } catch {
-          errorMessage = "Unable to access camera with any settings.";
-        }
+        errorMessage = "Camera constraints not compatible";
+        suggestion = "Your device may not support these camera settings.";
+      } else if (message.includes('does not support')) {
+        errorMessage = "Browser not supported";
+        suggestion = "Use Chrome, Firefox, Safari, or Edge.";
       }
-      
+
       toast({
-        title: "Camera Error",
-        description: errorMessage,
+        title: errorMessage,
+        description: suggestion,
         variant: "destructive",
       });
     }
@@ -745,21 +751,60 @@ const Scan = () => {
     }
   }, [searchProducts, toast]);
 
-  // Capture photo from camera
+  // Capture photo from camera with mobile orientation handling
   const capturePhoto = useCallback(() => {
-    if (!videoRef.current || !canvasRef.current) return;
-
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext("2d");
-    if (ctx) {
-      ctx.drawImage(video, 0, 0);
-      processImage(canvas.toDataURL("image/jpeg"));
+    if (!videoRef.current || !canvasRef.current) {
+      toast({
+        title: "Capture Error",
+        description: "Camera not ready. Try again.",
+        variant: "destructive",
+      });
+      return;
     }
-    stopCamera();
-  }, [processImage, stopCamera]);
+
+    try {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+
+      // Get correct dimensions
+      const width = video.videoWidth || video.width;
+      const height = video.videoHeight || video.height;
+
+      if (!width || !height) {
+        throw new Error('Invalid video dimensions');
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        throw new Error('Could not get canvas context');
+      }
+
+      // Draw video frame to canvas
+      ctx.drawImage(video, 0, 0, width, height);
+
+      // Convert to JPEG with good quality
+      const imageData = canvas.toDataURL("image/jpeg", 0.95);
+
+      if (!imageData || imageData.length < 100) {
+        throw new Error('Canvas conversion failed');
+      }
+
+      console.log('Photo captured:', imageData.length, 'bytes');
+      processImage(imageData);
+      stopCamera();
+
+    } catch (error) {
+      console.error('Capture error:', error);
+      toast({
+        title: "Capture Error",
+        description: "Failed to capture photo. Try again.",
+        variant: "destructive",
+      });
+    }
+  }, [processImage, stopCamera, toast]);
 
   // Handle file upload
   const handleFileUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
@@ -810,24 +855,28 @@ const Scan = () => {
             <CardContent className="space-y-6">
               {/* Camera View */}
               <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 aspect-[3/4] sm:aspect-video max-h-[72vh] sm:max-h-none shadow-lg border border-slate-200 dark:border-slate-700">
-                {/* Always render video element, control visibility with CSS */}
+                {/* Video element with improved mobile compatibility */}
                 <video
                   ref={videoRef}
                   autoPlay
                   playsInline
                   muted
+                  webkit-playsinline="true"
+                  x5-playsinline="true"
+                  controls={false}
                   className={`w-full h-full object-cover ${cameraActive ? 'block' : 'hidden'}`}
                   style={{
-                    backgroundColor: '#000'
-                  }}
+                    backgroundColor: '#000',
+                    WebkitTransform: 'translate3d(0,0,0)',
+                    transform: 'translate3d(0,0,0)',
+                    WebkitUserSelect: 'none',
+                    userSelect: 'none',
+                  } as React.CSSProperties}
                   onError={(e) => {
                     console.error('Video element error:', e);
                   }}
-                  onStalled={() => {
-                    console.log('Video stalled');
-                  }}
-                  onSuspend={() => {
-                    console.log('Video suspended');
+                  onLoadedMetadata={() => {
+                    console.log('Video metadata loaded:', (videoRef.current as HTMLVideoElement).videoWidth, 'x', (videoRef.current as HTMLVideoElement).videoHeight);
                   }}
                 />
                 <canvas ref={canvasRef} className="hidden" />
@@ -1072,25 +1121,26 @@ const Scan = () => {
               <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
               <div className="text-sm">
                 <p className="font-medium text-blue-900 mb-2">Camera Troubleshooting</p>
-                <div className="space-y-1 text-blue-800">
-                  <p><strong>Browser:</strong> {navigator.userAgent.split(' ').slice(-2).join(' ')}</p>
+                <div className="space-y-1 text-blue-800 text-xs">
+                  <p><strong>Browser:</strong> {navigator.userAgent.match(/Chrome|Safari|Firefox|Edge|Opera/) ? navigator.userAgent.match(/Chrome|Safari|Firefox|Edge|Opera/)?.[0] : 'Unknown'}</p>
+                  <p><strong>Device:</strong> {/Mobile|Android|iPhone|iPad/.test(navigator.userAgent) ? '📱 Mobile' : '💻 Desktop'}</p>
                   <p><strong>Protocol:</strong> {location.protocol}</p>
-                  <p><strong>Hostname:</strong> {location.hostname}</p>
-                  <p><strong>Navigator has mediaDevices:</strong> {navigator.mediaDevices ? '✅ Yes' : '❌ No'}</p>
-                  <p><strong>getUserMedia available:</strong> {!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) ? '❌ No' : '✅ Yes'}</p>
-                  <p><strong>Secure Context:</strong> {location.protocol === 'https:' || location.hostname === 'localhost' ? '✅ Yes' : '❌ No'}</p>
-                  <p><strong>HTTPS required:</strong> {location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1' ? '❌ Yes (missing)' : '✅ No'}</p>
+                  <p><strong>Host:</strong> {location.hostname}</p>
+                  <p><strong>mediaDevices:</strong> {navigator.mediaDevices ? '✅' : '❌'} {!navigator.mediaDevices && <span className="text-red-600 font-medium">(Required!)</span>}</p>
+                  <p><strong>getUserMedia:</strong> {navigator.mediaDevices?.getUserMedia ? '✅' : '❌'} {!navigator.mediaDevices?.getUserMedia && <span className="text-red-600 font-medium">(Required!)</span>}</p>
+                  <p><strong>Secure Context:</strong> {location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1' ? '✅ Yes' : '❌ No'}</p>
                 </div>
                 <div className="mt-3 space-y-2">
-                  <p className="font-medium text-blue-900">If camera doesn't work:</p>
-                  <ul className="list-disc list-inside space-y-1 text-blue-800">
-                    <li>Open browser console (F12) and click "Use Camera" to see detailed errors</li>
-                    <li>Check browser camera permissions (click the 🔒 icon in address bar)</li>
-                    <li>Try refreshing the page and granting camera access</li>
-                    <li>Ensure no other app is using the camera</li>
-                    <li>Try using Chrome, Firefox, or Safari browsers</li>
-                    <li>On mobile, use the built-in camera app instead</li>
-                    <li>If using localhost, make sure you're on http://localhost:8080 or http://127.0.0.1:8080</li>
+                  <p className="font-medium text-blue-900 text-xs">If camera doesn't work:</p>
+                  <ul className="list-disc list-inside space-y-1 text-blue-800 text-xs">
+                    <li><strong>First:</strong> Open browser console (F12) and click "Use Camera" - read any errors there</li>
+                    <li><strong>Permissions:</strong> Check the 🔒 lock icon in address bar - grant camera access</li>
+                    <li><strong>Refresh:</strong> Reload the page after allowing permissions</li>
+                    <li><strong>Other apps:</strong> Close apps using camera (Zoom, Teams, Discord, etc)</li>
+                    <li><strong>Browser:</strong> Try Chrome, Firefox, Safari, or Edge</li>
+                    <li><strong>Mobile:</strong> Try portrait mode, use Chrome browser, check iOS privacy settings</li>
+                    <li><strong>HTTPS:</strong> Remote sites need HTTPS (not http://)</li>
+                    <li><strong>localhost:</strong> Use http://localhost:8080 or http://127.0.0.1:8080</li>
                   </ul>
                 </div>
               </div>
