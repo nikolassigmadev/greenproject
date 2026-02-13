@@ -143,7 +143,25 @@ export const defaultProducts: Product[] = [
     keywords: ['shirt', 'tshirt', 'cotton', 'apparel', 'top'],
     barcode: '2345678901234',
   },
-  
+    {
+    id: '#p0003',
+    name: 'Aqua',
+    brand: 'Danone',
+    category: 'Drinkware',
+    origin: { country: 'Indonesia', region: ' Bali' },
+    materials: ['Standard Production'],
+    laborRisk: 'high',
+    transportDistance: 2000,
+    certifications: [],
+    carbonFootprint: 8.4,
+    keywords: [],
+    barcode: '',
+    imageUrl: 'https://www.shutterstock.com/image-photo/jakarta-indonesia-july-27th-2024-600nw-2494710323.jpg',
+    
+    
+  }
+
+
 ];
 
 
