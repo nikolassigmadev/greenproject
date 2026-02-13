@@ -374,6 +374,8 @@ const Scan = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const cameraInitializingRef = useRef(false);
+  const timeoutIdRef = useRef<NodeJS.Timeout | null>(null);
 
   const [isScanning, setIsScanning] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -394,7 +396,14 @@ const Scan = () => {
   // Start camera with improved browser and mobile compatibility
   const startCamera = useCallback(async () => {
     try {
+      // Clear any previous timeout
+      if (timeoutIdRef.current) {
+        clearTimeout(timeoutIdRef.current);
+        timeoutIdRef.current = null;
+      }
+
       setCameraInitializing(true);
+      cameraInitializingRef.current = true;
 
       // Verify video element exists
       if (!videoRef.current) {
@@ -473,6 +482,14 @@ const Scan = () => {
       // Setup handlers
       const onCanPlay = () => {
         console.log('Video can play, dimensions:', video.videoWidth, 'x', video.videoHeight);
+
+        // Clear timeout since we succeeded
+        if (timeoutIdRef.current) {
+          clearTimeout(timeoutIdRef.current);
+          timeoutIdRef.current = null;
+        }
+
+        cameraInitializingRef.current = false;
         setCameraActive(true);
         setCameraInitializing(false);
 
@@ -489,6 +506,13 @@ const Scan = () => {
         console.error('Video stream error');
         video.removeEventListener('error', onError);
         video.removeEventListener('canplay', onCanPlay);
+
+        if (timeoutIdRef.current) {
+          clearTimeout(timeoutIdRef.current);
+          timeoutIdRef.current = null;
+        }
+
+        cameraInitializingRef.current = false;
         setCameraInitializing(false);
 
         toast({
@@ -517,17 +541,19 @@ const Scan = () => {
         // Continue - it might work with the canplay event
       }
 
-      // Timeout safety
-      const timeoutId = setTimeout(() => {
-        if (cameraInitializing) {
+      // Timeout safety using ref to avoid stale closures
+      timeoutIdRef.current = setTimeout(() => {
+        if (cameraInitializingRef.current) {
           console.error('Camera initialization timeout');
           video.removeEventListener('canplay', onCanPlay);
           video.removeEventListener('error', onError);
+          cameraInitializingRef.current = false;
           setCameraInitializing(false);
 
           // Stop the stream
           if (video.srcObject instanceof MediaStream) {
             video.srcObject.getTracks().forEach(track => track.stop());
+            video.srcObject = null;
           }
 
           toast({
@@ -538,10 +564,15 @@ const Scan = () => {
         }
       }, 8000);
 
-      return () => clearTimeout(timeoutId);
-
     } catch (error: unknown) {
       console.error('Camera initialization error:', error);
+
+      if (timeoutIdRef.current) {
+        clearTimeout(timeoutIdRef.current);
+        timeoutIdRef.current = null;
+      }
+
+      cameraInitializingRef.current = false;
       setCameraInitializing(false);
 
       const errName =
@@ -579,15 +610,24 @@ const Scan = () => {
         variant: "destructive",
       });
     }
-  }, [toast, cameraActive, cameraInitializing]);
+  }, [toast]);
 
   // Stop camera
   const stopCamera = useCallback(() => {
+    // Clean up timeout
+    if (timeoutIdRef.current) {
+      clearTimeout(timeoutIdRef.current);
+      timeoutIdRef.current = null;
+    }
+
+    cameraInitializingRef.current = false;
+
     if (videoRef.current?.srcObject) {
       const stream = videoRef.current.srcObject as MediaStream;
       stream.getTracks().forEach((track) => track.stop());
       videoRef.current.srcObject = null;
       setCameraActive(false);
+      setCameraInitializing(false);
     }
   }, []);
 
