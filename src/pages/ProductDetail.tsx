@@ -71,9 +71,29 @@ const ProductDetail = () => {
               <Card>
                 <CardContent className="p-6">
                   <div className="flex flex-col sm:flex-row gap-6">
-                    {/* Image placeholder */}
-                    <div className="w-full sm:w-48 h-48 rounded-xl bg-gradient-to-br from-eco-sage/20 to-eco-leaf/10 flex items-center justify-center flex-shrink-0">
-                      <Package className="w-16 h-16 text-primary/30" />
+                    {/* Product Image with fallback to package icon */}
+                    <div className="w-full sm:w-48 h-48 rounded-xl bg-gradient-to-br from-eco-sage/20 to-eco-leaf/10 flex items-center justify-center flex-shrink-0 relative overflow-hidden">
+                      {product.imageUrl ? (
+                        <img 
+                          src={product.imageUrl} 
+                          alt={product.name}
+                          className="w-full h-full object-cover rounded-xl"
+                          onError={(e) => {
+                            // Fallback to package icon if image fails to load
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                            const parent = target.parentElement;
+                            if (parent) {
+                              const packageIcon = document.createElement('div');
+                              packageIcon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-16 h-16 text-primary/30"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" x2="12" y1="22.08" y2="12"/></svg>';
+                              packageIcon.className = 'absolute inset-0 flex items-center justify-center';
+                              parent.appendChild(packageIcon);
+                            }
+                          }}
+                        />
+                      ) : (
+                        <Package className="w-16 h-16 text-primary/30" />
+                      )}
                     </div>
 
                     <div className="flex-1 space-y-4">
