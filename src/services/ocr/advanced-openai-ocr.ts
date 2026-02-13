@@ -3,8 +3,18 @@ import OpenAI from 'openai';
 // Initialize OpenAI client with new API key
 const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
 
+console.log('🔑 Environment check:', {
+  hasApiKey: !!apiKey,
+  apiKeyLength: apiKey?.length,
+  isProduction: import.meta.env.PROD,
+  mode: import.meta.env.MODE,
+  envSource: import.meta.env.DEV ? '.env.local' : '.env.production'
+});
+
 if (!apiKey) {
-  console.error('❌ OpenAI API key not configured. Set VITE_OPENAI_API_KEY in .env.local');
+  console.error('❌ OpenAI API key not configured. Set VITE_OPENAI_API_KEY in .env.local or .env.production');
+} else {
+  console.log('✅ OpenAI API key configured successfully');
 }
 
 const client = apiKey ? new OpenAI({ apiKey, dangerouslyAllowBrowser: true }) : null;
@@ -79,13 +89,24 @@ Return your response as JSON with this exact structure:
 export const advancedProductOCR = async (imageDataUrl: string): Promise<AdvancedOCRResult> => {
   const startTime = performance.now();
 
+  console.log('🚀 Starting ChatGPT-style OCR analysis...');
+  console.log('🌍 Environment info:', {
+    isProduction: import.meta.env.PROD,
+    mode: import.meta.env.MODE,
+    hasClient: !!client,
+    apiKeyLength: import.meta.env.VITE_OPENAI_API_KEY?.length
+  });
+
   if (!client) {
+    const error = 'OpenAI API key not configured. Please set VITE_OPENAI_API_KEY in .env.local or .env.production';
+    console.error('❌', error);
     return {
       success: false,
       fullText: '',
       confidence: 0,
       rawExtraction: '',
-      error: 'OpenAI API key not configured. Please set VITE_OPENAI_API_KEY in .env.local'
+      error,
+      processingTime: performance.now() - startTime
     };
   }
 
@@ -95,7 +116,13 @@ export const advancedProductOCR = async (imageDataUrl: string): Promise<Advanced
       base64Image = imageDataUrl.split(',')[1];
     }
 
-    console.log('🔍 Analyzing image with ChatGPT-style approach...');
+    console.log('� Image data processed:', {
+      hasBase64: !!base64Image,
+      base64Length: base64Image?.length,
+      imageType: imageDataUrl.split(':')[0]?.split(';')[0]
+    });
+
+    console.log('🤖 Calling OpenAI API with GPT-4o...');
 
     // Simple ChatGPT-style image analysis
     const response = await client.chat.completions.create({
@@ -113,7 +140,7 @@ export const advancedProductOCR = async (imageDataUrl: string): Promise<Advanced
             },
             {
               type: 'text',
-              text: `Look at this image and tell me what product this is. Just give me the product name and brand in a simple format like:
+              text: `Look at this image and tell me what product this is. Just give me product name and brand in a simple format like:
 
 Product: [Product Name]
 Brand: [Brand Name]
@@ -126,10 +153,17 @@ If you can't identify the product clearly, say "Unknown Product" and "Unknown Br
       temperature: 0.2,
     });
 
+    console.log('✅ OpenAI API response received:', {
+      hasResponse: !!response,
+      hasChoices: !!response.choices,
+      choiceCount: response.choices?.length,
+      firstChoice: response.choices[0]
+    });
+
     const rawResponse = response.choices[0]?.message?.content || '';
     console.log('🤖 ChatGPT Response:', rawResponse);
 
-    // Parse the simple response
+    // Parse simple response
     const productMatch = rawResponse.match(/Product:\s*(.+)/i);
     const brandMatch = rawResponse.match(/Brand:\s*(.+)/i);
 
@@ -141,7 +175,7 @@ If you can't identify the product clearly, say "Unknown Product" and "Unknown Br
 
     if (productName || brandName) {
       const fullText = `${brandName || ''} ${productName || ''}`.trim();
-      console.log('✅ ChatGPT-style analysis successful:', { productName, brandName, fullText });
+      console.log('✅ ChatGPT-style analysis successful:', { productName, brandName, fullText, processingTime });
 
       return {
         success: true,
@@ -158,18 +192,25 @@ If you can't identify the product clearly, say "Unknown Product" and "Unknown Br
         notes: 'ChatGPT-style image analysis'
       };
     } else {
-      console.log('❌ Could not identify product');
+      console.log('❌ Could not identify product from response:', rawResponse);
       return {
         success: false,
         fullText: '',
         confidence: 0,
         rawExtraction: rawResponse,
-        error: 'Could not identify product from image'
+        error: 'Could not identify product from image',
+        processingTime
       };
     }
 
   } catch (error) {
-    console.error('❌ ChatGPT-style analysis failed:', error);
+    console.error('❌ ChatGPT-style analysis failed:', {
+      error: error instanceof Error ? error.message : error,
+      stack: error instanceof Error ? error.stack : 'No stack trace',
+      isProduction: import.meta.env.PROD,
+      apiKeyConfigured: !!import.meta.env.VITE_OPENAI_API_KEY
+    });
+    
     const endTime = performance.now();
     const processingTime = endTime - startTime;
 
