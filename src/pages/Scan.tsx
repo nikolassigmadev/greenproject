@@ -69,44 +69,53 @@ const shortOcrTokenAllowlist = new Set<string>([
 
 const isAcceptableOcrToken = (token: string) => {
   const t = token.toLowerCase();
-  if (t.length < 3) return false;
+  if (t.length < 2) return false; // Reduced from 3
   if (/(.)\1{2,}/.test(t)) return false;
-  if (!/^[a-z]+$/.test(t)) return false;
+  if (!/^[a-z0-9]+$/i.test(t)) return false; // Allow alphanumeric only
 
-  const vowels = (t.match(/[aeiouy]/g) || []).length;
-  if (vowels === 0) return false;
+  const vowels = (t.match(/[aeiouy]/gi) || []).length;
+  if (vowels === 0 && t.length > 2) return false; // Allow short vowel-less words
+
+  if (t.length === 2) {
+    if (shortOcrTokenAllowlist.has(t)) return true;
+    return vowels / t.length >= 0.3; // Reduced from 0.5
+  }
 
   if (t.length === 3) {
-    return shortOcrTokenAllowlist.has(t);
+    if (shortOcrTokenAllowlist.has(t)) return true;
+    return vowels / t.length >= 0.3; // Reduced from 0.5
   }
 
   if (t.length === 4) {
     if (shortOcrTokenAllowlist.has(t)) return true;
-    return vowels / t.length >= 0.5;
+    return vowels / t.length >= 0.4; // Reduced from 0.5
   }
 
-  if (/[b-df-hj-np-tv-z]{5,}/.test(t)) return false;
-  return vowels / t.length >= 0.18;
+  if (/[b-df-hj-np-tv-z]{4,}/.test(t)) return false;
+  return vowels / t.length >= 0.15; // Reduced from 0.18
 };
 
 const cleanupOcrTextForDisplay = (text: string) => {
-  const normalized = normalizeOcrText(text).toLowerCase();
-  const words = normalized.match(/\b[a-z]{3,}(?:[-'][a-z]{2,})*\b/g) || [];
+  const normalized = normalizeOcrText(text);
+  // Less aggressive filtering - keep more text
+  const words = normalized.match(/\b[a-zA-Z0-9]{2,}(?:[-'][a-zA-Z0-9]{1,})*\b/g) || [];
   const filtered = words.filter(isAcceptableOcrToken);
   return normalizeOcrText(uniqPreserveOrder(filtered).join(" "));
 };
 
 const cleanupOcrTextForSearch = (text: string) => {
-  const normalized = normalizeOcrText(text).toLowerCase();
-  const words = normalized.match(/\b[a-z]{3,}(?:[-'][a-z]{2,})*\b/g) || [];
-  const numericCodes = normalized.match(/\b\d{8,}\b/g) || [];
+  const normalized = normalizeOcrText(text);
+  // Less aggressive filtering - keep more text including numbers and brand names
+  const words = normalized.match(/\b[a-zA-Z0-9]{2,}(?:[-'][a-zA-Z0-9]{1,})*\b/g) || [];
+  const numericCodes = normalized.match(/\b\d{6,}\b/g) || [];
   const filtered = words.filter(isAcceptableOcrToken);
   return normalizeOcrText(uniqPreserveOrder([...filtered, ...numericCodes]).join(" "));
 };
 
 const shouldTreatAsNoText = (text: string, result: OcrResult) => {
   const visible = text.replace(/\s/g, "");
-  if (visible.length < 6) return true;
+  // More lenient - accept shorter text
+  if (visible.length < 3) return true;
 
   const letters = (visible.match(/[a-z]/gi) || []).length;
   const digits = (visible.match(/[0-9]/g) || []).length;
@@ -168,31 +177,31 @@ const getReliableOcrText = (result: OcrResult) => {
 
 const isLikelyGibberish = (text: string) => {
   const visible = text.replace(/\s/g, "");
-  if (visible.length < 6) return true;
+  if (visible.length < 3) return true;
 
   const digits = (visible.match(/[0-9]/g) || []).length;
-  const letters = (visible.match(/[a-z]/gi) || []).length;
+  const letters = (visible.match(/[a-zA-Z]/g) || []).length;
   const total = visible.length;
 
   const digitRatio = total ? digits / total : 0;
   const letterRatio = total ? letters / total : 0;
 
-  // If it looks like a numeric code/barcode, allow it.
-  if (digits >= 8 && digitRatio >= 0.6) return false;
+  // More lenient - accept barcodes and numbers
+  if (digits >= 6 && digitRatio >= 0.6) return false;
 
-  if (letters < 4) return true;
-  if (letterRatio < 0.35) return true;
-  if (/(.)\1{3,}/.test(visible)) return true;
+  if (letters < 2) return true;
+  if (letterRatio < 0.2) return true; // Lowered from 0.35
+  if (/(.)\1{2,}/.test(visible)) return true;
 
-  const vowels = (visible.match(/[aeiou]/gi) || []).length;
+  const vowels = (visible.match(/[aeiouAEIOU]/g) || []).length;
   const vowelRatio = letters ? vowels / letters : 0;
-  if (vowelRatio < 0.12) return true;
+  if (vowelRatio < 0.05) return true; // Lowered from 0.12
 
   const tokens = text.split(/\s+/).map((t) => t.trim()).filter(Boolean);
   if (tokens.length === 0) return true;
 
   const avgTokenLen = tokens.reduce((sum, t) => sum + t.length, 0) / tokens.length;
-  if (tokens.length < 2 && avgTokenLen < 3) return true;
+  if (tokens.length < 2 && avgTokenLen < 2) return true;
 
   return false;
 };
@@ -440,16 +449,16 @@ const Scan = () => {
         stream = await mediaDevices.getUserMedia({
           video: {
             facingMode: { ideal: 'environment' },
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
+            width: { ideal: 1280, min: 640 },
+            height: { ideal: 720, min: 480 }
           },
           audio: false
         });
         console.log('Camera access granted with optimal settings');
       } catch (err) {
-        console.log('Optimal settings failed, trying standard settings:', err);
+        console.log('Optimal settings failed, trying basic settings:', err);
 
-        // Second try: basic video without constraints
+        // Second try: basic video without constraints for desktop
         try {
           stream = await mediaDevices.getUserMedia({
             video: true,
@@ -458,7 +467,21 @@ const Scan = () => {
           console.log('Camera access granted with basic settings');
         } catch (err2) {
           console.log('Basic settings failed too:', err2);
-          throw err;
+          
+          // Third try: very minimal constraints
+          try {
+            stream = await mediaDevices.getUserMedia({
+              video: {
+                width: { min: 320 },
+                height: { min: 240 }
+              },
+              audio: false
+            });
+            console.log('Camera access granted with minimal settings');
+          } catch (err3) {
+            console.log('Minimal settings failed:', err3);
+            throw err;
+          }
         }
       }
 
@@ -916,7 +939,7 @@ const Scan = () => {
 
       const cleanedForDisplay = cleanupOcrTextForDisplay(extractedText);
       const cleanedForSearch = cleanupOcrTextForSearch(extractedText);
-      const shouldReject = cleanedForSearch.length < 4 || isLikelyGibberish(cleanedForSearch);
+      const shouldReject = cleanedForSearch.length < 2 || isLikelyGibberish(cleanedForSearch);
 
       if (shouldReject) {
         setExtractedText("");
