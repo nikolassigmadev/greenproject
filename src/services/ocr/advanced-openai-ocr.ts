@@ -25,6 +25,7 @@ export interface AdvancedOCRResult {
   rawExtraction: string;
   error?: string;
   processingTime?: number;
+  notes?: string;
 }
 
 /**
@@ -73,8 +74,7 @@ Return your response as JSON with this exact structure:
 }`;
 
 /**
- * Advanced OCR with GPT-4 Vision
- * Optimized for product recognition with structured output
+ * Simple ChatGPT-style product analysis
  */
 export const advancedProductOCR = async (imageDataUrl: string): Promise<AdvancedOCRResult> => {
   const startTime = performance.now();
@@ -90,23 +90,18 @@ export const advancedProductOCR = async (imageDataUrl: string): Promise<Advanced
   }
 
   try {
-    // Convert data URL to base64 if needed
     let base64Image = imageDataUrl;
     if (imageDataUrl.includes(',')) {
       base64Image = imageDataUrl.split(',')[1];
     }
 
-    console.log('🔍 Starting advanced OCR with GPT-4 Vision...');
+    console.log('🔍 Analyzing image with ChatGPT-style approach...');
 
-    // Call OpenAI GPT-4 Vision API with optimized parameters
+    // Simple ChatGPT-style image analysis
     const response = await client.chat.completions.create({
-      model: 'gpt-4o', // Updated to use GPT-4o which supports vision
-      max_tokens: 2048, // Increased for detailed extraction
+      model: 'gpt-4o',
+      max_tokens: 500,
       messages: [
-        {
-          role: 'system',
-          content: PRODUCT_OCR_SYSTEM_PROMPT,
-        },
         {
           role: 'user',
           content: [
@@ -118,78 +113,73 @@ export const advancedProductOCR = async (imageDataUrl: string): Promise<Advanced
             },
             {
               type: 'text',
-              text: 'Extract all product information from this image following the system prompt instructions.',
+              text: `Look at this image and tell me what product this is. Just give me the product name and brand in a simple format like:
+
+Product: [Product Name]
+Brand: [Brand Name]
+
+If you can't identify the product clearly, say "Unknown Product" and "Unknown Brand".`,
             },
           ],
         },
       ],
-      temperature: 0.3, // Low temperature for consistent, precise output
+      temperature: 0.2,
     });
 
     const rawResponse = response.choices[0]?.message?.content || '';
+    console.log('🤖 ChatGPT Response:', rawResponse);
 
-    console.log('📄 Raw OCR Response:', rawResponse);
+    // Parse the simple response
+    const productMatch = rawResponse.match(/Product:\s*(.+)/i);
+    const brandMatch = rawResponse.match(/Brand:\s*(.+)/i);
 
-    // Parse JSON response
-    let extractedData;
-    try {
-      // Find JSON in response (in case there's extra text)
-      const jsonMatch = rawResponse.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        extractedData = JSON.parse(jsonMatch[0]);
-      } else {
-        throw new Error('No JSON found in response');
-      }
-    } catch (parseError) {
-      console.error('❌ Failed to parse JSON response:', parseError);
-      // Fallback: treat entire response as text
-      extractedData = {
-        productName: null,
-        brandName: null,
+    const productName = productMatch ? productMatch[1].trim() : null;
+    const brandName = brandMatch ? brandMatch[1].trim() : null;
+
+    const endTime = performance.now();
+    const processingTime = endTime - startTime;
+
+    if (productName || brandName) {
+      const fullText = `${brandName || ''} ${productName || ''}`.trim();
+      console.log('✅ ChatGPT-style analysis successful:', { productName, brandName, fullText });
+
+      return {
+        success: true,
+        fullText,
+        confidence: 0.9,
+        rawExtraction: rawResponse,
+        processingTime,
+        productName,
+        brandName,
+        certifications: [],
         ingredients: [],
         barcode: null,
-        certifications: [],
         nutritionInfo: null,
-        fullText: rawResponse,
-        confidence: 0.5,
+        notes: 'ChatGPT-style image analysis'
+      };
+    } else {
+      console.log('❌ Could not identify product');
+      return {
+        success: false,
+        fullText: '',
+        confidence: 0,
+        rawExtraction: rawResponse,
+        error: 'Could not identify product from image'
       };
     }
 
-    const processingTime = performance.now() - startTime;
-
-    console.log('✅ Advanced OCR completed successfully');
-    console.log('📊 Extracted Data:', {
-      product: extractedData.productName,
-      brand: extractedData.brandName,
-      certifications: extractedData.certifications,
-      confidence: extractedData.confidence,
-      time: `${processingTime.toFixed(2)}ms`,
-    });
-
-    return {
-      success: true,
-      fullText: extractedData.fullText || rawResponse,
-      productName: extractedData.productName,
-      brandName: extractedData.brandName,
-      ingredients: extractedData.ingredients || [],
-      barcode: extractedData.barcode,
-      certifications: extractedData.certifications || [],
-      nutritionInfo: extractedData.nutritionInfo,
-      confidence: extractedData.confidence || 0.85,
-      rawExtraction: rawResponse,
-      processingTime,
-    };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-    console.error('❌ Advanced OCR Error:', error);
+    console.error('❌ ChatGPT-style analysis failed:', error);
+    const endTime = performance.now();
+    const processingTime = endTime - startTime;
 
     return {
       success: false,
       fullText: '',
       confidence: 0,
       rawExtraction: '',
-      error: `Advanced OCR failed: ${errorMessage}`,
-      processingTime: performance.now() - startTime,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      processingTime
     };
   }
 };
