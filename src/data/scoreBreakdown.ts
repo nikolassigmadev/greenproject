@@ -1,7 +1,7 @@
 import type { Product } from "@/data/products";
 import { extractSimpleLivestockFactors } from "@/data/simpleLivestockScoring";
 
-export type ScoreFactorKey = "labor" | "carbon" | "transport" | "materials" | "certifications" | "manual";
+export type ScoreFactorKey = "labor" | "animalWelfare" | "carbon" | "transport" | "certifications" | "manual";
 export type ScoreFactorDirection = "penalty" | "bonus";
 
 export interface ScoreFactorBreakdown {
@@ -23,80 +23,164 @@ export interface ScoreBreakdown {
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 
-const laborImpact = (laborRisk: Product["laborRisk"]) => {
-  if (laborRisk === "high") return -50;
-  if (laborRisk === "medium") return -20;
-  return 0;
+// ============================================================
+// LABOR (35 points max) — Start at 35, deduct violations, add bonuses
+// ============================================================
+const laborScore = (laborRisk: Product["laborRisk"], certifications: string[]): number => {
+  let score = 35;
+
+  if (laborRisk === "high") {
+    // High risk = no living wage (-15) + unsafe conditions (-12)
+    score -= 27;
+  } else if (laborRisk === "medium") {
+    // Medium risk = no union rights (-8) + limited transparency (-5)
+    score -= 13;
+  }
+  // low = no violations
+
+  // Bonuses from certifications
+  const certs = certifications.map((c) => c.toLowerCase());
+  if (certs.some((c) => c.includes("fair trade"))) score += 5;
+  if (certs.some((c) => c.includes("b-corp"))) score += 3;
+  if (certs.some((c) => c.includes("living wage"))) score += 2;
+
+  return clamp(score, 0, 35);
 };
 
-const carbonImpact = (carbonFootprint: number) => {
-  if (carbonFootprint > 50) return -30;
-  if (carbonFootprint > 20) return -20;
-  if (carbonFootprint > 10) return -10;
-  return 0;
+// ============================================================
+// ANIMAL WELFARE (30 points max) — Start at 30, deduct violations, add bonuses
+// ============================================================
+const animalWelfareScore = (product: Product): number => {
+  let score = 30;
+  const materials = product.materials.map((m) => m.toLowerCase());
+  const certs = product.certifications.map((c) => c.toLowerCase());
+  const isLivestock =
+    product.category.includes("Meat") ||
+    product.category.includes("Dairy") ||
+    product.category.includes("Eggs");
+
+  if (isLivestock) {
+    const factors = extractSimpleLivestockFactors(product);
+
+    // Map animal space to farming type violations
+    if (factors.animalSpace === "terrible") {
+      score -= 30; // factory farmed — instant 0
+    } else if (factors.animalSpace === "poor") {
+      score -= 22; // intensive farming
+    } else if (factors.animalSpace === "good") {
+      score -= 12; // free-range/cage-free
+    } else if (factors.animalSpace === "excellent") {
+      score -= 5; // organic + humane
+    }
+
+    // Animal testing penalty
+    if (materials.some((m) => m.includes("animal testing") || m.includes("tested on animals"))) {
+      score -= 15;
+    }
+  } else {
+    // Non-livestock: check for animal-derived materials or testing
+    if (materials.some((m) => m.includes("animal testing") || m.includes("tested on animals"))) {
+      score -= 15;
+    }
+    if (materials.some((m) => m.includes("leather") || m.includes("fur") || m.includes("down") || m.includes("silk") || m.includes("wool"))) {
+      score -= 12;
+    }
+  }
+
+  // Bonuses from certifications
+  if (certs.some((c) => c.includes("certified humane"))) score += 3;
+  if (certs.some((c) => c.includes("animal welfare approved") || c === "awa")) score += 3;
+  if (certs.some((c) => c.includes("grass-fed") || c.includes("grass fed"))) score += 2;
+  if (certs.some((c) => c.includes("cruelty-free") || c.includes("cruelty free") || c.includes("vegan"))) score += 2;
+
+  return clamp(score, 0, 30);
 };
 
-const transportImpact = (transportDistance: number) => {
-  if (transportDistance > 10000) return -35;
-  if (transportDistance > 5000) return -20;
-  if (transportDistance > 2000) return -5;
-  return 0;
+// ============================================================
+// CARBON FOOTPRINT (20 points max) — Tier-based on kg CO2
+// ============================================================
+const carbonScore = (carbonFootprint: number): number => {
+  if (carbonFootprint <= 0.5) return 20;
+  if (carbonFootprint <= 2.0) return 16;
+  if (carbonFootprint <= 5.0) return 11;
+  if (carbonFootprint <= 10.0) return 6;
+  return 2;
 };
 
-const certificationImpact = (certifications: string[]) => Math.min(certifications.length * 5, 15);
-
-const materialsImpactStandard = (materials: string[]) => {
-  const normalized = materials.map((m) => m.toLowerCase());
-
-  let points = 0;
-
-  const hasAny = (terms: string[]) => normalized.some((m) => terms.some((t) => m.includes(t)));
-
-  if (hasAny(["recycled", "ocean plastic"])) points += 6;
-  if (hasAny(["organic", "plant-based", "bamboo", "cork"])) points += 5;
-  if (hasAny(["stainless steel", "glass"])) points += 3;
-  if (hasAny(["plastic-free", "compostable"])) points += 4;
-
-  if (hasAny(["virgin plastic"])) points -= 8;
-  if (hasAny(["plastic", "pet"])) points -= 5;
-  if (hasAny(["polyester", "synthetic", "nylon"])) points -= 4;
-  if (hasAny(["artificial", "preservatives", "food coloring"])) points -= 3;
-
-  return clamp(points, -15, 15);
+// ============================================================
+// TRANSPORTATION (10 points max) — Distance base × mode multiplier
+// ============================================================
+const transportBaseScore = (distance: number): number => {
+  if (distance <= 100) return 10;
+  if (distance <= 500) return 8;
+  if (distance <= 2000) return 6;
+  if (distance <= 5000) return 4;
+  if (distance <= 10000) return 2;
+  return 1;
 };
 
-const livestockWelfareScore = (product: Product) => {
-  const factors = extractSimpleLivestockFactors(product);
-
-  const spaceScores: Record<string, number> = { excellent: 95, good: 75, poor: 40, terrible: 15 };
-  const executionScores: Record<string, number> = { humane: 90, standard: 60, inhumane: 20 };
-  const dietScores: Record<string, number> = { natural: 85, organic: 80, conventional: 45, processed: 25 };
-
-  const space = spaceScores[factors.animalSpace] ?? 50;
-  const execution = executionScores[factors.animalExecution] ?? 50;
-  const diet = dietScores[factors.animalDiet] ?? 50;
-
-  return (space * 0.35) + (execution * 0.35) + (diet * 0.3);
+const inferTransportMode = (distance: number): { mode: string; multiplier: number } => {
+  if (distance <= 100) return { mode: "Local", multiplier: 1.2 };
+  if (distance <= 2000) return { mode: "Truck", multiplier: 0.8 };
+  if (distance <= 10000) return { mode: "Ship", multiplier: 0.9 };
+  return { mode: "Air", multiplier: 0.5 };
 };
 
+const transportScore = (distance: number): number => {
+  const base = transportBaseScore(distance);
+  const { multiplier } = inferTransportMode(distance);
+  return clamp(Math.round(base * multiplier * 10) / 10, 0, 10);
+};
+
+// ============================================================
+// CERTIFICATIONS (5 points max) — Tiered certification scoring
+// ============================================================
+const TIER_1 = ["b-corp", "fair trade", "certified humane", "rainforest alliance", "animal welfare approved", "awa"];
+const TIER_2 = ["usda organic", "eu organic", "gots certified", "organic", "non-gmo", "carbon neutral", "leaping bunny"];
+const TIER_3 = ["cage-free", "cage free", "free-range", "free range", "grass-fed", "grass fed", "recyclable"];
+const BONUS_CERTS = ["supply chain disclosure", "third-party audit", "third party audit", "sustainability report"];
+
+const certificationScore = (certifications: string[]): number => {
+  const certs = certifications.map((c) => c.toLowerCase());
+  let score = 0;
+
+  for (const cert of certs) {
+    if (TIER_1.some((t) => cert.includes(t))) {
+      score += 2;
+    } else if (TIER_2.some((t) => cert.includes(t))) {
+      score += 1;
+    } else if (TIER_3.some((t) => cert.includes(t))) {
+      score += 0.5;
+    }
+
+    // Bonus certifications stack
+    if (BONUS_CERTS.some((b) => cert.includes(b))) {
+      if (cert.includes("supply chain")) score += 2;
+      else if (cert.includes("third-party audit") || cert.includes("third party audit")) score += 1;
+      else if (cert.includes("sustainability report")) score += 1;
+    }
+  }
+
+  return clamp(score, 0, 5);
+};
+
+// ============================================================
+// MAIN: getScoreBreakdown
+// ============================================================
 export const getScoreBreakdown = (product: Product): ScoreBreakdown => {
-  const baseline = 100;
-
+  // Manual override — untouched
   if (product.manualScore !== undefined && product.manualScore >= 0 && product.manualScore <= 100) {
-    const impact = product.manualScore - baseline;
-    const finalScore = clamp(baseline + impact, 0, 100);
-
     return {
-      baseline,
-      finalScore,
+      baseline: 0,
+      finalScore: product.manualScore,
       isEstimated: false,
       factors: [
         {
           key: "manual",
           label: "Manual override",
           cap: 100,
-          impact,
-          direction: impact >= 0 ? "bonus" : "penalty",
+          impact: product.manualScore,
+          direction: "bonus",
           inputLabel: "Manual score",
           inputValue: String(product.manualScore),
         },
@@ -104,129 +188,68 @@ export const getScoreBreakdown = (product: Product): ScoreBreakdown => {
     };
   }
 
-  const isLivestock = product.category.includes("Meat") || product.category.includes("Dairy") || product.category.includes("Eggs");
-  const isFood = product.category === 'Food & Beverage' || product.category === 'Snacks & Packaged Foods';
+  const labor = laborScore(product.laborRisk, product.certifications);
+  const animal = animalWelfareScore(product);
+  const carbon = carbonScore(product.carbonFootprint);
+  const transport = transportScore(product.transportDistance);
+  const certs = certificationScore(product.certifications);
 
-  const labor = laborImpact(product.laborRisk);
-  const carbon = carbonImpact(product.carbonFootprint);
-  const transport = transportImpact(product.transportDistance);
-  const cert = certificationImpact(product.certifications);
+  const finalScore = clamp(Math.round(labor + animal + carbon + transport + certs), 0, 100);
 
-  if (!isLivestock) {
-    const materials = materialsImpactStandard(product.materials);
-    const score = clamp(baseline + labor + carbon + transport + materials + cert, 0, 100);
-
-    return {
-      baseline,
-      finalScore: score,
-      isEstimated: false,
-      factors: [
-        {
-          key: "labor",
-          label: "Labor practices",
-          cap: 50,
-          impact: labor,
-          direction: "penalty",
-          inputLabel: "Labor risk",
-          inputValue: product.laborRisk,
-        },
-        {
-          key: "carbon",
-          label: "Carbon footprint",
-          cap: 30,
-          impact: carbon,
-          direction: "penalty",
-          inputLabel: "Carbon footprint",
-          inputValue: `${product.carbonFootprint} kg CO₂`,
-        },
-        {
-          key: "transport",
-          label: "Transport distance",
-          cap: 35,
-          impact: transport,
-          direction: "penalty",
-          inputLabel: "Transport distance",
-          inputValue: `${product.transportDistance.toLocaleString()} km`,
-        },
-        {
-          key: "materials",
-          label: isFood ? "Contents & packaging" : "Materials & packaging",
-          cap: 15,
-          impact: materials,
-          direction: materials >= 0 ? "bonus" : "penalty",
-          inputLabel: isFood ? "Contents" : "Materials",
-          inputValue: `${product.materials.length} listed`,
-        },
-        {
-          key: "certifications",
-          label: "Certifications",
-          cap: 15,
-          impact: cert,
-          direction: "bonus",
-          inputLabel: "Certifications",
-          inputValue: product.certifications.length > 0 ? product.certifications.join(", ") : "None",
-        },
-      ],
-    };
-  }
-
-  const welfare = livestockWelfareScore(product);
-  const standardScore = clamp(baseline + labor + carbon + transport + cert, 0, 100);
-  const finalScore = clamp(Math.round((welfare * 0.7) + (standardScore * 0.3)), 0, 100);
-
-  const scaledLabor = labor * 0.3;
-  const scaledCarbon = carbon * 0.3;
-  const scaledTransport = transport * 0.3;
-  const scaledCert = cert * 0.3;
-
-  const materialsPenalty = (welfare - 100) * 0.7;
+  const { mode } = inferTransportMode(product.transportDistance);
+  const isLivestock =
+    product.category.includes("Meat") ||
+    product.category.includes("Dairy") ||
+    product.category.includes("Eggs");
 
   return {
-    baseline,
+    baseline: 0,
     finalScore,
     isEstimated: false,
     factors: [
       {
         key: "labor",
         label: "Labor practices",
-        cap: 50 * 0.3,
-        impact: scaledLabor,
-        direction: "penalty",
+        cap: 35,
+        impact: labor,
+        direction: "bonus",
         inputLabel: "Labor risk",
         inputValue: product.laborRisk,
       },
       {
+        key: "animalWelfare",
+        label: "Animal welfare",
+        cap: 30,
+        impact: animal,
+        direction: "bonus",
+        inputLabel: isLivestock ? "Farming conditions" : "Animal impact",
+        inputValue: isLivestock
+          ? extractSimpleLivestockFactors(product).animalSpace
+          : "Non-animal product",
+      },
+      {
         key: "carbon",
         label: "Carbon footprint",
-        cap: 30 * 0.3,
-        impact: scaledCarbon,
-        direction: "penalty",
-        inputLabel: "Carbon footprint",
+        cap: 20,
+        impact: carbon,
+        direction: "bonus",
+        inputLabel: "CO₂ emissions",
         inputValue: `${product.carbonFootprint} kg CO₂`,
       },
       {
         key: "transport",
-        label: "Transport distance",
-        cap: 35 * 0.3,
-        impact: scaledTransport,
-        direction: "penalty",
-        inputLabel: "Transport distance",
-        inputValue: `${product.transportDistance.toLocaleString()} km`,
-      },
-      {
-        key: "materials",
-        label: "Materials & packaging",
-        cap: 70,
-        impact: materialsPenalty,
-        direction: materialsPenalty >= 0 ? "bonus" : "penalty",
-        inputLabel: "Animal welfare factors",
-        inputValue: `${product.materials.join(", ")}`,
+        label: "Transportation",
+        cap: 10,
+        impact: transport,
+        direction: "bonus",
+        inputLabel: "Distance & mode",
+        inputValue: `${product.transportDistance.toLocaleString()} km (${mode})`,
       },
       {
         key: "certifications",
         label: "Certifications",
-        cap: 15 * 0.3,
-        impact: scaledCert,
+        cap: 5,
+        impact: certs,
         direction: "bonus",
         inputLabel: "Certifications",
         inputValue: product.certifications.length > 0 ? product.certifications.join(", ") : "None",
@@ -235,64 +258,50 @@ export const getScoreBreakdown = (product: Product): ScoreBreakdown => {
   };
 };
 
+// ============================================================
+// "Why This Score?" explanation generator
+// ============================================================
 export const generateWhyThisScore = (breakdown: ScoreBreakdown): string[] => {
   const factors = breakdown.factors.filter((f) => f.key !== "manual");
-
-  const negatives = factors
-    .filter((f) => f.impact < 0)
-    .sort((a, b) => Math.abs(b.impact) - Math.abs(a.impact));
-
-  const positives = factors
-    .filter((f) => f.impact > 0)
-    .sort((a, b) => b.impact - a.impact);
+  if (factors.length === 0) return ["This score was set manually."];
 
   const sentences: string[] = [];
 
-  const topNegative = negatives[0];
-  const secondNegative = negatives[1];
+  // Sort by how far each factor is from its max (worst performers first)
+  const gaps = factors
+    .map((f) => ({ factor: f, gap: f.cap - f.impact }))
+    .filter((g) => g.gap > 0)
+    .sort((a, b) => b.gap - a.gap);
 
-  const lowScore = breakdown.finalScore < 60;
-  const hasCertBonus = factors.some((f) => f.key === "certifications" && f.impact > 0);
-
-  const describeFactorCause = (f: ScoreFactorBreakdown) => {
-    if (f.key === "labor") return `labor-risk sourcing`;
-    if (f.key === "carbon") return `carbon emissions`;
-    if (f.key === "transport") return `long-distance transport`;
-    if (f.key === "materials") return `materials and packaging`;
-    if (f.key === "certifications") return `verified certifications`;
+  const describeCategory = (f: ScoreFactorBreakdown) => {
+    if (f.key === "labor") return "labor practices";
+    if (f.key === "animalWelfare") return "animal welfare";
+    if (f.key === "carbon") return "carbon emissions";
+    if (f.key === "transport") return "transportation distance";
+    if (f.key === "certifications") return "certifications";
     return f.label.toLowerCase();
   };
 
-  const describeInput = (f: ScoreFactorBreakdown) => {
-    if (f.key === "carbon") return `${f.inputValue}`;
-    if (f.key === "transport") return `${f.inputValue}`;
-    if (f.key === "labor") return `labor risk is ${f.inputValue}`;
-    if (f.key === "certifications") return f.inputValue === "None" ? `no verified certifications` : `certifications are present`;
-    if (f.key === "materials") return `the listed materials/packaging signals`;
-    return `${f.inputLabel.toLowerCase()} is ${f.inputValue}`;
-  };
+  if (gaps.length > 0) {
+    const worst = gaps[0];
+    sentences.push(
+      `The biggest score gap is in ${describeCategory(worst.factor)}, scoring ${Math.round(worst.factor.impact)} out of ${worst.factor.cap} possible points.`
+    );
 
-  if (topNegative) {
-    sentences.push(`Most of the score reduction comes from ${describeFactorCause(topNegative)} because ${describeInput(topNegative)}.`);
+    if (gaps.length > 1) {
+      const second = gaps[1];
+      sentences.push(
+        `${describeCategory(second.factor).charAt(0).toUpperCase() + describeCategory(second.factor).slice(1)} also reduces the score, earning ${Math.round(second.factor.impact)} out of ${second.factor.cap}.`
+      );
+    }
+  }
 
-    if (secondNegative && Math.abs(secondNegative.impact) >= Math.abs(topNegative.impact) * 0.4) {
-      sentences.push(`The score is further reduced because of ${describeFactorCause(secondNegative)} because ${describeInput(secondNegative)}.`);
-    }
-
-    if (lowScore && !hasCertBonus) {
-      sentences.push(`The score does not gain much from verified certifications.`);
-    }
-  } else {
-    const topPositive = positives[0];
-    if (topPositive) {
-      sentences.push(`The score remains high due to ${describeFactorCause(topPositive)} because ${describeInput(topPositive)}.`);
-      const nextPositive = positives[1];
-      if (nextPositive && nextPositive.impact >= topPositive.impact * 0.4) {
-        sentences.push(`The product also gains points from ${describeFactorCause(nextPositive)} because ${describeInput(nextPositive)}.`);
-      }
-    } else {
-      sentences.push(`The score remains close to the baseline because no single factor creates a large penalty or bonus.`);
-    }
+  // Mention strongest category
+  const best = factors.slice().sort((a, b) => (b.impact / b.cap) - (a.impact / a.cap))[0];
+  if (best && best.impact / best.cap >= 0.8) {
+    sentences.push(
+      `The product scores well in ${describeCategory(best)}, earning ${Math.round(best.impact)} out of ${best.cap} points.`
+    );
   }
 
   if (breakdown.isEstimated) {
