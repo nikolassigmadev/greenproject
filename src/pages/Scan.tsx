@@ -10,6 +10,7 @@ import { useProducts } from "@/hooks/useProducts";
 import { useToast } from "@/hooks/use-toast";
 import { calculateScore, Product } from "@/data/products";
 import { ScoreBreakdownSlider } from "@/components/ScoreBreakdownSlider";
+import { recognizeImageWithOpenAI } from "@/services/ocr/openai-service";
 import Tesseract from "tesseract.js";
 
 type OcrWord = {
@@ -712,7 +713,7 @@ const Scan = () => {
     }
   }, [navigate, products, toast]);
 
-  // Process image with OCR
+  // Process image with OCR - Try OpenAI first, fallback to Tesseract
   const processImage = useCallback(async (imageData: string) => {
     setIsProcessing(true);
     setExtractedText("");
@@ -721,52 +722,77 @@ const Scan = () => {
 
     try {
       setIsScanning(true);
-      const preprocessedGray = await preprocessImageDataUrl(imageData);
-      const preprocessedThreshold = await preprocessImageThresholdDataUrl(imageData);
+      let extractedText = "";
+      let useOpenAI = true;
 
-      const cropCenter = await cropImageDataUrl(imageData, { x: 0.15, y: 0.18, w: 0.7, h: 0.64 });
-      const cropTop = await cropImageDataUrl(imageData, { x: 0.05, y: 0.0, w: 0.9, h: 0.55 });
-      const cropCenterThreshold = await preprocessImageThresholdDataUrl(cropCenter);
-      const cropTopThreshold = await preprocessImageThresholdDataUrl(cropTop);
+      // Try OpenAI Vision API first
+      try {
+        console.log("Attempting OCR with OpenAI Vision API...");
+        const openaiResult = await recognizeImageWithOpenAI(imageData);
 
-      const inputs: Array<{ label: string; dataUrl: string }> = [
-        { label: "original", dataUrl: imageData },
-        { label: "gray", dataUrl: preprocessedGray },
-        { label: "threshold", dataUrl: preprocessedThreshold },
-        { label: "crop_center_threshold", dataUrl: cropCenterThreshold },
-        { label: "crop_top_threshold", dataUrl: cropTopThreshold },
-      ];
-
-      let best: { candidateText: string; score: number } | null = null;
-
-      for (let i = 0; i < inputs.length; i++) {
-        const input = inputs[i];
-        const result = (await Tesseract.recognize(input.dataUrl, "eng", {
-          logger: (m: unknown) => {
-            if (i !== 0) return;
-            const status =
-              typeof m === "object" && m !== null && "status" in m
-                ? String((m as TesseractProgress).status)
-                : "";
-            if (status === "recognizing text") {
-              setIsScanning(true);
-            }
-          },
-        })) as OcrResult;
-
-        const text = normalizeOcrText(String(result?.data?.text || ""));
-        const reliable = getReliableOcrText(result);
-        const candidateText = reliable.reliableText.length >= 4 ? reliable.reliableText : text;
-
-        const score = scoreOcrCandidate(candidateText, reliable.reliableText, reliable, result);
-        if (!best || score > best.score) {
-          best = { candidateText, score };
+        if (openaiResult.success && openaiResult.text) {
+          console.log("OpenAI extraction successful");
+          extractedText = openaiResult.text;
+        } else {
+          console.warn("OpenAI extraction failed, falling back to Tesseract:", openaiResult.error);
+          useOpenAI = false;
         }
+      } catch (error) {
+        console.warn("OpenAI API error, using Tesseract fallback:", error);
+        useOpenAI = false;
       }
 
-      const chosenText = normalizeOcrText(best?.candidateText || "");
-      const cleanedForDisplay = cleanupOcrTextForDisplay(chosenText);
-      const cleanedForSearch = cleanupOcrTextForSearch(chosenText);
+      // Fallback to Tesseract if OpenAI didn't work
+      if (!useOpenAI || !extractedText) {
+        console.log("Using Tesseract.js for OCR...");
+        const preprocessedGray = await preprocessImageDataUrl(imageData);
+        const preprocessedThreshold = await preprocessImageThresholdDataUrl(imageData);
+
+        const cropCenter = await cropImageDataUrl(imageData, { x: 0.15, y: 0.18, w: 0.7, h: 0.64 });
+        const cropTop = await cropImageDataUrl(imageData, { x: 0.05, y: 0.0, w: 0.9, h: 0.55 });
+        const cropCenterThreshold = await preprocessImageThresholdDataUrl(cropCenter);
+        const cropTopThreshold = await preprocessImageThresholdDataUrl(cropTop);
+
+        const inputs: Array<{ label: string; dataUrl: string }> = [
+          { label: "original", dataUrl: imageData },
+          { label: "gray", dataUrl: preprocessedGray },
+          { label: "threshold", dataUrl: preprocessedThreshold },
+          { label: "crop_center_threshold", dataUrl: cropCenterThreshold },
+          { label: "crop_top_threshold", dataUrl: cropTopThreshold },
+        ];
+
+        let best: { candidateText: string; score: number } | null = null;
+
+        for (let i = 0; i < inputs.length; i++) {
+          const input = inputs[i];
+          const result = (await Tesseract.recognize(input.dataUrl, "eng", {
+            logger: (m: unknown) => {
+              if (i !== 0) return;
+              const status =
+                typeof m === "object" && m !== null && "status" in m
+                  ? String((m as TesseractProgress).status)
+                  : "";
+              if (status === "recognizing text") {
+                setIsScanning(true);
+              }
+            },
+          })) as OcrResult;
+
+          const text = normalizeOcrText(String(result?.data?.text || ""));
+          const reliable = getReliableOcrText(result);
+          const candidateText = reliable.reliableText.length >= 4 ? reliable.reliableText : text;
+
+          const score = scoreOcrCandidate(candidateText, reliable.reliableText, reliable, result);
+          if (!best || score > best.score) {
+            best = { candidateText, score };
+          }
+        }
+
+        extractedText = normalizeOcrText(best?.candidateText || "");
+      }
+
+      const cleanedForDisplay = cleanupOcrTextForDisplay(extractedText);
+      const cleanedForSearch = cleanupOcrTextForSearch(extractedText);
       const shouldReject = cleanedForSearch.length < 4 || isLikelyGibberish(cleanedForSearch);
 
       if (shouldReject) {
@@ -780,6 +806,7 @@ const Scan = () => {
       setIsScanning(false);
       searchProducts(cleanedForSearch);
     } catch (error) {
+      console.error("Image processing error:", error);
       toast({
         title: "Processing Error",
         description: "Failed to process the image. Please try again.",
