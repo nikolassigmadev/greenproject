@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { calculateScore, Product } from "@/data/products";
 import { ScoreBreakdownSlider } from "@/components/ScoreBreakdownSlider";
 import { recognizeImageWithOpenAI } from "@/services/ocr/openai-service";
+import { advancedProductOCR, extractBrandName, extractProductName, extractCertifications, checkOpenAIHealth } from "@/services/ocr/advanced-openai-ocr";
 import Tesseract from "tesseract.js";
 
 type OcrWord = {
@@ -725,21 +726,66 @@ const Scan = () => {
       let extractedText = "";
       let useOpenAI = true;
 
-      // Try OpenAI Vision API first
+      // Try Advanced OpenAI Vision API first (GPT-4 Vision with optimized prompts)
       try {
-        console.log("Attempting OCR with OpenAI Vision API...");
-        const openaiResult = await recognizeImageWithOpenAI(imageData);
+        console.log("🚀 Attempting ADVANCED OCR with GPT-4 Vision...");
+        const advancedResult = await advancedProductOCR(imageData);
 
-        if (openaiResult.success && openaiResult.text) {
-          console.log("OpenAI extraction successful");
-          extractedText = openaiResult.text;
+        if (advancedResult.success) {
+          console.log("✅ Advanced OCR extraction successful");
+          console.log("📊 Extracted:", {
+            product: advancedResult.productName,
+            brand: advancedResult.brandName,
+            certifications: advancedResult.certifications,
+            confidence: advancedResult.confidence,
+            time: advancedResult.processingTime,
+          });
+
+          // Prefer product name + brand for search
+          if (advancedResult.productName && advancedResult.brandName) {
+            extractedText = `${advancedResult.brandName} ${advancedResult.productName}`;
+          } else if (advancedResult.productName) {
+            extractedText = advancedResult.productName;
+          } else if (advancedResult.brandName) {
+            extractedText = advancedResult.brandName;
+          } else {
+            extractedText = advancedResult.fullText;
+          }
+
+          // Show additional info in toast
+          if (advancedResult.certifications.length > 0) {
+            toast({
+              title: "Certifications Found",
+              description: `${advancedResult.certifications.join(", ")}`,
+            });
+          }
         } else {
-          console.warn("OpenAI extraction failed, falling back to Tesseract:", openaiResult.error);
+          console.warn("❌ Advanced OCR failed, falling back to standard OpenAI:", advancedResult.error);
           useOpenAI = false;
         }
       } catch (error) {
-        console.warn("OpenAI API error, using Tesseract fallback:", error);
+        console.warn("⚠️ Advanced OCR error, trying standard OpenAI:", error);
         useOpenAI = false;
+      }
+
+      // Fallback to standard OpenAI if advanced failed
+      if (!useOpenAI || !extractedText) {
+        try {
+          console.log("📡 Attempting standard OpenAI Vision API...");
+          const openaiResult = await recognizeImageWithOpenAI(imageData);
+
+          if (openaiResult.success && openaiResult.text) {
+            console.log("✅ Standard OpenAI extraction successful");
+            extractedText = openaiResult.text;
+            useOpenAI = true;
+          } else {
+            console.warn("Standard OpenAI failed:", openaiResult.error);
+            useOpenAI = false;
+          }
+        } catch (error) {
+          console.warn("Standard OpenAI error:", error);
+          useOpenAI = false;
+        }
       }
 
       // Fallback to Tesseract if OpenAI didn't work
