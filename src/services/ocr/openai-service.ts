@@ -39,19 +39,21 @@ export const recognizeImageWithOpenAI = async (imageDataUrl: string): Promise<Oc
     }
 
     // Call OpenAI Vision API
-    const response = await client.messages.create({
-      model: 'claude-3-5-sonnet-20241022',
+    const response = await client.chat.completions.create({
+      model: 'gpt-4o',
       max_tokens: 1024,
       messages: [
+        {
+          role: 'system',
+          content: 'You are an OCR expert. Extract all visible text from product images with high accuracy.',
+        },
         {
           role: 'user',
           content: [
             {
-              type: 'image',
-              source: {
-                type: 'base64',
-                media_type: 'image/jpeg',
-                data: base64Image,
+              type: 'image_url',
+              image_url: {
+                url: `data:image/jpeg;base64,${base64Image}`,
               },
             },
             {
@@ -63,14 +65,11 @@ export const recognizeImageWithOpenAI = async (imageDataUrl: string): Promise<Oc
       ],
     });
 
-    const extractedText = response.content
-      .filter((block) => block.type === 'text')
-      .map((block) => (block.type === 'text' ? block.text : ''))
-      .join('\n');
+    const extractedText = response.choices[0]?.message?.content || '';
 
     return {
       text: extractedText,
-      confidence: 95, // Claude 3.5 is very accurate
+      confidence: 90, // GPT-4o is very accurate
       success: true,
     };
   } catch (error) {
@@ -100,19 +99,21 @@ export const extractProductCode = async (imageDataUrl: string): Promise<string> 
       base64Image = imageDataUrl.split(',')[1];
     }
 
-    const response = await client.messages.create({
-      model: 'claude-3-5-sonnet-20241022',
+    const response = await client.chat.completions.create({
+      model: 'gpt-4o',
       max_tokens: 256,
       messages: [
+        {
+          role: 'system',
+          content: 'You are a barcode and product code extraction expert.',
+        },
         {
           role: 'user',
           content: [
             {
-              type: 'image',
-              source: {
-                type: 'base64',
-                media_type: 'image/jpeg',
-                data: base64Image,
+              type: 'image_url',
+              image_url: {
+                url: `data:image/jpeg;base64,${base64Image}`,
               },
             },
             {
@@ -124,10 +125,7 @@ export const extractProductCode = async (imageDataUrl: string): Promise<string> 
       ],
     });
 
-    const code = response.content
-      .filter((block) => block.type === 'text')
-      .map((block) => (block.type === 'text' ? block.text.trim() : ''))
-      .join('');
+    const code = (response.choices[0]?.message?.content || '').trim();
 
     return code;
   } catch (error) {
@@ -146,8 +144,8 @@ export const checkOpenAIConnection = async (): Promise<boolean> => {
 
   try {
     // Make a simple API call to verify connection
-    const response = await client.messages.create({
-      model: 'claude-3-5-sonnet-20241022',
+    const response = await client.chat.completions.create({
+      model: 'gpt-4o',
       max_tokens: 10,
       messages: [
         {
@@ -157,7 +155,7 @@ export const checkOpenAIConnection = async (): Promise<boolean> => {
       ],
     });
 
-    return response.content.length > 0;
+    return response.choices[0]?.message?.content?.length > 0;
   } catch (error) {
     console.error('OpenAI connection check failed:', error);
     return false;

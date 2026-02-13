@@ -99,24 +99,26 @@ export const advancedProductOCR = async (imageDataUrl: string): Promise<Advanced
     console.log('🔍 Starting advanced OCR with GPT-4 Vision...');
 
     // Call OpenAI GPT-4 Vision API with optimized parameters
-    const response = await client.messages.create({
+    const response = await client.chat.completions.create({
       model: 'gpt-4-vision-preview',
       max_tokens: 2048, // Increased for detailed extraction
       messages: [
         {
+          role: 'system',
+          content: PRODUCT_OCR_SYSTEM_PROMPT,
+        },
+        {
           role: 'user',
           content: [
             {
-              type: 'image',
-              source: {
-                type: 'base64',
-                media_type: 'image/jpeg',
-                data: base64Image,
+              type: 'image_url',
+              image_url: {
+                url: `data:image/jpeg;base64,${base64Image}`,
               },
             },
             {
               type: 'text',
-              text: PRODUCT_OCR_SYSTEM_PROMPT,
+              text: 'Extract all product information from this image following the system prompt instructions.',
             },
           ],
         },
@@ -124,10 +126,7 @@ export const advancedProductOCR = async (imageDataUrl: string): Promise<Advanced
       temperature: 0.3, // Low temperature for consistent, precise output
     });
 
-    const rawResponse = response.content
-      .filter((block) => block.type === 'text')
-      .map((block) => (block.type === 'text' ? block.text : ''))
-      .join('\n');
+    const rawResponse = response.choices[0]?.message?.content || '';
 
     console.log('📄 Raw OCR Response:', rawResponse);
 
@@ -207,19 +206,21 @@ export const extractBrandName = async (imageDataUrl: string): Promise<string | n
       base64Image = imageDataUrl.split(',')[1];
     }
 
-    const response = await client.messages.create({
+    const response = await client.chat.completions.create({
       model: 'gpt-4-vision-preview',
       max_tokens: 100,
       messages: [
         {
+          role: 'system',
+          content: 'You are a brand name extraction expert. Extract ONLY the brand/manufacturer name from product images.',
+        },
+        {
           role: 'user',
           content: [
             {
-              type: 'image',
-              source: {
-                type: 'base64',
-                media_type: 'image/jpeg',
-                data: base64Image,
+              type: 'image_url',
+              image_url: {
+                url: `data:image/jpeg;base64,${base64Image}`,
               },
             },
             {
@@ -232,11 +233,7 @@ export const extractBrandName = async (imageDataUrl: string): Promise<string | n
       temperature: 0.2,
     });
 
-    const brandName = response.content
-      .filter((block) => block.type === 'text')
-      .map((block) => (block.type === 'text' ? block.text.trim() : ''))
-      .join('')
-      .replace(/["']/g, '');
+    const brandName = (response.choices[0]?.message?.content || '').trim().replace(/["']/g, '');
 
     return brandName && brandName !== 'UNKNOWN' ? brandName : null;
   } catch (error) {
@@ -257,19 +254,21 @@ export const extractProductName = async (imageDataUrl: string): Promise<string |
       base64Image = imageDataUrl.split(',')[1];
     }
 
-    const response = await client.messages.create({
+    const response = await client.chat.completions.create({
       model: 'gpt-4-vision-preview',
       max_tokens: 100,
       messages: [
         {
+          role: 'system',
+          content: 'You are a product name extraction expert. Extract ONLY the product name from product images.',
+        },
+        {
           role: 'user',
           content: [
             {
-              type: 'image',
-              source: {
-                type: 'base64',
-                media_type: 'image/jpeg',
-                data: base64Image,
+              type: 'image_url',
+              image_url: {
+                url: `data:image/jpeg;base64,${base64Image}`,
               },
             },
             {
@@ -282,11 +281,7 @@ export const extractProductName = async (imageDataUrl: string): Promise<string |
       temperature: 0.2,
     });
 
-    const productName = response.content
-      .filter((block) => block.type === 'text')
-      .map((block) => (block.type === 'text' ? block.text.trim() : ''))
-      .join('')
-      .replace(/["']/g, '');
+    const productName = (response.choices[0]?.message?.content || '').trim().replace(/["']/g, '');
 
     return productName && productName !== 'UNKNOWN' ? productName : null;
   } catch (error) {
@@ -307,19 +302,21 @@ export const extractCertifications = async (imageDataUrl: string): Promise<strin
       base64Image = imageDataUrl.split(',')[1];
     }
 
-    const response = await client.messages.create({
+    const response = await client.chat.completions.create({
       model: 'gpt-4-vision-preview',
       max_tokens: 200,
       messages: [
         {
+          role: 'system',
+          content: 'You are an ethical certification detection expert. Identify sustainability and ethical labels on products.',
+        },
+        {
           role: 'user',
           content: [
             {
-              type: 'image',
-              source: {
-                type: 'base64',
-                media_type: 'image/jpeg',
-                data: base64Image,
+              type: 'image_url',
+              image_url: {
+                url: `data:image/jpeg;base64,${base64Image}`,
               },
             },
             {
@@ -345,10 +342,7 @@ Return empty array [] if none found.`,
       temperature: 0.1, // Very low for consistent categorization
     });
 
-    const response_text = response.content
-      .filter((block) => block.type === 'text')
-      .map((block) => (block.type === 'text' ? block.text : ''))
-      .join('');
+    const response_text = response.choices[0]?.message?.content || '';
 
     try {
       const jsonMatch = response_text.match(/\[.*\]/s);
@@ -374,7 +368,7 @@ export const checkOpenAIHealth = async (): Promise<boolean> => {
 
   try {
     console.log('🏥 Checking OpenAI API health...');
-    const response = await client.messages.create({
+    const response = await client.chat.completions.create({
       model: 'gpt-4-vision-preview',
       max_tokens: 10,
       messages: [
@@ -385,7 +379,7 @@ export const checkOpenAIHealth = async (): Promise<boolean> => {
       ],
     });
 
-    const isHealthy = response.content.length > 0;
+    const isHealthy = response.choices[0]?.message?.content?.length > 0;
     console.log(isHealthy ? '✅ OpenAI API is healthy' : '❌ OpenAI API returned empty response');
     return isHealthy;
   } catch (error) {
