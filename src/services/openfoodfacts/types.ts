@@ -1,8 +1,77 @@
+// Single product lookup response
 export interface OpenFoodFactsResponse {
   code: string;
   status: number; // 1 = found, 0 = not found
   status_verbose: string;
   product?: OpenFoodFactsProduct;
+}
+
+// Text search response
+export interface OpenFoodFactsSearchResponse {
+  count: number;
+  page: number;
+  page_count: number;
+  page_size: number;
+  products: OpenFoodFactsProduct[];
+}
+
+export interface EcoscorePackagingComponent {
+  material?: string;
+  shape?: string;
+  weight_measured?: number;
+  recycling?: string;
+  score?: number;
+  non_recyclable_and_non_biodegradable?: string;
+}
+
+export interface EcoscoreAdjustments {
+  origins_of_ingredients?: {
+    epi_score?: number;
+    transportation_score?: number;
+    value?: number;
+    aggregated_origins?: Array<{
+      origin?: string;
+      percent?: number;
+    }>;
+  };
+  packaging?: {
+    score?: number;
+    value?: number;
+    packagings?: EcoscorePackagingComponent[];
+  };
+  threatened_species?: {
+    ingredient?: string;
+    value?: number;
+  };
+  production_system?: {
+    labels?: string[];
+    value?: number;
+  };
+}
+
+export interface EcoscoreData {
+  grade?: string;
+  score?: number;
+  status?: string;
+  adjustments?: EcoscoreAdjustments;
+  agribalyse?: {
+    code?: string;
+    score?: number;
+    co2_agriculture?: number;
+    co2_consumption?: number;
+    co2_distribution?: number;
+    co2_packaging?: number;
+    co2_processing?: number;
+    co2_total?: number;
+    co2_transportation?: number;
+    ef_agriculture?: number;
+    ef_consumption?: number;
+    ef_distribution?: number;
+    ef_packaging?: number;
+    ef_processing?: number;
+    ef_total?: number;
+    ef_transportation?: number;
+  };
 }
 
 export interface OpenFoodFactsProduct {
@@ -14,16 +83,17 @@ export interface OpenFoodFactsProduct {
   categories_tags?: string[];
 
   // Environmental scoring
-  ecoscore_grade?: string; // "a" | "b" | "c" | "d" | "e" | "unknown" | "not-applicable"
-  ecoscore_score?: number; // 0-100
+  ecoscore_grade?: string;
+  ecoscore_score?: number;
+  ecoscore_data?: EcoscoreData;
 
   // Carbon footprint
   carbon_footprint_percent_of_known_ingredients?: number;
 
   // Nutrition scoring
-  nutriscore_grade?: string; // "a" through "e"
+  nutriscore_grade?: string;
   nutriscore_score?: number;
-  nova_group?: number; // 1-4 (processing level)
+  nova_group?: number;
 
   nutriments?: {
     'carbon-footprint-from-known-ingredients_product'?: number;
@@ -57,17 +127,20 @@ export interface OpenFoodFactsResult {
   barcode: string;
   productName: string | null;
   brand: string | null;
-  ecoscoreGrade: string | null; // "a"-"e" or null
-  ecoscoreScore: number | null; // 0-100
+  ecoscoreGrade: string | null;
+  ecoscoreScore: number | null;
   nutriscoreGrade: string | null;
   nutriscoreScore: number | null;
-  novaGroup: number | null; // 1-4
-  carbonFootprint100g: number | null; // g CO2e per 100g
+  novaGroup: number | null;
+  carbonFootprint100g: number | null;
+  carbonFootprintProduct: number | null;
+  carbonFootprintServing: number | null;
   labels: string[];
   categories: string[];
   origins: string | null;
   ingredientsText: string | null;
   imageUrl: string | null;
+  ecoscoreData: EcoscoreData | null;
   rawProduct: OpenFoodFactsProduct | null;
   error?: string;
 }
