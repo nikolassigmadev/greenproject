@@ -1,5 +1,6 @@
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, MapPin, Truck, Leaf, AlertTriangle, Award, Package, ArrowRight } from "lucide-react";
+import { ArrowLeft, MapPin, Truck, Leaf, AlertTriangle, Award, Package, ArrowRight, Loader2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { ScoreDisplay } from "@/components/ScoreDisplay";
@@ -12,6 +13,8 @@ import { calculateScore, findAlternatives } from "@/data/products";
 import { useProducts } from "@/hooks/useProducts";
 import { cn } from "@/lib/utils";
 import { ScoreBreakdownSlider } from "@/components/ScoreBreakdownSlider";
+import { lookupBarcode, isValidBarcode } from "@/services/openfoodfacts";
+import { OpenFoodFactsCard } from "@/components/OpenFoodFactsCard";
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -41,6 +44,14 @@ const ProductDetail = () => {
 
   const score = calculateScore(product);
   const alternatives = findAlternatives(product, products);
+
+  const offQuery = useQuery({
+    queryKey: ['openfoodfacts', product.barcode],
+    queryFn: () => lookupBarcode(product.barcode!),
+    enabled: !!product.barcode && isValidBarcode(product.barcode),
+    staleTime: 1000 * 60 * 30,
+    retry: 1,
+  });
 
   const laborRiskConfig = {
     low: { label: 'Low Risk', color: 'text-score-excellent', bg: 'bg-score-excellent/10', progress: 20 },
@@ -252,6 +263,19 @@ const ProductDetail = () => {
                     <p className="font-mono text-sm">{product.barcode}</p>
                   </CardContent>
                 </Card>
+              )}
+
+              {/* OpenFoodFacts Data */}
+              {offQuery.isLoading && product.barcode && (
+                <Card>
+                  <CardContent className="flex items-center justify-center gap-2 py-4">
+                    <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
+                    <span className="text-sm text-muted-foreground">Fetching environmental data...</span>
+                  </CardContent>
+                </Card>
+              )}
+              {offQuery.data && (
+                <OpenFoodFactsCard result={offQuery.data} />
               )}
             </div>
           </div>
