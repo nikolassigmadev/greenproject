@@ -6,17 +6,81 @@ import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useProducts } from "@/hooks/useProducts";
-import { useToast } from "@/hooks/use-toast";
-import { calculateScore, Product } from "@/data/products";
+import { ProductCard } from "@/components/ProductCard";
+import { OpenFoodFactsCard } from "@/components/OpenFoodFactsCard";
+import { EnvironmentalImpactCard } from "@/components/EnvironmentalImpactCard";
 import { ScoreBreakdownSlider } from "@/components/ScoreBreakdownSlider";
+import { useToast } from "@/hooks/use-toast";
+import { useProducts } from "@/hooks/useProducts";
+import type { Product } from "@/data/products";
+import { calculateScore } from "@/data/products";
 import { recognizeImageWithOpenAI } from "@/services/ocr/openai-service";
 import { advancedProductOCR, extractBrandName, extractProductName, extractCertifications, checkOpenAIHealth } from "@/services/ocr/advanced-openai-ocr";
 import { copySingleProductCode } from "@/utils/productExporter";
 import { lookupBarcode, isValidBarcode, searchProducts as searchOffProducts } from "@/services/openfoodfacts";
-import { OpenFoodFactsCard } from "@/components/OpenFoodFactsCard";
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
 import Tesseract from "tesseract.js";
+
+// Function to calculate ecological data completeness score
+const calculateEcoScore = (result: OpenFoodFactsResult): number => {
+  let score = 0;
+  
+  // Eco-Score data (most important)
+  if (result.ecoscoreGrade) score += 20;
+  if (result.ecoscoreScore !== null) score += 10;
+  
+  // Carbon footprint data
+  if (result.carbonFootprint100g !== null) score += 15;
+  if (result.carbonFootprintProduct !== null) score += 10;
+  if (result.carbonFootprintServing !== null) score += 10;
+  
+  // Eco-Score adjustments (very important for detailed breakdown)
+  const adjustments = result.ecoscoreData?.adjustments;
+  if (adjustments) {
+    if (adjustments.packaging?.value !== undefined) score += 15;
+    if (adjustments.origins_of_ingredients?.value !== undefined) score += 15;
+    if (adjustments.threatened_species?.value !== undefined) score += 10;
+    if (adjustments.production_system?.value !== undefined) score += 10;
+  }
+  
+  // Agribalyse data (CO2 lifecycle breakdown)
+  const agri = result.ecoscoreData?.agribalyse;
+  if (agri) {
+    if (agri.co2_total !== undefined) score += 20;
+    if (agri.co2_agriculture !== undefined) score += 5;
+    if (agri.co2_processing !== undefined) score += 5;
+    if (agri.co2_packaging !== undefined) score += 5;
+    if (agri.co2_transportation !== undefined) score += 5;
+    if (agri.co2_distribution !== undefined) score += 5;
+    if (agri.co2_consumption !== undefined) score += 5;
+  }
+  
+  // Additional data
+  if (result.nutriscoreGrade) score += 5;
+  if (result.novaGroup !== null) score += 5;
+  if (result.labels && result.labels.length > 0) score += 5;
+  if (result.origins) score += 5;
+  if (result.imageUrl) score += 5;
+  
+  return score;
+};
+
+// Function to filter and select best products
+const filterBestProducts = (results: OpenFoodFactsResult[]): OpenFoodFactsResult[] => {
+  if (results.length <= 3) return results;
+  
+  // Calculate eco scores for all products
+  const productsWithScores = results.map(result => ({
+    result,
+    ecoScore: calculateEcoScore(result)
+  }));
+  
+  // Sort by eco score (descending) - highest score first
+  productsWithScores.sort((a, b) => b.ecoScore - a.ecoScore);
+  
+  // Take top 3
+  return productsWithScores.slice(0, 3).map(item => item.result);
+};
 
 type OcrWord = {
   text?: string;
@@ -408,6 +472,8 @@ const Scan = () => {
   const [offSearchLoading, setOffSearchLoading] = useState(false);
   const [offSearchImage, setOffSearchImage] = useState<string | null>(null);
   const [offSearchText, setOffSearchText] = useState("");
+  const [showDetailedEnvironmental, setShowDetailedEnvironmental] = useState(false);
+  const [selectedEnvironmentalResult, setSelectedEnvironmentalResult] = useState<OpenFoodFactsResult | null>(null);
   const offFileInputRef = useRef<HTMLInputElement>(null);
 
   // Debug: Check if video element is mounted
@@ -825,6 +891,22 @@ const Scan = () => {
     }
   }, [uploadedImage, extractedText, products, toast, navigate]);
 
+  // Handle viewing detailed environmental impact
+  const viewDetailedEnvironmental = useCallback((result: OpenFoodFactsResult) => {
+    setSelectedEnvironmentalResult(result);
+    setShowDetailedEnvironmental(true);
+    toast({
+      title: "Environmental Impact Details",
+      description: "Showing comprehensive environmental analysis.",
+    });
+  }, [toast]);
+
+  // Handle back to search results
+  const backToSearchResults = useCallback(() => {
+    setShowDetailedEnvironmental(false);
+    setSelectedEnvironmentalResult(null);
+  }, []);
+
   // Process image with OCR - Try OpenAI first, fallback to Tesseract
   const processImage = useCallback(async (imageData: string) => {
     setIsProcessing(true);
@@ -1006,12 +1088,17 @@ const Scan = () => {
 
     setOffLoading(true);
     setOffResult(null);
+    setOffSearchResults([]);
 
     try {
       const result = await lookupBarcode(barcode.trim());
       setOffResult(result);
 
       if (result.found) {
+        // Also populate search results so they display in the UI
+        setOffSearchResults([result]);
+        // Automatically show detailed environmental view for barcode lookups
+        viewDetailedEnvironmental(result);
         toast({
           title: "Product Found on OpenFoodFacts",
           description: `${result.brand || ""} ${result.productName || "Unknown Product"}`.trim(),
@@ -1065,6 +1152,8 @@ const Scan = () => {
             setOffSearchResults([barcodeResult]);
             setOffSearchText(`Barcode: ${advancedResult.barcode}`);
             setOffSearchLoading(false);
+            // Automatically show detailed environmental view for barcode lookups from images
+            viewDetailedEnvironmental(barcodeResult);
             toast({
               title: "Product Found",
               description: `${barcodeResult.brand || ""} ${barcodeResult.productName || ""}`.trim(),
@@ -1096,13 +1185,22 @@ const Scan = () => {
           variant: "destructive",
         });
       } else {
-        toast({
-          title: `${results.length} Product${results.length > 1 ? "s" : ""} Found`,
-          description: `Searched for "${searchQuery}" on OpenFoodFacts.`,
-        });
-      }
+        const filteredResults = filterBestProducts(results);
+      
+        if (filteredResults.length < results.length) {
+          toast({
+            title: `${filteredResults.length} Best Products Selected`,
+            description: `Found ${results.length} products, showing only those with the most complete ecological data.`,
+          });
+        } else {
+          toast({
+            title: `${filteredResults.length} Product${filteredResults.length > 1 ? "s" : ""} Found`,
+            description: `Searched for "${searchQuery}" on OpenFoodFacts.`,
+          });
+        }
 
-      setOffSearchResults(results);
+        setOffSearchResults(filteredResults);
+      }
     } catch (error) {
       console.error("OFF image search error:", error);
       toast({
@@ -1328,7 +1426,7 @@ const Scan = () => {
               )}
 
               {/* Search results */}
-              {offSearchResults.length > 0 && !offSearchLoading && (
+              {offSearchResults.length > 0 && !offSearchLoading && !showDetailedEnvironmental && (
                 <div className="space-y-3">
                   <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
                     Found {offSearchResults.length} result{offSearchResults.length > 1 ? "s" : ""}
@@ -1337,18 +1435,50 @@ const Scan = () => {
                     {offSearchResults.map((result, i) => (
                       <div key={`${result.barcode}-${i}`}>
                         <OpenFoodFactsCard result={result} />
+                        <div className="mt-2 flex justify-center">
+                          <Button
+                            onClick={() => viewDetailedEnvironmental(result)}
+                            variant="outline"
+                            size="sm"
+                            className="text-emerald-600 border-emerald-300 hover:bg-emerald-50"
+                          >
+                            <Leaf className="w-4 h-4 mr-2" />
+                            View Detailed Environmental Impact
+                          </Button>
+                        </div>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
 
+              {/* Detailed Environmental View */}
+              {showDetailedEnvironmental && selectedEnvironmentalResult && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
+                      Environmental Impact Analysis
+                    </h3>
+                    <Button
+                      onClick={backToSearchResults}
+                      variant="outline"
+                      size="sm"
+                    >
+                      ← Back to Results
+                    </Button>
+                  </div>
+                  <EnvironmentalImpactCard result={selectedEnvironmentalResult} />
+                </div>
+              )}
+
               {/* No results */}
-              {offSearchResults.length === 0 && offSearchImage && !offSearchLoading && offSearchText && (
+              {offSearchResults.length === 0 && (offSearchImage || barcodeInput) && !offSearchLoading && !offLoading && (offSearchText || offResult) && (
                 <div className="flex items-center gap-3 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800">
                   <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
                   <p className="text-sm text-amber-800 dark:text-amber-200">
-                    No products found for "{offSearchText}"
+                    {offSearchText ? `No products found for "${offSearchText}"` : 
+                     offResult?.found === false ? offResult.error || "Product not found" :
+                     "No products found"}
                   </p>
                 </div>
               )}
