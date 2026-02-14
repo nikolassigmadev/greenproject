@@ -464,7 +464,7 @@ const Scan = () => {
             height: { ideal: 720, min: 480 }
           },
           audio: false
-        });
+        }) as MediaStream;
         console.log('Camera access granted with optimal settings');
       } catch (err) {
         console.log('Optimal settings failed, trying basic settings:', err);
@@ -474,7 +474,7 @@ const Scan = () => {
           stream = await mediaDevices.getUserMedia({
             video: true,
             audio: false
-          });
+          }) as MediaStream;
           console.log('Camera access granted with basic settings');
         } catch (err2) {
           console.log('Basic settings failed too:', err2);
@@ -487,7 +487,7 @@ const Scan = () => {
                 height: { min: 240 }
               },
               audio: false
-            });
+            }) as MediaStream;
             console.log('Camera access granted with minimal settings');
           } catch (err3) {
             console.log('Minimal settings failed:', err3);
@@ -1214,29 +1214,167 @@ const Scan = () => {
     <div className="min-h-screen flex flex-col">
       <Header />
       
-      <main className="flex-1 py-8">
-        <div className="container max-w-2xl">
+      <main className="flex-1 py-6 sm:py-8">
+        <div className="container max-w-4xl">
           {/* Page Header */}
-          <div className="text-center mb-8">
-            <h1 className="text-3xl sm:text-4xl font-display font-bold mb-2">
+          <div className="text-center mb-8 sm:mb-10">
+            <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-900/20 dark:to-emerald-800/20 mb-4">
+              <ScanLine className="w-8 h-8 sm:w-10 sm:h-10 text-emerald-600" />
+            </div>
+            <h1 className="text-3xl sm:text-4xl font-display font-bold mb-3 bg-gradient-to-r from-emerald-700 to-emerald-600 dark:from-emerald-400 dark:to-emerald-300 bg-clip-text text-transparent">
               Scan a Product
             </h1>
-            <p className="text-muted-foreground">
-              Use your camera or upload an image to identify products
+            <p className="text-base sm:text-lg text-muted-foreground max-w-md mx-auto leading-relaxed">
+              Use your camera or upload an image to instantly identify products and discover their ethical impact
             </p>
           </div>
 
-          {/* Scanner Card */}
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <ScanLine className="w-5 h-5 text-primary" />
-                Product Scanner
+          {/* Product Lookup */}
+          <Card className="mb-6 sm:mb-8 border-0 shadow-lg bg-gradient-to-br from-white to-slate-50/30 dark:from-slate-900 dark:to-slate-800/30">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-3 text-lg">
+                <div className="flex items-center justify-center w-9 h-9 rounded-full bg-emerald-100 dark:bg-emerald-900/50">
+                  <Search className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <span className="bg-gradient-to-r from-emerald-700 to-emerald-600 bg-clip-text text-transparent">Product Lookup</span>
               </CardTitle>
+              <p className="text-sm text-muted-foreground pl-12">
+                Search by barcode, upload image, or enter product name
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Barcode Input */}
+              <div className="space-y-3">
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Barcode Search</label>
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleBarcodeLookup(barcodeInput);
+                  }}
+                  className="flex gap-3"
+                >
+                  <Input
+                    placeholder="Enter barcode (e.g., 3017620422003)"
+                    value={barcodeInput}
+                    onChange={(e) => setBarcodeInput(e.target.value)}
+                    className="flex-1 h-11 rounded-lg border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/50 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/20"
+                    inputMode="numeric"
+                  />
+                  <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700 h-11 px-5 rounded-lg shadow-md hover:shadow-lg transition-all duration-300" disabled={offLoading}>
+                    {offLoading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Search className="w-4 h-4" />
+                    )}
+                  </Button>
+                </form>
+              </div>
+
+              {/* Image Upload */}
+              <div className="space-y-3">
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Image Search</label>
+                <Button
+                  onClick={() => offFileInputRef.current?.click()}
+                  disabled={offSearchLoading}
+                  className="w-full h-11 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-lg transition-all duration-300"
+                  variant="outline"
+                >
+                  {offSearchLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Analyzing...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4 mr-2" />
+                      Choose Product Image
+                    </>
+                  )}
+                </Button>
+                <input
+                  ref={offFileInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={handleOffFileUpload}
+                  className="hidden"
+                />
+              </div>
+
+              {/* Preview uploaded image */}
+              {offSearchImage && (
+                <div className="space-y-3">
+                  <div className="relative rounded-lg overflow-hidden bg-slate-50 dark:bg-slate-900 aspect-video max-h-48 border border-slate-200 dark:border-slate-700">
+                    <img
+                      src={offSearchImage}
+                      alt="Scanned product"
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                  {offSearchText && (
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                      Identified: <span className="font-medium">{offSearchText}</span>
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Loading state */}
+              {offSearchLoading && (
+                <div className="flex items-center justify-center gap-3 py-6">
+                  <Loader2 className="w-5 h-5 animate-spin text-emerald-600" />
+                  <span className="text-sm text-slate-600 dark:text-slate-400">Searching database...</span>
+                </div>
+              )}
+
+              {/* Search results */}
+              {offSearchResults.length > 0 && !offSearchLoading && (
+                <div className="space-y-3">
+                  <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                    Found {offSearchResults.length} result{offSearchResults.length > 1 ? "s" : ""}
+                  </p>
+                  <div className="space-y-2">
+                    {offSearchResults.map((result, i) => (
+                      <div key={`${result.barcode}-${i}`}>
+                        <OpenFoodFactsCard result={result} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* No results */}
+              {offSearchResults.length === 0 && offSearchImage && !offSearchLoading && offSearchText && (
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800">
+                  <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                  <p className="text-sm text-amber-800 dark:text-amber-200">
+                    No products found for "{offSearchText}"
+                  </p>
+                </div>
+              )}
+
+              <p className="text-xs text-slate-500 dark:text-slate-400 text-center">
+                Powered by OpenFoodFacts database
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Scanner Card */}
+          <Card className="mb-6 sm:mb-8 border-0 shadow-lg bg-white dark:bg-slate-900">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-3 text-lg">
+                <div className="flex items-center justify-center w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-900/50">
+                  <ScanLine className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                </div>
+                <span className="text-slate-800 dark:text-slate-200">Product Scanner</span>
+              </CardTitle>
+              <p className="text-sm text-muted-foreground pl-12">
+                Use camera or upload image to identify products
+              </p>
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Camera View */}
-              <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 aspect-[3/4] sm:aspect-video max-h-[72vh] sm:max-h-none shadow-lg border border-slate-200 dark:border-slate-700">
+              <div className="relative rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 aspect-[3/4] sm:aspect-video max-h-[72vh] sm:max-h-none shadow-lg border border-slate-200 dark:border-slate-700">
                 {/* Video element with improved mobile compatibility */}
                 <video
                   ref={videoRef}
@@ -1265,28 +1403,25 @@ const Scan = () => {
                 
                 {cameraActive && (
                   <>
-                    {/* Scanning overlay with improved design */}
+                    {/* Scanning overlay */}
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                       <div className="relative">
-                        <div className="w-[min(78vw,26rem)] aspect-square border-2 border-primary rounded-2xl animate-pulse-soft shadow-lg" />
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="absolute inset-4 border border-primary/50 rounded-xl" />
-                        </div>
+                        <div className="w-[min(78vw,26rem)] aspect-square border-2 border-blue-500 rounded-2xl" />
                         {/* Corner indicators */}
-                        <div className="absolute top-2 left-2 w-8 h-8 border-t-2 border-l-2 border-primary rounded-tl-lg" />
-                        <div className="absolute top-2 right-2 w-8 h-8 border-t-2 border-r-2 border-primary rounded-tr-lg" />
-                        <div className="absolute bottom-2 left-2 w-8 h-8 border-b-2 border-l-2 border-primary rounded-bl-lg" />
-                        <div className="absolute bottom-2 right-2 w-8 h-8 border-b-2 border-r-2 border-primary rounded-br-lg" />
+                        <div className="absolute top-2 left-2 w-6 h-6 border-t-2 border-l-2 border-blue-500 rounded-tl-lg" />
+                        <div className="absolute top-2 right-2 w-6 h-6 border-t-2 border-r-2 border-blue-500 rounded-tr-lg" />
+                        <div className="absolute bottom-2 left-2 w-6 h-6 border-b-2 border-l-2 border-blue-500 rounded-bl-lg" />
+                        <div className="absolute bottom-2 right-2 w-6 h-6 border-b-2 border-r-2 border-blue-500 rounded-br-lg" />
                       </div>
                     </div>
 
-                    {/* Camera controls with improved positioning */}
-                    <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-4 px-6">
+                    {/* Camera controls */}
+                    <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-3 px-6">
                       <div className="bg-black/20 backdrop-blur-md rounded-full p-2 flex gap-3">
                         <Button 
                           onClick={capturePhoto} 
                           size="lg" 
-                          className="bg-gradient-hero hover:scale-105 transition-transform duration-200 rounded-full w-16 h-16 p-0 shadow-lg"
+                          className="bg-blue-600 hover:bg-blue-700 rounded-full w-14 h-14 p-0 shadow-lg"
                         >
                           <Camera className="w-6 h-6" />
                         </Button>
@@ -1294,7 +1429,7 @@ const Scan = () => {
                           onClick={stopCamera} 
                           variant="secondary" 
                           size="lg"
-                          className="bg-white/90 hover:bg-white hover:scale-105 transition-all duration-200 rounded-full w-14 h-14 p-0 shadow-lg border border-white/20"
+                          className="bg-white/90 hover:bg-white rounded-full w-12 h-12 p-0 shadow-lg border border-white/20"
                         >
                           <X className="w-5 h-5 text-slate-700" />
                         </Button>
@@ -1304,41 +1439,35 @@ const Scan = () => {
                 )}
                 
                 {cameraInitializing ? (
-                  <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900">
+                  <div className="absolute inset-0 flex items-center justify-center bg-slate-100 dark:bg-slate-800">
                     <div className="text-center space-y-4 p-8">
-                      <div className="relative">
-                        <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto" />
-                        <div className="absolute inset-0 w-12 h-12 animate-ping bg-primary/20 rounded-full mx-auto" />
-                      </div>
+                      <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto" />
                       <div className="space-y-2">
-                        <p className="text-lg font-medium text-slate-700 dark:text-slate-300">Initializing camera...</p>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">Please allow camera access when prompted</p>
+                        <p className="text-lg font-medium text-slate-800 dark:text-slate-200">Initializing camera...</p>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">Please allow camera access</p>
                       </div>
                     </div>
                   </div>
                 ) : !cameraActive && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 p-8">
+                  <div className="absolute inset-0 flex items-center justify-center bg-slate-100 dark:bg-slate-800 p-8">
                     <div className="w-full max-w-md space-y-6">
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <Button
                           onClick={startCamera}
                           variant="outline"
-                          className="h-36 flex-col gap-4 bg-white/50 hover:bg-white hover:scale-105 transition-all duration-200 rounded-2xl border-2 border-transparent hover:border-primary/30 shadow-lg backdrop-blur-sm"
+                          className="h-32 flex-col gap-3 bg-white hover:bg-gray-50 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl border-2 border-slate-200 dark:border-slate-700 hover:border-blue-400 shadow-sm"
                           disabled={isProcessing}
                         >
-                          <div className="relative">
-                            <Camera className="w-10 h-10 text-primary" />
-                            <div className="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full animate-pulse" />
-                          </div>
+                          <Camera className="w-8 h-8 text-blue-600" />
                           <span className="font-medium">Use Camera</span>
                         </Button>
                         <Button
                           onClick={() => fileInputRef.current?.click()}
                           variant="outline"
-                          className="h-36 flex-col gap-4 bg-white/50 hover:bg-white hover:scale-105 transition-all duration-200 rounded-2xl border-2 border-transparent hover:border-primary/30 shadow-lg backdrop-blur-sm"
+                          className="h-32 flex-col gap-3 bg-white hover:bg-gray-50 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl border-2 border-slate-200 dark:border-slate-700 hover:border-blue-400 shadow-sm"
                           disabled={isProcessing}
                         >
-                          <Upload className="w-10 h-10 text-primary" />
+                          <Upload className="w-8 h-8 text-blue-600" />
                           <span className="font-medium">Upload Image</span>
                         </Button>
                       </div>
@@ -1378,22 +1507,33 @@ const Scan = () => {
 
               {/* Processing State */}
               {isProcessing && (
-                <div className="flex items-center justify-center gap-3 py-8">
-                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                  <span className="text-muted-foreground">
-                    {isScanning ? "Reading text from image..." : "Processing image..."}
-                  </span>
+                <div className="flex items-center justify-center gap-4 py-12">
+                  <div className="relative">
+                    <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
+                    <div className="absolute inset-0 w-8 h-8 animate-ping bg-emerald-400/20 rounded-full" />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-base font-medium text-slate-700 dark:text-slate-300">
+                      {isScanning ? "Reading text from image..." : "Processing image..."}
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-1">This may take a few seconds</p>
+                  </div>
                 </div>
               )}
 
               {/* Image Preview */}
               {uploadedImage && (
-                <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground">Image Preview:</p>
-                  <div className="relative rounded-lg overflow-hidden bg-muted aspect-video max-h-64">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center">
+                      <ImageIcon className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Scanned Image</p>
+                  </div>
+                  <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900 aspect-video max-h-80 shadow-lg border border-slate-200/50 dark:border-slate-700/50">
                     <img
                       src={uploadedImage}
-                      alt="Uploaded"
+                      alt="Uploaded product"
                       className="w-full h-full object-contain"
                     />
                   </div>
@@ -1402,15 +1542,25 @@ const Scan = () => {
 
               {/* Extracted Text */}
               {(extractedText || ocrMessage) && (
-                <div className="p-4 rounded-lg bg-muted/50 border border-border">
-                  <p className="text-xs text-muted-foreground mb-2">Extracted Text:</p>
+                <div className="p-6 rounded-2xl bg-gradient-to-br from-emerald-50 to-emerald-100/50 dark:from-emerald-950/30 dark:to-emerald-900/20 border border-emerald-200/50 dark:border-emerald-800/30 shadow-lg">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-6 h-6 rounded-full bg-emerald-200 dark:bg-emerald-800 flex items-center justify-center">
+                      <ScanLine className="w-3 h-3 text-emerald-700 dark:text-emerald-300" />
+                    </div>
+                    <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">Extracted Information</p>
+                  </div>
                   {extractedText ? (
-                    <p className="text-sm font-mono whitespace-pre-wrap">
-                      {extractedText.slice(0, 200)}
-                      {extractedText.length > 200 && "..."}
-                    </p>
+                    <div className="bg-white/50 dark:bg-slate-800/50 rounded-xl p-4 border border-emerald-200/30 dark:border-emerald-700/30">
+                      <p className="text-sm font-mono leading-relaxed text-slate-700 dark:text-slate-300">
+                        {extractedText.slice(0, 300)}
+                        {extractedText.length > 300 && "..."}
+                      </p>
+                    </div>
                   ) : (
-                    <p className="text-sm text-muted-foreground">{ocrMessage}</p>
+                    <div className="flex items-center gap-3 p-3 rounded-lg bg-amber-50/80 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-800/30">
+                      <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                      <p className="text-sm text-amber-800 dark:text-amber-200">{ocrMessage}</p>
+                    </div>
                   )}
                 </div>
               )}
@@ -1418,12 +1568,17 @@ const Scan = () => {
           </Card>
 
           {/* Manual Search */}
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Search className="w-5 h-5 text-primary" />
-                Manual Search
+          <Card className="mb-6 sm:mb-8 border-0 shadow-lg bg-gradient-to-br from-white to-slate-50/30 dark:from-slate-900 dark:to-slate-800/30">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-3 text-lg">
+                <div className="flex items-center justify-center w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-900/50">
+                  <Search className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                </div>
+                <span className="bg-gradient-to-r from-blue-700 to-blue-600 bg-clip-text text-transparent">Manual Search</span>
               </CardTitle>
+              <p className="text-sm text-muted-foreground pl-12">
+                Search by product name, barcode, or ID code
+              </p>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleManualSearch} className="flex gap-3">
@@ -1431,9 +1586,9 @@ const Scan = () => {
                   placeholder="Enter product name, barcode, or code (e.g., #p0001)"
                   value={manualSearch}
                   onChange={(e) => setManualSearch(e.target.value)}
-                  className="flex-1"
+                  className="flex-1 h-12 rounded-xl border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/50 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20"
                 />
-                <Button type="submit" className="bg-gradient-hero">
+                <Button type="submit" className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 h-12 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300">
                   <Search className="w-4 h-4 mr-2" />
                   Search
                 </Button>
@@ -1441,187 +1596,51 @@ const Scan = () => {
             </CardContent>
           </Card>
 
-          {/* Barcode Lookup */}
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Leaf className="w-5 h-5 text-emerald-600" />
-                Barcode Lookup
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handleBarcodeLookup(barcodeInput);
-                }}
-                className="flex gap-3"
-              >
-                <Input
-                  placeholder="Enter barcode number (e.g., 3017620422003)"
-                  value={barcodeInput}
-                  onChange={(e) => setBarcodeInput(e.target.value)}
-                  className="flex-1"
-                  inputMode="numeric"
-                />
-                <Button type="submit" className="bg-gradient-hero" disabled={offLoading}>
-                  {offLoading ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <Search className="w-4 h-4 mr-2" />
-                  )}
-                  Lookup
-                </Button>
-              </form>
-              <p className="text-xs text-muted-foreground mt-2">
-                Look up food products by EAN/UPC barcode on OpenFoodFacts
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* OpenFoodFacts Results */}
-          {offLoading && (
-            <Card className="mb-6">
-              <CardContent className="flex items-center justify-center gap-3 py-8">
-                <Loader2 className="w-5 h-5 animate-spin text-emerald-600" />
-                <span className="text-muted-foreground">Looking up product on OpenFoodFacts...</span>
-              </CardContent>
-            </Card>
-          )}
-
-          {offResult && !offLoading && (
-            <div className="mb-6">
-              <OpenFoodFactsCard result={offResult} />
-              {offResult.found === false && offResult.error && (
-                <Card className="mt-3 border-amber-200 dark:border-amber-800">
-                  <CardContent className="flex items-center gap-2 py-4">
-                    <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
-                    <p className="text-sm text-amber-800 dark:text-amber-200">
-                      {offResult.error}
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          )}
-
-          {/* Scan Image for OpenFoodFacts */}
-          <Card className="mb-6 border-emerald-200 dark:border-emerald-800">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Camera className="w-5 h-5 text-emerald-600" />
-                Scan Product for Environmental Impact
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Upload or take a photo of a food product to search OpenFoodFacts and see its environmental impact.
-              </p>
-              <div className="flex gap-3">
-                <Button
-                  onClick={() => offFileInputRef.current?.click()}
-                  disabled={offSearchLoading}
-                  className="flex-1"
-                  variant="outline"
-                >
-                  {offSearchLoading ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <Upload className="w-4 h-4 mr-2" />
-                  )}
-                  {offSearchLoading ? "Searching..." : "Upload Image"}
-                </Button>
-              </div>
-              <input
-                ref={offFileInputRef}
-                type="file"
-                accept="image/*"
-                capture="environment"
-                onChange={handleOffFileUpload}
-                className="hidden"
-              />
-
-              {/* Preview uploaded image */}
-              {offSearchImage && (
-                <div className="space-y-2">
-                  <div className="relative rounded-lg overflow-hidden bg-muted aspect-video max-h-48">
-                    <img
-                      src={offSearchImage}
-                      alt="Scanned product"
-                      className="w-full h-full object-contain"
-                    />
-                  </div>
-                  {offSearchText && (
-                    <p className="text-xs text-muted-foreground">
-                      Identified: <span className="font-medium">{offSearchText}</span>
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {/* Loading state */}
-              {offSearchLoading && (
-                <div className="flex items-center justify-center gap-3 py-4">
-                  <Loader2 className="w-5 h-5 animate-spin text-emerald-600" />
-                  <span className="text-sm text-muted-foreground">
-                    Identifying product and searching OpenFoodFacts...
-                  </span>
-                </div>
-              )}
-
-              {/* Search results - top 3 */}
-              {offSearchResults.length > 0 && !offSearchLoading && (
-                <div className="space-y-4">
-                  <p className="text-sm font-medium">
-                    Top {offSearchResults.length} Result{offSearchResults.length > 1 ? "s" : ""}
-                  </p>
-                  {offSearchResults.map((result, i) => (
-                    <OpenFoodFactsCard key={`${result.barcode}-${i}`} result={result} />
-                  ))}
-                </div>
-              )}
-
-              {/* No results */}
-              {offSearchResults.length === 0 && offSearchImage && !offSearchLoading && offSearchText && (
-                <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-sm">
-                  <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
-                  <p className="text-amber-800 dark:text-amber-200">
-                    No products found for "{offSearchText}" on OpenFoodFacts. Try a different image or use the barcode lookup above.
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
 
           {/* Search Results */}
           {searchResults.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Search Results ({searchResults.length})</CardTitle>
+            <Card className="border-0 shadow-xl bg-gradient-to-br from-white to-slate-50/30 dark:from-slate-900 dark:to-slate-800/30">
+              <CardHeader className="pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center justify-center w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-900/50">
+                    <Search className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <CardTitle className="text-lg bg-gradient-to-r from-blue-700 to-blue-600 bg-clip-text text-transparent">
+                    Found {searchResults.length} Product{searchResults.length > 1 ? "s" : ""}
+                  </CardTitle>
+                </div>
+                <p className="text-sm text-muted-foreground pl-12">
+                  Click on any product to view detailed ethical ratings
+                </p>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {searchResults.map((product) => (
                     <button
                       key={product.id}
                       onClick={() => navigate(`/product/${product.id.replace("#", "")}`)}
-                      className="w-full p-4 rounded-lg border border-border hover:border-primary hover:bg-primary/5 transition-all text-left flex items-center gap-4"
+                      className="w-full p-5 rounded-2xl border border-slate-200/50 dark:border-slate-700/50 hover:border-blue-400/50 hover:bg-gradient-to-r hover:from-blue-50/30 hover:to-blue-100/30 dark:hover:from-blue-950/20 dark:hover:to-blue-900/20 transition-all duration-300 text-left flex items-center gap-4 group shadow-sm hover:shadow-lg"
                     >
-                      <div className="w-12 h-12 rounded-lg bg-eco-sage/20 flex items-center justify-center flex-shrink-0">
+                      <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-700 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
                         {uploadedImage ? (
-                          <img src={uploadedImage} alt="" className="w-full h-full object-cover rounded" />
+                          <img src={uploadedImage} alt="" className="w-full h-full object-cover rounded-lg" />
                         ) : (
-                          <ScanLine className="w-6 h-6 text-primary/50" />
+                          <ScanLine className="w-8 h-8 text-blue-500/50" />
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{product.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {product.brand} • {product.id}
+                        <p className="font-semibold text-base text-slate-800 dark:text-slate-200 truncate group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors">
+                          {product.name}
                         </p>
-                        <div className="mt-3">
-                          <div className="text-sm font-medium">Score: {calculateScore(product)}</div>
-                          <div className="mt-2">
+                        <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
+                          {product.brand} • <span className="font-mono text-xs bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">{product.id}</span>
+                        </p>
+                        <div className="flex items-center gap-4">
+                          <div className="text-sm">
+                            <span className="font-medium text-slate-700 dark:text-slate-300">Score: </span>
+                            <span className="font-bold text-blue-600 dark:text-blue-400">{calculateScore(product)}</span>
+                          </div>
+                          <div className="flex-1">
                             <ScoreBreakdownSlider product={product} />
                           </div>
                         </div>
@@ -1635,43 +1654,55 @@ const Scan = () => {
 
           {/* No Results Found - Add Product Option */}
           {searchResults.length === 0 && extractedText && uploadedImage && (
-            <Card>
-              <CardHeader>
-                <CardTitle>No Products Found</CardTitle>
+            <Card className="border-0 shadow-xl bg-gradient-to-br from-amber-50 via-amber-100/50 to-amber-50/30 dark:from-amber-950/30 dark:via-amber-900/20 dark:to-amber-950/10">
+              <CardHeader className="pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center justify-center w-9 h-9 rounded-full bg-amber-200 dark:bg-amber-800">
+                    <Plus className="w-4 h-4 text-amber-700 dark:text-amber-300" />
+                  </div>
+                  <CardTitle className="text-lg text-amber-800 dark:text-amber-200">
+                    Add New Product
+                  </CardTitle>
+                </div>
+                <p className="text-sm text-amber-700 dark:text-amber-300 pl-12">
+                  Help grow our ethical database by adding this product
+                </p>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <p className="text-muted-foreground">
-                    No products match "{extractedText}". Would you like to add this product to the database?
-                  </p>
-                  
-                  {/* Show extracted info */}
-                  <div className="p-3 rounded-lg bg-muted/50 border">
-                    <p className="text-sm font-medium mb-2">Extracted Information:</p>
-                    <p className="text-sm text-muted-foreground">{extractedText}</p>
+                <div className="space-y-6">
+                  <div className="p-4 rounded-xl bg-white/70 dark:bg-slate-800/70 border border-amber-200/50 dark:border-amber-800/30">
+                    <div className="flex items-center gap-2 mb-3">
+                      <ScanLine className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                      <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">Extracted Information</p>
+                    </div>
+                    <p className="text-sm text-slate-700 dark:text-slate-300 font-mono bg-amber-50/50 dark:bg-amber-950/20 p-3 rounded-lg border border-amber-200/30 dark:border-amber-800/30">
+                      {extractedText}
+                    </p>
                   </div>
                   
-                  {/* Show uploaded image */}
-                  <div className="flex items-center gap-4">
-                    <div className="w-20 h-20 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                  <div className="flex items-center gap-6">
+                    <div className="w-24 h-24 rounded-2xl overflow-hidden bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-700 shadow-lg flex-shrink-0">
                       <img 
                         src={uploadedImage} 
                         alt="Scanned product" 
                         className="w-full h-full object-cover"
                       />
                     </div>
-                    <div className="flex-1">
+                    <div className="flex-1 space-y-3">
                       <Button 
                         onClick={createProductFromOCR}
-                        className="w-full bg-gradient-hero gap-2"
+                        className="w-full h-14 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 gap-3 text-base font-semibold"
                         disabled={isProcessing}
                       >
-                        <Plus className="w-4 h-4" />
-                        {isProcessing ? 'Processing...' : 'Add Product with Image'}
+                        <Plus className="w-5 h-5" />
+                        {isProcessing ? 'Creating Product...' : 'Add Product with Image'}
                       </Button>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        This will copy product code to clipboard with the image included
-                      </p>
+                      <div className="p-3 rounded-lg bg-amber-100/50 dark:bg-amber-900/20 border border-amber-200/30 dark:border-amber-800/30">
+                        <p className="text-xs text-amber-700 dark:text-amber-300 flex items-center gap-2">
+                          <Plus className="w-3 h-3" />
+                          This will copy product code to clipboard with the image included for easy addition to the database
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1680,48 +1711,78 @@ const Scan = () => {
           )}
 
           {/* Tips */}
-          <div className="mt-8 p-4 rounded-lg bg-muted/50 border border-border">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-0.5" />
-              <div className="text-sm text-muted-foreground">
-                <p className="font-medium text-foreground mb-1">Scanning Tips</p>
-                <ul className="list-disc list-inside space-y-1">
-                  <li>Position the product label clearly in frame</li>
-                  <li>Ensure good lighting for best results</li>
-                  <li>Try scanning barcodes for faster identification</li>
-                  <li>Use manual search if scanning doesn't work</li>
+          <div className="mt-8 sm:mt-12 p-6 rounded-2xl bg-gradient-to-br from-blue-50 via-blue-100/50 to-blue-50/30 dark:from-blue-950/30 dark:via-blue-900/20 dark:to-blue-950/10 border border-blue-200/50 dark:border-blue-800/30 shadow-lg">
+            <div className="flex items-start gap-4">
+              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-200 dark:bg-blue-800 flex-shrink-0 mt-1">
+                <AlertCircle className="w-5 h-5 text-blue-700 dark:text-blue-300" />
+              </div>
+              <div className="text-sm text-slate-700 dark:text-slate-300">
+                <p className="font-semibold text-blue-900 dark:text-blue-100 mb-3 text-base">Pro Tips for Better Scanning</p>
+                <ul className="space-y-2">
+                  <li className="flex items-start gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 flex-shrink-0" />
+                    <span><strong>Position clearly:</strong> Place product labels flat and centered in the frame</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 flex-shrink-0" />
+                    <span><strong>Good lighting:</strong> Use bright, even lighting for best OCR accuracy</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 flex-shrink-0" />
+                    <span><strong>Barcode first:</strong> Scan barcodes for instant identification when available</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 flex-shrink-0" />
+                    <span><strong>Manual fallback:</strong> Use manual search if automatic scanning doesn't work</span>
+                  </li>
                 </ul>
               </div>
             </div>
           </div>
 
           {/* Debug Information */}
-          <div className="mt-6 p-4 rounded-lg bg-blue-50 border border-blue-200">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+          <div className="mt-6 p-6 rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100/50 dark:from-slate-900 dark:to-slate-800/50 border border-slate-200/50 dark:border-slate-700/30 shadow-lg">
+            <div className="flex items-start gap-4">
+              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 flex-shrink-0 mt-1">
+                <AlertCircle className="w-5 h-5 text-slate-600 dark:text-slate-400" />
+              </div>
               <div className="text-sm">
-                <p className="font-medium text-blue-900 mb-2">Camera Troubleshooting</p>
-                <div className="space-y-1 text-blue-800 text-xs">
-                  <p><strong>Browser:</strong> {navigator.userAgent.match(/Chrome|Safari|Firefox|Edge|Opera/) ? navigator.userAgent.match(/Chrome|Safari|Firefox|Edge|Opera/)?.[0] : 'Unknown'}</p>
-                  <p><strong>Device:</strong> {/Mobile|Android|iPhone|iPad/.test(navigator.userAgent) ? '📱 Mobile' : '💻 Desktop'}</p>
-                  <p><strong>Protocol:</strong> {location.protocol}</p>
-                  <p><strong>Host:</strong> {location.hostname}</p>
-                  <p><strong>mediaDevices:</strong> {navigator.mediaDevices ? '✅' : '❌'} {!navigator.mediaDevices && <span className="text-red-600 font-medium">(Required!)</span>}</p>
-                  <p><strong>getUserMedia:</strong> {navigator.mediaDevices?.getUserMedia ? '✅' : '❌'} {!navigator.mediaDevices?.getUserMedia && <span className="text-red-600 font-medium">(Required!)</span>}</p>
-                  <p><strong>Secure Context:</strong> {location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1' ? '✅ Yes' : '❌ No'}</p>
+                <p className="font-semibold text-slate-800 dark:text-slate-200 mb-3 text-base">Camera Troubleshooting</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                  <div className="space-y-2 text-slate-700 dark:text-slate-300 text-xs">
+                    <p><strong>Browser:</strong> {navigator.userAgent.match(/Chrome|Safari|Firefox|Edge|Opera/) ? navigator.userAgent.match(/Chrome|Safari|Firefox|Edge|Opera/)?.[0] : 'Unknown'}</p>
+                    <p><strong>Device:</strong> {/Mobile|Android|iPhone|iPad/.test(navigator.userAgent) ? '📱 Mobile' : '💻 Desktop'}</p>
+                    <p><strong>Protocol:</strong> {location.protocol}</p>
+                    <p><strong>Host:</strong> {location.hostname}</p>
+                  </div>
+                  <div className="space-y-2 text-slate-700 dark:text-slate-300 text-xs">
+                    <p><strong>mediaDevices:</strong> {navigator.mediaDevices ? '✅ Available' : '❌ Missing'} {!navigator.mediaDevices && <span className="text-red-600 font-medium"> (Required!)</span>}</p>
+                    <p><strong>getUserMedia:</strong> {navigator.mediaDevices?.getUserMedia ? '✅ Available' : '❌ Missing'} {!navigator.mediaDevices?.getUserMedia && <span className="text-red-600 font-medium"> (Required!)</span>}</p>
+                    <p><strong>Secure Context:</strong> {location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1' ? '✅ Yes' : '❌ No'}</p>
+                  </div>
                 </div>
-                <div className="mt-3 space-y-2">
-                  <p className="font-medium text-blue-900 text-xs">If camera doesn't work:</p>
-                  <ul className="list-disc list-inside space-y-1 text-blue-800 text-xs">
-                    <li><strong>First:</strong> Open browser console (F12) and click "Use Camera" - read any errors there</li>
-                    <li><strong>Permissions:</strong> Check the 🔒 lock icon in address bar - grant camera access</li>
-                    <li><strong>Refresh:</strong> Reload the page after allowing permissions</li>
-                    <li><strong>Other apps:</strong> Close apps using camera (Zoom, Teams, Discord, etc)</li>
-                    <li><strong>Browser:</strong> Try Chrome, Firefox, Safari, or Edge</li>
-                    <li><strong>Mobile:</strong> Try portrait mode, use Chrome browser, check iOS privacy settings</li>
-                    <li><strong>HTTPS:</strong> Remote sites need HTTPS (not http://)</li>
-                    <li><strong>localhost:</strong> Use http://localhost:8080 or http://127.0.0.1:8080</li>
-                  </ul>
+                <div className="space-y-3">
+                  <p className="font-semibold text-slate-800 dark:text-slate-200 text-sm">If camera doesn't work:</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <p className="font-medium text-slate-700 dark:text-slate-300 text-xs">🔧 Quick Fixes:</p>
+                      <ul className="space-y-1 text-slate-600 dark:text-slate-400 text-xs">
+                        <li>• Open browser console (F12) and check for errors</li>
+                        <li>• Check 🔒 lock icon for camera permissions</li>
+                        <li>• Reload page after allowing permissions</li>
+                        <li>• Close other apps using camera</li>
+                      </ul>
+                    </div>
+                    <div className="space-y-2">
+                      <p className="font-medium text-slate-700 dark:text-slate-300 text-xs">🌐 Browser & Device:</p>
+                      <ul className="space-y-1 text-slate-600 dark:text-slate-400 text-xs">
+                        <li>• Try Chrome, Firefox, Safari, or Edge</li>
+                        <li>• Mobile: Use portrait mode, Chrome browser</li>
+                        <li>• Check iOS privacy settings</li>
+                        <li>• Remote sites need HTTPS (not http://)</li>
+                      </ul>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
