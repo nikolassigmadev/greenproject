@@ -1,6 +1,11 @@
-import type { OpenFoodFactsResponse, OpenFoodFactsResult } from './types';
+import type {
+  OpenFoodFactsResponse,
+  OpenFoodFactsSearchResponse,
+  OpenFoodFactsProduct,
+  OpenFoodFactsResult,
+} from './types';
 
-const OFF_API_BASE = 'https://world.openfoodfacts.org/api/v0';
+const OFF_API_BASE = 'https://world.openfoodfacts.org';
 
 const emptyResult = (barcode: string, error?: string): OpenFoodFactsResult => ({
   found: false,
@@ -13,14 +18,63 @@ const emptyResult = (barcode: string, error?: string): OpenFoodFactsResult => ({
   nutriscoreScore: null,
   novaGroup: null,
   carbonFootprint100g: null,
+  carbonFootprintProduct: null,
+  carbonFootprintServing: null,
   labels: [],
   categories: [],
   origins: null,
   ingredientsText: null,
   imageUrl: null,
+  ecoscoreData: null,
   rawProduct: null,
   error,
 });
+
+const normalizeProduct = (p: OpenFoodFactsProduct): OpenFoodFactsResult => {
+  const carbonFootprint100g =
+    p.nutriments?.['carbon-footprint-from-known-ingredients_100g'] ?? null;
+  const carbonFootprintProduct =
+    p.nutriments?.['carbon-footprint-from-known-ingredients_product'] ?? null;
+  const carbonFootprintServing =
+    p.nutriments?.['carbon-footprint-from-known-ingredients_serving'] ?? null;
+
+  const labels = p.labels_tags
+    ? p.labels_tags.map((l) => l.replace(/^en:/, '').replace(/-/g, ' '))
+    : p.labels
+      ? p.labels.split(',').map((l) => l.trim())
+      : [];
+
+  const categories = p.categories_tags
+    ? p.categories_tags.map((c) => c.replace(/^en:/, '').replace(/-/g, ' '))
+    : p.categories
+      ? p.categories.split(',').map((c) => c.trim())
+      : [];
+
+  return {
+    found: true,
+    barcode: p.code,
+    productName: p.product_name_en || p.product_name || null,
+    brand: p.brands || null,
+    ecoscoreGrade:
+      p.ecoscore_grade && p.ecoscore_grade !== 'unknown' && p.ecoscore_grade !== 'not-applicable'
+        ? p.ecoscore_grade
+        : null,
+    ecoscoreScore: typeof p.ecoscore_score === 'number' ? p.ecoscore_score : null,
+    nutriscoreGrade: p.nutriscore_grade || null,
+    nutriscoreScore: typeof p.nutriscore_score === 'number' ? p.nutriscore_score : null,
+    novaGroup: typeof p.nova_group === 'number' ? p.nova_group : null,
+    carbonFootprint100g: typeof carbonFootprint100g === 'number' ? carbonFootprint100g : null,
+    carbonFootprintProduct: typeof carbonFootprintProduct === 'number' ? carbonFootprintProduct : null,
+    carbonFootprintServing: typeof carbonFootprintServing === 'number' ? carbonFootprintServing : null,
+    labels,
+    categories,
+    origins: p.origins || null,
+    ingredientsText: p.ingredients_text_en || p.ingredients_text || null,
+    imageUrl: p.image_front_url || p.image_url || null,
+    ecoscoreData: p.ecoscore_data || null,
+    rawProduct: p,
+  };
+};
 
 export const isValidBarcode = (code: string): boolean => {
   const cleaned = code.replace(/\s+/g, '').trim();
@@ -35,7 +89,7 @@ export const lookupBarcode = async (barcode: string): Promise<OpenFoodFactsResul
   }
 
   try {
-    const response = await fetch(`${OFF_API_BASE}/product/${cleaned}.json`);
+    const response = await fetch(`${OFF_API_BASE}/api/v0/product/${cleaned}.json`);
 
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -47,49 +101,47 @@ export const lookupBarcode = async (barcode: string): Promise<OpenFoodFactsResul
       return emptyResult(cleaned, data.status_verbose || 'Product not found on OpenFoodFacts');
     }
 
-    const p = data.product;
-
-    const carbonFootprint100g =
-      p.nutriments?.['carbon-footprint-from-known-ingredients_100g'] ?? null;
-
-    const labels = p.labels_tags
-      ? p.labels_tags.map((l) => l.replace(/^en:/, '').replace(/-/g, ' '))
-      : p.labels
-        ? p.labels.split(',').map((l) => l.trim())
-        : [];
-
-    const categories = p.categories_tags
-      ? p.categories_tags.map((c) => c.replace(/^en:/, '').replace(/-/g, ' '))
-      : p.categories
-        ? p.categories.split(',').map((c) => c.trim())
-        : [];
-
-    return {
-      found: true,
-      barcode: cleaned,
-      productName: p.product_name_en || p.product_name || null,
-      brand: p.brands || null,
-      ecoscoreGrade:
-        p.ecoscore_grade && p.ecoscore_grade !== 'unknown' && p.ecoscore_grade !== 'not-applicable'
-          ? p.ecoscore_grade
-          : null,
-      ecoscoreScore: typeof p.ecoscore_score === 'number' ? p.ecoscore_score : null,
-      nutriscoreGrade: p.nutriscore_grade || null,
-      nutriscoreScore: typeof p.nutriscore_score === 'number' ? p.nutriscore_score : null,
-      novaGroup: typeof p.nova_group === 'number' ? p.nova_group : null,
-      carbonFootprint100g: typeof carbonFootprint100g === 'number' ? carbonFootprint100g : null,
-      labels,
-      categories,
-      origins: p.origins || null,
-      ingredientsText: p.ingredients_text_en || p.ingredients_text || null,
-      imageUrl: p.image_front_url || p.image_url || null,
-      rawProduct: p,
-    };
+    return normalizeProduct(data.product);
   } catch (error) {
     console.error('OpenFoodFacts API error:', error);
     return emptyResult(
       cleaned,
       error instanceof Error ? error.message : 'Failed to contact OpenFoodFacts'
     );
+  }
+};
+
+export const searchProducts = async (
+  query: string,
+  limit: number = 3
+): Promise<OpenFoodFactsResult[]> => {
+  const trimmed = query.trim();
+  if (!trimmed) return [];
+
+  try {
+    const params = new URLSearchParams({
+      search_terms: trimmed,
+      search_simple: '1',
+      action: 'process',
+      json: '1',
+      page_size: String(limit),
+    });
+
+    const response = await fetch(`${OFF_API_BASE}/cgi/search.pl?${params}`);
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data: OpenFoodFactsSearchResponse = await response.json();
+
+    if (!data.products || data.products.length === 0) {
+      return [];
+    }
+
+    return data.products.map(normalizeProduct);
+  } catch (error) {
+    console.error('OpenFoodFacts search error:', error);
+    return [];
   }
 };

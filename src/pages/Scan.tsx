@@ -13,7 +13,7 @@ import { ScoreBreakdownSlider } from "@/components/ScoreBreakdownSlider";
 import { recognizeImageWithOpenAI } from "@/services/ocr/openai-service";
 import { advancedProductOCR, extractBrandName, extractProductName, extractCertifications, checkOpenAIHealth } from "@/services/ocr/advanced-openai-ocr";
 import { copySingleProductCode } from "@/utils/productExporter";
-import { lookupBarcode, isValidBarcode } from "@/services/openfoodfacts";
+import { lookupBarcode, isValidBarcode, searchProducts as searchOffProducts } from "@/services/openfoodfacts";
 import { OpenFoodFactsCard } from "@/components/OpenFoodFactsCard";
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
 import Tesseract from "tesseract.js";
@@ -404,6 +404,11 @@ const Scan = () => {
   const [offResult, setOffResult] = useState<OpenFoodFactsResult | null>(null);
   const [offLoading, setOffLoading] = useState(false);
   const [barcodeInput, setBarcodeInput] = useState("");
+  const [offSearchResults, setOffSearchResults] = useState<OpenFoodFactsResult[]>([]);
+  const [offSearchLoading, setOffSearchLoading] = useState(false);
+  const [offSearchImage, setOffSearchImage] = useState<string | null>(null);
+  const [offSearchText, setOffSearchText] = useState("");
+  const offFileInputRef = useRef<HTMLInputElement>(null);
 
   // Debug: Check if video element is mounted
   useEffect(() => {
@@ -1030,6 +1035,104 @@ const Scan = () => {
     }
   }, [toast]);
 
+  // Process image for OpenFoodFacts search (separate from internal DB scan)
+  const processImageForOFF = useCallback(async (imageData: string) => {
+    setOffSearchLoading(true);
+    setOffSearchResults([]);
+    setOffSearchText("");
+    setOffSearchImage(imageData);
+
+    try {
+      // Use the same GPT-4o OCR to extract product name
+      const advancedResult = await advancedProductOCR(imageData);
+
+      let searchQuery = "";
+      if (advancedResult.success) {
+        if (advancedResult.productName && advancedResult.brandName) {
+          searchQuery = `${advancedResult.brandName} ${advancedResult.productName}`;
+        } else if (advancedResult.productName) {
+          searchQuery = advancedResult.productName;
+        } else if (advancedResult.brandName) {
+          searchQuery = advancedResult.brandName;
+        } else {
+          searchQuery = advancedResult.fullText;
+        }
+
+        // If barcode was found, also do a direct barcode lookup
+        if (advancedResult.barcode && isValidBarcode(advancedResult.barcode)) {
+          const barcodeResult = await lookupBarcode(advancedResult.barcode);
+          if (barcodeResult.found) {
+            setOffSearchResults([barcodeResult]);
+            setOffSearchText(`Barcode: ${advancedResult.barcode}`);
+            setOffSearchLoading(false);
+            toast({
+              title: "Product Found",
+              description: `${barcodeResult.brand || ""} ${barcodeResult.productName || ""}`.trim(),
+            });
+            return;
+          }
+        }
+      }
+
+      if (!searchQuery) {
+        toast({
+          title: "Could not identify product",
+          description: "Try a clearer image or use manual barcode entry.",
+          variant: "destructive",
+        });
+        setOffSearchLoading(false);
+        return;
+      }
+
+      setOffSearchText(searchQuery);
+
+      // Search OpenFoodFacts by product name
+      const results = await searchOffProducts(searchQuery, 3);
+
+      if (results.length === 0) {
+        toast({
+          title: "No Results",
+          description: `No products found for "${searchQuery}" on OpenFoodFacts.`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: `${results.length} Product${results.length > 1 ? "s" : ""} Found`,
+          description: `Searched for "${searchQuery}" on OpenFoodFacts.`,
+        });
+      }
+
+      setOffSearchResults(results);
+    } catch (error) {
+      console.error("OFF image search error:", error);
+      toast({
+        title: "Processing Error",
+        description: "Failed to process the image. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setOffSearchLoading(false);
+    }
+  }, [toast]);
+
+  // Handle file upload for OFF search
+  const handleOffFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = event.target?.result;
+      if (typeof result === "string") {
+        processImageForOFF(result);
+      }
+    };
+    reader.readAsDataURL(file);
+
+    // Reset input so same file can be selected again
+    e.target.value = "";
+  }, [processImageForOFF]);
+
   // Capture photo from camera with mobile orientation handling
   const capturePhoto = useCallback(() => {
     if (!videoRef.current || !canvasRef.current) {
@@ -1401,6 +1504,94 @@ const Scan = () => {
               )}
             </div>
           )}
+
+          {/* Scan Image for OpenFoodFacts */}
+          <Card className="mb-6 border-emerald-200 dark:border-emerald-800">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Camera className="w-5 h-5 text-emerald-600" />
+                Scan Product for Environmental Impact
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Upload or take a photo of a food product to search OpenFoodFacts and see its environmental impact.
+              </p>
+              <div className="flex gap-3">
+                <Button
+                  onClick={() => offFileInputRef.current?.click()}
+                  disabled={offSearchLoading}
+                  className="flex-1"
+                  variant="outline"
+                >
+                  {offSearchLoading ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Upload className="w-4 h-4 mr-2" />
+                  )}
+                  {offSearchLoading ? "Searching..." : "Upload Image"}
+                </Button>
+              </div>
+              <input
+                ref={offFileInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={handleOffFileUpload}
+                className="hidden"
+              />
+
+              {/* Preview uploaded image */}
+              {offSearchImage && (
+                <div className="space-y-2">
+                  <div className="relative rounded-lg overflow-hidden bg-muted aspect-video max-h-48">
+                    <img
+                      src={offSearchImage}
+                      alt="Scanned product"
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                  {offSearchText && (
+                    <p className="text-xs text-muted-foreground">
+                      Identified: <span className="font-medium">{offSearchText}</span>
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Loading state */}
+              {offSearchLoading && (
+                <div className="flex items-center justify-center gap-3 py-4">
+                  <Loader2 className="w-5 h-5 animate-spin text-emerald-600" />
+                  <span className="text-sm text-muted-foreground">
+                    Identifying product and searching OpenFoodFacts...
+                  </span>
+                </div>
+              )}
+
+              {/* Search results - top 3 */}
+              {offSearchResults.length > 0 && !offSearchLoading && (
+                <div className="space-y-4">
+                  <p className="text-sm font-medium">
+                    Top {offSearchResults.length} Result{offSearchResults.length > 1 ? "s" : ""}
+                  </p>
+                  {offSearchResults.map((result, i) => (
+                    <OpenFoodFactsCard key={`${result.barcode}-${i}`} result={result} />
+                  ))}
+                </div>
+              )}
+
+              {/* No results */}
+              {offSearchResults.length === 0 && offSearchImage && !offSearchLoading && offSearchText && (
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-sm">
+                  <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                  <p className="text-amber-800 dark:text-amber-200">
+                    No products found for "{offSearchText}" on OpenFoodFacts. Try a different image or use the barcode lookup above.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Search Results */}
           {searchResults.length > 0 && (
