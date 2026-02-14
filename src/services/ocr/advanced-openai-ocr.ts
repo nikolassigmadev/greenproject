@@ -140,12 +140,14 @@ export const advancedProductOCR = async (imageDataUrl: string): Promise<Advanced
             },
             {
               type: 'text',
-              text: `Look at this image and tell me what product this is. Just give me product name and brand in a simple format like:
+              text: `Look at this image and tell me what product this is. Give me the information in this exact format:
 
 Product: [Product Name]
 Brand: [Brand Name]
+Barcode: [barcode number if visible, otherwise "none"]
 
-If you can't identify the product clearly, say "Unknown Product" and "Unknown Brand".`,
+If you can't identify the product clearly, say "Unknown Product" and "Unknown Brand".
+Look carefully for any barcode numbers (UPC, EAN) printed on the packaging.`,
             },
           ],
         },
@@ -166,9 +168,14 @@ If you can't identify the product clearly, say "Unknown Product" and "Unknown Br
     // Parse simple response
     const productMatch = rawResponse.match(/Product:\s*(.+)/i);
     const brandMatch = rawResponse.match(/Brand:\s*(.+)/i);
+    const barcodeMatch = rawResponse.match(/Barcode:\s*(.+)/i);
 
     const productName = productMatch ? productMatch[1].trim() : null;
     const brandName = brandMatch ? brandMatch[1].trim() : null;
+    const extractedBarcode = barcodeMatch ? barcodeMatch[1].trim() : null;
+    const barcode = extractedBarcode && extractedBarcode.toLowerCase() !== 'none' && /^\d{8,14}$/.test(extractedBarcode.replace(/\s/g, ''))
+      ? extractedBarcode.replace(/\s/g, '')
+      : null;
 
     const endTime = performance.now();
     const processingTime = endTime - startTime;
@@ -187,7 +194,7 @@ If you can't identify the product clearly, say "Unknown Product" and "Unknown Br
         brandName,
         certifications: [],
         ingredients: [],
-        barcode: null,
+        barcode: barcode,
         nutritionInfo: null,
         notes: 'ChatGPT-style image analysis'
       };

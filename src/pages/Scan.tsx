@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Camera, Upload, Search, Loader2, AlertCircle, X, ScanLine, Image as ImageIcon, Plus } from "lucide-react";
+import { Camera, Upload, Search, Loader2, AlertCircle, X, ScanLine, Image as ImageIcon, Plus, Leaf } from "lucide-react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,9 @@ import { ScoreBreakdownSlider } from "@/components/ScoreBreakdownSlider";
 import { recognizeImageWithOpenAI } from "@/services/ocr/openai-service";
 import { advancedProductOCR, extractBrandName, extractProductName, extractCertifications, checkOpenAIHealth } from "@/services/ocr/advanced-openai-ocr";
 import { copySingleProductCode } from "@/utils/productExporter";
+import { lookupBarcode, isValidBarcode } from "@/services/openfoodfacts";
+import { OpenFoodFactsCard } from "@/components/OpenFoodFactsCard";
+import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
 import Tesseract from "tesseract.js";
 
 type OcrWord = {
@@ -398,6 +401,9 @@ const Scan = () => {
   const [manualSearch, setManualSearch] = useState("");
   const [searchResults, setSearchResults] = useState<Product[]>([]);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [offResult, setOffResult] = useState<OpenFoodFactsResult | null>(null);
+  const [offLoading, setOffLoading] = useState(false);
+  const [barcodeInput, setBarcodeInput] = useState("");
 
   // Debug: Check if video element is mounted
   useEffect(() => {
@@ -820,6 +826,8 @@ const Scan = () => {
     setExtractedText("");
     setOcrMessage(null);
     setSearchResults([]);
+    setOffResult(null);
+    setOffLoading(false);
 
     try {
       setIsScanning(true);
@@ -858,6 +866,29 @@ const Scan = () => {
               title: "Certifications Found",
               description: `${advancedResult.certifications.join(", ")}`,
             });
+          }
+
+          // If a barcode was extracted, query OpenFoodFacts in parallel
+          if (advancedResult.barcode && isValidBarcode(advancedResult.barcode)) {
+            console.log("Barcode detected by OCR:", advancedResult.barcode);
+            setOffLoading(true);
+            lookupBarcode(advancedResult.barcode)
+              .then((result) => {
+                console.log("OpenFoodFacts result:", result);
+                setOffResult(result);
+                if (result.found) {
+                  toast({
+                    title: "Found on OpenFoodFacts",
+                    description: `${result.brand || ""} ${result.productName || "Unknown Product"}`.trim(),
+                  });
+                }
+              })
+              .catch((err) => {
+                console.error("OpenFoodFacts lookup failed:", err);
+              })
+              .finally(() => {
+                setOffLoading(false);
+              });
           }
         } else {
           console.warn("❌ Advanced OCR failed, falling back to standard OpenAI:", advancedResult.error);
@@ -963,6 +994,41 @@ const Scan = () => {
       setIsScanning(false);
     }
   }, [searchProducts, toast]);
+
+  // Manual barcode lookup on OpenFoodFacts
+  const handleBarcodeLookup = useCallback(async (barcode: string) => {
+    if (!barcode.trim()) return;
+
+    setOffLoading(true);
+    setOffResult(null);
+
+    try {
+      const result = await lookupBarcode(barcode.trim());
+      setOffResult(result);
+
+      if (result.found) {
+        toast({
+          title: "Product Found on OpenFoodFacts",
+          description: `${result.brand || ""} ${result.productName || "Unknown Product"}`.trim(),
+        });
+      } else {
+        toast({
+          title: "Not Found",
+          description: result.error || "Product not found on OpenFoodFacts.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Barcode lookup error:", error);
+      toast({
+        title: "Lookup Error",
+        description: "Failed to query OpenFoodFacts. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setOffLoading(false);
+    }
+  }, [toast]);
 
   // Capture photo from camera with mobile orientation handling
   const capturePhoto = useCallback(() => {
@@ -1271,6 +1337,70 @@ const Scan = () => {
               </form>
             </CardContent>
           </Card>
+
+          {/* Barcode Lookup */}
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Leaf className="w-5 h-5 text-emerald-600" />
+                Barcode Lookup
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleBarcodeLookup(barcodeInput);
+                }}
+                className="flex gap-3"
+              >
+                <Input
+                  placeholder="Enter barcode number (e.g., 3017620422003)"
+                  value={barcodeInput}
+                  onChange={(e) => setBarcodeInput(e.target.value)}
+                  className="flex-1"
+                  inputMode="numeric"
+                />
+                <Button type="submit" className="bg-gradient-hero" disabled={offLoading}>
+                  {offLoading ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Search className="w-4 h-4 mr-2" />
+                  )}
+                  Lookup
+                </Button>
+              </form>
+              <p className="text-xs text-muted-foreground mt-2">
+                Look up food products by EAN/UPC barcode on OpenFoodFacts
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* OpenFoodFacts Results */}
+          {offLoading && (
+            <Card className="mb-6">
+              <CardContent className="flex items-center justify-center gap-3 py-8">
+                <Loader2 className="w-5 h-5 animate-spin text-emerald-600" />
+                <span className="text-muted-foreground">Looking up product on OpenFoodFacts...</span>
+              </CardContent>
+            </Card>
+          )}
+
+          {offResult && !offLoading && (
+            <div className="mb-6">
+              <OpenFoodFactsCard result={offResult} />
+              {offResult.found === false && offResult.error && (
+                <Card className="mt-3 border-amber-200 dark:border-amber-800">
+                  <CardContent className="flex items-center gap-2 py-4">
+                    <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                    <p className="text-sm text-amber-800 dark:text-amber-200">
+                      {offResult.error}
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          )}
 
           {/* Search Results */}
           {searchResults.length > 0 && (
