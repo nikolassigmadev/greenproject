@@ -21,6 +21,11 @@ import { lookupBarcode, isValidBarcode, searchProducts as searchOffProducts } fr
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
 import Tesseract from "tesseract.js";
 
+// Check if a product has an eco-score grade
+const hasEcoScore = (product: OpenFoodFactsResult): boolean => {
+  return !!product.ecoscoreGrade;
+};
+
 // Function to calculate ecological data completeness score
 const calculateEcoScore = (result: OpenFoodFactsResult): number => {
   let score = 0;
@@ -962,11 +967,17 @@ const Scan = () => {
             lookupBarcode(advancedResult.barcode)
               .then((result) => {
                 console.log("OpenFoodFacts result:", result);
-                setOffResult(result);
-                if (result.found) {
+                if (result.found && hasEcoScore(result)) {
+                  setOffResult(result);
                   toast({
                     title: "Found on OpenFoodFacts",
                     description: `${result.brand || ""} ${result.productName || "Unknown Product"}`.trim(),
+                  });
+                } else if (result.found) {
+                  toast({
+                    title: "No Environmental Data",
+                    description: `"${result.productName || "Product"}" has no Eco-Score breakdown.`,
+                    variant: "destructive",
                   });
                 }
               })
@@ -1094,7 +1105,7 @@ const Scan = () => {
       const result = await lookupBarcode(barcode.trim());
       setOffResult(result);
 
-      if (result.found) {
+      if (result.found && hasEcoScore(result)) {
         // Also populate search results so they display in the UI
         setOffSearchResults([result]);
         // Automatically show detailed environmental view for barcode lookups
@@ -1102,6 +1113,12 @@ const Scan = () => {
         toast({
           title: "Product Found on OpenFoodFacts",
           description: `${result.brand || ""} ${result.productName || "Unknown Product"}`.trim(),
+        });
+      } else if (result.found) {
+        toast({
+          title: "No Environmental Data",
+          description: `"${result.productName || "This product"}" was found but has no Eco-Score or environmental breakdown.`,
+          variant: "destructive",
         });
       } else {
         toast({
@@ -1148,7 +1165,7 @@ const Scan = () => {
         // If barcode was found, also do a direct barcode lookup
         if (advancedResult.barcode && isValidBarcode(advancedResult.barcode)) {
           const barcodeResult = await lookupBarcode(advancedResult.barcode);
-          if (barcodeResult.found) {
+          if (barcodeResult.found && hasEcoScore(barcodeResult)) {
             setOffSearchResults([barcodeResult]);
             setOffSearchText(`Barcode: ${advancedResult.barcode}`);
             setOffSearchLoading(false);
@@ -1158,6 +1175,14 @@ const Scan = () => {
               title: "Product Found",
               description: `${barcodeResult.brand || ""} ${barcodeResult.productName || ""}`.trim(),
             });
+            return;
+          } else if (barcodeResult.found) {
+            toast({
+              title: "No Environmental Data",
+              description: `"${barcodeResult.productName || "This product"}" has no Eco-Score or environmental breakdown.`,
+              variant: "destructive",
+            });
+            setOffSearchLoading(false);
             return;
           }
         }
@@ -1175,30 +1200,26 @@ const Scan = () => {
 
       setOffSearchText(searchQuery);
 
-      // Search OpenFoodFacts by product name
-      const results = await searchOffProducts(searchQuery, 3);
+      // Search OpenFoodFacts by product name - fetch more to filter
+      const results = await searchOffProducts(searchQuery, 10);
 
-      if (results.length === 0) {
+      // Only keep products with eco-score and breakdown
+      const withEcoScore = results.filter(hasEcoScore);
+      const filteredResults = filterBestProducts(withEcoScore);
+
+      if (filteredResults.length === 0) {
         toast({
           title: "No Results",
-          description: `No products found for "${searchQuery}" on OpenFoodFacts.`,
+          description: results.length > 0
+            ? `Found ${results.length} products for "${searchQuery}" but none have Eco-Score data.`
+            : `No products found for "${searchQuery}" on OpenFoodFacts.`,
           variant: "destructive",
         });
       } else {
-        const filteredResults = filterBestProducts(results);
-      
-        if (filteredResults.length < results.length) {
-          toast({
-            title: `${filteredResults.length} Best Products Selected`,
-            description: `Found ${results.length} products, showing only those with the most complete ecological data.`,
-          });
-        } else {
-          toast({
-            title: `${filteredResults.length} Product${filteredResults.length > 1 ? "s" : ""} Found`,
-            description: `Searched for "${searchQuery}" on OpenFoodFacts.`,
-          });
-        }
-
+        toast({
+          title: `${filteredResults.length} Product${filteredResults.length > 1 ? "s" : ""} Found`,
+          description: `Showing products with Eco-Score data for "${searchQuery}".`,
+        });
         setOffSearchResults(filteredResults);
       }
     } catch (error) {

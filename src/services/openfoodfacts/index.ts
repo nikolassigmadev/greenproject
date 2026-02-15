@@ -145,3 +145,68 @@ export const searchProducts = async (
     return [];
   }
 };
+
+export interface BrowseOptions {
+  query?: string;
+  category?: string;
+  country?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface BrowseResult {
+  products: OpenFoodFactsResult[];
+  totalCount: number;
+  page: number;
+  pageCount: number;
+}
+
+export const browseProducts = async (options: BrowseOptions = {}): Promise<BrowseResult> => {
+  const { query, category, country, page = 1, pageSize = 24 } = options;
+
+  try {
+    const params = new URLSearchParams({
+      action: 'process',
+      json: '1',
+      page: String(page),
+      page_size: String(pageSize),
+    });
+
+    if (query?.trim()) {
+      params.set('search_terms', query.trim());
+    }
+
+    let tagIndex = 0;
+
+    if (category) {
+      params.set(`tagtype_${tagIndex}`, 'categories');
+      params.set(`tag_contains_${tagIndex}`, 'contains');
+      params.set(`tag_${tagIndex}`, category);
+      tagIndex++;
+    }
+
+    if (country) {
+      params.set(`tagtype_${tagIndex}`, 'countries');
+      params.set(`tag_contains_${tagIndex}`, 'contains');
+      params.set(`tag_${tagIndex}`, country);
+    }
+
+    const response = await fetch(`${OFF_API_BASE}/cgi/search.pl?${params}`);
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data: OpenFoodFactsSearchResponse = await response.json();
+
+    return {
+      products: (data.products || []).map(normalizeProduct),
+      totalCount: data.count || 0,
+      page: data.page || page,
+      pageCount: data.page_count || 0,
+    };
+  } catch (error) {
+    console.error('OpenFoodFacts browse error:', error);
+    return { products: [], totalCount: 0, page: 1, pageCount: 0 };
+  }
+};
