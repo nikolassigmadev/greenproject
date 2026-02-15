@@ -3,6 +3,7 @@ import Index from "./pages/Index";
 import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
 import Scan from "./pages/Scan";
+import Database from "./pages/Database";
 import NotFound from "./pages/NotFound";
 
 // Import admin components - uncomment to enable
@@ -25,6 +26,10 @@ export const router = createBrowserRouter([
   {
     path: "/scan",
     element: <Scan />,
+  },
+  {
+    path: "/database",
+    element: <Database />,
   },
   // Uncomment admin routes to enable
  {
