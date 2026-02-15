@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Scan, Database, Home, Camera, Menu, X } from "lucide-react";
+import { Scan, Database, Home, Camera, Menu, X, ShoppingBag } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,8 @@ export function Header() {
 
   const navItems = [
     { path: '/', label: 'Home', icon: Home },
-    { path: '/products', label: 'Products', icon: Database },
+    { path: '/products', label: 'Products', icon: ShoppingBag },
+    { path: '/database', label: 'Database', icon: Database },
     { path: '/scan', label: 'Scan', icon: Camera },
   ];
 
