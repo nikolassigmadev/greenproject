@@ -125,6 +125,7 @@ export const searchProducts = async (
       action: 'process',
       json: '1',
       page_size: String(limit),
+      sort_by: 'unique_scans_n',
     });
 
     const response = await fetch(`${OFF_API_BASE}/cgi/search.pl?${params}`);
@@ -170,6 +171,7 @@ export const browseProducts = async (options: BrowseOptions = {}): Promise<Brows
       json: '1',
       page: String(page),
       page_size: String(pageSize),
+      sort_by: 'unique_scans_n',
     });
 
     if (query?.trim()) {
@@ -189,7 +191,13 @@ export const browseProducts = async (options: BrowseOptions = {}): Promise<Brows
       params.set(`tagtype_${tagIndex}`, 'countries');
       params.set(`tag_contains_${tagIndex}`, 'contains');
       params.set(`tag_${tagIndex}`, country);
+      tagIndex++;
     }
+
+    // Require a front image to exist (filters out incomplete entries)
+    params.set(`tagtype_${tagIndex}`, 'states');
+    params.set(`tag_contains_${tagIndex}`, 'contains');
+    params.set(`tag_${tagIndex}`, 'en:front-photo-selected');
 
     const response = await fetch(`${OFF_API_BASE}/cgi/search.pl?${params}`);
 
