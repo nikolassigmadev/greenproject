@@ -84,7 +84,7 @@ export function getScoreRating(score: number): { label: string; color: string } 
 export function findAlternatives(product: Product, allProducts: Product[]): Product[] {
   return allProducts
     .filter(p => p.id !== product.id)
-    .filter(p => 
+    .filter(p =>
       p.category === product.category ||
       p.keywords.some(k => product.keywords.includes(k))
     )
@@ -93,6 +93,21 @@ export function findAlternatives(product: Product, allProducts: Product[]): Prod
     .sort((a, b) => b.score - a.score)
     .slice(0, 3)
     .map(({ product }) => product);
+}
+
+// Find the best alternative with minimal CO2 footprint
+export function findLowCO2Alternative(product: Product, allProducts: Product[]): Product | null {
+  const currentScore = calculateScore(product);
+  const candidates = allProducts
+    .filter(p => p.id !== product.id)
+    .filter(p =>
+      p.category === product.category ||
+      p.keywords.some(k => product.keywords.includes(k))
+    )
+    .filter(p => calculateScore(p) > currentScore)
+    .sort((a, b) => a.carbonFootprint - b.carbonFootprint);
+
+  return candidates[0] || null;
 }
 
 // ==========================================
