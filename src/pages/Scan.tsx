@@ -17,7 +17,7 @@ import { calculateScore, findLowCO2Alternative } from "@/data/products";
 import { recognizeImageWithOpenAI } from "@/services/ocr/openai-service";
 import { advancedProductOCR, extractBrandName, extractProductName, extractCertifications, checkOpenAIHealth } from "@/services/ocr/advanced-openai-ocr";
 import { copySingleProductCode } from "@/utils/productExporter";
-import { lookupBarcode, isValidBarcode, searchProducts as searchOffProducts, searchBetterAlternative } from "@/services/openfoodfacts";
+import { lookupBarcode, isValidBarcode, searchProducts as searchOffProducts, searchBetterAlternatives } from "@/services/openfoodfacts";
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
 import Tesseract from "tesseract.js";
 
@@ -479,7 +479,7 @@ const Scan = () => {
   const [offSearchText, setOffSearchText] = useState("");
   const [showDetailedEnvironmental, setShowDetailedEnvironmental] = useState(false);
   const [selectedEnvironmentalResult, setSelectedEnvironmentalResult] = useState<OpenFoodFactsResult | null>(null);
-  const [offAlternative, setOffAlternative] = useState<OpenFoodFactsResult | null>(null);
+  const [offAlternatives, setOffAlternatives] = useState<OpenFoodFactsResult[]>([]);
   const [offAlternativeLoading, setOffAlternativeLoading] = useState(false);
   const offFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -489,9 +489,9 @@ const Scan = () => {
     console.log('Canvas ref status:', Boolean(canvasRef.current));
   }, [cameraActive, cameraInitializing]);
 
-  // Search for a greener alternative when OFF results have a poor eco-score
+  // Search for greener alternatives when OFF results have a poor eco-score
   useEffect(() => {
-    setOffAlternative(null);
+    setOffAlternatives([]);
     // Check the first result (primary product) for poor eco-score
     const primaryResult = offSearchResults[0] || offResult;
     if (!primaryResult?.found) return;
@@ -500,9 +500,9 @@ const Scan = () => {
     if (!grade || !['d', 'e'].includes(grade)) return;
 
     setOffAlternativeLoading(true);
-    searchBetterAlternative(primaryResult)
-      .then((alt) => setOffAlternative(alt))
-      .catch(() => setOffAlternative(null))
+    searchBetterAlternatives(primaryResult)
+      .then((alts) => setOffAlternatives(alts))
+      .catch(() => setOffAlternatives([]))
       .finally(() => setOffAlternativeLoading(false));
   }, [offSearchResults, offResult]);
 
@@ -1490,57 +1490,65 @@ const Scan = () => {
                     ))}
                   </div>
 
-                  {/* Greener Alternative Suggestion */}
+                  {/* Greener Alternatives Suggestion */}
                   {offAlternativeLoading && (
                     <div className="flex items-center gap-2 py-3">
                       <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
                       <span className="text-sm text-slate-600 dark:text-slate-400">Searching for greener alternatives...</span>
                     </div>
                   )}
-                  {offAlternative && !offAlternativeLoading && (
+                  {offAlternatives.length > 0 && !offAlternativeLoading && (
                     <div className="p-4 rounded-2xl border-2 border-emerald-300/60 dark:border-emerald-700/60 bg-gradient-to-r from-emerald-50 to-emerald-100/50 dark:from-emerald-950/30 dark:to-emerald-900/20">
                       <div className="flex items-center gap-2 mb-3">
                         <Leaf className="w-5 h-5 text-emerald-600" />
                         <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
-                          Greener Alternative Available
+                          Greener Alternatives ({offAlternatives.length})
                         </p>
                       </div>
-                      <div className="flex items-start gap-3">
-                        {offAlternative.imageUrl && (
-                          <img
-                            src={offAlternative.imageUrl}
-                            alt={offAlternative.productName || "Alternative"}
-                            className="w-14 h-14 rounded-lg object-cover border border-emerald-200 dark:border-emerald-700 flex-shrink-0"
-                          />
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-sm text-slate-800 dark:text-slate-200 truncate">
-                            {offAlternative.productName || "Unknown Product"}
-                          </p>
-                          {offAlternative.brand && (
-                            <p className="text-xs text-slate-600 dark:text-slate-400">{offAlternative.brand}</p>
-                          )}
-                          <div className="flex items-center gap-3 mt-1">
-                            {offAlternative.ecoscoreGrade && (
-                              <span className="text-xs font-bold text-emerald-600">
-                                Eco-Score: {offAlternative.ecoscoreGrade.toUpperCase()}
-                              </span>
+                      <div className="space-y-3">
+                        {offAlternatives.map((alt, i) => (
+                          <div key={`${alt.barcode}-alt-${i}`} className="flex items-start gap-3 p-3 rounded-xl bg-white/60 dark:bg-slate-800/40 border border-emerald-200/40 dark:border-emerald-700/40">
+                            {alt.imageUrl && (
+                              <img
+                                src={alt.imageUrl}
+                                alt={alt.productName || "Alternative"}
+                                className="w-14 h-14 rounded-lg object-cover border border-emerald-200 dark:border-emerald-700 flex-shrink-0"
+                              />
                             )}
-                            {offAlternative.ecoscoreData?.agribalyse?.co2_total != null && (
-                              <span className="text-xs text-slate-600 dark:text-slate-400">
-                                CO2: <span className="font-bold text-emerald-600">{offAlternative.ecoscoreData.agribalyse.co2_total.toFixed(2)} kg/kg</span>
-                              </span>
-                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-sm text-slate-800 dark:text-slate-200 truncate">
+                                {alt.productName || "Unknown Product"}
+                              </p>
+                              {alt.brand && (
+                                <p className="text-xs text-slate-600 dark:text-slate-400">{alt.brand}</p>
+                              )}
+                              <div className="flex items-center gap-3 mt-1">
+                                {alt.ecoscoreGrade && (
+                                  <span className="text-xs font-bold text-emerald-600">
+                                    Eco-Score: {alt.ecoscoreGrade.toUpperCase()}
+                                  </span>
+                                )}
+                                {alt.ecoscoreData?.agribalyse?.co2_total != null ? (
+                                  <span className="text-xs text-slate-600 dark:text-slate-400">
+                                    CO2: <span className="font-bold text-emerald-600">{alt.ecoscoreData.agribalyse.co2_total.toFixed(2)} kg/kg</span>
+                                  </span>
+                                ) : alt.carbonFootprint100g != null ? (
+                                  <span className="text-xs text-slate-600 dark:text-slate-400">
+                                    CO2: <span className="font-bold text-emerald-600">{alt.carbonFootprint100g.toFixed(1)} g/100g</span>
+                                  </span>
+                                ) : null}
+                              </div>
+                            </div>
+                            <Button
+                              onClick={() => viewDetailedEnvironmental(alt)}
+                              variant="outline"
+                              size="sm"
+                              className="text-emerald-600 border-emerald-300 hover:bg-emerald-50 flex-shrink-0"
+                            >
+                              View
+                            </Button>
                           </div>
-                        </div>
-                        <Button
-                          onClick={() => viewDetailedEnvironmental(offAlternative)}
-                          variant="outline"
-                          size="sm"
-                          className="text-emerald-600 border-emerald-300 hover:bg-emerald-50 flex-shrink-0"
-                        >
-                          View
-                        </Button>
+                        ))}
                       </div>
                     </div>
                   )}

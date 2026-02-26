@@ -162,22 +162,23 @@ export interface BrowseResult {
   pageCount: number;
 }
 
-// Search for a greener alternative in the same category with a better eco-score and lower CO2
-export const searchBetterAlternative = async (
-  result: OpenFoodFactsResult
-): Promise<OpenFoodFactsResult | null> => {
+// Search for greener alternatives in the same category with better eco-scores and lower CO2
+export const searchBetterAlternatives = async (
+  result: OpenFoodFactsResult,
+  limit: number = 3
+): Promise<OpenFoodFactsResult[]> => {
   const grade = result.ecoscoreGrade?.toLowerCase();
-  if (!grade || !['d', 'e'].includes(grade)) return null;
+  if (!grade || !['d', 'e'].includes(grade)) return [];
 
   // Use the first meaningful category (skip very generic ones)
   const category = result.categories.find(c => c.length > 3) || result.categories[0];
-  if (!category) return null;
+  if (!category) return [];
 
   try {
     const params = new URLSearchParams({
       action: 'process',
       json: '1',
-      page_size: '20',
+      page_size: '30',
       sort_by: 'unique_scans_n',
       tagtype_0: 'categories',
       tag_contains_0: 'contains',
@@ -185,18 +186,21 @@ export const searchBetterAlternative = async (
     });
 
     const response = await fetch(`${OFF_API_BASE}/cgi/search.pl?${params}`);
-    if (!response.ok) return null;
+    if (!response.ok) return [];
 
     const data: OpenFoodFactsSearchResponse = await response.json();
-    if (!data.products || data.products.length === 0) return null;
+    if (!data.products || data.products.length === 0) return [];
 
     const betterGrades = new Set(['a', 'b']);
     const candidates = data.products
       .filter(p => p.code !== result.barcode)
       .map(normalizeProduct)
-      .filter(p => p.ecoscoreGrade && betterGrades.has(p.ecoscoreGrade.toLowerCase()));
+      .filter(p =>
+        p.ecoscoreGrade && betterGrades.has(p.ecoscoreGrade.toLowerCase()) &&
+        (p.ecoscoreData?.agribalyse?.co2_total != null || p.carbonFootprint100g != null)
+      );
 
-    if (candidates.length === 0) return null;
+    if (candidates.length === 0) return [];
 
     // Sort by CO2 total (ascending) - prefer lowest carbon footprint
     candidates.sort((a, b) => {
@@ -205,10 +209,10 @@ export const searchBetterAlternative = async (
       return aCO2 - bCO2;
     });
 
-    return candidates[0];
+    return candidates.slice(0, limit);
   } catch (error) {
     console.error('Error searching for alternatives:', error);
-    return null;
+    return [];
   }
 };
 
