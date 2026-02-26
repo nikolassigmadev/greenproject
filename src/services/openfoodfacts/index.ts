@@ -162,6 +162,56 @@ export interface BrowseResult {
   pageCount: number;
 }
 
+// Search for a greener alternative in the same category with a better eco-score and lower CO2
+export const searchBetterAlternative = async (
+  result: OpenFoodFactsResult
+): Promise<OpenFoodFactsResult | null> => {
+  const grade = result.ecoscoreGrade?.toLowerCase();
+  if (!grade || !['d', 'e'].includes(grade)) return null;
+
+  // Use the first meaningful category (skip very generic ones)
+  const category = result.categories.find(c => c.length > 3) || result.categories[0];
+  if (!category) return null;
+
+  try {
+    const params = new URLSearchParams({
+      action: 'process',
+      json: '1',
+      page_size: '20',
+      sort_by: 'unique_scans_n',
+      tagtype_0: 'categories',
+      tag_contains_0: 'contains',
+      tag_0: category,
+    });
+
+    const response = await fetch(`${OFF_API_BASE}/cgi/search.pl?${params}`);
+    if (!response.ok) return null;
+
+    const data: OpenFoodFactsSearchResponse = await response.json();
+    if (!data.products || data.products.length === 0) return null;
+
+    const betterGrades = new Set(['a', 'b']);
+    const candidates = data.products
+      .filter(p => p.code !== result.barcode)
+      .map(normalizeProduct)
+      .filter(p => p.ecoscoreGrade && betterGrades.has(p.ecoscoreGrade.toLowerCase()));
+
+    if (candidates.length === 0) return null;
+
+    // Sort by CO2 total (ascending) - prefer lowest carbon footprint
+    candidates.sort((a, b) => {
+      const aCO2 = a.ecoscoreData?.agribalyse?.co2_total ?? a.carbonFootprint100g ?? Infinity;
+      const bCO2 = b.ecoscoreData?.agribalyse?.co2_total ?? b.carbonFootprint100g ?? Infinity;
+      return aCO2 - bCO2;
+    });
+
+    return candidates[0];
+  } catch (error) {
+    console.error('Error searching for alternatives:', error);
+    return null;
+  }
+};
+
 export const browseProducts = async (options: BrowseOptions = {}): Promise<BrowseResult> => {
   const { query, category, country, page = 1, pageSize = 24 } = options;
 

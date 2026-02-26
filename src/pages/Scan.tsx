@@ -13,11 +13,11 @@ import { ScoreBreakdownSlider } from "@/components/ScoreBreakdownSlider";
 import { useToast } from "@/hooks/use-toast";
 import { useProducts } from "@/hooks/useProducts";
 import type { Product } from "@/data/products";
-import { calculateScore } from "@/data/products";
+import { calculateScore, findLowCO2Alternative } from "@/data/products";
 import { recognizeImageWithOpenAI } from "@/services/ocr/openai-service";
 import { advancedProductOCR, extractBrandName, extractProductName, extractCertifications, checkOpenAIHealth } from "@/services/ocr/advanced-openai-ocr";
 import { copySingleProductCode } from "@/utils/productExporter";
-import { lookupBarcode, isValidBarcode, searchProducts as searchOffProducts } from "@/services/openfoodfacts";
+import { lookupBarcode, isValidBarcode, searchProducts as searchOffProducts, searchBetterAlternative } from "@/services/openfoodfacts";
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
 import Tesseract from "tesseract.js";
 
@@ -479,6 +479,8 @@ const Scan = () => {
   const [offSearchText, setOffSearchText] = useState("");
   const [showDetailedEnvironmental, setShowDetailedEnvironmental] = useState(false);
   const [selectedEnvironmentalResult, setSelectedEnvironmentalResult] = useState<OpenFoodFactsResult | null>(null);
+  const [offAlternative, setOffAlternative] = useState<OpenFoodFactsResult | null>(null);
+  const [offAlternativeLoading, setOffAlternativeLoading] = useState(false);
   const offFileInputRef = useRef<HTMLInputElement>(null);
 
   // Debug: Check if video element is mounted
@@ -486,6 +488,23 @@ const Scan = () => {
     console.log('Video ref status:', Boolean(videoRef.current));
     console.log('Canvas ref status:', Boolean(canvasRef.current));
   }, [cameraActive, cameraInitializing]);
+
+  // Search for a greener alternative when OFF results have a poor eco-score
+  useEffect(() => {
+    setOffAlternative(null);
+    // Check the first result (primary product) for poor eco-score
+    const primaryResult = offSearchResults[0] || offResult;
+    if (!primaryResult?.found) return;
+
+    const grade = primaryResult.ecoscoreGrade?.toLowerCase();
+    if (!grade || !['d', 'e'].includes(grade)) return;
+
+    setOffAlternativeLoading(true);
+    searchBetterAlternative(primaryResult)
+      .then((alt) => setOffAlternative(alt))
+      .catch(() => setOffAlternative(null))
+      .finally(() => setOffAlternativeLoading(false));
+  }, [offSearchResults, offResult]);
 
   // Start camera with improved browser and mobile compatibility
   const startCamera = useCallback(async () => {
@@ -1470,6 +1489,61 @@ const Scan = () => {
                       </div>
                     ))}
                   </div>
+
+                  {/* Greener Alternative Suggestion */}
+                  {offAlternativeLoading && (
+                    <div className="flex items-center gap-2 py-3">
+                      <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Searching for greener alternatives...</span>
+                    </div>
+                  )}
+                  {offAlternative && !offAlternativeLoading && (
+                    <div className="p-4 rounded-2xl border-2 border-emerald-300/60 dark:border-emerald-700/60 bg-gradient-to-r from-emerald-50 to-emerald-100/50 dark:from-emerald-950/30 dark:to-emerald-900/20">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Leaf className="w-5 h-5 text-emerald-600" />
+                        <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+                          Greener Alternative Available
+                        </p>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        {offAlternative.imageUrl && (
+                          <img
+                            src={offAlternative.imageUrl}
+                            alt={offAlternative.productName || "Alternative"}
+                            className="w-14 h-14 rounded-lg object-cover border border-emerald-200 dark:border-emerald-700 flex-shrink-0"
+                          />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-sm text-slate-800 dark:text-slate-200 truncate">
+                            {offAlternative.productName || "Unknown Product"}
+                          </p>
+                          {offAlternative.brand && (
+                            <p className="text-xs text-slate-600 dark:text-slate-400">{offAlternative.brand}</p>
+                          )}
+                          <div className="flex items-center gap-3 mt-1">
+                            {offAlternative.ecoscoreGrade && (
+                              <span className="text-xs font-bold text-emerald-600">
+                                Eco-Score: {offAlternative.ecoscoreGrade.toUpperCase()}
+                              </span>
+                            )}
+                            {offAlternative.ecoscoreData?.agribalyse?.co2_total != null && (
+                              <span className="text-xs text-slate-600 dark:text-slate-400">
+                                CO2: <span className="font-bold text-emerald-600">{offAlternative.ecoscoreData.agribalyse.co2_total.toFixed(2)} kg/kg</span>
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <Button
+                          onClick={() => viewDetailedEnvironmental(offAlternative)}
+                          variant="outline"
+                          size="sm"
+                          className="text-emerald-600 border-emerald-300 hover:bg-emerald-50 flex-shrink-0"
+                        >
+                          View
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1766,38 +1840,65 @@ const Scan = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {searchResults.map((product) => (
-                    <button
-                      key={product.id}
-                      onClick={() => navigate(`/product/${product.id.replace("#", "")}`)}
-                      className="w-full p-5 rounded-2xl border border-slate-200/50 dark:border-slate-700/50 hover:border-blue-400/50 hover:bg-gradient-to-r hover:from-blue-50/30 hover:to-blue-100/30 dark:hover:from-blue-950/20 dark:hover:to-blue-900/20 transition-all duration-300 text-left flex items-center gap-4 group shadow-sm hover:shadow-lg"
-                    >
-                      <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-700 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
-                        {uploadedImage ? (
-                          <img src={uploadedImage} alt="" className="w-full h-full object-cover rounded-lg" />
-                        ) : (
-                          <ScanLine className="w-8 h-8 text-blue-500/50" />
+                  {searchResults.map((product) => {
+                    const score = calculateScore(product);
+                    const alternative = score < 60 ? findLowCO2Alternative(product, products) : null;
+                    return (
+                      <div key={product.id} className="space-y-3">
+                        <button
+                          onClick={() => navigate(`/product/${product.id.replace("#", "")}`)}
+                          className="w-full p-5 rounded-2xl border border-slate-200/50 dark:border-slate-700/50 hover:border-blue-400/50 hover:bg-gradient-to-r hover:from-blue-50/30 hover:to-blue-100/30 dark:hover:from-blue-950/20 dark:hover:to-blue-900/20 transition-all duration-300 text-left flex items-center gap-4 group shadow-sm hover:shadow-lg"
+                        >
+                          <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-700 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
+                            {uploadedImage ? (
+                              <img src={uploadedImage} alt="" className="w-full h-full object-cover rounded-lg" />
+                            ) : (
+                              <ScanLine className="w-8 h-8 text-blue-500/50" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-base text-slate-800 dark:text-slate-200 truncate group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors">
+                              {product.name}
+                            </p>
+                            <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
+                              {product.brand} • <span className="font-mono text-xs bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">{product.id}</span>
+                            </p>
+                            <div className="flex items-center gap-4">
+                              <div className="text-sm">
+                                <span className="font-medium text-slate-700 dark:text-slate-300">Score: </span>
+                                <span className="font-bold text-blue-600 dark:text-blue-400">{score}</span>
+                              </div>
+                              <div className="flex-1">
+                                <ScoreBreakdownSlider product={product} />
+                              </div>
+                            </div>
+                          </div>
+                        </button>
+
+                        {alternative && (
+                          <button
+                            onClick={() => navigate(`/product/${alternative.id.replace("#", "")}`)}
+                            className="w-full p-4 rounded-2xl border-2 border-emerald-300/60 dark:border-emerald-700/60 bg-gradient-to-r from-emerald-50 to-emerald-100/50 dark:from-emerald-950/30 dark:to-emerald-900/20 hover:border-emerald-400 hover:shadow-lg transition-all duration-300 text-left flex items-center gap-4 group"
+                          >
+                            <div className="w-12 h-12 rounded-xl bg-emerald-200 dark:bg-emerald-800 flex items-center justify-center flex-shrink-0">
+                              <Leaf className="w-6 h-6 text-emerald-700 dark:text-emerald-300" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 uppercase tracking-wide mb-1">
+                                Greener Alternative
+                              </p>
+                              <p className="font-semibold text-sm text-slate-800 dark:text-slate-200 truncate group-hover:text-emerald-700 dark:group-hover:text-emerald-300 transition-colors">
+                                {alternative.name}
+                              </p>
+                              <p className="text-xs text-slate-600 dark:text-slate-400">
+                                {alternative.brand} • Score: <span className="font-bold text-emerald-600">{calculateScore(alternative)}</span> • CO2: <span className="font-bold text-emerald-600">{alternative.carbonFootprint} kg</span>
+                              </p>
+                            </div>
+                          </button>
                         )}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-base text-slate-800 dark:text-slate-200 truncate group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors">
-                          {product.name}
-                        </p>
-                        <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
-                          {product.brand} • <span className="font-mono text-xs bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">{product.id}</span>
-                        </p>
-                        <div className="flex items-center gap-4">
-                          <div className="text-sm">
-                            <span className="font-medium text-slate-700 dark:text-slate-300">Score: </span>
-                            <span className="font-bold text-blue-600 dark:text-blue-400">{calculateScore(product)}</span>
-                          </div>
-                          <div className="flex-1">
-                            <ScoreBreakdownSlider product={product} />
-                          </div>
-                        </div>
-                      </div>
-                    </button>
-                  ))}
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
