@@ -16,6 +16,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
+import { getBrandFlag } from "@/data/brandFlags";
+import { LaborFlagBanner } from "@/components/LaborFlagBanner";
 
 interface EnvironmentalImpactCardProps {
   result: OpenFoodFactsResult;
@@ -61,6 +63,7 @@ const getPackagingImpactLevel = (score?: number): { label: string; color: string
 export function EnvironmentalImpactCard({ result }: EnvironmentalImpactCardProps) {
   if (!result.found) return null;
 
+  const brandFlag = getBrandFlag(result.brand);
   const agri = result.ecoscoreData?.agribalyse;
   const adjustments = result.ecoscoreData?.adjustments;
   const packaging = adjustments?.packaging;
@@ -102,6 +105,9 @@ export function EnvironmentalImpactCard({ result }: EnvironmentalImpactCardProps
           </div>
         </CardHeader>
       </Card>
+
+      {/* Labor flag */}
+      {brandFlag && <LaborFlagBanner flag={brandFlag} brandName={result.brand} />}
 
       {/* Environment Section */}
       <Card>

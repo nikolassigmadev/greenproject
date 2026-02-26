@@ -1,7 +1,5 @@
-import { Leaf, Heart, Settings, Mail, Github, Twitter, Globe } from "lucide-react";
+import { Leaf, Heart, Settings } from "lucide-react";
 import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
@@ -9,7 +7,7 @@ export function Footer() {
   return (
     <footer className="border-t border-border/50 bg-gradient-to-b from-muted/30 to-muted/50 py-12 mt-auto">
       <div className="container">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
           {/* Brand Section */}
           <div className="space-y-4">
             <div className="flex items-center gap-2">
@@ -64,56 +62,20 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Resources */}
+          {/* Database Link */}
           <div className="space-y-4">
             <h3 className="font-display font-semibold text-foreground">Resources</h3>
             <ul className="space-y-2">
               <li>
-                <a 
-                  href="#" 
+                <Link
+                  to="/database"
                   className="text-sm text-muted-foreground hover:text-primary transition-colors flex items-center gap-1 group"
                 >
                   <span className="w-0 h-0 group-hover:w-1 group-hover:h-1 bg-primary rounded-full transition-all duration-200" />
-                  Sustainability Guide
-                </a>
-              </li>
-              <li>
-                <a 
-                  href="#" 
-                  className="text-sm text-muted-foreground hover:text-primary transition-colors flex items-center gap-1 group"
-                >
-                  <span className="w-0 h-0 group-hover:w-1 group-hover:h-1 bg-primary rounded-full transition-all duration-200" />
-                  API Documentation
-                </a>
-              </li>
-              <li>
-                <a 
-                  href="#" 
-                  className="text-sm text-muted-foreground hover:text-primary transition-colors flex items-center gap-1 group"
-                >
-                  <span className="w-0 h-0 group-hover:w-1 group-hover:h-1 bg-primary rounded-full transition-all duration-200" />
-                  Research Methodology
-                </a>
+                  Food Database
+                </Link>
               </li>
             </ul>
-          </div>
-
-          {/* Newsletter */}
-          <div className="space-y-4">
-            <h3 className="font-display font-semibold text-foreground">Stay Updated</h3>
-            <p className="text-sm text-muted-foreground">
-              Get tips on sustainable living and new product updates.
-            </p>
-            <div className="space-y-2">
-              <Input 
-                type="email" 
-                placeholder="Enter your email" 
-                className="bg-background border-border/50 focus:border-primary transition-colors"
-              />
-              <Button size="sm" className="w-full bg-gradient-hero hover:opacity-90 transition-opacity">
-                Subscribe
-              </Button>
-            </div>
           </div>
         </div>
 
@@ -125,33 +87,7 @@ export function Footer() {
             </div>
             
             <div className="flex items-center gap-6">
-              {/* Social Links */}
-              <div className="flex items-center gap-3">
-                <a 
-                  href="#" 
-                  className="text-muted-foreground hover:text-primary transition-colors group"
-                  aria-label="Twitter"
-                >
-                  <Twitter className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                </a>
-                <a 
-                  href="#" 
-                  className="text-muted-foreground hover:text-primary transition-colors group"
-                  aria-label="GitHub"
-                >
-                  <Github className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                </a>
-                <a 
-                  href="#" 
-                  className="text-muted-foreground hover:text-primary transition-colors group"
-                  aria-label="Website"
-                >
-                  <Globe className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                </a>
-              </div>
-              
               {/* Admin Link */}
-              <div className="h-4 w-px bg-border" />
               <Link 
                 to="/admin" 
                 className="text-muted-foreground/50 hover:text-muted-foreground transition-colors group"
