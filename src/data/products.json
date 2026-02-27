@@ -41,5 +41,79 @@
     "keywords": [],
     "barcode": "",
     "imageUrl": "https://www.shutterstock.com/image-photo/jakarta-indonesia-july-27th-2024-600nw-2494710323.jpg"
-  }
+  },
+  {
+  "id": "#p0004",
+  "name": "TEST",
+  "brand": "TEST",
+  "category": "Food & Beverage",
+  "origin": {
+    "country": ""
+  },
+  "materials": [
+    "D"
+  ],
+  "laborRisk": "low",
+  "transportDistance": 0,
+  "certifications": [
+    "Fair Trade",
+    "Non-GMO"
+  ],
+  "carbonFootprint": -1.4,
+  "keywords": [
+    "D"
+  ],
+  "barcode": "",
+  "comments": "D",
+  "manualScore": 60,
+  "laborViolations": "no-union-rights",
+  "laborBonuses": [
+    "B-Corp certified (+3)"
+  ],
+  "animalWelfareConditions": "plant-based",
+  "animalWelfareItems": [
+    "Certified Humane (+3)",
+    "Cruelty-free (vegan) (+2)"
+  ],
+  "transportMode": "truck"
+},
+ {
+  "id": "#p0005",
+  "name": "geo",
+  "brand": "suia",
+  "category": "Meat, Dairy & Eggs",
+  "origin": {
+    "country": ""
+  },
+  "materials": [
+    "BEEF",
+    "Good Space",
+    "Standard Execution",
+    "Conventional Diet"
+  ],
+  "laborRisk": "low",
+  "transportDistance": 0,
+  "certifications": [
+    "Supply chain disclosure (+2)",
+    "Rainforest Alliance"
+  ],
+  "carbonFootprint": -1.4,
+  "keywords": [
+    "usu"
+  ],
+  "barcode": "",
+  "comments": "sdyusay",
+  "laborViolations": "none",
+  "laborBonuses": [
+    "B-Corp certified (+3)"
+  ],
+  "animalWelfareConditions": "plant-based",
+  "animalWelfareItems": [
+    "Certified Humane (+3)",
+    "Grass-fed (+2)"
+  ],
+  "transportMode": "truck"
+}
+
+  
 ]
