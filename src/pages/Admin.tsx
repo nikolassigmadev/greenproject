@@ -19,6 +19,7 @@ import { Plus, Pencil, Trash2, Upload, ImageIcon, X, Download, LogOut, ChevronsU
 import { ScoreDisplay } from '@/components/ScoreDisplay';
 import { SimpleLivestockForm, SimpleLivestockData } from '@/components/SimpleLivestockForm';
 import { downloadProductsFile, copySingleProductCode } from '@/utils/productExporter';
+
 import { clearAdminAuthenticated, isAdminAuthenticated } from '@/utils/adminAuth';
 import { toast } from 'sonner';
 
@@ -223,13 +224,13 @@ const Admin = () => {
     try {
       const success = await copySingleProductCode(product);
       if (success) {
-        toast.success(`Product code for "${product.name}" copied to clipboard!`);
+        toast.success(`Product JSON for "${product.name}" copied to clipboard!`);
       } else {
         toast.error("Could not copy to clipboard. Please try again.");
       }
     } catch (error) {
       console.error('Export error:', error);
-      toast.error("Failed to export product code.");
+      toast.error("Failed to export product JSON.");
     }
   };
 
@@ -268,7 +269,7 @@ const Admin = () => {
           <div className="flex gap-2">
             <Button onClick={handleExportProducts} variant="outline" className="gap-2">
               <Download className="w-4 h-4" />
-              Export Products
+              Export JSON
             </Button>
             <Button
               onClick={() => {
@@ -329,7 +330,7 @@ const Admin = () => {
                           <Download className="w-4 h-4" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="export">Copy Product Code</SelectItem>
+                          <SelectItem value="export">Copy Product JSON</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>

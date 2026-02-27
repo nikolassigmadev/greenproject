@@ -1,73 +1,20 @@
 import { Product } from '@/data/products';
 
-export const exportProductsToCode = (products: Product[]): string => {
-  // Convert products array to TypeScript code
-  const productsCode = products.map(product => {
-    const imageUrlField = product.imageUrl ? `imageUrl: '${product.imageUrl}'` : 'imageUrl: undefined';
-    const regionField = product.origin.region ? `region: '${product.origin.region}'` : '';
-    const manualScoreField = product.manualScore !== undefined ? `manualScore: ${product.manualScore}` : '';
-    const commentsField = product.comments ? `comments: '${product.comments.replace(/'/g, "\\'")}'` : '';
-    
-    return `  {
-    id: '${product.id}',
-    name: '${product.name}',
-    brand: '${product.brand}',
-    category: '${product.category}',
-    origin: { country: '${product.origin.country}'${regionField ? `, ${regionField}` : ''} },
-    materials: [${product.materials.map(m => `'${m}'`).join(', ')}],
-    laborRisk: '${product.laborRisk}',
-    transportDistance: ${product.transportDistance},
-    certifications: [${product.certifications.map(c => `'${c}'`).join(', ')}],
-    carbonFootprint: ${product.carbonFootprint},
-    keywords: [${product.keywords.map(k => `'${k}'`).join(', ')}],
-    barcode: '${product.barcode}',
-    ${imageUrlField},
-    ${manualScoreField}
-    ${commentsField ? `,${commentsField}` : ''}
-  }`;
-  }).join(',\n');
-
-  return `// ==========================================
-// PRODUCT DATABASE - ADD YOUR PRODUCTS HERE
-// ==========================================
-
-export const defaultProducts: Product[] = [
-${productsCode},
-];`;
+export const exportProductsToJson = (products: Product[]): string => {
+  return JSON.stringify(products, null, 2);
 };
 
-export const exportSingleProductToCode = (product: Product): string => {
-  const imageUrlField = product.imageUrl ? `imageUrl: '${product.imageUrl}'` : 'imageUrl: undefined';
-  const regionField = product.origin.region ? `region: '${product.origin.region}'` : '';
-  const manualScoreField = product.manualScore !== undefined ? `manualScore: ${product.manualScore}` : '';
-  const commentsField = product.comments ? `comments: '${product.comments.replace(/'/g, "\\'")}'` : '';
-  
-  return `  {
-    id: '${product.id}',
-    name: '${product.name}',
-    brand: '${product.brand}',
-    category: '${product.category}',
-    origin: { country: '${product.origin.country}'${regionField ? `, ${regionField}` : ''} },
-    materials: [${product.materials.map(m => `'${m}'`).join(', ')}],
-    laborRisk: '${product.laborRisk}',
-    transportDistance: ${product.transportDistance},
-    certifications: [${product.certifications.map(c => `'${c}'`).join(', ')}],
-    carbonFootprint: ${product.carbonFootprint},
-    keywords: [${product.keywords.map(k => `'${k}'`).join(', ')}],
-    barcode: '${product.barcode}',
-    ${imageUrlField},
-    ${manualScoreField}
-    ${commentsField ? `,${commentsField}` : ''}
-  }`;
+export const exportSingleProductToJson = (product: Product): string => {
+  return JSON.stringify(product, null, 2);
 };
 
 export const downloadProductsFile = (products: Product[]) => {
-  const code = exportProductsToCode(products);
-  const blob = new Blob([code], { type: 'text/typescript' });
+  const json = exportProductsToJson(products);
+  const blob = new Blob([json], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'products.ts';
+  a.download = 'products.json';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -75,21 +22,21 @@ export const downloadProductsFile = (products: Product[]) => {
 };
 
 export const copySingleProductCode = (product: Product): Promise<boolean> => {
-  const code = exportSingleProductToCode(product);
+  const json = exportSingleProductToJson(product);
 
   // Check if clipboard API is available
   if (!navigator.clipboard) {
     console.warn('Clipboard API not available, using fallback');
-    return fallbackCopy(code);
+    return fallbackCopy(json);
   }
 
-  return navigator.clipboard.writeText(code).then(() => {
-    console.log('Product code copied to clipboard!');
+  return navigator.clipboard.writeText(json).then(() => {
+    console.log('Product JSON copied to clipboard!');
     return true;
   }).catch(err => {
-    console.error('Failed to copy product code:', err);
+    console.error('Failed to copy product JSON:', err);
     // Fallback to manual copy method
-    return fallbackCopy(code);
+    return fallbackCopy(json);
   });
 };
 
