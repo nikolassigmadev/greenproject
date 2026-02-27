@@ -60,14 +60,6 @@ const Admin = () => {
     'Fair Trade',
   ];
 
-  // Load products from localStorage on component mount
-  useEffect(() => {
-    const storedProducts = loadProducts();
-    if (storedProducts) {
-      setProductList(storedProducts);
-    }
-  }, []);
-
   useEffect(() => {
     if (!isAdminAuthenticated()) {
       navigate('/admin/login', { replace: true, state: { from: location } });
@@ -75,13 +67,6 @@ const Admin = () => {
   }, [location, navigate]);
 
   const authenticated = isAdminAuthenticated();
-
-  // Save products to localStorage whenever productList changes
-  useEffect(() => {
-    if (productList !== defaultProducts) {
-      saveProducts(productList);
-    }
-  }, [productList]);
 
   // Update editing product materials in real-time when livestock data changes
   useEffect(() => {
