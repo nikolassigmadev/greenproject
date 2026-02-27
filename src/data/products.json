@@ -1,0 +1,45 @@
+[
+  {
+    "id": "#p0001",
+    "name": "Organic Cotton T-Shirt",
+    "brand": "EcoWear",
+    "category": "Clothing",
+    "origin": { "country": "Portugal", "region": "Porto" },
+    "materials": ["Organic Cotton", "Natural Dyes"],
+    "laborRisk": "low",
+    "transportDistance": 5500,
+    "certifications": ["GOTS Certified", "Fair Trade", "B-Corp"],
+    "carbonFootprint": 8.5,
+    "keywords": ["shirt", "tshirt", "cotton", "apparel", "top"],
+    "barcode": "1234567890123"
+  },
+  {
+    "id": "#p0002",
+    "name": "Fast Fashion Basic Tee",
+    "brand": "QuickStyle",
+    "category": "Clothing",
+    "origin": { "country": "Bangladesh", "region": "Dhaka" },
+    "materials": ["Polyester", "Cotton Blend"],
+    "laborRisk": "high",
+    "transportDistance": 12000,
+    "certifications": [],
+    "carbonFootprint": 35,
+    "keywords": ["shirt", "tshirt", "cotton", "apparel", "top"],
+    "barcode": "2345678901234"
+  },
+  {
+    "id": "#p0003",
+    "name": "Aqua",
+    "brand": "Danone",
+    "category": "Drinkware",
+    "origin": { "country": "Indonesia", "region": " Bali" },
+    "materials": ["Standard Production"],
+    "laborRisk": "high",
+    "transportDistance": 2000,
+    "certifications": [],
+    "carbonFootprint": 8.4,
+    "keywords": [],
+    "barcode": "",
+    "imageUrl": "https://www.shutterstock.com/image-photo/jakarta-indonesia-july-27th-2024-600nw-2494710323.jpg"
+  }
+]
