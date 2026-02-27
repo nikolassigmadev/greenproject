@@ -1,22 +1,27 @@
-import { 
-  Leaf, 
-  AlertTriangle, 
-  Info, 
-  ExternalLink, 
-  Package, 
-  Droplets, 
-  Factory, 
+import {
+  Leaf,
+  AlertTriangle,
+  Info,
+  ExternalLink,
+  Package,
+  Droplets,
+  Factory,
   Truck,
   Car,
   MapPin,
   TreePine,
-  AlertCircle
+  AlertCircle,
+  ShieldX,
+  ShieldAlert,
+  ShieldCheck,
+  ThumbsDown,
+  ThumbsUp,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
-import { getBrandFlag } from "@/data/brandFlags";
+import { getBrandFlag, type BrandFlag } from "@/data/brandFlags";
 import { LaborFlagBanner } from "@/components/LaborFlagBanner";
 
 interface EnvironmentalImpactCardProps {
@@ -60,10 +65,144 @@ const getPackagingImpactLevel = (score?: number): { label: string; color: string
   return { label: "Very high impact", color: "text-red-600" };
 };
 
+// ────────────────────────────────────────────
+// Verdict system
+// ────────────────────────────────────────────
+
+type VerdictLevel = "urgent" | "moderate" | "mild";
+
+interface Verdict {
+  level: VerdictLevel;
+  label: string;
+  subtitle: string;
+  reasons: string[];
+}
+
+const verdictConfig: Record<VerdictLevel, {
+  bg: string;
+  border: string;
+  text: string;
+  subtitleText: string;
+  icon: typeof ShieldX;
+}> = {
+  urgent: {
+    bg: "bg-red-50 dark:bg-red-950/50",
+    border: "border-red-300 dark:border-red-800",
+    text: "text-red-700 dark:text-red-300",
+    subtitleText: "text-red-600 dark:text-red-400",
+    icon: ShieldX,
+  },
+  moderate: {
+    bg: "bg-amber-50 dark:bg-amber-950/50",
+    border: "border-amber-300 dark:border-amber-800",
+    text: "text-amber-700 dark:text-amber-300",
+    subtitleText: "text-amber-600 dark:text-amber-400",
+    icon: ShieldAlert,
+  },
+  mild: {
+    bg: "bg-emerald-50 dark:bg-emerald-950/50",
+    border: "border-emerald-300 dark:border-emerald-800",
+    text: "text-emerald-700 dark:text-emerald-300",
+    subtitleText: "text-emerald-600 dark:text-emerald-400",
+    icon: ShieldCheck,
+  },
+};
+
+function computeVerdict(
+  result: OpenFoodFactsResult,
+  brandFlag: BrandFlag | null,
+): Verdict {
+  const reasons: string[] = [];
+  let score = 0; // higher = worse
+
+  // 1. Labor flag (heaviest weight)
+  if (brandFlag) {
+    if (brandFlag.severity === "critical") {
+      score += 50;
+      reasons.push("Brand linked to forced labor or child labor");
+    } else if (brandFlag.severity === "high") {
+      score += 30;
+      reasons.push("Brand has serious labor abuse allegations");
+    } else {
+      score += 15;
+      reasons.push("Brand has unresolved labor concerns");
+    }
+  }
+
+  // 2. Eco-Score
+  const grade = result.ecoscoreGrade?.toLowerCase();
+  if (grade === "e") {
+    score += 25;
+    reasons.push("Very poor environmental impact (Eco-Score E)");
+  } else if (grade === "d") {
+    score += 15;
+    reasons.push("High environmental impact (Eco-Score D)");
+  } else if (grade === "c") {
+    score += 5;
+  }
+  // a/b = no penalty
+
+  // 3. Threatened species
+  const threatened = result.ecoscoreData?.adjustments?.threatened_species;
+  if (threatened && typeof threatened.value === "number" && threatened.value < 0) {
+    score += 10;
+    reasons.push("Contains ingredients that harm threatened species");
+  }
+
+  // 4. NOVA ultra-processed
+  if (result.novaGroup === 4) {
+    score += 5;
+    reasons.push("Ultra-processed food (NOVA 4)");
+  }
+
+  // 5. High carbon
+  const agri = result.ecoscoreData?.agribalyse;
+  if (agri && typeof agri.co2_total === "number" && agri.co2_total > 5) {
+    score += 10;
+    reasons.push(`High carbon footprint (${agri.co2_total.toFixed(1)} kg CO\u2082/kg)`);
+  }
+
+  // Determine level
+  if (score >= 40) {
+    return {
+      level: "urgent",
+      label: "Avoid This Product",
+      subtitle: "Serious ethical or environmental concerns identified",
+      reasons,
+    };
+  }
+  if (score >= 15) {
+    return {
+      level: "moderate",
+      label: "Consider Alternatives",
+      subtitle: "Some concerns found \u2014 look for better options if possible",
+      reasons,
+    };
+  }
+
+  // Positive reasons for mild
+  const positiveReasons: string[] = [];
+  if (grade === "a") positiveReasons.push("Excellent environmental impact (Eco-Score A)");
+  else if (grade === "b") positiveReasons.push("Good environmental impact (Eco-Score B)");
+  if (!brandFlag) positiveReasons.push("No known labor violations");
+  if (result.novaGroup && result.novaGroup <= 2) positiveReasons.push("Minimally processed");
+  if (positiveReasons.length === 0) positiveReasons.push("No major concerns identified");
+
+  return {
+    level: "mild",
+    label: "Good Choice",
+    subtitle: "This product meets ethical and environmental standards",
+    reasons: positiveReasons,
+  };
+}
+
 export function EnvironmentalImpactCard({ result }: EnvironmentalImpactCardProps) {
   if (!result.found) return null;
 
   const brandFlag = getBrandFlag(result.brand);
+  const verdict = computeVerdict(result, brandFlag);
+  const vc = verdictConfig[verdict.level];
+  const VerdictIcon = vc.icon;
   const agri = result.ecoscoreData?.agribalyse;
   const adjustments = result.ecoscoreData?.adjustments;
   const packaging = adjustments?.packaging;
@@ -75,6 +214,35 @@ export function EnvironmentalImpactCard({ result }: EnvironmentalImpactCardProps
 
   return (
     <div className="space-y-6">
+      {/* Verdict Banner */}
+      <div className={`rounded-xl border-2 ${vc.border} ${vc.bg} p-5`}>
+        <div className="flex items-start gap-4">
+          <div className="flex-shrink-0 mt-0.5">
+            <VerdictIcon className={`w-8 h-8 ${vc.text}`} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className={`text-lg font-bold ${vc.text}`}>
+              {verdict.label}
+            </h3>
+            <p className={`text-sm mt-0.5 ${vc.subtitleText}`}>
+              {verdict.subtitle}
+            </p>
+            <ul className="mt-3 space-y-1.5">
+              {verdict.reasons.map((reason, i) => (
+                <li key={i} className="flex items-start gap-2">
+                  {verdict.level === "mild" ? (
+                    <ThumbsUp className={`w-3.5 h-3.5 mt-0.5 flex-shrink-0 ${vc.text}`} />
+                  ) : (
+                    <ThumbsDown className={`w-3.5 h-3.5 mt-0.5 flex-shrink-0 ${vc.text}`} />
+                  )}
+                  <span className={`text-sm ${vc.subtitleText}`}>{reason}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </div>
+
       {/* Header with product info */}
       <Card className="border-emerald-200 dark:border-emerald-800">
         <CardHeader>

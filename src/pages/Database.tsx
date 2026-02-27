@@ -43,7 +43,11 @@ const CATEGORIES = [
 
 const COUNTRIES = [
   "All",
+  // North America
   "United States",
+  "Canada",
+  "Mexico",
+  // Europe
   "France",
   "Germany",
   "United Kingdom",
@@ -52,21 +56,66 @@ const COUNTRIES = [
   "Belgium",
   "Switzerland",
   "Netherlands",
-  "Canada",
-  "Australia",
-  "Brazil",
-  "Japan",
-  "India",
-  "Mexico",
   "Portugal",
   "Sweden",
   "Austria",
   "Poland",
   "Denmark",
+  "Norway",
+  "Finland",
+  "Ireland",
+  "Greece",
+  // Indonesia
+  "Indonesia",
 ];
 
 function hasEcoScore(product: OpenFoodFactsResult): boolean {
   return !!product.ecoscoreGrade;
+}
+
+/**
+ * Returns true if the product has a full environmental breakdown
+ * (lifecycle CO2 data from Agribalyse, not just an eco-score letter).
+ */
+function hasFullBreakdown(product: OpenFoodFactsResult): boolean {
+  const agri = product.ecoscoreData?.agribalyse;
+  return !!(agri && typeof agri.co2_total === "number" && agri.co2_total > 0);
+}
+
+/**
+ * Score a product's relevance to the search query.
+ * Higher score = shown first.
+ *
+ * Priority:
+ *   1. Product name contains the query  (+200)
+ *   2. Has full environmental breakdown  (+100)
+ *   3. Has carbon footprint data         (+50)
+ *   4. Has an image                      (+10)
+ */
+function relevanceScore(product: OpenFoodFactsResult, query: string): number {
+  let score = 0;
+  const q = query.toLowerCase().trim();
+
+  if (q) {
+    const name = (product.productName || "").toLowerCase();
+    const brand = (product.brand || "").toLowerCase();
+
+    // Exact name match gets the highest boost
+    if (name === q) {
+      score += 300;
+    } else if (name.includes(q)) {
+      score += 200;
+    } else if (brand.includes(q)) {
+      // Brand match is useful but lower priority than name match
+      score += 50;
+    }
+  }
+
+  if (hasFullBreakdown(product)) score += 100;
+  if (product.carbonFootprint100g !== null) score += 50;
+  if (product.imageUrl) score += 10;
+
+  return score;
 }
 
 function gradeColor(grade: string | null): string {
@@ -96,16 +145,25 @@ const Database = () => {
     setLoading(true);
     setPage(newPage);
 
+    const query = search.trim();
+
+    // Fetch more results so we have enough to filter from
     const data = await browseProducts({
-      query: search || undefined,
+      query: query || undefined,
       category: selectedCategory !== "All" ? selectedCategory : undefined,
       country: selectedCountry !== "All" ? selectedCountry : undefined,
       page: newPage,
-      pageSize: 24,
+      pageSize: query ? 100 : 24,
     });
 
-    // Only show products that have an eco-score grade
-    const filtered = data.products.filter(hasEcoScore);
+    let filtered = data.products.filter(hasEcoScore);
+
+    if (query) {
+      // Sort by relevance — name matches first, then products with richer data
+      filtered.sort((a, b) => relevanceScore(b, query) - relevanceScore(a, query));
+      filtered = filtered.slice(0, 24);
+    }
+
     setResult({ ...data, products: filtered });
     setHasSearched(true);
     setLoading(false);
