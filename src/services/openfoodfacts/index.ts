@@ -7,6 +7,39 @@ import type {
 
 const OFF_API_BASE = 'https://world.openfoodfacts.org';
 
+// Countries we care about — Europe, North America, and Indonesia.
+// Matched against OpenFoodFacts `countries_tags` which use "en:" prefix.
+const ALLOWED_COUNTRY_TAGS = new Set([
+  // North America
+  "en:united-states", "en:canada", "en:mexico",
+  // Europe
+  "en:france", "en:germany", "en:united-kingdom", "en:spain", "en:italy",
+  "en:belgium", "en:switzerland", "en:netherlands", "en:portugal", "en:sweden",
+  "en:austria", "en:poland", "en:denmark", "en:norway", "en:finland",
+  "en:ireland", "en:greece", "en:czech-republic", "en:romania", "en:hungary",
+  "en:croatia", "en:slovakia", "en:slovenia", "en:bulgaria", "en:luxembourg",
+  "en:estonia", "en:latvia", "en:lithuania", "en:cyprus", "en:malta",
+  "en:iceland", "en:liechtenstein",
+  // Indonesia
+  "en:indonesia",
+]);
+
+/**
+ * Returns true if the product is sold in an allowed region
+ * (Europe, North America, or Indonesia). If no country data
+ * is available, the product is kept to avoid false negatives.
+ */
+const isAllowedRegion = (product: OpenFoodFactsResult): boolean => {
+  const raw = product.rawProduct;
+  if (!raw) return true;
+
+  const tags = raw.countries_tags;
+  // No country data → keep the product
+  if (!tags || tags.length === 0) return true;
+
+  return tags.some(tag => ALLOWED_COUNTRY_TAGS.has(tag.toLowerCase()));
+};
+
 const emptyResult = (barcode: string, error?: string): OpenFoodFactsResult => ({
   found: false,
   barcode,
@@ -119,12 +152,13 @@ export const searchProducts = async (
   if (!trimmed) return [];
 
   try {
+    // Fetch extra results so we still have enough after region filtering
     const params = new URLSearchParams({
       search_terms: trimmed,
       search_simple: '1',
       action: 'process',
       json: '1',
-      page_size: String(limit),
+      page_size: String(Math.min(limit * 3, 50)),
       sort_by: 'unique_scans_n',
     });
 
@@ -140,7 +174,10 @@ export const searchProducts = async (
       return [];
     }
 
-    return data.products.map(normalizeProduct);
+    return data.products
+      .map(normalizeProduct)
+      .filter(isAllowedRegion)
+      .slice(0, limit);
   } catch (error) {
     console.error('OpenFoodFacts search error:', error);
     return [];
@@ -195,6 +232,7 @@ export const searchBetterAlternatives = async (
     const candidates = data.products
       .filter(p => p.code !== result.barcode)
       .map(normalizeProduct)
+      .filter(isAllowedRegion)
       .filter(p =>
         p.ecoscoreGrade && betterGrades.has(p.ecoscoreGrade.toLowerCase()) &&
         (p.ecoscoreData?.agribalyse?.co2_total != null || p.carbonFootprint100g != null)
@@ -261,8 +299,12 @@ export const browseProducts = async (options: BrowseOptions = {}): Promise<Brows
 
     const data: OpenFoodFactsSearchResponse = await response.json();
 
+    const products = (data.products || [])
+      .map(normalizeProduct)
+      .filter(isAllowedRegion);
+
     return {
-      products: (data.products || []).map(normalizeProduct),
+      products,
       totalCount: data.count || 0,
       page: data.page || page,
       pageCount: data.page_count || 0,

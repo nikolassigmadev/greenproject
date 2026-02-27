@@ -111,6 +111,7 @@ export interface OpenFoodFactsProduct {
   origins_tags?: string[];
   manufacturing_places?: string;
   countries?: string;
+  countries_tags?: string[];
 
   // Ingredients
   ingredients_text?: string;
