@@ -153,7 +153,7 @@ const Database = () => {
       category: selectedCategory !== "All" ? selectedCategory : undefined,
       country: selectedCountry !== "All" ? selectedCountry : undefined,
       page: newPage,
-      pageSize: query ? 100 : 24,
+      pageSize: query ? 36 : 24,
     });
 
     let filtered = data.products.filter(hasEcoScore);

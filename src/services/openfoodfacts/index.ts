@@ -7,6 +7,32 @@ import type {
 
 const OFF_API_BASE = 'https://world.openfoodfacts.org';
 
+// ---------------------------------------------------------------------------
+// Simple in-memory cache with TTL (5 minutes) to avoid duplicate API calls
+// ---------------------------------------------------------------------------
+const CACHE_TTL_MS = 5 * 60 * 1000;
+
+interface CacheEntry<T> {
+  data: T;
+  expiry: number;
+}
+
+const cache = new Map<string, CacheEntry<unknown>>();
+
+function cacheGet<T>(key: string): T | undefined {
+  const entry = cache.get(key);
+  if (!entry) return undefined;
+  if (Date.now() > entry.expiry) {
+    cache.delete(key);
+    return undefined;
+  }
+  return entry.data as T;
+}
+
+function cacheSet<T>(key: string, data: T): void {
+  cache.set(key, { data, expiry: Date.now() + CACHE_TTL_MS });
+}
+
 // Countries we care about — Europe, North America, and Indonesia.
 // Matched against OpenFoodFacts `countries_tags` which use "en:" prefix.
 const ALLOWED_COUNTRY_TAGS = new Set([
@@ -121,6 +147,10 @@ export const lookupBarcode = async (barcode: string): Promise<OpenFoodFactsResul
     return emptyResult(cleaned, 'Invalid barcode format. Expected 8-14 digits.');
   }
 
+  const cacheKey = `barcode:${cleaned}`;
+  const cached = cacheGet<OpenFoodFactsResult>(cacheKey);
+  if (cached) return cached;
+
   try {
     const response = await fetch(`${OFF_API_BASE}/api/v0/product/${cleaned}.json`);
 
@@ -134,7 +164,9 @@ export const lookupBarcode = async (barcode: string): Promise<OpenFoodFactsResul
       return emptyResult(cleaned, data.status_verbose || 'Product not found on OpenFoodFacts');
     }
 
-    return normalizeProduct(data.product);
+    const result = normalizeProduct(data.product);
+    cacheSet(cacheKey, result);
+    return result;
   } catch (error) {
     console.error('OpenFoodFacts API error:', error);
     return emptyResult(
@@ -151,6 +183,10 @@ export const searchProducts = async (
   const trimmed = query.trim();
   if (!trimmed) return [];
 
+  const cacheKey = `search:${trimmed.toLowerCase()}:${limit}`;
+  const cached = cacheGet<OpenFoodFactsResult[]>(cacheKey);
+  if (cached) return cached;
+
   try {
     // Fetch extra results so we still have enough after region filtering
     const params = new URLSearchParams({
@@ -160,6 +196,15 @@ export const searchProducts = async (
       json: '1',
       page_size: String(Math.min(limit * 3, 50)),
       sort_by: 'unique_scans_n',
+      // Only fetch the fields we actually use — cuts response size dramatically
+      fields: [
+        'code', 'product_name', 'product_name_en', 'brands',
+        'ecoscore_grade', 'ecoscore_score', 'ecoscore_data',
+        'nutriscore_grade', 'nutriscore_score', 'nova_group',
+        'nutriments', 'labels_tags', 'labels', 'categories_tags', 'categories',
+        'origins', 'ingredients_text', 'ingredients_text_en',
+        'image_front_url', 'image_url', 'countries_tags',
+      ].join(','),
     });
 
     const response = await fetch(`${OFF_API_BASE}/cgi/search.pl?${params}`);
@@ -174,10 +219,12 @@ export const searchProducts = async (
       return [];
     }
 
-    return data.products
+    const results = data.products
       .map(normalizeProduct)
       .filter(isAllowedRegion)
       .slice(0, limit);
+    cacheSet(cacheKey, results);
+    return results;
   } catch (error) {
     console.error('OpenFoodFacts search error:', error);
     return [];
@@ -211,6 +258,10 @@ export const searchBetterAlternatives = async (
   const category = result.categories.find(c => c.length > 3) || result.categories[0];
   if (!category) return [];
 
+  const cacheKey = `alts:${result.barcode}:${category}:${limit}`;
+  const cached = cacheGet<OpenFoodFactsResult[]>(cacheKey);
+  if (cached) return cached;
+
   try {
     const params = new URLSearchParams({
       action: 'process',
@@ -220,6 +271,14 @@ export const searchBetterAlternatives = async (
       tagtype_0: 'categories',
       tag_contains_0: 'contains',
       tag_0: category,
+      fields: [
+        'code', 'product_name', 'product_name_en', 'brands',
+        'ecoscore_grade', 'ecoscore_score', 'ecoscore_data',
+        'nutriscore_grade', 'nutriscore_score', 'nova_group',
+        'nutriments', 'labels_tags', 'labels', 'categories_tags', 'categories',
+        'origins', 'ingredients_text', 'ingredients_text_en',
+        'image_front_url', 'image_url', 'countries_tags',
+      ].join(','),
     });
 
     const response = await fetch(`${OFF_API_BASE}/cgi/search.pl?${params}`);
@@ -247,7 +306,9 @@ export const searchBetterAlternatives = async (
       return aCO2 - bCO2;
     });
 
-    return candidates.slice(0, limit);
+    const results = candidates.slice(0, limit);
+    cacheSet(cacheKey, results);
+    return results;
   } catch (error) {
     console.error('Error searching for alternatives:', error);
     return [];
@@ -257,6 +318,10 @@ export const searchBetterAlternatives = async (
 export const browseProducts = async (options: BrowseOptions = {}): Promise<BrowseResult> => {
   const { query, category, country, page = 1, pageSize = 24 } = options;
 
+  const cacheKey = `browse:${query || ''}:${category || ''}:${country || ''}:${page}:${pageSize}`;
+  const cached = cacheGet<BrowseResult>(cacheKey);
+  if (cached) return cached;
+
   try {
     const params = new URLSearchParams({
       action: 'process',
@@ -264,6 +329,15 @@ export const browseProducts = async (options: BrowseOptions = {}): Promise<Brows
       page: String(page),
       page_size: String(pageSize),
       sort_by: 'unique_scans_n',
+      // Only fetch the fields we actually use — cuts response size dramatically
+      fields: [
+        'code', 'product_name', 'product_name_en', 'brands',
+        'ecoscore_grade', 'ecoscore_score', 'ecoscore_data',
+        'nutriscore_grade', 'nutriscore_score', 'nova_group',
+        'nutriments', 'labels_tags', 'labels', 'categories_tags', 'categories',
+        'origins', 'ingredients_text', 'ingredients_text_en',
+        'image_front_url', 'image_url', 'countries_tags',
+      ].join(','),
     });
 
     if (query?.trim()) {
@@ -303,12 +377,14 @@ export const browseProducts = async (options: BrowseOptions = {}): Promise<Brows
       .map(normalizeProduct)
       .filter(isAllowedRegion);
 
-    return {
+    const result: BrowseResult = {
       products,
       totalCount: data.count || 0,
       page: data.page || page,
       pageCount: data.page_count || 0,
     };
+    cacheSet(cacheKey, result);
+    return result;
   } catch (error) {
     console.error('OpenFoodFacts browse error:', error);
     return { products: [], totalCount: 0, page: 1, pageCount: 0 };
