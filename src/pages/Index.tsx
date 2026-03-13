@@ -1,145 +1,164 @@
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
-import { HeroSection } from "@/components/HeroSection";
 import { ProductCard } from "@/components/ProductCard";
 import { calculateScore } from "@/data/products";
 import { useProducts } from "@/hooks/useProducts";
-import { ArrowRight, Shirt, Home, Smartphone, Apple, Heart, Coffee, FootprintsIcon, Package } from "lucide-react";
+import { Shirt, Home, Smartphone, Apple, Heart, Coffee, FootprintsIcon, Package, ArrowRight, Camera, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+
+const categoryConfig: Record<string, { icon: typeof Shirt; emoji: string; description: string }> = {
+  'Clothing': { icon: Shirt, emoji: '👕', description: 'Sustainable apparel' },
+  'Drinkware': { icon: Home, emoji: '🥤', description: 'Eco-friendly containers' },
+  'Food & Beverage': { icon: Apple, emoji: '🍎', description: 'Ethical food choices' },
+  'Personal Care': { icon: Heart, emoji: '💚', description: 'Natural body care' },
+  'Footwear': { icon: FootprintsIcon, emoji: '👟', description: 'Sustainable shoes' },
+  'Meat, Dairy & Eggs': { icon: Package, emoji: '🥚', description: 'Ethical animal products' },
+  'Electronics & Appliances': { icon: Smartphone, emoji: '📱', description: 'Green technology' },
+  'Snacks & Packaged Foods': { icon: Coffee, emoji: '🍫', description: 'Healthy snacks' },
+};
 
 const Index = () => {
   const products = useProducts();
-  
-  // Get unique categories and count products
   const categories = [...new Set(products.map(p => p.category))];
-  
-  // Category icons and colors
-  const categoryConfig = {
-    'Clothing': { icon: Shirt, color: 'bg-blue-100 text-blue-600', description: 'Sustainable apparel' },
-    'Drinkware': { icon: Home, color: 'bg-cyan-100 text-cyan-600', description: 'Eco-friendly containers' },
-    'Food & Beverage': { icon: Apple, color: 'bg-green-100 text-green-600', description: 'Ethical food choices' },
-    'Personal Care': { icon: Heart, color: 'bg-pink-100 text-pink-600', description: 'Natural body care' },
-    'Footwear': { icon: FootprintsIcon, color: 'bg-amber-100 text-amber-600', description: 'Sustainable shoes' },
-    'Meat, Dairy & Eggs': { icon: Package, color: 'bg-red-100 text-red-600', description: 'Ethical animal products' },
-    'Electronics & Appliances': { icon: Smartphone, color: 'bg-purple-100 text-purple-600', description: 'Green technology' },
-    'Snacks & Packaged Foods': { icon: Coffee, color: 'bg-orange-100 text-orange-600', description: 'Healthy snacks' },
-  };
 
-  // Get featured products for each category (highest scored)
-  const categoryProducts = categories.map(category => {
-    const categoryProducts = products.filter(p => p.category === category);
-    const featured = categoryProducts.length > 0 
-      ? categoryProducts.reduce((best, current) => 
-          calculateScore(current) > calculateScore(best) ? current : best
-        )
-      : null;
-    
-    return {
-      category,
-      config: categoryConfig[category as keyof typeof categoryConfig] || { icon: Package, color: 'bg-gray-100 text-gray-600', description: 'Product category' },
-      count: categoryProducts.length,
-      featured,
-    };
-  });
+  const topProducts = products
+    .map(p => ({ product: p, score: calculateScore(p) }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 6)
+    .map(({ product }) => product);
 
   const alternativeProducts = products
-    .map((p) => ({ product: p, score: calculateScore(p) }))
+    .map(p => ({ product: p, score: calculateScore(p) }))
     .filter(({ score }) => score >= 97)
     .sort((a, b) => b.score - a.score)
-    .map(({ product }) => product)
-    .slice(0, 4);
+    .slice(0, 4)
+    .map(({ product }) => product);
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen bg-white flex flex-col">
       <Header />
-      
+
       <main className="flex-1">
-        <HeroSection />
-
-        {/* Categories Section */}
-        <section className="py-16 bg-muted/30">
-          <div className="container">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl sm:text-4xl font-display font-bold mb-4">
-                Shop by Category
-              </h2>
-              <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-                Explore our curated categories and discover sustainable products that align with your values
+        {/* Hero */}
+        <section className="bg-black text-white">
+          <div className="max-w-screen-xl mx-auto px-4 sm:px-6 py-16 sm:py-24">
+            <div className="max-w-2xl">
+              <p className="text-green-400 font-bold text-sm uppercase tracking-widest mb-4">Ethical Shopping</p>
+              <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black tracking-tighter leading-none mb-6">
+                Know the<br />
+                <span className="text-green-400">True Cost</span><br />
+                of What You Buy
+              </h1>
+              <p className="text-gray-400 text-lg leading-relaxed mb-10 max-w-lg">
+                Scan any product to reveal its environmental impact, labor practices, and discover more ethical alternatives.
               </p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {categoryProducts.map(({ category, config, count, featured }) => {
-                const Icon = config.icon;
-                return (
-                  <Link key={category} to={`/products?category=${encodeURIComponent(category)}`}>
-                    <Card className="group hover:shadow-lg transition-all duration-300 border-2 hover:border-primary/20 cursor-pointer">
-                      <CardContent className="p-6">
-                        <div className="flex items-center justify-between mb-4">
-                          <div className={`w-12 h-12 rounded-xl ${config.color} flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                            <Icon className="w-6 h-6" />
-                          </div>
-                          <span className="text-sm font-medium text-muted-foreground bg-muted px-2 py-1 rounded-full">
-                            {count} products
-                          </span>
-                        </div>
-                        
-                        <h3 className="font-semibold text-lg mb-2 group-hover:text-primary transition-colors">
-                          {category}
-                        </h3>
-                        
-                        <p className="text-sm text-muted-foreground mb-4">
-                          {config.description}
-                        </p>
-                        
-                        {featured && (
-                          <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs text-muted-foreground mb-1">Featured</p>
-                              <p className="text-sm font-medium truncate">{featured.name}</p>
-                            </div>
-                            <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  </Link>
-                );
-              })}
-            </div>
-
-            <div className="mt-12 text-center">
-              <Button asChild size="lg" className="shadow-soft">
-                <Link to="/products">
-                  View All Products
-                  <ArrowRight className="w-4 h-4 ml-2" />
+              <div className="flex flex-wrap gap-3">
+                <Link
+                  to="/scan"
+                  className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white text-black font-black text-base hover:bg-gray-100 transition-colors"
+                >
+                  <Camera className="w-5 h-5" />
+                  Start Scanning
                 </Link>
-              </Button>
+                <Link
+                  to="/products"
+                  className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white/10 text-white font-black text-base hover:bg-white/20 transition-colors border border-white/20"
+                >
+                  Browse Products
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </div>
             </div>
           </div>
         </section>
 
-        {alternativeProducts.length > 0 && (
-          <section className="py-16">
-            <div className="container">
-              <div className="flex items-end justify-between gap-4 mb-10">
-                <div>
-                  <h2 className="text-3xl sm:text-4xl font-display font-bold mb-2">
-                    The Alternative
-                  </h2>
-                  <p className="text-lg text-muted-foreground leading-relaxed">
-                    Products with a sustainability score of 97 or higher.
-                  </p>
-                </div>
-                <Button asChild variant="outline">
-                  <Link to="/products?minScore=97">See all</Link>
-                </Button>
+        {/* Stats strip */}
+        <section className="border-b border-gray-100">
+          <div className="max-w-screen-xl mx-auto px-4 sm:px-6 py-8">
+            <div className="grid grid-cols-3 gap-6 sm:gap-12">
+              <div className="text-center">
+                <p className="text-3xl sm:text-4xl font-black text-black">{products.length}</p>
+                <p className="text-sm text-gray-500 font-semibold mt-1">Products Rated</p>
               </div>
+              <div className="text-center">
+                <p className="text-3xl sm:text-4xl font-black text-black">{categories.length}</p>
+                <p className="text-sm text-gray-500 font-semibold mt-1">Categories</p>
+              </div>
+              <div className="text-center">
+                <p className="text-3xl sm:text-4xl font-black text-green-600">{alternativeProducts.length}</p>
+                <p className="text-sm text-gray-500 font-semibold mt-1">Top Ethical</p>
+              </div>
+            </div>
+          </div>
+        </section>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {alternativeProducts.map((product) => (
+        {/* How it works */}
+        <section className="py-16 sm:py-20">
+          <div className="max-w-screen-xl mx-auto px-4 sm:px-6">
+            <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-black mb-12">How it works</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
+              {[
+                { n: '01', title: 'Scan Product', desc: 'Use your camera to scan a barcode or capture product text', emoji: '📷' },
+                { n: '02', title: 'Get Insights', desc: 'Instantly see ethical scores, origin data, and carbon impact', emoji: '📊' },
+                { n: '03', title: 'Choose Better', desc: 'Discover sustainable alternatives that match your values', emoji: '🌱' },
+              ].map(step => (
+                <div key={step.n} className="flex gap-5">
+                  <div className="w-12 h-12 rounded-2xl bg-black text-white flex items-center justify-center flex-shrink-0 font-black text-sm">{step.n}</div>
+                  <div>
+                    <p className="text-2xl mb-1">{step.emoji}</p>
+                    <h3 className="font-black text-black text-lg mb-1">{step.title}</h3>
+                    <p className="text-gray-500 text-sm leading-relaxed">{step.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Categories */}
+        <section className="py-16 sm:py-20 bg-gray-50">
+          <div className="max-w-screen-xl mx-auto px-4 sm:px-6">
+            <div className="flex items-end justify-between mb-10">
+              <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-black">Shop by category</h2>
+              <Link to="/products" className="text-sm font-bold text-gray-500 hover:text-black transition-colors flex items-center gap-1">
+                See all <ChevronRight className="w-4 h-4" />
+              </Link>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+              {categories.map(cat => {
+                const config = categoryConfig[cat] || { icon: Package, emoji: '📦', description: 'Product category' };
+                const count = products.filter(p => p.category === cat).length;
+                return (
+                  <Link
+                    key={cat}
+                    to={`/products?category=${encodeURIComponent(cat)}`}
+                    className="group bg-white rounded-2xl p-5 border border-gray-100 hover:border-black hover:shadow-lg transition-all duration-200"
+                  >
+                    <span className="text-3xl block mb-3">{config.emoji}</span>
+                    <h3 className="font-black text-black text-sm leading-tight mb-1 group-hover:text-black">{cat}</h3>
+                    <p className="text-xs text-gray-400 font-semibold">{count} products</p>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* Top ethical products */}
+        {alternativeProducts.length > 0 && (
+          <section className="py-16 sm:py-20">
+            <div className="max-w-screen-xl mx-auto px-4 sm:px-6">
+              <div className="flex items-end justify-between mb-10">
+                <div>
+                  <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-black">The Alternative</h2>
+                  <p className="text-gray-500 font-medium mt-1">Products scoring 97 or higher</p>
+                </div>
+                <Link to="/products?minScore=97" className="text-sm font-bold text-gray-500 hover:text-black transition-colors flex items-center gap-1">
+                  See all <ChevronRight className="w-4 h-4" />
+                </Link>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                {alternativeProducts.map(product => (
                   <ProductCard key={product.id} product={product} />
                 ))}
               </div>
@@ -147,52 +166,22 @@ const Index = () => {
           </section>
         )}
 
-        {/* How It Works Section */}
-        <section className="py-16">
-          <div className="container">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl sm:text-4xl font-display font-bold mb-4">
-                How It Works
-              </h2>
-              <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-                Three simple steps to make more informed purchasing decisions
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-              <StepCard 
-                number={1}
-                title="Scan Product"
-                description="Use your camera to scan a barcode or capture product text"
-              />
-              <StepCard 
-                number={2}
-                title="Get Insights"
-                description="Instantly see ethical scores, origin data, and carbon impact"
-              />
-              <StepCard 
-                number={3}
-                title="Choose Better"
-                description="Discover sustainable alternatives that match your values"
-              />
-            </div>
-          </div>
-        </section>
-
-        {/* CTA Section */}
-        <section className="py-16 bg-gradient-hero text-primary-foreground">
-          <div className="container text-center">
-            <h2 className="text-3xl sm:text-4xl font-display font-bold mb-6">
-              Ready to Shopp Consciously?
+        {/* CTA */}
+        <section className="py-16 sm:py-24 bg-black">
+          <div className="max-w-screen-xl mx-auto px-4 sm:px-6 text-center">
+            <h2 className="text-4xl sm:text-5xl font-black text-white tracking-tight mb-6">
+              Ready to shop <span className="text-green-400">consciously?</span>
             </h2>
-            <p className="text-lg text-primary-foreground/90 mb-8 max-w-2xl mx-auto leading-relaxed">
-              Start scanning products today to join thousands making more sustainable choices for a better future.
+            <p className="text-gray-400 text-lg mb-10 max-w-xl mx-auto">
+              Start scanning products today to join thousands making more sustainable choices.
             </p>
-            <Button asChild size="lg" variant="secondary" className="shadow-card text-lg px-8 py-3">
-              <Link to="/scan">
-                Start Your First Scan
-              </Link>
-            </Button>
+            <Link
+              to="/scan"
+              className="inline-flex items-center gap-2 px-10 py-5 rounded-2xl bg-white text-black font-black text-lg hover:bg-gray-100 transition-colors"
+            >
+              <Camera className="w-5 h-5" />
+              Start Your First Scan
+            </Link>
           </div>
         </section>
       </main>
@@ -201,17 +190,5 @@ const Index = () => {
     </div>
   );
 };
-
-function StepCard({ number, title, description }: { number: number; title: string; description: string }) {
-  return (
-    <div className="text-center">
-      <div className="w-14 h-14 rounded-2xl bg-gradient-hero text-primary-foreground font-display font-bold text-2xl flex items-center justify-center mx-auto mb-4 shadow-soft">
-        {number}
-      </div>
-      <h3 className="font-display font-semibold text-lg mb-2">{title}</h3>
-      <p className="text-muted-foreground text-sm">{description}</p>
-    </div>
-  );
-}
 
 export default Index;

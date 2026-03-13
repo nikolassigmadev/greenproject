@@ -1,15 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Camera, Upload, Search, Loader2, AlertCircle, X, ScanLine, Image as ImageIcon, Plus, Leaf } from "lucide-react";
-import { Header } from "@/components/Header";
-import { Footer } from "@/components/Footer";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ProductCard } from "@/components/ProductCard";
-import { OpenFoodFactsCard } from "@/components/OpenFoodFactsCard";
+import { Camera, Upload, Search, Loader2, X, ScanLine, Image as ImageIcon, Plus, Leaf, ArrowLeft, MoreHorizontal, Zap } from "lucide-react";
 import { EnvironmentalImpactCard } from "@/components/EnvironmentalImpactCard";
-import { ScoreBreakdownSlider } from "@/components/ScoreBreakdownSlider";
 import { useToast } from "@/hooks/use-toast";
 import { useProducts } from "@/hooks/useProducts";
 import type { Product } from "@/data/products";
@@ -1349,10 +1341,297 @@ const Scan = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      
-      <main className="flex-1 py-6 sm:py-8">
+    <div className="fixed inset-0 bg-black overflow-hidden">
+      {/* Hidden elements */}
+      <canvas ref={canvasRef} className="hidden" />
+      <input ref={fileInputRef} type="file" accept="image/*" capture="environment" onChange={handleFileUpload} className="hidden" />
+      <input ref={offFileInputRef} type="file" accept="image/*" capture="environment" onChange={handleOffFileUpload} className="hidden" />
+
+      {/* === BACKGROUND: Camera or uploaded image === */}
+      <div className="absolute inset-0">
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted
+          webkit-playsinline="true"
+          x5-playsinline="true"
+          controls={false}
+          className={`w-full h-full object-cover ${cameraActive ? 'block' : 'hidden'}`}
+          style={{ backgroundColor: '#000', WebkitTransform: 'translate3d(0,0,0)', transform: 'translate3d(0,0,0)' } as React.CSSProperties}
+          onError={(e) => console.error('Video element error:', e)}
+          onLoadedMetadata={() => console.log('Video metadata loaded:', (videoRef.current as HTMLVideoElement).videoWidth, 'x', (videoRef.current as HTMLVideoElement).videoHeight)}
+        />
+        {uploadedImage && !cameraActive && (
+          <img src={uploadedImage} alt="Scanned product" className="w-full h-full object-cover" />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/30 pointer-events-none" />
+      </div>
+
+      {/* === SCAN BOX OVERLAY === */}
+      {cameraActive && !isProcessing && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="relative w-72 h-72">
+            <div className="absolute top-0 left-0 w-8 h-8 border-t-[3px] border-l-[3px] border-white rounded-tl-xl" />
+            <div className="absolute top-0 right-0 w-8 h-8 border-t-[3px] border-r-[3px] border-white rounded-tr-xl" />
+            <div className="absolute bottom-0 left-0 w-8 h-8 border-b-[3px] border-l-[3px] border-white rounded-bl-xl" />
+            <div className="absolute bottom-0 right-0 w-8 h-8 border-b-[3px] border-r-[3px] border-white rounded-br-xl" />
+          </div>
+        </div>
+      )}
+
+      {/* === FLOATING LABELS (results + image) === */}
+      {searchResults.length > 0 && uploadedImage && !isProcessing && (
+        <>
+          <div className="absolute top-[28%] left-6 z-10">
+            <div className="bg-white rounded-2xl px-4 py-2 shadow-2xl">
+              <p className="font-black text-black text-xs uppercase tracking-wide">{searchResults[0]?.brand || 'Brand'}</p>
+              <p className="font-black text-2xl text-black leading-none">{calculateScore(searchResults[0])}</p>
+            </div>
+          </div>
+          {searchResults.length > 1 && (
+            <div className="absolute top-[40%] right-6 z-10">
+              <div className="bg-white rounded-2xl px-4 py-2 shadow-2xl">
+                <p className="font-black text-black text-xs uppercase tracking-wide">{searchResults[1]?.brand || 'Alt'}</p>
+                <p className="font-black text-2xl text-gray-500 leading-none">{calculateScore(searchResults[1])}</p>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* === TOP BAR === */}
+      <div className="absolute top-0 left-0 right-0 z-20 pt-safe">
+        <div className="flex items-center justify-between px-4 pt-4 pb-2">
+          <button onClick={() => navigate(-1)} className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center">
+            <ArrowLeft className="w-5 h-5 text-white" />
+          </button>
+          <span className="text-white font-semibold text-base tracking-tight drop-shadow">Scanner</span>
+          <button className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center">
+            <MoreHorizontal className="w-5 h-5 text-white" />
+          </button>
+        </div>
+      </div>
+
+      {/* === PROCESSING OVERLAY === */}
+      {(isProcessing || cameraInitializing || offSearchLoading) && (
+        <div className="absolute inset-0 z-30 flex items-center justify-center">
+          <div className="bg-black/80 backdrop-blur-xl rounded-3xl px-10 py-8 flex flex-col items-center gap-4">
+            <Loader2 className="w-8 h-8 animate-spin text-white" />
+            <p className="text-white font-semibold text-sm text-center">
+              {cameraInitializing ? 'Starting camera…' : isProcessing ? 'Analysing product…' : 'Searching database…'}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* === BOTTOM CONTROLS (no results yet) === */}
+      {searchResults.length === 0 && offSearchResults.length === 0 && !showDetailedEnvironmental && !isProcessing && !offSearchLoading && (
+        <div className="absolute bottom-0 left-0 right-0 z-20 pb-safe">
+          <div className="px-5 pb-8 pt-4">
+            <div className="flex items-center gap-2.5 overflow-x-auto no-scrollbar mb-6">
+              <button
+                onClick={() => { if (!cameraActive && !cameraInitializing) startCamera(); }}
+                className="flex-shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-full bg-white text-black text-sm font-bold shadow-lg"
+              >
+                <Leaf className="w-3.5 h-3.5 text-green-600" />
+                <span>Scan product</span>
+              </button>
+              <button onClick={() => stopCamera()} className="flex-shrink-0 w-11 h-11 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center border border-white/20">
+                <ScanLine className="w-5 h-5 text-white" />
+              </button>
+              <button onClick={() => { stopCamera(); fileInputRef.current?.click(); }} className="flex-shrink-0 w-11 h-11 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center border border-white/20">
+                <ImageIcon className="w-5 h-5 text-white" />
+              </button>
+              <button onClick={() => { stopCamera(); offFileInputRef.current?.click(); }} className="flex-shrink-0 w-11 h-11 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center border border-white/20">
+                <Upload className="w-5 h-5 text-white" />
+              </button>
+              <button onClick={() => stopCamera()} className="flex-shrink-0 w-11 h-11 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center border border-white/20">
+                <Search className="w-5 h-5 text-white" />
+              </button>
+            </div>
+
+            {!cameraActive && (
+              <div className="mb-6">
+                <form onSubmit={(e) => { e.preventDefault(); if (barcodeInput.trim()) handleBarcodeLookup(barcodeInput); else if (manualSearch.trim()) searchProducts(manualSearch); }} className="flex gap-2">
+                  <input
+                    placeholder="Barcode or product name…"
+                    value={barcodeInput || manualSearch}
+                    onChange={(e) => { setBarcodeInput(e.target.value); setManualSearch(e.target.value); }}
+                    className="flex-1 h-12 rounded-2xl bg-white/90 backdrop-blur-sm px-4 text-black font-medium placeholder:text-gray-400 text-sm border-0 outline-none shadow-lg"
+                    inputMode="search"
+                  />
+                  <button type="submit" disabled={offLoading || isProcessing} className="h-12 px-5 rounded-2xl bg-white text-black font-bold text-sm shadow-lg disabled:opacity-60">
+                    {offLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                  </button>
+                </form>
+              </div>
+            )}
+
+            <div className="flex items-center justify-center gap-8">
+              <div className="w-12 h-12" />
+              <button
+                onClick={cameraActive ? capturePhoto : startCamera}
+                disabled={isProcessing || cameraInitializing}
+                className="w-20 h-20 rounded-full bg-white shadow-2xl flex items-center justify-center disabled:opacity-60 active:scale-95 transition-transform"
+              >
+                {cameraActive ? <div className="w-16 h-16 rounded-full border-[3px] border-black/10" /> : <Camera className="w-8 h-8 text-black" />}
+              </button>
+              <button onClick={() => cameraActive ? stopCamera() : undefined} className={`w-12 h-12 rounded-full backdrop-blur-sm flex items-center justify-center border border-white/20 ${cameraActive ? 'bg-black/50' : 'bg-transparent'}`}>
+                {cameraActive ? <X className="w-5 h-5 text-white" /> : <Zap className="w-5 h-5 text-white/40" />}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* === RESULTS BOTTOM SHEET === */}
+      {(searchResults.length > 0 || offSearchResults.length > 0 || showDetailedEnvironmental) && !isProcessing && (
+        <div className="absolute inset-x-0 bottom-0 z-30 animate-slide-up" style={{ maxHeight: '82vh', overflowY: 'auto' }}>
+          <div className="bg-white rounded-t-3xl shadow-2xl">
+            <div className="flex justify-center pt-3 pb-1">
+              <div className="w-10 h-1 bg-gray-200 rounded-full" />
+            </div>
+            <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
+              <button onClick={() => { setSearchResults([]); setOffSearchResults([]); setShowDetailedEnvironmental(false); setSelectedEnvironmentalResult(null); setUploadedImage(null); setOffSearchImage(null); setExtractedText(''); }} className="flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-black transition-colors">
+                <ArrowLeft className="w-4 h-4" />Back
+              </button>
+              <span className="font-black text-base text-black">{showDetailedEnvironmental ? 'Environmental Impact' : 'Nutrition'}</span>
+              <div className="w-14" />
+            </div>
+
+            {showDetailedEnvironmental && selectedEnvironmentalResult && (
+              <div className="px-5 pb-8">
+                <EnvironmentalImpactCard result={selectedEnvironmentalResult} />
+                <button onClick={backToSearchResults} className="w-full mt-4 py-4 rounded-2xl bg-black text-white font-bold text-base">Done</button>
+              </div>
+            )}
+
+            {!showDetailedEnvironmental && searchResults.map((product) => {
+              const score = calculateScore(product);
+              const alt = score < 60 ? findLowCO2Alternative(product, products) : null;
+              const laborEmoji = product.laborRisk === 'low' ? '🟢' : product.laborRisk === 'medium' ? '🟡' : '🔴';
+              const scoreColor = score >= 80 ? 'text-green-600' : score >= 60 ? 'text-yellow-500' : 'text-red-500';
+              return (
+                <div key={product.id} className="px-5 pb-2">
+                  <div className="flex items-start justify-between gap-3 mt-4 mb-5">
+                    <div className="flex-1">
+                      <span className="inline-flex mb-2 px-3 py-1 rounded-full bg-black text-white text-xs font-bold">{product.category}</span>
+                      <h2 className="text-xl font-black text-black leading-tight">{product.name}</h2>
+                      <p className="text-sm text-gray-500 font-semibold mt-0.5">{product.brand}</p>
+                    </div>
+                    <div className="flex items-center gap-2 bg-gray-100 rounded-full px-3 py-1.5 flex-shrink-0 mt-6">
+                      <span className="text-gray-400 font-bold text-lg leading-none select-none">−</span>
+                      <span className="font-black text-black text-sm px-1">1</span>
+                      <span className="text-gray-400 font-bold text-lg leading-none select-none">+</span>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 mb-4">
+                    <div className="bg-gray-50 rounded-2xl p-4">
+                      <div className="flex items-center gap-1.5 mb-1"><span className="text-lg">🌱</span><span className="text-xs font-semibold text-gray-500">Ethics Score</span></div>
+                      <span className={`text-3xl font-black ${scoreColor}`}>{score}</span>
+                    </div>
+                    <div className="bg-gray-50 rounded-2xl p-4">
+                      <div className="flex items-center gap-1.5 mb-1"><span className="text-lg">⚠️</span><span className="text-xs font-semibold text-gray-500">Labor Risk</span></div>
+                      <span className="text-xl font-black text-black">{laborEmoji} <span className="capitalize">{product.laborRisk}</span></span>
+                    </div>
+                    <div className="bg-gray-50 rounded-2xl p-4">
+                      <div className="flex items-center gap-1.5 mb-1"><span className="text-lg">🌿</span><span className="text-xs font-semibold text-gray-500">Carbon kg CO₂</span></div>
+                      <span className="text-3xl font-black text-black">{product.carbonFootprint}</span>
+                    </div>
+                    <div className="bg-gray-50 rounded-2xl p-4">
+                      <div className="flex items-center gap-1.5 mb-1"><span className="text-lg">✅</span><span className="text-xs font-semibold text-gray-500">Certifications</span></div>
+                      <span className="text-3xl font-black text-black">{product.certifications.length}</span>
+                    </div>
+                  </div>
+                  <div className="bg-gray-50 rounded-2xl p-4 mb-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2"><span className="text-lg">💚</span><span className="text-sm font-bold text-black">Ethics score</span></div>
+                      <span className={`text-sm font-black ${scoreColor}`}>{score}/100</span>
+                    </div>
+                    <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                      <div className="h-full rounded-full transition-all duration-700" style={{ width: `${score}%`, background: score >= 80 ? '#16a34a' : score >= 60 ? '#eab308' : '#ef4444' }} />
+                    </div>
+                  </div>
+                  {alt && (
+                    <button onClick={() => navigate(`/product/${alt.id.replace('#', '')}`)} className="w-full mb-4 p-4 rounded-2xl border-2 border-green-200 bg-green-50 text-left flex items-center gap-3">
+                      <span className="text-2xl">🌿</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold text-green-700 uppercase tracking-wide">Greener Alternative</p>
+                        <p className="text-sm font-black text-black truncate">{alt.name}</p>
+                        <p className="text-xs text-gray-500">{alt.brand} · Score: {calculateScore(alt)}</p>
+                      </div>
+                    </button>
+                  )}
+                  <div className="space-y-3 pb-6">
+                    <button onClick={() => navigate(`/product/${product.id.replace('#', '')}`)} className="w-full py-4 rounded-2xl border-2 border-gray-200 text-black font-bold text-base flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors">
+                      ✨ Fix Results
+                    </button>
+                    <button onClick={() => { setSearchResults([]); setOffSearchResults([]); setUploadedImage(null); setExtractedText(''); }} className="w-full py-4 rounded-2xl bg-black text-white font-bold text-base">Done</button>
+                  </div>
+                </div>
+              );
+            })}
+
+            {!showDetailedEnvironmental && searchResults.length === 0 && offSearchResults.length > 0 && (
+              <div className="px-5 pb-6">
+                {offSearchResults.slice(0, 2).map((result, i) => (
+                  <div key={`${result.barcode}-${i}`} className="pt-4">
+                    <div className="flex items-start gap-3 mb-5">
+                      <div className="flex-1">
+                        <span className="inline-flex mb-2 px-3 py-1 rounded-full bg-black text-white text-xs font-bold">Food Product</span>
+                        <h2 className="text-xl font-black text-black leading-tight">{result.productName || 'Unknown Product'}</h2>
+                        {result.brand && <p className="text-sm text-gray-500 font-semibold mt-0.5">{result.brand}</p>}
+                      </div>
+                      {result.imageUrl && <img src={result.imageUrl} alt="" className="w-16 h-16 rounded-xl object-cover flex-shrink-0" />}
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 mb-4">
+                      <div className="bg-gray-50 rounded-2xl p-4">
+                        <div className="flex items-center gap-1.5 mb-1"><span className="text-lg">🌍</span><span className="text-xs font-semibold text-gray-500">Eco Score</span></div>
+                        <span className="text-3xl font-black text-black uppercase">{result.ecoscoreGrade || '—'}</span>
+                      </div>
+                      <div className="bg-gray-50 rounded-2xl p-4">
+                        <div className="flex items-center gap-1.5 mb-1"><span className="text-lg">🥗</span><span className="text-xs font-semibold text-gray-500">Nutri Score</span></div>
+                        <span className="text-3xl font-black text-black uppercase">{result.nutriscoreGrade || '—'}</span>
+                      </div>
+                      {result.carbonFootprint100g != null && (
+                        <div className="bg-gray-50 rounded-2xl p-4">
+                          <div className="flex items-center gap-1.5 mb-1"><span className="text-lg">🌿</span><span className="text-xs font-semibold text-gray-500">CO₂/100g</span></div>
+                          <span className="text-2xl font-black text-black">{result.carbonFootprint100g.toFixed(1)}g</span>
+                        </div>
+                      )}
+                      {result.novaGroup != null && (
+                        <div className="bg-gray-50 rounded-2xl p-4">
+                          <div className="flex items-center gap-1.5 mb-1"><span className="text-lg">🔬</span><span className="text-xs font-semibold text-gray-500">NOVA Group</span></div>
+                          <span className="text-3xl font-black text-black">{result.novaGroup}</span>
+                        </div>
+                      )}
+                    </div>
+                    {result.ecoscoreGrade && (
+                      <div className="bg-gray-50 rounded-2xl p-4 mb-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2"><span className="text-lg">💚</span><span className="text-sm font-bold text-black">Eco score</span></div>
+                          <span className="text-sm font-black text-green-600 uppercase">{result.ecoscoreGrade}</span>
+                        </div>
+                        <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                          <div className="h-full rounded-full" style={{ width: result.ecoscoreGrade === 'a' ? '90%' : result.ecoscoreGrade === 'b' ? '70%' : result.ecoscoreGrade === 'c' ? '50%' : result.ecoscoreGrade === 'd' ? '30%' : '10%', background: result.ecoscoreGrade === 'a' ? '#16a34a' : result.ecoscoreGrade === 'b' ? '#84cc16' : result.ecoscoreGrade === 'c' ? '#eab308' : '#ef4444' }} />
+                        </div>
+                      </div>
+                    )}
+                    <div className="space-y-3 pb-2">
+                      <button onClick={() => viewDetailedEnvironmental(result)} className="w-full py-4 rounded-2xl border-2 border-gray-200 text-black font-bold text-base flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors">✨ Fix Results</button>
+                      <button onClick={() => { setOffSearchResults([]); setOffSearchImage(null); setUploadedImage(null); }} className="w-full py-4 rounded-2xl bg-black text-white font-bold text-base">Done</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* END OF NEW UI */}
+      {false && <main>
         <div className="container max-w-4xl">
           {/* Page Header */}
           <div className="text-center mb-8 sm:mb-10">
@@ -2048,9 +2327,7 @@ const Scan = () => {
             </div>
           </div>
         </div>
-      </main>
-
-      <Footer />
+      </main>}
     </div>
   );
 };

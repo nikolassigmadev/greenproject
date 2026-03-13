@@ -1,10 +1,8 @@
 import { useState, useMemo, useEffect } from "react";
-import { Search, Filter, SlidersHorizontal } from "lucide-react";
+import { Search, SlidersHorizontal } from "lucide-react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { ProductCard } from "@/components/ProductCard";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { calculateScore } from "@/data/products";
 import { useProducts } from "@/hooks/useProducts";
 import { cn } from "@/lib/utils";
@@ -59,84 +57,79 @@ const Products = () => {
   }, [products, search, selectedCategory, sortBy, minScore]);
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen bg-white flex flex-col">
       <Header />
-      
-      <main className="flex-1 py-8">
-        <div className="container">
-          {/* Page Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl sm:text-4xl font-display font-bold mb-2">
-              Product Database
-            </h1>
-            <p className="text-muted-foreground">
-              Browse {products.length} products and discover their sustainability scores
-            </p>
-          </div>
 
-          {/* Filters */}
-          <div className="flex flex-col sm:flex-row gap-4 mb-8">
-            {/* Search */}
+      <main className="flex-1">
+        {/* Page header */}
+        <div className="border-b border-gray-100 py-8">
+          <div className="max-w-screen-xl mx-auto px-4 sm:px-6">
+            <h1 className="text-3xl sm:text-4xl font-black text-black tracking-tight mb-1">Products</h1>
+            <p className="text-gray-500 font-medium">{products.length} products rated for ethics & sustainability</p>
+          </div>
+        </div>
+
+        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 py-6">
+          {/* Search + sort */}
+          <div className="flex flex-col sm:flex-row gap-3 mb-6">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Search products, brands, or codes..."
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                placeholder="Search products, brands, or codes…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-10"
+                className="w-full h-12 rounded-2xl border border-gray-200 bg-gray-50 pl-11 pr-4 text-sm font-medium text-black placeholder:text-gray-400 focus:outline-none focus:border-black transition-colors"
               />
             </div>
-
-            {/* Sort */}
             <div className="flex items-center gap-2">
-              <SlidersHorizontal className="w-4 h-4 text-muted-foreground" />
+              <SlidersHorizontal className="w-4 h-4 text-gray-400" />
               <select
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
-                className="bg-card border border-input rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                onChange={(e) => setSortBy(e.target.value as 'score' | 'name' | 'carbon')}
+                className="h-12 rounded-2xl border border-gray-200 bg-gray-50 px-4 text-sm font-semibold text-black focus:outline-none focus:border-black transition-colors"
               >
                 <option value="score">Highest Score</option>
-                <option value="name">Name A-Z</option>
+                <option value="name">Name A–Z</option>
                 <option value="carbon">Lowest Carbon</option>
               </select>
             </div>
           </div>
 
-          {/* Categories */}
-          <div className="flex flex-wrap gap-2 mb-8">
-            <Filter className="w-4 h-4 text-muted-foreground mt-1.5" />
-            {categories.map((category) => (
-              <Badge
-                key={category}
-                variant={selectedCategory === category ? "default" : "outline"}
+          {/* Category pills */}
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2 mb-6">
+            {categories.map(cat => (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
                 className={cn(
-                  "cursor-pointer transition-all duration-200",
-                  selectedCategory === category 
-                    ? "bg-primary text-primary-foreground" 
-                    : "hover:bg-primary/10"
+                  "flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold transition-all duration-200",
+                  selectedCategory === cat
+                    ? "bg-black text-white"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                 )}
-                onClick={() => setSelectedCategory(category)}
               >
-                {category}
-              </Badge>
+                {cat}
+              </button>
             ))}
           </div>
 
-          {/* Results count */}
-          <p className="text-sm text-muted-foreground mb-6">
-            Showing {filteredProducts.length} of {products.length} products
+          {/* Count */}
+          <p className="text-sm text-gray-400 font-semibold mb-6">
+            {filteredProducts.length} of {products.length} products
           </p>
 
-          {/* Products Grid */}
+          {/* Grid */}
           {filteredProducts.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {filteredProducts.map((product) => (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+              {filteredProducts.map(product => (
                 <ProductCard key={product.id} product={product} />
               ))}
             </div>
           ) : (
-            <div className="text-center py-16">
-              <p className="text-muted-foreground">No products found matching your criteria.</p>
+            <div className="text-center py-20">
+              <p className="text-5xl mb-4">🔍</p>
+              <p className="font-black text-xl text-black mb-2">No products found</p>
+              <p className="text-gray-500 font-medium">Try adjusting your search or filters</p>
             </div>
           )}
         </div>
