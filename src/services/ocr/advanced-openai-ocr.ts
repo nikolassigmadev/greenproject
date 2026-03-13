@@ -1,21 +1,27 @@
 import OpenAI from 'openai';
 
-// Initialize OpenAI client with new API key
+// Initialize OpenAI client
 const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
+if (!apiKey) console.error('OpenAI API key not configured. Set VITE_OPENAI_API_KEY in .env.local');
 
-console.log('🔑 Environment check:', {
-  hasApiKey: !!apiKey,
-  apiKeyLength: apiKey?.length,
-  isProduction: import.meta.env.PROD,
-  mode: import.meta.env.MODE,
-  envSource: import.meta.env.DEV ? '.env.local' : '.env.production'
-});
-
-if (!apiKey) {
-  console.error('❌ OpenAI API key not configured. Set VITE_OPENAI_API_KEY in .env.local or .env.production');
-} else {
-  console.log('✅ OpenAI API key configured successfully');
-}
+/** Resize a base64 JPEG to maxPx on the longest side and re-encode at 0.8 quality */
+const compressImageBase64 = (base64: string, maxPx: number): Promise<string> => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxPx / Math.max(img.width, img.height));
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      canvas.getContext('2d')!.drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL('image/jpeg', 0.8).split(',')[1]);
+    };
+    img.onerror = () => resolve(base64);
+    img.src = `data:image/jpeg;base64,${base64}`;
+  });
+};
 
 const client = apiKey ? new OpenAI({ apiKey, dangerouslyAllowBrowser: true }) : null;
 
@@ -89,14 +95,6 @@ Return your response as JSON with this exact structure:
 export const advancedProductOCR = async (imageDataUrl: string): Promise<AdvancedOCRResult> => {
   const startTime = performance.now();
 
-  console.log('🚀 Starting ChatGPT-style OCR analysis...');
-  console.log('🌍 Environment info:', {
-    isProduction: import.meta.env.PROD,
-    mode: import.meta.env.MODE,
-    hasClient: !!client,
-    apiKeyLength: import.meta.env.VITE_OPENAI_API_KEY?.length
-  });
-
   if (!client) {
     const error = 'OpenAI API key not configured. Please set VITE_OPENAI_API_KEY in .env.local or .env.production';
     console.error('❌', error);
@@ -116,18 +114,13 @@ export const advancedProductOCR = async (imageDataUrl: string): Promise<Advanced
       base64Image = imageDataUrl.split(',')[1];
     }
 
-    console.log('� Image data processed:', {
-      hasBase64: !!base64Image,
-      base64Length: base64Image?.length,
-      imageType: imageDataUrl.split(':')[0]?.split(';')[0]
-    });
 
-    console.log('🤖 Calling OpenAI API with GPT-4o...');
+    // Downscale image to max 800px before sending — reduces upload size ~4×
+    const compressedBase64 = await compressImageBase64(base64Image, 800);
 
-    // Simple ChatGPT-style image analysis
     const response = await client.chat.completions.create({
-      model: 'gpt-4o',
-      max_tokens: 500,
+      model: 'gpt-4o-mini',
+      max_tokens: 150,
       messages: [
         {
           role: 'user',
@@ -135,35 +128,24 @@ export const advancedProductOCR = async (imageDataUrl: string): Promise<Advanced
             {
               type: 'image_url',
               image_url: {
-                url: `data:image/jpeg;base64,${base64Image}`,
+                url: `data:image/jpeg;base64,${compressedBase64}`,
+                detail: 'low',
               },
             },
             {
               type: 'text',
-              text: `Look at this image and tell me what product this is. Give me the information in this exact format:
-
-Product: [Product Name]
-Brand: [Brand Name]
-Barcode: [barcode number if visible, otherwise "none"]
-
-If you can't identify the product clearly, say "Unknown Product" and "Unknown Brand".
-Look carefully for any barcode numbers (UPC, EAN) printed on the packaging.`,
+              text: `Product image. Reply in this exact format only:
+Product: [name]
+Brand: [brand]
+Barcode: [number or none]`,
             },
           ],
         },
       ],
-      temperature: 0.2,
-    });
-
-    console.log('✅ OpenAI API response received:', {
-      hasResponse: !!response,
-      hasChoices: !!response.choices,
-      choiceCount: response.choices?.length,
-      firstChoice: response.choices[0]
+      temperature: 0,
     });
 
     const rawResponse = response.choices[0]?.message?.content || '';
-    console.log('🤖 ChatGPT Response:', rawResponse);
 
     // Parse simple response
     const productMatch = rawResponse.match(/Product:\s*(.+)/i);
@@ -182,8 +164,6 @@ Look carefully for any barcode numbers (UPC, EAN) printed on the packaging.`,
 
     if (productName || brandName) {
       const fullText = `${brandName || ''} ${productName || ''}`.trim();
-      console.log('✅ ChatGPT-style analysis successful:', { productName, brandName, fullText, processingTime });
-
       return {
         success: true,
         fullText,
@@ -199,7 +179,6 @@ Look carefully for any barcode numbers (UPC, EAN) printed on the packaging.`,
         notes: 'ChatGPT-style image analysis'
       };
     } else {
-      console.log('❌ Could not identify product from response:', rawResponse);
       return {
         success: false,
         fullText: '',
@@ -211,13 +190,6 @@ Look carefully for any barcode numbers (UPC, EAN) printed on the packaging.`,
     }
 
   } catch (error) {
-    console.error('❌ ChatGPT-style analysis failed:', {
-      error: error instanceof Error ? error.message : error,
-      stack: error instanceof Error ? error.stack : 'No stack trace',
-      isProduction: import.meta.env.PROD,
-      apiKeyConfigured: !!import.meta.env.VITE_OPENAI_API_KEY
-    });
-    
     const endTime = performance.now();
     const processingTime = endTime - startTime;
 
@@ -245,7 +217,7 @@ export const extractBrandName = async (imageDataUrl: string): Promise<string | n
     }
 
     const response = await client.chat.completions.create({
-      model: 'gpt-4o', // Updated to use GPT-4o
+      model: 'gpt-4o-mini',
       max_tokens: 100,
       messages: [
         {
@@ -293,7 +265,7 @@ export const extractProductName = async (imageDataUrl: string): Promise<string |
     }
 
     const response = await client.chat.completions.create({
-      model: 'gpt-4o', // Updated to use GPT-4o
+      model: 'gpt-4o-mini',
       max_tokens: 100,
       messages: [
         {
@@ -341,7 +313,7 @@ export const extractCertifications = async (imageDataUrl: string): Promise<strin
     }
 
     const response = await client.chat.completions.create({
-      model: 'gpt-4o', // Updated to use GPT-4o
+      model: 'gpt-4o-mini',
       max_tokens: 200,
       messages: [
         {
@@ -407,7 +379,7 @@ export const checkOpenAIHealth = async (): Promise<boolean> => {
   try {
     console.log('🏥 Checking OpenAI API health...');
     const response = await client.chat.completions.create({
-      model: 'gpt-4o', // Updated to use GPT-4o
+      model: 'gpt-4o-mini',
       max_tokens: 10,
       messages: [
         {
@@ -437,7 +409,7 @@ export const getOCRStats = (): {
 } => {
   return {
     apiConfigured: !!client,
-    model: 'gpt-4o', // Updated to current model
+    model: 'gpt-4o-mini',
     temperature: 0.3,
     maxTokens: 2048,
   };
