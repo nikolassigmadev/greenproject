@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Camera, Upload, Search, Loader2, X, ScanLine, Image as ImageIcon, Plus, Leaf, ArrowLeft, MoreHorizontal, Zap } from "lucide-react";
+import { Camera, Upload, Search, Loader2, X, ScanLine, Image as ImageIcon, Plus, Leaf, ArrowLeft, MoreHorizontal, Zap, Database } from "lucide-react";
 import { EnvironmentalImpactCard } from "@/components/EnvironmentalImpactCard";
 import { useToast } from "@/hooks/use-toast";
 import { useProducts } from "@/hooks/useProducts";
@@ -473,6 +473,7 @@ const Scan = () => {
   const [selectedEnvironmentalResult, setSelectedEnvironmentalResult] = useState<OpenFoodFactsResult | null>(null);
   const [offAlternatives, setOffAlternatives] = useState<OpenFoodFactsResult[]>([]);
   const [offAlternativeLoading, setOffAlternativeLoading] = useState(false);
+  const [scanMode, setScanMode] = useState<'off' | 'bali'>('off');
   const offFileInputRef = useRef<HTMLInputElement>(null);
 
   // Debug: Check if video element is mounted
@@ -1305,7 +1306,8 @@ const Scan = () => {
       }
 
       console.log('Photo captured:', imageData.length, 'bytes');
-      processImageForOFF(imageData);
+      if (scanMode === 'bali') processImage(imageData);
+      else processImageForOFF(imageData);
       stopCamera();
 
     } catch (error) {
@@ -1316,7 +1318,7 @@ const Scan = () => {
         variant: "destructive",
       });
     }
-  }, [processImageForOFF, stopCamera, toast]);
+  }, [scanMode, processImage, processImageForOFF, stopCamera, toast]);
 
   // Handle file upload
   const handleFileUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
@@ -1326,11 +1328,12 @@ const Scan = () => {
       reader.onload = (e) => {
         const imageData = e.target?.result as string;
         setUploadedImage(imageData);
-        processImage(imageData);
+        if (scanMode === 'bali') processImage(imageData);
+        else processImageForOFF(imageData);
       };
       reader.readAsDataURL(file);
     }
-  }, [processImage]);
+  }, [scanMode, processImage, processImageForOFF]);
 
   // Manual search
   const handleManualSearch = (e: React.FormEvent) => {
@@ -1431,11 +1434,18 @@ const Scan = () => {
           <div className="px-5 pb-8 pt-4">
             <div className="flex items-center gap-2.5 overflow-x-auto no-scrollbar mb-6">
               <button
-                onClick={() => { if (!cameraActive && !cameraInitializing) startCamera(); }}
-                className="flex-shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-full bg-white text-black text-sm font-bold shadow-lg"
+                onClick={() => { setScanMode('off'); if (!cameraActive && !cameraInitializing) startCamera(); }}
+                className={`flex-shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold shadow-lg transition-colors ${scanMode === 'off' ? 'bg-green-900 text-white' : 'bg-white text-green-900'}`}
               >
-                <Leaf className="w-3.5 h-3.5 text-green-600" />
-                <span>Scan product</span>
+                <Leaf className="w-3.5 h-3.5" />
+                <span>Open Food Facts</span>
+              </button>
+              <button
+                onClick={() => { setScanMode('bali'); if (!cameraActive && !cameraInitializing) startCamera(); }}
+                className={`flex-shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold shadow-lg transition-colors ${scanMode === 'bali' ? 'bg-green-900 text-white' : 'bg-white text-green-900'}`}
+              >
+                <Database className="w-3.5 h-3.5" />
+                <span>Bali Database</span>
               </button>
               <button onClick={() => stopCamera()} className="flex-shrink-0 w-11 h-11 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center border border-white/20">
                 <ScanLine className="w-5 h-5 text-white" />
@@ -1453,7 +1463,7 @@ const Scan = () => {
 
             {!cameraActive && (
               <div className="mb-6">
-                <form onSubmit={async (e) => { e.preventDefault(); const q = (barcodeInput || manualSearch).trim(); if (!q) return; if (isValidBarcode(q)) { handleBarcodeLookup(q); } else { setOffSearchLoading(true); setOffSearchResults([]); try { const results = await searchOffProducts(q, 10); const filtered = filterBestProducts(results.filter(hasEcoScore)); setOffSearchResults(filtered.length > 0 ? filtered : results.slice(0, 3)); if (filtered.length === 0 && results.length === 0) { toast({ title: "No Results", description: `Nothing found for "${q}" on Open Food Facts.`, variant: "destructive" }); } } catch { toast({ title: "Search Error", description: "Failed to search Open Food Facts.", variant: "destructive" }); } finally { setOffSearchLoading(false); } } }} className="flex gap-2">
+                <form onSubmit={async (e) => { e.preventDefault(); const q = (barcodeInput || manualSearch).trim(); if (!q) return; if (scanMode === 'bali') { searchProducts(q); } else if (isValidBarcode(q)) { handleBarcodeLookup(q); } else { setOffSearchLoading(true); setOffSearchResults([]); try { const results = await searchOffProducts(q, 10); const filtered = filterBestProducts(results.filter(hasEcoScore)); setOffSearchResults(filtered.length > 0 ? filtered : results.slice(0, 3)); if (filtered.length === 0 && results.length === 0) { toast({ title: "No Results", description: `Nothing found for "${q}" on Open Food Facts.`, variant: "destructive" }); } } catch { toast({ title: "Search Error", description: "Failed to search Open Food Facts.", variant: "destructive" }); } finally { setOffSearchLoading(false); } } }} className="flex gap-2">
                   <input
                     placeholder="Barcode or product name…"
                     value={barcodeInput || manualSearch}
@@ -1565,7 +1575,7 @@ const Scan = () => {
                   )}
                   <div className="space-y-3 pb-6">
                     <button onClick={() => navigate(`/product/${product.id.replace('#', '')}`)} className="w-full py-4 rounded-2xl border-2 border-green-200 text-green-900 font-bold text-base flex items-center justify-center gap-2 hover:bg-green-50 transition-colors">
-                      ✨ Fix Results
+                      View Results
                     </button>
                     <button onClick={() => { setSearchResults([]); setOffSearchResults([]); setUploadedImage(null); setExtractedText(''); }} className="w-full py-4 rounded-2xl bg-green-900 text-white font-bold text-base">Done</button>
                   </div>
@@ -1619,7 +1629,7 @@ const Scan = () => {
                       </div>
                     )}
                     <div className="space-y-3 pb-2">
-                      <button onClick={() => viewDetailedEnvironmental(result)} className="w-full py-4 rounded-2xl border-2 border-green-200 text-green-900 font-bold text-base flex items-center justify-center gap-2 hover:bg-green-50 transition-colors">✨ Fix Results</button>
+                      <button onClick={() => viewDetailedEnvironmental(result)} className="w-full py-4 rounded-2xl border-2 border-green-200 text-green-900 font-bold text-base flex items-center justify-center gap-2 hover:bg-green-50 transition-colors">View Results</button>
                       <button onClick={() => { setOffSearchResults([]); setOffSearchImage(null); setUploadedImage(null); }} className="w-full py-4 rounded-2xl bg-green-900 text-white font-bold text-base">Done</button>
                     </div>
                   </div>

@@ -221,7 +221,7 @@ const ProductDetail = () => {
                 to="/scan"
                 className="w-full py-4 rounded-2xl border-2 border-green-200 text-green-900 font-bold text-base flex items-center justify-center gap-2 hover:bg-green-50 transition-colors"
               >
-                ✨ Fix Results
+                View Results
               </Link>
               <Link
                 to="/products"
