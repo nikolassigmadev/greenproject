@@ -29,91 +29,58 @@
   },
   {
     "id": "#p0003",
-    "name": "Aqua",
-    "brand": "Danone",
-    "category": "Drinkware",
-    "origin": { "country": "Indonesia", "region": " Bali" },
-    "materials": ["Standard Production"],
-    "laborRisk": "high",
-    "transportDistance": 2000,
-    "certifications": [],
-    "carbonFootprint": 8.4,
-    "keywords": [],
-    "barcode": "",
-    "imageUrl": "https://www.shutterstock.com/image-photo/jakarta-indonesia-july-27th-2024-600nw-2494710323.jpg"
+    "name": "M&M's Milk Chocolate",
+    "brand": "Mars",
+    "category": "Food & Beverage",
+    "origin": { "country": "United States" },
+    "materials": ["Milk Chocolate", "Sugar", "Corn Syrup"],
+    "laborRisk": "medium",
+    "transportDistance": 2500,
+    "certifications": ["Rainforest Alliance"],
+    "carbonFootprint": 12.3,
+    "keywords": ["chocolate", "candy", "milk", "sweets", "snacks"],
+    "barcode": "040000425534"
   },
   {
-  "id": "#p0004",
-  "name": "TEST",
-  "brand": "TEST",
-  "category": "Food & Beverage",
-  "origin": {
-    "country": ""
+    "id": "#p0004",
+    "name": "Kinder Chocolate",
+    "brand": "Ferrero",
+    "category": "Food & Beverage",
+    "origin": { "country": "Italy" },
+    "materials": ["Milk Chocolate", "Hazelnuts", "Sugar"],
+    "laborRisk": "medium",
+    "transportDistance": 3500,
+    "certifications": [],
+    "carbonFootprint": 15.8,
+    "keywords": ["chocolate", "hazelnut", "candy", "sweets", "snacks"],
+    "barcode": "8000500012345"
   },
-  "materials": [
-    "D"
-  ],
-  "laborRisk": "low",
-  "transportDistance": 0,
-  "certifications": [
-    "Fair Trade",
-    "Non-GMO"
-  ],
-  "carbonFootprint": -1.4,
-  "keywords": [
-    "D"
-  ],
-  "barcode": "",
-  "comments": "D",
-  "manualScore": 60,
-  "laborViolations": "no-union-rights",
-  "laborBonuses": [
-    "B-Corp certified (+3)"
-  ],
-  "animalWelfareConditions": "plant-based",
-  "animalWelfareItems": [
-    "Certified Humane (+3)",
-    "Cruelty-free (vegan) (+2)"
-  ],
-  "transportMode": "truck"
-},
- {
-  "id": "#p0005",
-  "name": "geo",
-  "brand": "suia",
-  "category": "Meat, Dairy & Eggs",
-  "origin": {
-    "country": ""
+  {
+    "id": "#p0005",
+    "name": "Kinder Surprise",
+    "brand": "Ferrero",
+    "category": "Food & Beverage",
+    "origin": { "country": "Italy" },
+    "materials": ["Milk Chocolate", "Toy", "Sugar"],
+    "laborRisk": "medium",
+    "transportDistance": 3800,
+    "certifications": [],
+    "carbonFootprint": 18.2,
+    "keywords": ["chocolate", "surprise", "toy", "candy", "sweets"],
+    "barcode": "8000500012346"
   },
-  "materials": [
-    "BEEF",
-    "Good Space",
-    "Standard Execution",
-    "Conventional Diet"
-  ],
-  "laborRisk": "low",
-  "transportDistance": 0,
-  "certifications": [
-    "Supply chain disclosure (+2)",
-    "Rainforest Alliance"
-  ],
-  "carbonFootprint": -1.4,
-  "keywords": [
-    "usu"
-  ],
-  "barcode": "",
-  "comments": "sdyusay",
-  "laborViolations": "none",
-  "laborBonuses": [
-    "B-Corp certified (+3)"
-  ],
-  "animalWelfareConditions": "plant-based",
-  "animalWelfareItems": [
-    "Certified Humane (+3)",
-    "Grass-fed (+2)"
-  ],
-  "transportMode": "truck"
-}
-
-  
+  {
+    "id": "#p0006",
+    "name": "M&M's Peanut Chocolate",
+    "brand": "Mars",
+    "category": "Food & Beverage",
+    "origin": { "country": "United States" },
+    "materials": ["Peanuts", "Milk Chocolate", "Sugar"],
+    "laborRisk": "medium",
+    "transportDistance": 2600,
+    "certifications": ["Rainforest Alliance"],
+    "carbonFootprint": 14.1,
+    "keywords": ["peanut", "chocolate", "candy", "nuts", "snacks"],
+    "barcode": "040000425535"
+  }
 ]

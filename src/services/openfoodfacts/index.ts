@@ -196,8 +196,7 @@ export const searchProducts = async (
   const cached = cacheGet<OpenFoodFactsResult[]>(cacheKey);
   if (cached) return cached;
 
-  // Fetch extra results so we still have enough after region filtering
-  const fetchSize = String(Math.min(limit * 3, 50));
+  const fetchSize = String(Math.min(limit, 10));
 
   // Try v2 API first (more reliable for text search)
   try {
@@ -216,7 +215,6 @@ export const searchProducts = async (
       if (data.products && data.products.length > 0) {
         const results = data.products
           .map(normalizeProduct)
-          .filter(isAllowedRegion)
           .slice(0, limit);
         cacheSet(cacheKey, results);
         return results;
@@ -251,7 +249,6 @@ export const searchProducts = async (
 
     const results = data.products
       .map(normalizeProduct)
-      .filter(isAllowedRegion)
       .slice(0, limit);
     cacheSet(cacheKey, results);
     return results;

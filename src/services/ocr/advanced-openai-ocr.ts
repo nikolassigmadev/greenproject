@@ -25,6 +25,99 @@ const compressImageBase64 = (base64: string, maxPx: number): Promise<string> => 
 
 const client = apiKey ? new OpenAI({ apiKey, dangerouslyAllowBrowser: true }) : null;
 
+// Fallback OCR function when OpenAI is not available
+export const fallbackOCR = async (imageDataUrl: string): Promise<AdvancedOCRResult> => {
+  const startTime = performance.now();
+  
+  try {
+    // Use Tesseract.js as fallback with better preprocessing
+    const Tesseract = (await import('tesseract.js')).default;
+    
+    // Preprocess image for better OCR results
+    const preprocessImage = async (dataUrl: string) => {
+      const img = new Image();
+      img.src = dataUrl;
+      await new Promise(resolve => img.onload = resolve);
+      
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d')!;
+      
+      // Scale up for better text recognition
+      const scale = 2;
+      canvas.width = img.width * scale;
+      canvas.height = img.height * scale;
+      
+      // Apply preprocessing
+      ctx.filter = 'contrast(1.5) brightness(1.1)';
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      
+      return canvas.toDataURL('image/jpeg', 0.9);
+    };
+    
+    const preprocessed = await preprocessImage(imageDataUrl);
+    
+    const result = await Tesseract.recognize(preprocessed, 'eng', {
+      logger: () => {} // Silent logging
+    });
+    
+    const extractedText = result.data.text.trim();
+    
+    // Validate and clean the extracted text
+    const cleanText = extractedText
+      .replace(/[^\w\s\-.,]/g, ' ') // Remove special characters except hyphens, periods, commas
+      .replace(/\s+/g, ' ') // Normalize whitespace
+      .trim();
+    
+    // Extract potential product name and brand from the text
+    const words = cleanText.split(' ').filter(w => w.length > 2);
+    let productName = null;
+    let brandName = null;
+    
+    if (words.length >= 2) {
+      // Heuristic: first word might be brand, rest might be product name
+      brandName = words[0];
+      productName = words.slice(1).join(' ').substring(0, 50); // Limit length
+    } else if (words.length === 1) {
+      productName = words[0];
+    }
+    
+    if (cleanText && cleanText.length > 3) {
+      return {
+        success: true,
+        fullText: cleanText,
+        confidence: result.data.confidence / 100,
+        productName: productName || undefined,
+        brandName: brandName || undefined,
+        certifications: [],
+        ingredients: [],
+        barcode: null,
+        nutritionInfo: null,
+        rawExtraction: extractedText,
+        processingTime: performance.now() - startTime,
+        notes: 'Tesseract.js fallback OCR with preprocessing'
+      };
+    }
+    
+    return {
+      success: false,
+      fullText: '',
+      confidence: 0,
+      rawExtraction: '',
+      error: 'No text could be extracted with fallback OCR',
+      processingTime: performance.now() - startTime
+    };
+  } catch (error) {
+    return {
+      success: false,
+      fullText: '',
+      confidence: 0,
+      rawExtraction: '',
+      error: error instanceof Error ? error.message : 'Fallback OCR failed',
+      processingTime: performance.now() - startTime
+    };
+  }
+};
+
 /**
  * Advanced OCR Result Type
  */
@@ -96,16 +189,8 @@ export const advancedProductOCR = async (imageDataUrl: string): Promise<Advanced
   const startTime = performance.now();
 
   if (!client) {
-    const error = 'OpenAI API key not configured. Please set VITE_OPENAI_API_KEY in .env.local or .env.production';
-    console.error('❌', error);
-    return {
-      success: false,
-      fullText: '',
-      confidence: 0,
-      rawExtraction: '',
-      error,
-      processingTime: performance.now() - startTime
-    };
+    console.warn('⚠️ OpenAI API key not configured, using Tesseract.js fallback');
+    return await fallbackOCR(imageDataUrl);
   }
 
   try {
