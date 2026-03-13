@@ -1,13 +1,22 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Camera, Upload, Search, Loader2, X, ScanLine, Image as ImageIcon, Leaf, ArrowLeft, MoreHorizontal, Zap, Database } from "lucide-react";
-import { getBrandFlag } from "@/data/brandFlags";
+import { Camera, Upload, Search, Loader2, AlertCircle, X, ScanLine, Image as ImageIcon, Plus, Leaf } from "lucide-react";
+import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ProductCard } from "@/components/ProductCard";
+import { OpenFoodFactsCard } from "@/components/OpenFoodFactsCard";
+import { EnvironmentalImpactCard } from "@/components/EnvironmentalImpactCard";
+import { ScoreBreakdownSlider } from "@/components/ScoreBreakdownSlider";
 import { useToast } from "@/hooks/use-toast";
 import { useProducts } from "@/hooks/useProducts";
 import type { Product } from "@/data/products";
 import { calculateScore, findLowCO2Alternative } from "@/data/products";
 import { recognizeImageWithOpenAI } from "@/services/ocr/openai-service";
-import { advancedProductOCR } from "@/services/ocr/advanced-openai-ocr";
+import { advancedProductOCR, extractBrandName, extractProductName, extractCertifications, checkOpenAIHealth } from "@/services/ocr/advanced-openai-ocr";
+import { copySingleProductCode } from "@/utils/productExporter";
 import { lookupBarcode, isValidBarcode, searchProducts as searchOffProducts, searchBetterAlternatives } from "@/services/openfoodfacts";
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
 import Tesseract from "tesseract.js";
@@ -15,57 +24,6 @@ import Tesseract from "tesseract.js";
 // Check if a product has an eco-score grade
 const hasEcoScore = (product: OpenFoodFactsResult): boolean => {
   return !!product.ecoscoreGrade;
-};
-
-// Function to calculate ecological data completeness score
-const calculateEcoScore = (result: OpenFoodFactsResult): number => {
-  let score = 0;
-  
-  // Eco-Score data (most important)
-  if (result.ecoscoreGrade) score += 20;
-  if (result.ecoscoreScore !== null) score += 10;
-  
-  // Carbon footprint data
-  if (result.carbonFootprint100g !== null) score += 15;
-  if (result.carbonFootprintProduct !== null) score += 10;
-  if (result.carbonFootprintServing !== null) score += 10;
-  
-  // Eco-Score adjustments (very important for detailed breakdown)
-  const adjustments = result.ecoscoreData?.adjustments;
-  if (adjustments) {
-    if (adjustments.packaging?.value !== undefined) score += 15;
-    if (adjustments.origins_of_ingredients?.value !== undefined) score += 15;
-    if (adjustments.threatened_species?.value !== undefined) score += 10;
-    if (adjustments.production_system?.value !== undefined) score += 10;
-  }
-  
-  // Agribalyse data (CO2 lifecycle breakdown)
-  const agri = result.ecoscoreData?.agribalyse;
-  if (agri) {
-    if (agri.co2_total !== undefined) score += 20;
-    if (agri.co2_agriculture !== undefined) score += 5;
-    if (agri.co2_processing !== undefined) score += 5;
-    if (agri.co2_packaging !== undefined) score += 5;
-    if (agri.co2_transportation !== undefined) score += 5;
-    if (agri.co2_distribution !== undefined) score += 5;
-    if (agri.co2_consumption !== undefined) score += 5;
-  }
-  
-  // Additional data
-  if (result.nutriscoreGrade) score += 5;
-  if (result.novaGroup !== null) score += 5;
-  if (result.labels && result.labels.length > 0) score += 5;
-  if (result.origins) score += 5;
-  if (result.imageUrl) score += 5;
-  
-  return score;
-};
-
-// Return top 3 results in OpenFoodFacts relevance order (sorted by scan popularity).
-// Do NOT re-sort by eco-data completeness — that causes unrelated high-eco-data products
-// (e.g. "Prince Gout Chocolat") to replace the actually searched product.
-const filterBestProducts = (results: OpenFoodFactsResult[]): OpenFoodFactsResult[] => {
-  return results.slice(0, 3);
 };
 
 type OcrWord = {
@@ -437,7 +395,6 @@ const Scan = () => {
   const { toast } = useToast();
   const products = useProducts();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const cameraFileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cameraInitializingRef = useRef(false);
@@ -447,7 +404,7 @@ const Scan = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraInitializing, setCameraInitializing] = useState(false);
-  const [_extractedText, setExtractedText] = useState("");
+  const [extractedText, setExtractedText] = useState("");
   const [ocrMessage, setOcrMessage] = useState<string | null>(null);
   const [manualSearch, setManualSearch] = useState("");
   const [searchResults, setSearchResults] = useState<Product[]>([]);
@@ -463,7 +420,6 @@ const Scan = () => {
   const [selectedEnvironmentalResult, setSelectedEnvironmentalResult] = useState<OpenFoodFactsResult | null>(null);
   const [offAlternatives, setOffAlternatives] = useState<OpenFoodFactsResult[]>([]);
   const [offAlternativeLoading, setOffAlternativeLoading] = useState(false);
-  const [scanMode, setScanMode] = useState<'off' | 'bali'>('off');
   const offFileInputRef = useRef<HTMLInputElement>(null);
 
   // Debug: Check if video element is mounted
@@ -471,7 +427,6 @@ const Scan = () => {
     console.log('Video ref status:', Boolean(videoRef.current));
     console.log('Canvas ref status:', Boolean(canvasRef.current));
   }, [cameraActive, cameraInitializing]);
-
 
   // Search for greener alternatives when OFF results have a poor eco-score
   useEffect(() => {
@@ -513,13 +468,10 @@ const Scan = () => {
           return navigator.mediaDevices;
         }
         // Fallback for older browsers
-        const nav = navigator as Navigator & {
-          webkitGetUserMedia?: (c: MediaStreamConstraints, s: (stream: MediaStream) => void, e: (err: Error) => void) => void;
-        };
-        if (nav.webkitGetUserMedia) {
+        if ((navigator as any).webkitGetUserMedia) {
           return {
-            getUserMedia: (constraints: MediaStreamConstraints) => new Promise<MediaStream>((resolve, reject) => {
-              nav.webkitGetUserMedia!(constraints, resolve, reject);
+            getUserMedia: (constraints: any) => new Promise((resolve, reject) => {
+              (navigator as any).webkitGetUserMedia(constraints, resolve, reject);
             })
           };
         }
@@ -595,9 +547,6 @@ const Scan = () => {
 
       // Setup handlers
       const onCanPlay = () => {
-        // Guard: only resolve once (canplay can sometimes fire multiple times)
-        if (!cameraInitializingRef.current) return;
-
         console.log('Video can play, dimensions:', video.videoWidth, 'x', video.videoHeight);
 
         // Clear timeout since we succeeded
@@ -610,9 +559,8 @@ const Scan = () => {
         setCameraActive(true);
         setCameraInitializing(false);
 
-        // Clean up event listeners
+        // Clean up event listener
         video.removeEventListener('canplay', onCanPlay);
-        video.removeEventListener('loadedmetadata', onCanPlay);
 
         toast({
           title: "Camera Active",
@@ -624,7 +572,6 @@ const Scan = () => {
         console.error('Video stream error');
         video.removeEventListener('error', onError);
         video.removeEventListener('canplay', onCanPlay);
-        video.removeEventListener('loadedmetadata', onCanPlay);
 
         if (timeoutIdRef.current) {
           clearTimeout(timeoutIdRef.current);
@@ -644,31 +591,20 @@ const Scan = () => {
       video.addEventListener('canplay', onCanPlay);
       video.addEventListener('error', onError);
 
-      // Ensure attributes are set before playing
-      video.setAttribute('playsinline', '');
-      video.setAttribute('webkit-playsinline', '');
-
-      // If already in a playable state (readyState >= 3), resolve immediately
-      if (video.readyState >= 3) {
-        onCanPlay();
-        return;
-      }
-
-      // Start playback
+      // Start playback - iOS requires user gesture but we're already in one
       try {
+        // Ensure attributes are set before playing
+        video.setAttribute('playsinline', '');
+        video.setAttribute('webkit-playsinline', '');
+
         const playPromise = video.play();
         if (playPromise !== undefined) {
           await playPromise;
           console.log('Video playback started');
-          // canplay may have already fired while we were awaiting play() —
-          // if still initializing, resolve now.
-          if (cameraInitializingRef.current) {
-            onCanPlay();
-          }
         }
       } catch (err) {
         console.error('Play error:', err);
-        // Continue — canplay event may still fire
+        // Continue - it might work with the canplay event
       }
 
       // Timeout safety using ref to avoid stale closures
@@ -730,9 +666,8 @@ const Scan = () => {
         errorMessage = "Camera constraints not compatible";
         suggestion = "Your device may not support these camera settings.";
       } else if (message.includes('does not support')) {
-        // Browser doesn't support camera — fail silently, image upload still works
-        console.log('Camera not supported in this browser, image upload available.');
-        return;
+        errorMessage = "Browser not supported";
+        suggestion = "Use Chrome, Firefox, Safari, or Edge.";
       }
 
       toast({
@@ -842,6 +777,82 @@ const Scan = () => {
       });
     }
   }, [navigate, products, toast]);
+
+  // Create new product from OCR data
+  const createProductFromOCR = useCallback(async () => {
+    if (!uploadedImage || !extractedText) {
+      toast({
+        title: "Missing Information",
+        description: "Please scan an image first to extract product information.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Get OCR data for detailed extraction
+      const ocrData = await advancedProductOCR(uploadedImage);
+      
+      if (!ocrData.success) {
+        toast({
+          title: "OCR Failed",
+          description: "Could not extract product information. Try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Generate new product ID
+      const newProductId = `#p${String(products.length + 1).padStart(4, '0')}`;
+      
+      // Create new product object with extracted data
+      const newProduct: Product = {
+        id: newProductId,
+        name: ocrData.productName || extractedText.split(' ').slice(-2).join(' '), // Use last 2 words as fallback name
+        brand: ocrData.brandName || 'Unknown Brand',
+        category: 'General', // Default category
+        origin: {
+          country: 'Unknown', // Default origin
+        },
+        materials: ocrData.ingredients || [], // Use ingredients as materials
+        laborRisk: 'medium', // Default risk level
+        transportDistance: 500, // Default distance
+        certifications: ocrData.certifications || [],
+        carbonFootprint: 2.5, // Default footprint
+        keywords: [...extractedText.split(' '), ...(ocrData.certifications || [])], // Combine text and certifications
+        barcode: ocrData.barcode || '',
+        imageUrl: uploadedImage, // Include the uploaded image
+      };
+
+      // Copy product code to clipboard
+      const success = await copySingleProductCode(newProduct);
+      
+      if (success) {
+        toast({
+          title: "Product Code Copied! 📋",
+          description: `Product "${newProduct.name}" code copied to clipboard. Paste it in products.ts file.`,
+        });
+        
+        // Navigate to admin page for easy editing
+        setTimeout(() => {
+          navigate('/admin');
+        }, 2000);
+      } else {
+        toast({
+          title: "Copy Failed",
+          description: "Could not copy product code. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error creating product:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create product. Please try again.",
+        variant: "destructive",
+      });
+    }
+  }, [uploadedImage, extractedText, products, toast, navigate]);
 
   // Handle viewing detailed environmental impact
   const viewDetailedEnvironmental = useCallback((result: OpenFoodFactsResult) => {
@@ -1084,7 +1095,7 @@ const Scan = () => {
     } finally {
       setOffLoading(false);
     }
-  }, [toast, viewDetailedEnvironmental]);
+  }, [toast]);
 
   // Process image for OpenFoodFacts search (separate from internal DB scan)
   const processImageForOFF = useCallback(async (imageData: string) => {
@@ -1099,16 +1110,39 @@ const Scan = () => {
 
       let searchQuery = "";
       if (advancedResult.success) {
-        const name = advancedResult.productName?.trim() || "";
-        const brand = advancedResult.brandName?.trim() || "";
-        if (brand && name) {
-          searchQuery = `${brand} ${name}`;
-        } else if (name) {
-          searchQuery = name;
-        } else if (brand) {
-          searchQuery = brand;
+        if (advancedResult.productName && advancedResult.brandName) {
+          searchQuery = `${advancedResult.brandName} ${advancedResult.productName}`;
+        } else if (advancedResult.productName) {
+          searchQuery = advancedResult.productName;
+        } else if (advancedResult.brandName) {
+          searchQuery = advancedResult.brandName;
         } else {
-          searchQuery = advancedResult.fullText?.trim() || "";
+          searchQuery = advancedResult.fullText;
+        }
+
+        // If barcode was found, also do a direct barcode lookup
+        if (advancedResult.barcode && isValidBarcode(advancedResult.barcode)) {
+          const barcodeResult = await lookupBarcode(advancedResult.barcode);
+          if (barcodeResult.found && hasEcoScore(barcodeResult)) {
+            setOffSearchResults([barcodeResult]);
+            setOffSearchText(`Barcode: ${advancedResult.barcode}`);
+            setOffSearchLoading(false);
+            // Automatically show detailed environmental view for barcode lookups from images
+            viewDetailedEnvironmental(barcodeResult);
+            toast({
+              title: "Product Found",
+              description: `${barcodeResult.brand || ""} ${barcodeResult.productName || ""}`.trim(),
+            });
+            return;
+          } else if (barcodeResult.found) {
+            toast({
+              title: "No Environmental Data",
+              description: `"${barcodeResult.productName || "This product"}" has no Eco-Score or environmental breakdown.`,
+              variant: "destructive",
+            });
+            setOffSearchLoading(false);
+            return;
+          }
         }
       }
 
@@ -1127,17 +1161,17 @@ const Scan = () => {
       // Search OpenFoodFacts by product name - fetch more to filter
       const results = await searchOffProducts(searchQuery, 10);
 
-      if (results.length === 0) {
+      const filteredResults = results.slice(0, 3);
+
+      if (filteredResults.length === 0) {
         toast({
           title: "No Results",
           description: `No products found for "${searchQuery}" on OpenFoodFacts.`,
           variant: "destructive",
         });
       } else {
-        // Keep results in OFF relevance order — sliced to top 3
-        const filteredResults = filterBestProducts(results);
         toast({
-          title: "Product Found",
+          title: `${filteredResults.length} Product${filteredResults.length > 1 ? "s" : ""} Found`,
           description: `Showing best match for "${searchQuery}".`,
         });
         setOffSearchResults(filteredResults);
@@ -1214,8 +1248,7 @@ const Scan = () => {
       }
 
       console.log('Photo captured:', imageData.length, 'bytes');
-      if (scanMode === 'bali') processImage(imageData);
-      else processImageForOFF(imageData);
+      processImage(imageData);
       stopCamera();
 
     } catch (error) {
@@ -1226,7 +1259,7 @@ const Scan = () => {
         variant: "destructive",
       });
     }
-  }, [scanMode, processImage, processImageForOFF, stopCamera, toast]);
+  }, [processImage, stopCamera, toast]);
 
   // Handle file upload
   const handleFileUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
@@ -1236,12 +1269,11 @@ const Scan = () => {
       reader.onload = (e) => {
         const imageData = e.target?.result as string;
         setUploadedImage(imageData);
-        if (scanMode === 'bali') processImage(imageData);
-        else processImageForOFF(imageData);
+        processImage(imageData);
       };
       reader.readAsDataURL(file);
     }
-  }, [scanMode, processImage, processImageForOFF]);
+  }, [processImage]);
 
   // Manual search
   const handleManualSearch = (e: React.FormEvent) => {
@@ -1252,537 +1284,708 @@ const Scan = () => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black overflow-hidden">
-      {/* Hidden elements */}
-      <canvas ref={canvasRef} className="hidden" />
-      <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
-      <input ref={offFileInputRef} type="file" accept="image/*" onChange={handleOffFileUpload} className="hidden" />
-      {/* Native camera capture — bypasses WebRTC, works on all browsers */}
-      <input
-        ref={cameraFileInputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (!file) return;
-          const reader = new FileReader();
-          reader.onload = (ev) => {
-            const result = ev.target?.result;
-            if (typeof result === "string") {
-              stopCamera();
-              if (scanMode === 'bali') processImage(result);
-              else processImageForOFF(result);
-            }
-          };
-          reader.readAsDataURL(file);
-          e.target.value = "";
-        }}
-        className="hidden"
-      />
-
-      {/* === BACKGROUND: Camera or uploaded image === */}
-      <div className="absolute inset-0">
-        <video
-          ref={videoRef}
-          autoPlay
-          playsInline
-          muted
-          webkit-playsinline="true"
-          x5-playsinline="true"
-          controls={false}
-          className={`w-full h-full object-cover ${cameraActive ? 'block' : 'hidden'}`}
-          style={{ backgroundColor: '#000', WebkitTransform: 'translate3d(0,0,0)', transform: 'translate3d(0,0,0)' } as React.CSSProperties}
-          onError={(e) => console.error('Video element error:', e)}
-          onLoadedMetadata={() => console.log('Video metadata loaded:', (videoRef.current as HTMLVideoElement).videoWidth, 'x', (videoRef.current as HTMLVideoElement).videoHeight)}
-        />
-        {uploadedImage && !cameraActive && (
-          <img src={uploadedImage} alt="Scanned product" className="w-full h-full object-cover" />
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/30 pointer-events-none" />
-      </div>
-
-      {/* === SCAN BOX OVERLAY === */}
-      {cameraActive && !isProcessing && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="relative w-72 h-72">
-            <div className="absolute top-0 left-0 w-8 h-8 border-t-[3px] border-l-[3px] border-white rounded-tl-xl" />
-            <div className="absolute top-0 right-0 w-8 h-8 border-t-[3px] border-r-[3px] border-white rounded-tr-xl" />
-            <div className="absolute bottom-0 left-0 w-8 h-8 border-b-[3px] border-l-[3px] border-white rounded-bl-xl" />
-            <div className="absolute bottom-0 right-0 w-8 h-8 border-b-[3px] border-r-[3px] border-white rounded-br-xl" />
-          </div>
-        </div>
-      )}
-
-      {/* === FLOATING LABELS (results + image) === */}
-      {searchResults.length > 0 && uploadedImage && !isProcessing && (
-        <>
-          <div className="absolute top-[28%] left-6 z-10">
-            <div className="bg-white rounded-2xl px-4 py-2 shadow-2xl">
-              <p className="font-black text-green-950 text-xs uppercase tracking-wide">{searchResults[0]?.brand || 'Brand'}</p>
-              <p className="font-black text-2xl text-green-950 leading-none">{calculateScore(searchResults[0])}</p>
+    <div className="min-h-screen flex flex-col">
+      <Header />
+      
+      <main className="flex-1 py-6 sm:py-8">
+        <div className="container max-w-4xl">
+          {/* Page Header */}
+          <div className="text-center mb-8 sm:mb-10">
+            <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-900/20 dark:to-emerald-800/20 mb-4">
+              <ScanLine className="w-8 h-8 sm:w-10 sm:h-10 text-emerald-600" />
             </div>
-          </div>
-          {searchResults.length > 1 && (
-            <div className="absolute top-[40%] right-6 z-10">
-              <div className="bg-white rounded-2xl px-4 py-2 shadow-2xl">
-                <p className="font-black text-green-950 text-xs uppercase tracking-wide">{searchResults[1]?.brand || 'Alt'}</p>
-                <p className="font-black text-2xl text-gray-500 leading-none">{calculateScore(searchResults[1])}</p>
-              </div>
-            </div>
-          )}
-        </>
-      )}
-
-      {/* === TOP BAR === */}
-      <div className="absolute top-0 left-0 right-0 z-20 pt-safe">
-        <div className="flex items-center justify-between px-4 pt-4 pb-2">
-          <button onClick={() => navigate(-1)} className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center">
-            <ArrowLeft className="w-5 h-5 text-white" />
-          </button>
-          <span className="text-white font-semibold text-base tracking-tight drop-shadow">Scanner</span>
-          <button className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center">
-            <MoreHorizontal className="w-5 h-5 text-white" />
-          </button>
-        </div>
-      </div>
-
-      {/* === PROCESSING OVERLAY === */}
-      {(isProcessing || cameraInitializing || offSearchLoading) && (
-        <div className="absolute inset-0 z-30 flex items-center justify-center">
-          <div className="bg-black/80 backdrop-blur-xl rounded-3xl px-10 py-8 flex flex-col items-center gap-4">
-            <Loader2 className="w-8 h-8 animate-spin text-white" />
-            <p className="text-white font-semibold text-sm text-center">
-              {cameraInitializing ? 'Starting camera…' : isProcessing ? 'Analysing product…' : 'Searching database…'}
+            <h1 className="text-3xl sm:text-4xl font-display font-bold mb-3 bg-gradient-to-r from-emerald-700 to-emerald-600 dark:from-emerald-400 dark:to-emerald-300 bg-clip-text text-transparent">
+              Scan a Product
+            </h1>
+            <p className="text-base sm:text-lg text-muted-foreground max-w-md mx-auto leading-relaxed">
+              Use your camera or upload an image to instantly identify products and discover their ethical impact
             </p>
           </div>
-        </div>
-      )}
 
-      {/* === BOTTOM CONTROLS (no results yet) === */}
-      {searchResults.length === 0 && offSearchResults.length === 0 && !showDetailedEnvironmental && !isProcessing && !offSearchLoading && (
-        <div className="absolute bottom-0 left-0 right-0 z-20 pb-safe">
-          <div className="px-5 pb-8 pt-4">
-            <div className="flex items-center gap-2.5 overflow-x-auto no-scrollbar mb-6">
-              <button
-                onClick={() => { setScanMode('off'); if (!cameraActive && !cameraInitializing) startCamera(); }}
-                className={`flex-shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold shadow-lg transition-colors ${scanMode === 'off' ? 'bg-green-900 text-white' : 'bg-white text-green-900'}`}
-              >
-                <Leaf className="w-3.5 h-3.5" />
-                <span>Open Food Facts</span>
-              </button>
-              <button
-                onClick={() => { setScanMode('bali'); if (!cameraActive && !cameraInitializing) startCamera(); }}
-                className={`flex-shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold shadow-lg transition-colors ${scanMode === 'bali' ? 'bg-green-900 text-white' : 'bg-white text-green-900'}`}
-              >
-                <Database className="w-3.5 h-3.5" />
-                <span>Bali Database</span>
-              </button>
-              <button onClick={() => stopCamera()} className="flex-shrink-0 w-11 h-11 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center border border-white/20">
-                <ScanLine className="w-5 h-5 text-white" />
-              </button>
-              <button onClick={() => { stopCamera(); fileInputRef.current?.click(); }} className="flex-shrink-0 w-11 h-11 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center border border-white/20">
-                <ImageIcon className="w-5 h-5 text-white" />
-              </button>
-              <button onClick={() => { stopCamera(); offFileInputRef.current?.click(); }} className="flex-shrink-0 w-11 h-11 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center border border-white/20">
-                <Upload className="w-5 h-5 text-white" />
-              </button>
-              <button onClick={() => stopCamera()} className="flex-shrink-0 w-11 h-11 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center border border-white/20">
-                <Search className="w-5 h-5 text-white" />
-              </button>
-            </div>
-
-            {!cameraActive && (
-              <div className="mb-6">
-                <form onSubmit={async (e) => { e.preventDefault(); const q = (barcodeInput || manualSearch).trim(); if (!q) return; if (scanMode === 'bali') { searchProducts(q); } else if (isValidBarcode(q)) { handleBarcodeLookup(q); } else { setOffSearchLoading(true); setOffSearchResults([]); try { const results = await searchOffProducts(q, 10); if (results.length === 0) { toast({ title: "No Results", description: `Nothing found for "${q}" on Open Food Facts.`, variant: "destructive" }); } else { const best = filterBestProducts(results); setOffSearchResults(best); } } catch { toast({ title: "Search Error", description: "Failed to search Open Food Facts.", variant: "destructive" }); } finally { setOffSearchLoading(false); } } }} className="flex gap-2">
-                  <input
-                    placeholder="Barcode or product name…"
-                    value={barcodeInput || manualSearch}
-                    onChange={(e) => { setBarcodeInput(e.target.value); setManualSearch(e.target.value); }}
-                    className="flex-1 h-12 rounded-2xl bg-white/90 backdrop-blur-sm px-4 text-black font-medium placeholder:text-gray-400 text-sm border-0 outline-none shadow-lg"
-                    inputMode="search"
+          {/* Product Lookup */}
+          <Card className="mb-6 sm:mb-8 border-0 shadow-lg bg-gradient-to-br from-white to-slate-50/30 dark:from-slate-900 dark:to-slate-800/30">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-3 text-lg">
+                <div className="flex items-center justify-center w-9 h-9 rounded-full bg-emerald-100 dark:bg-emerald-900/50">
+                  <Search className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <span className="bg-gradient-to-r from-emerald-700 to-emerald-600 bg-clip-text text-transparent">Product Lookup</span>
+              </CardTitle>
+              <p className="text-sm text-muted-foreground pl-12">
+                Search by barcode, upload image, or enter product name
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Barcode Input */}
+              <div className="space-y-3">
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Barcode Search</label>
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleBarcodeLookup(barcodeInput);
+                  }}
+                  className="flex gap-3"
+                >
+                  <Input
+                    placeholder="Enter barcode (e.g., 3017620422003)"
+                    value={barcodeInput}
+                    onChange={(e) => setBarcodeInput(e.target.value)}
+                    className="flex-1 h-11 rounded-lg border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/50 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/20"
+                    inputMode="numeric"
                   />
-                  <button type="submit" disabled={offLoading || isProcessing} className="h-12 px-5 rounded-2xl bg-white text-black font-bold text-sm shadow-lg disabled:opacity-60">
-                    {offLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-                  </button>
+                  <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700 h-11 px-5 rounded-lg shadow-md hover:shadow-lg transition-all duration-300" disabled={offLoading}>
+                    {offLoading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Search className="w-4 h-4" />
+                    )}
+                  </Button>
                 </form>
               </div>
-            )}
 
-            <div className="flex items-center justify-center gap-8">
-              <div className="w-12 h-12" />
-              <button
-                onClick={() => cameraFileInputRef.current?.click()}
-                disabled={isProcessing || offSearchLoading}
-                className="w-20 h-20 rounded-full bg-white shadow-2xl flex items-center justify-center disabled:opacity-60 active:scale-95 transition-transform"
-              >
-                <Camera className="w-8 h-8 text-black" />
-              </button>
-              <button onClick={() => cameraActive ? stopCamera() : undefined} className={`w-12 h-12 rounded-full backdrop-blur-sm flex items-center justify-center border border-white/20 ${cameraActive ? 'bg-black/50' : 'bg-transparent'}`}>
-                {cameraActive ? <X className="w-5 h-5 text-white" /> : <Zap className="w-5 h-5 text-white/40" />}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* === RESULTS BOTTOM SHEET === */}
-      {(searchResults.length > 0 || offSearchResults.length > 0 || showDetailedEnvironmental) && !isProcessing && (
-        <div className="absolute inset-x-0 bottom-0 z-30 animate-slide-up" style={{ maxHeight: '82vh', overflowY: 'auto' }}>
-          <div className="bg-background rounded-t-3xl shadow-2xl">
-            <div className="flex justify-center pt-3 pb-1">
-              <div className="w-10 h-1 bg-green-200 rounded-full" />
-            </div>
-            <div className="flex items-center justify-between px-5 py-3 border-b border-border">
-              <button onClick={() => { setSearchResults([]); setOffSearchResults([]); setShowDetailedEnvironmental(false); setSelectedEnvironmentalResult(null); setUploadedImage(null); setOffSearchImage(null); setExtractedText(''); }} className="flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-green-900 transition-colors">
-                <ArrowLeft className="w-4 h-4" />Back
-              </button>
-              <span className="font-black text-base text-green-950">{showDetailedEnvironmental ? 'Environmental Impact' : 'Nutrition'}</span>
-              <div className="w-14" />
-            </div>
-
-            {showDetailedEnvironmental && selectedEnvironmentalResult && (
-              <div className="px-5 pb-8">
-                {(() => {
-                  const r = selectedEnvironmentalResult;
-                  const agri = r.ecoscoreData?.agribalyse;
-                  const grade = r.ecoscoreGrade?.toLowerCase();
-                  const gradeColor = grade === 'a' ? '#16a34a' : grade === 'b' ? '#84cc16' : grade === 'c' ? '#eab308' : grade === 'd' ? '#f97316' : '#ef4444';
-                  const gradeLabel = grade === 'a' ? 'Excellent' : grade === 'b' ? 'Good' : grade === 'c' ? 'Fair' : grade === 'd' ? 'Poor' : 'Very Poor';
-                  const lifecycleItems = (agri ? [
-                    { label: "Agriculture", value: agri.co2_agriculture, icon: "🌾" },
-                    { label: "Processing", value: agri.co2_processing, icon: "🏭" },
-                    { label: "Packaging", value: agri.co2_packaging, icon: "📦" },
-                    { label: "Transport", value: agri.co2_transportation, icon: "🚚" },
-                    { label: "Distribution", value: agri.co2_distribution, icon: "🏪" },
-                    { label: "Consumption", value: agri.co2_consumption, icon: "🍽️" },
-                  ] as { label: string; value: number | undefined; icon: string }[] : []).filter(item => typeof item.value === 'number' && (item.value as number) > 0);
-                  const maxVal = Math.max(...lifecycleItems.map(i => i.value as number), 0.01);
-                  const brandFlag = getBrandFlag(r.brand);
-                  const adjustments = r.ecoscoreData?.adjustments;
-                  const packaging = adjustments?.packaging;
-                  const threatened = adjustments?.threatened_species;
-                  return (
+              {/* Image Upload */}
+              <div className="space-y-3">
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Image Search</label>
+                <Button
+                  onClick={() => offFileInputRef.current?.click()}
+                  disabled={offSearchLoading}
+                  className="w-full h-11 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-lg transition-all duration-300"
+                  variant="outline"
+                >
+                  {offSearchLoading ? (
                     <>
-                      {/* Product header */}
-                      <div className="flex items-start gap-3 pt-4 mb-4">
-                        {r.imageUrl && <img src={r.imageUrl} alt="" className="w-16 h-16 rounded-2xl object-cover flex-shrink-0 border border-green-100" />}
-                        <div className="flex-1">
-                          <h2 className="text-xl font-black text-green-950 leading-tight">{r.productName || 'Unknown Product'}</h2>
-                          {r.brand && <p className="text-sm text-gray-500 font-semibold mt-0.5">{r.brand}</p>}
-                        </div>
-                      </div>
-
-                      {/* Labor flag — top priority alert */}
-                      {brandFlag && (() => {
-                        const severityBg = brandFlag.severity === 'critical' ? 'bg-red-500' : brandFlag.severity === 'high' ? 'bg-orange-500' : 'bg-amber-500';
-                        const severityLabel = brandFlag.severity === 'critical' ? 'Forced / Child Labor Allegations' : brandFlag.severity === 'high' ? 'Serious Labor Allegations' : 'Labor Concerns';
-                        return (
-                          <div className={`${severityBg} rounded-2xl p-4 mb-4`}>
-                            <div className="flex items-center gap-2 mb-2">
-                              <span className="text-lg">🚨</span>
-                              <span className="text-sm font-black text-white">{severityLabel}</span>
-                            </div>
-                            <p className="text-sm text-white/90 leading-snug">{brandFlag.allegation}</p>
-                            {brandFlag.sources.length > 0 && (
-                              <p className="text-xs text-white/70 mt-2">{brandFlag.sources.length} source{brandFlag.sources.length > 1 ? 's' : ''} documented</p>
-                            )}
-                          </div>
-                        );
-                      })()}
-
-                      {/* Score tiles */}
-                      <div className="grid grid-cols-2 gap-3 mb-4">
-                        {grade && (
-                          <div className="bg-green-50/60 rounded-2xl p-4">
-                            <div className="flex items-center gap-1.5 mb-1"><span className="text-lg">🌍</span><span className="text-xs font-semibold text-gray-500">Eco Score</span></div>
-                            <span className="text-3xl font-black uppercase" style={{ color: gradeColor }}>{grade}</span>
-                            <p className="text-xs text-gray-500 mt-0.5">{gradeLabel}</p>
-                          </div>
-                        )}
-                        {r.nutriscoreGrade && (
-                          <div className="bg-green-50/60 rounded-2xl p-4">
-                            <div className="flex items-center gap-1.5 mb-1"><span className="text-lg">🥗</span><span className="text-xs font-semibold text-gray-500">Nutri Score</span></div>
-                            <span className="text-3xl font-black text-green-950 uppercase">{r.nutriscoreGrade}</span>
-                          </div>
-                        )}
-                        {r.carbonFootprint100g != null && (
-                          <div className="bg-green-50/60 rounded-2xl p-4">
-                            <div className="flex items-center gap-1.5 mb-1"><span className="text-lg">🌿</span><span className="text-xs font-semibold text-gray-500">CO₂/100g</span></div>
-                            <span className="text-2xl font-black text-green-950">{r.carbonFootprint100g.toFixed(1)}g</span>
-                          </div>
-                        )}
-                        {agri?.co2_total != null && (
-                          <div className="bg-green-50/60 rounded-2xl p-4">
-                            <div className="flex items-center gap-1.5 mb-1"><span className="text-lg">♻️</span><span className="text-xs font-semibold text-gray-500">Total CO₂/kg</span></div>
-                            <span className="text-2xl font-black text-green-950">{agri.co2_total.toFixed(1)}</span>
-                            <p className="text-xs text-gray-500 mt-0.5">kg CO₂eq</p>
-                          </div>
-                        )}
-                        {r.novaGroup != null && (
-                          <div className="bg-green-50/60 rounded-2xl p-4">
-                            <div className="flex items-center gap-1.5 mb-1"><span className="text-lg">🔬</span><span className="text-xs font-semibold text-gray-500">NOVA Group</span></div>
-                            <span className="text-3xl font-black text-green-950">{r.novaGroup}</span>
-                            <p className="text-xs text-gray-500 mt-0.5">{r.novaGroup === 1 ? 'Unprocessed' : r.novaGroup === 2 ? 'Minimally processed' : r.novaGroup === 3 ? 'Processed' : 'Ultra-processed'}</p>
-                          </div>
-                        )}
-                        {r.ecoscoreScore != null && (
-                          <div className="bg-green-50/60 rounded-2xl p-4">
-                            <div className="flex items-center gap-1.5 mb-1"><span className="text-lg">📊</span><span className="text-xs font-semibold text-gray-500">Eco Score Pts</span></div>
-                            <span className="text-3xl font-black text-green-950">{r.ecoscoreScore}</span>
-                            <p className="text-xs text-gray-500 mt-0.5">out of 100</p>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Eco score progress */}
-                      {grade && (
-                        <div className="bg-green-50/60 rounded-2xl p-4 mb-4">
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center gap-2"><span className="text-lg">💚</span><span className="text-sm font-bold text-green-950">Environmental Impact</span></div>
-                            <span className="text-sm font-black uppercase" style={{ color: gradeColor }}>{grade} · {gradeLabel}</span>
-                          </div>
-                          <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                            <div className="h-full rounded-full transition-all duration-700" style={{ width: grade === 'a' ? '90%' : grade === 'b' ? '70%' : grade === 'c' ? '50%' : grade === 'd' ? '30%' : '10%', background: gradeColor }} />
-                          </div>
-                        </div>
-                      )}
-
-                      {/* CO2 lifecycle breakdown */}
-                      {lifecycleItems.length > 0 && (
-                        <div className="bg-green-50/60 rounded-2xl p-4 mb-4">
-                          <div className="flex items-center gap-2 mb-3"><span className="text-lg">🏭</span><span className="text-sm font-bold text-green-950">CO₂ Lifecycle Breakdown</span></div>
-                          <div className="space-y-2.5">
-                            {lifecycleItems.map(item => (
-                              <div key={item.label} className="flex items-center gap-3">
-                                <span className="text-sm w-5">{item.icon}</span>
-                                <span className="text-xs font-semibold text-gray-500 w-20">{item.label}</span>
-                                <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
-                                  <div className="h-full rounded-full" style={{ width: `${((item.value as number) / maxVal) * 100}%`, background: '#16a34a' }} />
-                                </div>
-                                <span className="text-xs font-black text-green-950 w-10 text-right">{(item.value as number).toFixed(2)}</span>
-                              </div>
-                            ))}
-                          </div>
-                          {agri?.co2_total != null && (
-                            <p className="text-xs text-gray-400 mt-3 text-right">Total: {agri.co2_total.toFixed(2)} kg CO₂eq/kg</p>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Threatened species */}
-                      {threatened && typeof threatened.value === 'number' && threatened.value < 0 && (
-                        <div className="bg-red-50 rounded-2xl p-4 mb-4 border border-red-200">
-                          <div className="flex items-center gap-2 mb-2"><span className="text-lg">⚠️</span><span className="text-sm font-bold text-red-800">Threatened Species Risk</span></div>
-                          <p className="text-sm text-red-700">Contains ingredients that impact threatened species.</p>
-                          {threatened.ingredient && <p className="text-xs text-red-600 mt-1 font-semibold">{threatened.ingredient}</p>}
-                        </div>
-                      )}
-
-                      {/* Packaging */}
-                      {packaging && packaging.packagings && packaging.packagings.length > 0 && (
-                        <div className="bg-green-50/60 rounded-2xl p-4 mb-4">
-                          <div className="flex items-center gap-2 mb-3"><span className="text-lg">📦</span><span className="text-sm font-bold text-green-950">Packaging</span></div>
-                          <div className="space-y-2">
-                            {packaging.packagings.map((pkg, i) => (
-                              <div key={i} className="flex items-center justify-between py-1.5 border-b border-green-100 last:border-0">
-                                <span className="text-xs text-gray-600 capitalize">{pkg.shape || 'Package'}{pkg.weight_measured ? ` · ${pkg.weight_measured}g` : ''}</span>
-                                <span className="text-xs font-bold text-green-950 capitalize">{pkg.material?.replace(/^en:/, '').replace(/-/g, ' ') || 'Unknown'}</span>
-                              </div>
-                            ))}
-                          </div>
-                          {typeof packaging.value === 'number' && (
-                            <p className="text-xs text-gray-500 mt-2">{packaging.value >= 10 ? '✅ Very low packaging impact' : packaging.value >= 5 ? '🟡 Low packaging impact' : packaging.value >= 0 ? '🟠 Medium packaging impact' : '🔴 High packaging impact'}</p>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Better alternatives */}
-                      {offAlternativeLoading && (
-                        <div className="flex items-center gap-3 py-3 mb-2">
-                          <Loader2 className="w-4 h-4 animate-spin text-green-600" />
-                          <span className="text-sm text-gray-500">Finding better alternatives…</span>
-                        </div>
-                      )}
-                      {offAlternatives.length > 0 && !offAlternativeLoading && (
-                        <div className="bg-green-50/60 rounded-2xl p-4 mb-4">
-                          <div className="flex items-center gap-2 mb-3"><span className="text-xl">🌱</span><span className="text-sm font-bold text-green-950">Better Alternatives</span></div>
-                          <div className="space-y-3">
-                            {offAlternatives.map((alt, i) => (
-                              <button key={`${alt.barcode}-alt-${i}`} onClick={() => viewDetailedEnvironmental(alt)} className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/70 border border-green-200/40 text-left active:scale-[0.98] transition-transform">
-                                {alt.imageUrl && <img src={alt.imageUrl} alt="" className="w-12 h-12 rounded-xl object-cover flex-shrink-0" />}
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-black text-green-950 truncate">{alt.productName || 'Unknown Product'}</p>
-                                  {alt.brand && <p className="text-xs text-gray-500">{alt.brand}</p>}
-                                  <div className="flex items-center gap-2 mt-0.5">
-                                    {alt.ecoscoreGrade && <span className="text-xs font-bold text-green-700 uppercase">Eco: {alt.ecoscoreGrade}</span>}
-                                    {alt.ecoscoreData?.agribalyse?.co2_total != null && <span className="text-xs text-gray-500">{alt.ecoscoreData.agribalyse.co2_total.toFixed(1)} kg CO₂/kg</span>}
-                                    {alt.carbonFootprint100g != null && !alt.ecoscoreData?.agribalyse?.co2_total && <span className="text-xs text-gray-500">{alt.carbonFootprint100g.toFixed(1)}g CO₂/100g</span>}
-                                  </div>
-                                </div>
-                                <span className="text-sm text-green-700 font-bold flex-shrink-0">→</span>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Analyzing...
                     </>
-                  );
-                })()}
-                <button onClick={backToSearchResults} className="w-full mt-2 py-4 rounded-2xl bg-green-900 text-white font-bold text-base">Done</button>
-              </div>
-            )}
-
-            {!showDetailedEnvironmental && searchResults.map((product) => {
-              const score = calculateScore(product);
-              const alt = score < 60 ? findLowCO2Alternative(product, products) : null;
-              const laborEmoji = product.laborRisk === 'low' ? '🟢' : product.laborRisk === 'medium' ? '🟡' : '🔴';
-              const scoreColor = score >= 80 ? 'text-green-600' : score >= 60 ? 'text-yellow-500' : 'text-red-500';
-              return (
-                <div key={product.id} className="px-5 pb-2">
-                  <div className="flex items-start justify-between gap-3 mt-4 mb-5">
-                    <div className="flex-1">
-                      <span className="inline-flex mb-2 px-3 py-1 rounded-full bg-green-900 text-white text-xs font-bold">{product.category}</span>
-                      <h2 className="text-xl font-black text-green-950 leading-tight">{product.name}</h2>
-                      <p className="text-sm text-gray-500 font-semibold mt-0.5">{product.brand}</p>
-                    </div>
-                    <div className="flex items-center gap-2 bg-gray-100 rounded-full px-3 py-1.5 flex-shrink-0 mt-6">
-                      <span className="text-gray-400 font-bold text-lg leading-none select-none">−</span>
-                      <span className="font-black text-green-950 text-sm px-1">1</span>
-                      <span className="text-gray-400 font-bold text-lg leading-none select-none">+</span>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3 mb-4">
-                    <div className="bg-green-50/60 rounded-2xl p-4">
-                      <div className="flex items-center gap-1.5 mb-1"><span className="text-lg">🌱</span><span className="text-xs font-semibold text-gray-500">Ethics Score</span></div>
-                      <span className={`text-3xl font-black ${scoreColor}`}>{score}</span>
-                    </div>
-                    <div className="bg-green-50/60 rounded-2xl p-4">
-                      <div className="flex items-center gap-1.5 mb-1"><span className="text-lg">⚠️</span><span className="text-xs font-semibold text-gray-500">Labor Risk</span></div>
-                      <span className="text-xl font-black text-green-950">{laborEmoji} <span className="capitalize">{product.laborRisk}</span></span>
-                    </div>
-                    <div className="bg-green-50/60 rounded-2xl p-4">
-                      <div className="flex items-center gap-1.5 mb-1"><span className="text-lg">🌿</span><span className="text-xs font-semibold text-gray-500">Carbon kg CO₂</span></div>
-                      <span className="text-3xl font-black text-green-950">{product.carbonFootprint}</span>
-                    </div>
-                    <div className="bg-green-50/60 rounded-2xl p-4">
-                      <div className="flex items-center gap-1.5 mb-1"><span className="text-lg">✅</span><span className="text-xs font-semibold text-gray-500">Certifications</span></div>
-                      <span className="text-3xl font-black text-green-950">{product.certifications.length}</span>
-                    </div>
-                  </div>
-                  <div className="bg-green-50/60 rounded-2xl p-4 mb-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2"><span className="text-lg">💚</span><span className="text-sm font-bold text-green-950">Ethics score</span></div>
-                      <span className={`text-sm font-black ${scoreColor}`}>{score}/100</span>
-                    </div>
-                    <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                      <div className="h-full rounded-full transition-all duration-700" style={{ width: `${score}%`, background: score >= 80 ? '#16a34a' : score >= 60 ? '#eab308' : '#ef4444' }} />
-                    </div>
-                  </div>
-                  {alt && (
-                    <button onClick={() => navigate(`/product/${alt.id.replace('#', '')}`)} className="w-full mb-4 p-4 rounded-2xl border-2 border-green-200 bg-green-50 text-left flex items-center gap-3">
-                      <span className="text-2xl">🌿</span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-bold text-green-700 uppercase tracking-wide">Greener Alternative</p>
-                        <p className="text-sm font-black text-green-950 truncate">{alt.name}</p>
-                        <p className="text-xs text-gray-500">{alt.brand} · Score: {calculateScore(alt)}</p>
-                      </div>
-                    </button>
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4 mr-2" />
+                      Choose Product Image
+                    </>
                   )}
-                  <div className="space-y-3 pb-6">
-                    <button onClick={() => navigate(`/product/${product.id.replace('#', '')}`)} className="w-full py-4 rounded-2xl border-2 border-green-200 text-green-900 font-bold text-base flex items-center justify-center gap-2 hover:bg-green-50 transition-colors">
-                      View Results
-                    </button>
-                    <button onClick={() => { setSearchResults([]); setOffSearchResults([]); setUploadedImage(null); setExtractedText(''); }} className="w-full py-4 rounded-2xl bg-green-900 text-white font-bold text-base">Done</button>
+                </Button>
+                <input
+                  ref={offFileInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={handleOffFileUpload}
+                  className="hidden"
+                />
+              </div>
+
+              {/* Preview uploaded image */}
+              {offSearchImage && (
+                <div className="space-y-3">
+                  <div className="relative rounded-lg overflow-hidden bg-slate-50 dark:bg-slate-900 aspect-video max-h-48 border border-slate-200 dark:border-slate-700">
+                    <img
+                      src={offSearchImage}
+                      alt="Scanned product"
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                  {offSearchText && (
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                      Identified: <span className="font-medium">{offSearchText}</span>
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Loading state */}
+              {offSearchLoading && (
+                <div className="flex items-center justify-center gap-3 py-6">
+                  <Loader2 className="w-5 h-5 animate-spin text-emerald-600" />
+                  <span className="text-sm text-slate-600 dark:text-slate-400">Searching database...</span>
+                </div>
+              )}
+
+              {/* Search results */}
+              {offSearchResults.length > 0 && !offSearchLoading && !showDetailedEnvironmental && (
+                <div className="space-y-3">
+                  <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                    Found {offSearchResults.length} result{offSearchResults.length > 1 ? "s" : ""}
+                  </p>
+                  <div className="space-y-2">
+                    {offSearchResults.map((result, i) => (
+                      <div key={`${result.barcode}-${i}`}>
+                        <OpenFoodFactsCard result={result} />
+                        <div className="mt-2 flex justify-center">
+                          <Button
+                            onClick={() => viewDetailedEnvironmental(result)}
+                            variant="outline"
+                            size="sm"
+                            className="text-emerald-600 border-emerald-300 hover:bg-emerald-50"
+                          >
+                            <Leaf className="w-4 h-4 mr-2" />
+                            View Detailed Environmental Impact
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Greener Alternatives Suggestion */}
+                  {offAlternativeLoading && (
+                    <div className="flex items-center gap-2 py-3">
+                      <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Searching for greener alternatives...</span>
+                    </div>
+                  )}
+                  {offAlternatives.length > 0 && !offAlternativeLoading && (
+                    <div className="p-4 rounded-2xl border-2 border-emerald-300/60 dark:border-emerald-700/60 bg-gradient-to-r from-emerald-50 to-emerald-100/50 dark:from-emerald-950/30 dark:to-emerald-900/20">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Leaf className="w-5 h-5 text-emerald-600" />
+                        <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+                          Greener Alternatives ({offAlternatives.length})
+                        </p>
+                      </div>
+                      <div className="space-y-3">
+                        {offAlternatives.map((alt, i) => (
+                          <div key={`${alt.barcode}-alt-${i}`} className="flex items-start gap-3 p-3 rounded-xl bg-white/60 dark:bg-slate-800/40 border border-emerald-200/40 dark:border-emerald-700/40">
+                            {alt.imageUrl && (
+                              <img
+                                src={alt.imageUrl}
+                                alt={alt.productName || "Alternative"}
+                                className="w-14 h-14 rounded-lg object-cover border border-emerald-200 dark:border-emerald-700 flex-shrink-0"
+                              />
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-sm text-slate-800 dark:text-slate-200 truncate">
+                                {alt.productName || "Unknown Product"}
+                              </p>
+                              {alt.brand && (
+                                <p className="text-xs text-slate-600 dark:text-slate-400">{alt.brand}</p>
+                              )}
+                              <div className="flex items-center gap-3 mt-1">
+                                {alt.ecoscoreGrade && (
+                                  <span className="text-xs font-bold text-emerald-600">
+                                    Eco-Score: {alt.ecoscoreGrade.toUpperCase()}
+                                  </span>
+                                )}
+                                {alt.ecoscoreData?.agribalyse?.co2_total != null ? (
+                                  <span className="text-xs text-slate-600 dark:text-slate-400">
+                                    CO2: <span className="font-bold text-emerald-600">{alt.ecoscoreData.agribalyse.co2_total.toFixed(2)} kg/kg</span>
+                                  </span>
+                                ) : alt.carbonFootprint100g != null ? (
+                                  <span className="text-xs text-slate-600 dark:text-slate-400">
+                                    CO2: <span className="font-bold text-emerald-600">{alt.carbonFootprint100g.toFixed(1)} g/100g</span>
+                                  </span>
+                                ) : null}
+                              </div>
+                            </div>
+                            <Button
+                              onClick={() => viewDetailedEnvironmental(alt)}
+                              variant="outline"
+                              size="sm"
+                              className="text-emerald-600 border-emerald-300 hover:bg-emerald-50 flex-shrink-0"
+                            >
+                              View
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Detailed Environmental View */}
+              {showDetailedEnvironmental && selectedEnvironmentalResult && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
+                      Environmental Impact Analysis
+                    </h3>
+                    <Button
+                      onClick={backToSearchResults}
+                      variant="outline"
+                      size="sm"
+                    >
+                      ← Back to Results
+                    </Button>
+                  </div>
+                  <EnvironmentalImpactCard result={selectedEnvironmentalResult} />
+                </div>
+              )}
+
+              {/* No results */}
+              {offSearchResults.length === 0 && (offSearchImage || barcodeInput) && !offSearchLoading && !offLoading && (offSearchText || offResult) && (
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800">
+                  <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                  <p className="text-sm text-amber-800 dark:text-amber-200">
+                    {offSearchText ? `No products found for "${offSearchText}"` : 
+                     offResult?.found === false ? offResult.error || "Product not found" :
+                     "No products found"}
+                  </p>
+                </div>
+              )}
+
+              <p className="text-xs text-slate-500 dark:text-slate-400 text-center">
+                Powered by OpenFoodFacts database
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Scanner Card */}
+          <Card className="mb-6 sm:mb-8 border-0 shadow-lg bg-white dark:bg-slate-900">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-3 text-lg">
+                <div className="flex items-center justify-center w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-900/50">
+                  <ScanLine className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                </div>
+                <span className="text-slate-800 dark:text-slate-200">Product Scanner</span>
+              </CardTitle>
+              <p className="text-sm text-muted-foreground pl-12">
+                Use camera or upload image to identify products
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Camera View */}
+              <div className="relative rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 aspect-[3/4] sm:aspect-video max-h-[72vh] sm:max-h-none shadow-lg border border-slate-200 dark:border-slate-700">
+                {/* Video element with improved mobile compatibility */}
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  webkit-playsinline="true"
+                  x5-playsinline="true"
+                  controls={false}
+                  className={`w-full h-full object-cover ${cameraActive ? 'block' : 'hidden'}`}
+                  style={{
+                    backgroundColor: '#000',
+                    WebkitTransform: 'translate3d(0,0,0)',
+                    transform: 'translate3d(0,0,0)',
+                    WebkitUserSelect: 'none',
+                    userSelect: 'none',
+                  } as React.CSSProperties}
+                  onError={(e) => {
+                    console.error('Video element error:', e);
+                  }}
+                  onLoadedMetadata={() => {
+                    console.log('Video metadata loaded:', (videoRef.current as HTMLVideoElement).videoWidth, 'x', (videoRef.current as HTMLVideoElement).videoHeight);
+                  }}
+                />
+                <canvas ref={canvasRef} className="hidden" />
+                
+                {cameraActive && (
+                  <>
+                    {/* Scanning overlay */}
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <div className="relative">
+                        <div className="w-[min(78vw,26rem)] aspect-square border-2 border-blue-500 rounded-2xl" />
+                        {/* Corner indicators */}
+                        <div className="absolute top-2 left-2 w-6 h-6 border-t-2 border-l-2 border-blue-500 rounded-tl-lg" />
+                        <div className="absolute top-2 right-2 w-6 h-6 border-t-2 border-r-2 border-blue-500 rounded-tr-lg" />
+                        <div className="absolute bottom-2 left-2 w-6 h-6 border-b-2 border-l-2 border-blue-500 rounded-bl-lg" />
+                        <div className="absolute bottom-2 right-2 w-6 h-6 border-b-2 border-r-2 border-blue-500 rounded-br-lg" />
+                      </div>
+                    </div>
+
+                    {/* Camera controls */}
+                    <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-3 px-6">
+                      <div className="bg-black/20 backdrop-blur-md rounded-full p-2 flex gap-3">
+                        <Button 
+                          onClick={capturePhoto} 
+                          size="lg" 
+                          className="bg-blue-600 hover:bg-blue-700 rounded-full w-14 h-14 p-0 shadow-lg"
+                        >
+                          <Camera className="w-6 h-6" />
+                        </Button>
+                        <Button 
+                          onClick={stopCamera} 
+                          variant="secondary" 
+                          size="lg"
+                          className="bg-white/90 hover:bg-white rounded-full w-12 h-12 p-0 shadow-lg border border-white/20"
+                        >
+                          <X className="w-5 h-5 text-slate-700" />
+                        </Button>
+                      </div>
+                    </div>
+                  </>
+                )}
+                
+                {cameraInitializing ? (
+                  <div className="absolute inset-0 flex items-center justify-center bg-slate-100 dark:bg-slate-800">
+                    <div className="text-center space-y-4 p-8">
+                      <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto" />
+                      <div className="space-y-2">
+                        <p className="text-lg font-medium text-slate-800 dark:text-slate-200">Initializing camera...</p>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">Please allow camera access</p>
+                      </div>
+                    </div>
+                  </div>
+                ) : !cameraActive && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-slate-100 dark:bg-slate-800 p-8">
+                    <div className="w-full max-w-md space-y-6">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <Button
+                          onClick={startCamera}
+                          variant="outline"
+                          className="h-32 flex-col gap-3 bg-white hover:bg-gray-50 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl border-2 border-slate-200 dark:border-slate-700 hover:border-blue-400 shadow-sm"
+                          disabled={isProcessing}
+                        >
+                          <Camera className="w-8 h-8 text-blue-600" />
+                          <span className="font-medium">Use Camera</span>
+                        </Button>
+                        <Button
+                          onClick={() => fileInputRef.current?.click()}
+                          variant="outline"
+                          className="h-32 flex-col gap-3 bg-white hover:bg-gray-50 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl border-2 border-slate-200 dark:border-slate-700 hover:border-blue-400 shadow-sm"
+                          disabled={isProcessing}
+                        >
+                          <Upload className="w-8 h-8 text-blue-600" />
+                          <span className="font-medium">Upload Image</span>
+                        </Button>
+                      </div>
+                      
+                      {/* Debug button with improved styling */}
+                      <Button
+                        onClick={() => {
+                          console.log('Debug - Video ref:', videoRef.current);
+                          console.log('Debug - Canvas ref:', canvasRef.current);
+                          console.log('Debug - File input ref:', fileInputRef.current);
+                          console.log('Debug - Camera active:', cameraActive);
+                          console.log('Debug - Camera initializing:', cameraInitializing);
+                          toast({
+                            title: "Debug Info",
+                            description: `Video ref: ${videoRef.current ? '✅' : '❌'}, Canvas ref: ${canvasRef.current ? '✅' : '❌'}`,
+                          });
+                        }}
+                        variant="outline"
+                        size="sm"
+                        className="w-full bg-slate-100/50 hover:bg-slate-200/50 dark:bg-slate-700/50 dark:hover:bg-slate-600/50 transition-all duration-200 rounded-xl border border-slate-300/30 dark:border-slate-600/30"
+                      >
+                        <span className="text-xs text-slate-500 dark:text-slate-400">🔧 Debug Video Elements</span>
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+
+              {/* Processing State */}
+              {isProcessing && (
+                <div className="flex items-center justify-center gap-4 py-12">
+                  <div className="relative">
+                    <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
+                    <div className="absolute inset-0 w-8 h-8 animate-ping bg-emerald-400/20 rounded-full" />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-base font-medium text-slate-700 dark:text-slate-300">
+                      {isScanning ? "Reading text from image..." : "Processing image..."}
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-1">This may take a few seconds</p>
                   </div>
                 </div>
-              );
-            })}
+              )}
 
-            {!showDetailedEnvironmental && searchResults.length === 0 && offSearchResults.length > 0 && (
-              <div className="px-5 pb-6">
-                {offSearchResults.slice(0, 3).map((result, i) => (
-                  <div key={`${result.barcode}-${i}`} className="pt-4">
-                    <div className="flex items-start gap-3 mb-5">
-                      <div className="flex-1">
-                        <span className="inline-flex mb-2 px-3 py-1 rounded-full bg-green-900 text-white text-xs font-bold">Food Product</span>
-                        <h2 className="text-xl font-black text-green-950 leading-tight">{result.productName || 'Unknown Product'}</h2>
-                        {result.brand && <p className="text-sm text-gray-500 font-semibold mt-0.5">{result.brand}</p>}
-                      </div>
-                      {result.imageUrl && <img src={result.imageUrl} alt="" className="w-16 h-16 rounded-xl object-cover flex-shrink-0" />}
+              {/* Image Preview */}
+              {uploadedImage && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center">
+                      <ImageIcon className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                     </div>
-                    <div className="grid grid-cols-2 gap-3 mb-4">
-                      <div className="bg-green-50/60 rounded-2xl p-4">
-                        <div className="flex items-center gap-1.5 mb-1"><span className="text-lg">🌍</span><span className="text-xs font-semibold text-gray-500">Eco Score</span></div>
-                        <span className="text-3xl font-black text-green-950 uppercase">{result.ecoscoreGrade || '—'}</span>
-                      </div>
-                      <div className="bg-green-50/60 rounded-2xl p-4">
-                        <div className="flex items-center gap-1.5 mb-1"><span className="text-lg">🥗</span><span className="text-xs font-semibold text-gray-500">Nutri Score</span></div>
-                        <span className="text-3xl font-black text-green-950 uppercase">{result.nutriscoreGrade || '—'}</span>
-                      </div>
-                      {result.carbonFootprint100g != null && (
-                        <div className="bg-green-50/60 rounded-2xl p-4">
-                          <div className="flex items-center gap-1.5 mb-1"><span className="text-lg">🌿</span><span className="text-xs font-semibold text-gray-500">CO₂/100g</span></div>
-                          <span className="text-2xl font-black text-green-950">{result.carbonFootprint100g.toFixed(1)}g</span>
-                        </div>
-                      )}
-                      {result.novaGroup != null && (
-                        <div className="bg-green-50/60 rounded-2xl p-4">
-                          <div className="flex items-center gap-1.5 mb-1"><span className="text-lg">🔬</span><span className="text-xs font-semibold text-gray-500">NOVA Group</span></div>
-                          <span className="text-3xl font-black text-green-950">{result.novaGroup}</span>
-                        </div>
-                      )}
+                    <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Scanned Image</p>
+                  </div>
+                  <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900 aspect-video max-h-80 shadow-lg border border-slate-200/50 dark:border-slate-700/50">
+                    <img
+                      src={uploadedImage}
+                      alt="Uploaded product"
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Extracted Text */}
+              {(extractedText || ocrMessage) && (
+                <div className="p-6 rounded-2xl bg-gradient-to-br from-emerald-50 to-emerald-100/50 dark:from-emerald-950/30 dark:to-emerald-900/20 border border-emerald-200/50 dark:border-emerald-800/30 shadow-lg">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-6 h-6 rounded-full bg-emerald-200 dark:bg-emerald-800 flex items-center justify-center">
+                      <ScanLine className="w-3 h-3 text-emerald-700 dark:text-emerald-300" />
                     </div>
-                    {result.ecoscoreGrade && (
-                      <div className="bg-green-50/60 rounded-2xl p-4 mb-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2"><span className="text-lg">💚</span><span className="text-sm font-bold text-green-950">Eco score</span></div>
-                          <span className="text-sm font-black text-green-600 uppercase">{result.ecoscoreGrade}</span>
-                        </div>
-                        <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                          <div className="h-full rounded-full" style={{ width: result.ecoscoreGrade === 'a' ? '90%' : result.ecoscoreGrade === 'b' ? '70%' : result.ecoscoreGrade === 'c' ? '50%' : result.ecoscoreGrade === 'd' ? '30%' : '10%', background: result.ecoscoreGrade === 'a' ? '#16a34a' : result.ecoscoreGrade === 'b' ? '#84cc16' : result.ecoscoreGrade === 'c' ? '#eab308' : '#ef4444' }} />
-                        </div>
-                      </div>
-                    )}
-                    {offAlternativeLoading && (
-                      <div className="flex items-center gap-2 mb-3">
-                        <Loader2 className="w-3.5 h-3.5 animate-spin text-green-600" />
-                        <span className="text-xs text-gray-500">Finding better alternatives…</span>
-                      </div>
-                    )}
-                    {offAlternatives.length > 0 && !offAlternativeLoading && (
-                      <div className="bg-green-50/60 rounded-2xl p-4 mb-3">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-base">🌱</span>
-                          <span className="text-xs font-bold text-green-950">Better Alternatives</span>
-                          <span className="ml-auto text-xs font-semibold text-green-700">{offAlternatives.length} found</span>
-                        </div>
-                        <div className="space-y-2">
-                          {offAlternatives.slice(0, 2).map((alt, altIdx) => (
-                            <button key={`preview-alt-${altIdx}`} onClick={() => viewDetailedEnvironmental(alt)} className="w-full flex items-center gap-2 p-2 rounded-xl bg-white/60 text-left">
-                              {alt.imageUrl && <img src={alt.imageUrl} alt="" className="w-9 h-9 rounded-lg object-cover flex-shrink-0" />}
-                              <div className="flex-1 min-w-0">
-                                <p className="text-xs font-black text-green-950 truncate">{alt.productName || 'Product'}</p>
-                                {alt.ecoscoreGrade && <span className="text-xs font-bold text-green-700 uppercase">Eco: {alt.ecoscoreGrade}</span>}
+                    <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">Extracted Information</p>
+                  </div>
+                  {extractedText ? (
+                    <div className="bg-white/50 dark:bg-slate-800/50 rounded-xl p-4 border border-emerald-200/30 dark:border-emerald-700/30">
+                      <p className="text-sm font-mono leading-relaxed text-slate-700 dark:text-slate-300">
+                        {extractedText.slice(0, 300)}
+                        {extractedText.length > 300 && "..."}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-3 p-3 rounded-lg bg-amber-50/80 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-800/30">
+                      <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                      <p className="text-sm text-amber-800 dark:text-amber-200">{ocrMessage}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Manual Search */}
+          <Card className="mb-6 sm:mb-8 border-0 shadow-lg bg-gradient-to-br from-white to-slate-50/30 dark:from-slate-900 dark:to-slate-800/30">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-3 text-lg">
+                <div className="flex items-center justify-center w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-900/50">
+                  <Search className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                </div>
+                <span className="bg-gradient-to-r from-blue-700 to-blue-600 bg-clip-text text-transparent">Manual Search</span>
+              </CardTitle>
+              <p className="text-sm text-muted-foreground pl-12">
+                Search by product name, barcode, or ID code
+              </p>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleManualSearch} className="flex gap-3">
+                <Input
+                  placeholder="Enter product name, barcode, or code (e.g., #p0001)"
+                  value={manualSearch}
+                  onChange={(e) => setManualSearch(e.target.value)}
+                  className="flex-1 h-12 rounded-xl border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/50 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20"
+                />
+                <Button type="submit" className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 h-12 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300">
+                  <Search className="w-4 h-4 mr-2" />
+                  Search
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+
+
+          {/* Search Results */}
+          {searchResults.length > 0 && (
+            <Card className="border-0 shadow-xl bg-gradient-to-br from-white to-slate-50/30 dark:from-slate-900 dark:to-slate-800/30">
+              <CardHeader className="pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center justify-center w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-900/50">
+                    <Search className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <CardTitle className="text-lg bg-gradient-to-r from-blue-700 to-blue-600 bg-clip-text text-transparent">
+                    Found {searchResults.length} Product{searchResults.length > 1 ? "s" : ""}
+                  </CardTitle>
+                </div>
+                <p className="text-sm text-muted-foreground pl-12">
+                  Click on any product to view detailed ethical ratings
+                </p>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {searchResults.map((product) => {
+                    const score = calculateScore(product);
+                    const alternative = score < 60 ? findLowCO2Alternative(product, products) : null;
+                    return (
+                      <div key={product.id} className="space-y-3">
+                        <button
+                          onClick={() => navigate(`/product/${product.id.replace("#", "")}`)}
+                          className="w-full p-5 rounded-2xl border border-slate-200/50 dark:border-slate-700/50 hover:border-blue-400/50 hover:bg-gradient-to-r hover:from-blue-50/30 hover:to-blue-100/30 dark:hover:from-blue-950/20 dark:hover:to-blue-900/20 transition-all duration-300 text-left flex items-center gap-4 group shadow-sm hover:shadow-lg"
+                        >
+                          <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-700 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
+                            {uploadedImage ? (
+                              <img src={uploadedImage} alt="" className="w-full h-full object-cover rounded-lg" />
+                            ) : (
+                              <ScanLine className="w-8 h-8 text-blue-500/50" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-base text-slate-800 dark:text-slate-200 truncate group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors">
+                              {product.name}
+                            </p>
+                            <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
+                              {product.brand} • <span className="font-mono text-xs bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">{product.id}</span>
+                            </p>
+                            <div className="flex items-center gap-4">
+                              <div className="text-sm">
+                                <span className="font-medium text-slate-700 dark:text-slate-300">Score: </span>
+                                <span className="font-bold text-blue-600 dark:text-blue-400">{score}</span>
                               </div>
-                              <span className="text-xs text-green-700 font-bold">→</span>
-                            </button>
-                          ))}
-                        </div>
+                              <div className="flex-1">
+                                <ScoreBreakdownSlider product={product} />
+                              </div>
+                            </div>
+                          </div>
+                        </button>
+
+                        {alternative && (
+                          <button
+                            onClick={() => navigate(`/product/${alternative.id.replace("#", "")}`)}
+                            className="w-full p-4 rounded-2xl border-2 border-emerald-300/60 dark:border-emerald-700/60 bg-gradient-to-r from-emerald-50 to-emerald-100/50 dark:from-emerald-950/30 dark:to-emerald-900/20 hover:border-emerald-400 hover:shadow-lg transition-all duration-300 text-left flex items-center gap-4 group"
+                          >
+                            <div className="w-12 h-12 rounded-xl bg-emerald-200 dark:bg-emerald-800 flex items-center justify-center flex-shrink-0">
+                              <Leaf className="w-6 h-6 text-emerald-700 dark:text-emerald-300" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 uppercase tracking-wide mb-1">
+                                Greener Alternative
+                              </p>
+                              <p className="font-semibold text-sm text-slate-800 dark:text-slate-200 truncate group-hover:text-emerald-700 dark:group-hover:text-emerald-300 transition-colors">
+                                {alternative.name}
+                              </p>
+                              <p className="text-xs text-slate-600 dark:text-slate-400">
+                                {alternative.brand} • Score: <span className="font-bold text-emerald-600">{calculateScore(alternative)}</span> • CO2: <span className="font-bold text-emerald-600">{alternative.carbonFootprint} kg</span>
+                              </p>
+                            </div>
+                          </button>
+                        )}
                       </div>
-                    )}
-                    <div className="space-y-3 pb-2">
-                      <button onClick={() => viewDetailedEnvironmental(result)} className="w-full py-4 rounded-2xl border-2 border-green-200 text-green-900 font-bold text-base flex items-center justify-center gap-2 hover:bg-green-50 transition-colors">View Results</button>
-                      <button onClick={() => { setOffSearchResults([]); setOffSearchImage(null); setUploadedImage(null); }} className="w-full py-4 rounded-2xl bg-green-900 text-white font-bold text-base">Done</button>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* No Results Found - Add Product Option */}
+          {searchResults.length === 0 && extractedText && uploadedImage && (
+            <Card className="border-0 shadow-xl bg-gradient-to-br from-amber-50 via-amber-100/50 to-amber-50/30 dark:from-amber-950/30 dark:via-amber-900/20 dark:to-amber-950/10">
+              <CardHeader className="pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center justify-center w-9 h-9 rounded-full bg-amber-200 dark:bg-amber-800">
+                    <Plus className="w-4 h-4 text-amber-700 dark:text-amber-300" />
+                  </div>
+                  <CardTitle className="text-lg text-amber-800 dark:text-amber-200">
+                    Add New Product
+                  </CardTitle>
+                </div>
+                <p className="text-sm text-amber-700 dark:text-amber-300 pl-12">
+                  Help grow our ethical database by adding this product
+                </p>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  <div className="p-4 rounded-xl bg-white/70 dark:bg-slate-800/70 border border-amber-200/50 dark:border-amber-800/30">
+                    <div className="flex items-center gap-2 mb-3">
+                      <ScanLine className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                      <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">Extracted Information</p>
+                    </div>
+                    <p className="text-sm text-slate-700 dark:text-slate-300 font-mono bg-amber-50/50 dark:bg-amber-950/20 p-3 rounded-lg border border-amber-200/30 dark:border-amber-800/30">
+                      {extractedText}
+                    </p>
+                  </div>
+                  
+                  <div className="flex items-center gap-6">
+                    <div className="w-24 h-24 rounded-2xl overflow-hidden bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-700 shadow-lg flex-shrink-0">
+                      <img 
+                        src={uploadedImage} 
+                        alt="Scanned product" 
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="flex-1 space-y-3">
+                      <Button 
+                        onClick={createProductFromOCR}
+                        className="w-full h-14 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 gap-3 text-base font-semibold"
+                        disabled={isProcessing}
+                      >
+                        <Plus className="w-5 h-5" />
+                        {isProcessing ? 'Creating Product...' : 'Add Product with Image'}
+                      </Button>
+                      <div className="p-3 rounded-lg bg-amber-100/50 dark:bg-amber-900/20 border border-amber-200/30 dark:border-amber-800/30">
+                        <p className="text-xs text-amber-700 dark:text-amber-300 flex items-center gap-2">
+                          <Plus className="w-3 h-3" />
+                          This will copy product code to clipboard with the image included for easy addition to the database
+                        </p>
+                      </div>
                     </div>
                   </div>
-                ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Tips */}
+          <div className="mt-8 sm:mt-12 p-6 rounded-2xl bg-gradient-to-br from-blue-50 via-blue-100/50 to-blue-50/30 dark:from-blue-950/30 dark:via-blue-900/20 dark:to-blue-950/10 border border-blue-200/50 dark:border-blue-800/30 shadow-lg">
+            <div className="flex items-start gap-4">
+              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-200 dark:bg-blue-800 flex-shrink-0 mt-1">
+                <AlertCircle className="w-5 h-5 text-blue-700 dark:text-blue-300" />
               </div>
-            )}
+              <div className="text-sm text-slate-700 dark:text-slate-300">
+                <p className="font-semibold text-blue-900 dark:text-blue-100 mb-3 text-base">Pro Tips for Better Scanning</p>
+                <ul className="space-y-2">
+                  <li className="flex items-start gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 flex-shrink-0" />
+                    <span><strong>Position clearly:</strong> Place product labels flat and centered in the frame</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 flex-shrink-0" />
+                    <span><strong>Good lighting:</strong> Use bright, even lighting for best OCR accuracy</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 flex-shrink-0" />
+                    <span><strong>Barcode first:</strong> Scan barcodes for instant identification when available</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 flex-shrink-0" />
+                    <span><strong>Manual fallback:</strong> Use manual search if automatic scanning doesn't work</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* Debug Information */}
+          <div className="mt-6 p-6 rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100/50 dark:from-slate-900 dark:to-slate-800/50 border border-slate-200/50 dark:border-slate-700/30 shadow-lg">
+            <div className="flex items-start gap-4">
+              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 flex-shrink-0 mt-1">
+                <AlertCircle className="w-5 h-5 text-slate-600 dark:text-slate-400" />
+              </div>
+              <div className="text-sm">
+                <p className="font-semibold text-slate-800 dark:text-slate-200 mb-3 text-base">Camera Troubleshooting</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                  <div className="space-y-2 text-slate-700 dark:text-slate-300 text-xs">
+                    <p><strong>Browser:</strong> {navigator.userAgent.match(/Chrome|Safari|Firefox|Edge|Opera/) ? navigator.userAgent.match(/Chrome|Safari|Firefox|Edge|Opera/)?.[0] : 'Unknown'}</p>
+                    <p><strong>Device:</strong> {/Mobile|Android|iPhone|iPad/.test(navigator.userAgent) ? '📱 Mobile' : '💻 Desktop'}</p>
+                    <p><strong>Protocol:</strong> {location.protocol}</p>
+                    <p><strong>Host:</strong> {location.hostname}</p>
+                  </div>
+                  <div className="space-y-2 text-slate-700 dark:text-slate-300 text-xs">
+                    <p><strong>mediaDevices:</strong> {navigator.mediaDevices ? '✅ Available' : '❌ Missing'} {!navigator.mediaDevices && <span className="text-red-600 font-medium"> (Required!)</span>}</p>
+                    <p><strong>getUserMedia:</strong> {navigator.mediaDevices?.getUserMedia ? '✅ Available' : '❌ Missing'} {!navigator.mediaDevices?.getUserMedia && <span className="text-red-600 font-medium"> (Required!)</span>}</p>
+                    <p><strong>Secure Context:</strong> {location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1' ? '✅ Yes' : '❌ No'}</p>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <p className="font-semibold text-slate-800 dark:text-slate-200 text-sm">If camera doesn't work:</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <p className="font-medium text-slate-700 dark:text-slate-300 text-xs">🔧 Quick Fixes:</p>
+                      <ul className="space-y-1 text-slate-600 dark:text-slate-400 text-xs">
+                        <li>• Open browser console (F12) and check for errors</li>
+                        <li>• Check 🔒 lock icon for camera permissions</li>
+                        <li>• Reload page after allowing permissions</li>
+                        <li>• Close other apps using camera</li>
+                      </ul>
+                    </div>
+                    <div className="space-y-2">
+                      <p className="font-medium text-slate-700 dark:text-slate-300 text-xs">🌐 Browser & Device:</p>
+                      <ul className="space-y-1 text-slate-600 dark:text-slate-400 text-xs">
+                        <li>• Try Chrome, Firefox, Safari, or Edge</li>
+                        <li>• Mobile: Use portrait mode, Chrome browser</li>
+                        <li>• Check iOS privacy settings</li>
+                        <li>• Remote sites need HTTPS (not http://)</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-      )}
+      </main>
 
+      <Footer />
     </div>
   );
 };
