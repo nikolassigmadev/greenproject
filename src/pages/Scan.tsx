@@ -482,6 +482,12 @@ const Scan = () => {
     console.log('Canvas ref status:', Boolean(canvasRef.current));
   }, [cameraActive, cameraInitializing]);
 
+  // Auto-start camera on mount so the background is always live camera view
+  useEffect(() => {
+    startCamera();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Search for greener alternatives when OFF results have a poor eco-score
   useEffect(() => {
     setOffAlternatives([]);
