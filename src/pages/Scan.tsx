@@ -1539,13 +1539,31 @@ const Scan = () => {
                   return (
                     <>
                       {/* Product header */}
-                      <div className="flex items-start gap-3 pt-4 mb-5">
+                      <div className="flex items-start gap-3 pt-4 mb-4">
                         {r.imageUrl && <img src={r.imageUrl} alt="" className="w-16 h-16 rounded-2xl object-cover flex-shrink-0 border border-green-100" />}
                         <div className="flex-1">
                           <h2 className="text-xl font-black text-green-950 leading-tight">{r.productName || 'Unknown Product'}</h2>
                           {r.brand && <p className="text-sm text-gray-500 font-semibold mt-0.5">{r.brand}</p>}
                         </div>
                       </div>
+
+                      {/* Labor flag — top priority alert */}
+                      {brandFlag && (() => {
+                        const severityBg = brandFlag.severity === 'critical' ? 'bg-red-500' : brandFlag.severity === 'high' ? 'bg-orange-500' : 'bg-amber-500';
+                        const severityLabel = brandFlag.severity === 'critical' ? 'Forced / Child Labor Allegations' : brandFlag.severity === 'high' ? 'Serious Labor Allegations' : 'Labor Concerns';
+                        return (
+                          <div className={`${severityBg} rounded-2xl p-4 mb-4`}>
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-lg">🚨</span>
+                              <span className="text-sm font-black text-white">{severityLabel}</span>
+                            </div>
+                            <p className="text-sm text-white/90 leading-snug">{brandFlag.allegation}</p>
+                            {brandFlag.sources.length > 0 && (
+                              <p className="text-xs text-white/70 mt-2">{brandFlag.sources.length} source{brandFlag.sources.length > 1 ? 's' : ''} documented</p>
+                            )}
+                          </div>
+                        );
+                      })()}
 
                       {/* Score tiles */}
                       <div className="grid grid-cols-2 gap-3 mb-4">
@@ -1623,13 +1641,6 @@ const Scan = () => {
                           {agri?.co2_total != null && (
                             <p className="text-xs text-gray-400 mt-3 text-right">Total: {agri.co2_total.toFixed(2)} kg CO₂eq/kg</p>
                           )}
-                        </div>
-                      )}
-
-                      {/* Labor flag */}
-                      {brandFlag && (
-                        <div className="mb-4">
-                          <LaborFlagBanner flag={brandFlag} brandName={r.brand} />
                         </div>
                       )}
 
