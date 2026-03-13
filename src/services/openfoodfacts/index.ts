@@ -176,6 +176,15 @@ export const lookupBarcode = async (barcode: string): Promise<OpenFoodFactsResul
   }
 };
 
+const SEARCH_FIELDS = [
+  'code', 'product_name', 'product_name_en', 'brands',
+  'ecoscore_grade', 'ecoscore_score', 'ecoscore_data',
+  'nutriscore_grade', 'nutriscore_score', 'nova_group',
+  'nutriments', 'labels_tags', 'labels', 'categories_tags', 'categories',
+  'origins', 'ingredients_text', 'ingredients_text_en',
+  'image_front_url', 'image_url', 'countries_tags',
+].join(',');
+
 export const searchProducts = async (
   query: string,
   limit: number = 3
@@ -187,24 +196,45 @@ export const searchProducts = async (
   const cached = cacheGet<OpenFoodFactsResult[]>(cacheKey);
   if (cached) return cached;
 
+  // Fetch extra results so we still have enough after region filtering
+  const fetchSize = String(Math.min(limit * 3, 50));
+
+  // Try v2 API first (more reliable for text search)
   try {
-    // Fetch extra results so we still have enough after region filtering
     const params = new URLSearchParams({
       search_terms: trimmed,
-      search_simple: '1',
+      page_size: fetchSize,
+      sort_by: 'unique_scans_n',
+      fields: SEARCH_FIELDS,
+    });
+
+    const response = await fetch(`${OFF_API_BASE}/api/v2/search?${params}`);
+
+    if (response.ok) {
+      const data: OpenFoodFactsSearchResponse = await response.json();
+
+      if (data.products && data.products.length > 0) {
+        const results = data.products
+          .map(normalizeProduct)
+          .filter(isAllowedRegion)
+          .slice(0, limit);
+        cacheSet(cacheKey, results);
+        return results;
+      }
+    }
+  } catch (error) {
+    console.warn('OpenFoodFacts v2 search failed, falling back to v1:', error);
+  }
+
+  // Fallback to v1 CGI endpoint
+  try {
+    const params = new URLSearchParams({
+      search_terms: trimmed,
       action: 'process',
       json: '1',
-      page_size: String(Math.min(limit * 3, 50)),
+      page_size: fetchSize,
       sort_by: 'unique_scans_n',
-      // Only fetch the fields we actually use — cuts response size dramatically
-      fields: [
-        'code', 'product_name', 'product_name_en', 'brands',
-        'ecoscore_grade', 'ecoscore_score', 'ecoscore_data',
-        'nutriscore_grade', 'nutriscore_score', 'nova_group',
-        'nutriments', 'labels_tags', 'labels', 'categories_tags', 'categories',
-        'origins', 'ingredients_text', 'ingredients_text_en',
-        'image_front_url', 'image_url', 'countries_tags',
-      ].join(','),
+      fields: SEARCH_FIELDS,
     });
 
     const response = await fetch(`${OFF_API_BASE}/cgi/search.pl?${params}`);

@@ -2,6 +2,8 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Camera, Upload, Search, Loader2, X, ScanLine, Image as ImageIcon, Plus, Leaf, ArrowLeft, MoreHorizontal, Zap, Database } from "lucide-react";
 import { EnvironmentalImpactCard } from "@/components/EnvironmentalImpactCard";
+import { LaborFlagBanner } from "@/components/LaborFlagBanner";
+import { getBrandFlag } from "@/data/brandFlags";
 import { useToast } from "@/hooks/use-toast";
 import { useProducts } from "@/hooks/useProducts";
 import type { Product } from "@/data/products";
@@ -76,7 +78,7 @@ const filterBestProducts = (results: OpenFoodFactsResult[]): OpenFoodFactsResult
   productsWithScores.sort((a, b) => b.ecoScore - a.ecoScore);
   
   // Take top 3
-  return productsWithScores.slice(0, 3).map(item => item.result);
+  return productsWithScores.slice(0, 1).map(item => item.result);
 };
 
 type OcrWord = {
@@ -1221,22 +1223,19 @@ const Scan = () => {
       // Search OpenFoodFacts by product name - fetch more to filter
       const results = await searchOffProducts(searchQuery, 10);
 
-      // Only keep products with eco-score and breakdown
-      const withEcoScore = results.filter(hasEcoScore);
-      const filteredResults = filterBestProducts(withEcoScore);
-
-      if (filteredResults.length === 0) {
+      if (results.length === 0) {
         toast({
           title: "No Results",
-          description: results.length > 0
-            ? `Found ${results.length} products for "${searchQuery}" but none have Eco-Score data.`
-            : `No products found for "${searchQuery}" on OpenFoodFacts.`,
+          description: `No products found for "${searchQuery}" on OpenFoodFacts.`,
           variant: "destructive",
         });
       } else {
+        // Prefer products with eco-score, but fall back to any result
+        const withEcoScore = results.filter(hasEcoScore);
+        const filteredResults = filterBestProducts(withEcoScore.length > 0 ? withEcoScore : results);
         toast({
-          title: `${filteredResults.length} Product${filteredResults.length > 1 ? "s" : ""} Found`,
-          description: `Showing products with Eco-Score data for "${searchQuery}".`,
+          title: "Product Found",
+          description: `Showing best match for "${searchQuery}".`,
         });
         setOffSearchResults(filteredResults);
       }
@@ -1469,7 +1468,7 @@ const Scan = () => {
 
             {!cameraActive && (
               <div className="mb-6">
-                <form onSubmit={async (e) => { e.preventDefault(); const q = (barcodeInput || manualSearch).trim(); if (!q) return; if (scanMode === 'bali') { searchProducts(q); } else if (isValidBarcode(q)) { handleBarcodeLookup(q); } else { setOffSearchLoading(true); setOffSearchResults([]); try { const results = await searchOffProducts(q, 10); const filtered = filterBestProducts(results.filter(hasEcoScore)); setOffSearchResults(filtered.length > 0 ? filtered : results.slice(0, 3)); if (filtered.length === 0 && results.length === 0) { toast({ title: "No Results", description: `Nothing found for "${q}" on Open Food Facts.`, variant: "destructive" }); } } catch { toast({ title: "Search Error", description: "Failed to search Open Food Facts.", variant: "destructive" }); } finally { setOffSearchLoading(false); } } }} className="flex gap-2">
+                <form onSubmit={async (e) => { e.preventDefault(); const q = (barcodeInput || manualSearch).trim(); if (!q) return; if (scanMode === 'bali') { searchProducts(q); } else if (isValidBarcode(q)) { handleBarcodeLookup(q); } else { setOffSearchLoading(true); setOffSearchResults([]); try { const results = await searchOffProducts(q, 10); if (results.length === 0) { toast({ title: "No Results", description: `Nothing found for "${q}" on Open Food Facts.`, variant: "destructive" }); } else { const withEcoScore = results.filter(hasEcoScore); const best = filterBestProducts(withEcoScore.length > 0 ? withEcoScore : results); setOffSearchResults(best); } } catch { toast({ title: "Search Error", description: "Failed to search Open Food Facts.", variant: "destructive" }); } finally { setOffSearchLoading(false); } } }} className="flex gap-2">
                   <input
                     placeholder="Barcode or product name…"
                     value={barcodeInput || manualSearch}
@@ -1518,8 +1517,182 @@ const Scan = () => {
 
             {showDetailedEnvironmental && selectedEnvironmentalResult && (
               <div className="px-5 pb-8">
-                <EnvironmentalImpactCard result={selectedEnvironmentalResult} />
-                <button onClick={backToSearchResults} className="w-full mt-4 py-4 rounded-2xl bg-green-900 text-white font-bold text-base">Done</button>
+                {(() => {
+                  const r = selectedEnvironmentalResult;
+                  const agri = r.ecoscoreData?.agribalyse;
+                  const grade = r.ecoscoreGrade?.toLowerCase();
+                  const gradeColor = grade === 'a' ? '#16a34a' : grade === 'b' ? '#84cc16' : grade === 'c' ? '#eab308' : grade === 'd' ? '#f97316' : '#ef4444';
+                  const gradeLabel = grade === 'a' ? 'Excellent' : grade === 'b' ? 'Good' : grade === 'c' ? 'Fair' : grade === 'd' ? 'Poor' : 'Very Poor';
+                  const lifecycleItems = (agri ? [
+                    { label: "Agriculture", value: agri.co2_agriculture, icon: "🌾" },
+                    { label: "Processing", value: agri.co2_processing, icon: "🏭" },
+                    { label: "Packaging", value: agri.co2_packaging, icon: "📦" },
+                    { label: "Transport", value: agri.co2_transportation, icon: "🚚" },
+                    { label: "Distribution", value: agri.co2_distribution, icon: "🏪" },
+                    { label: "Consumption", value: agri.co2_consumption, icon: "🍽️" },
+                  ] as { label: string; value: number | undefined; icon: string }[] : []).filter(item => typeof item.value === 'number' && (item.value as number) > 0);
+                  const maxVal = Math.max(...lifecycleItems.map(i => i.value as number), 0.01);
+                  const brandFlag = getBrandFlag(r.brand);
+                  const adjustments = r.ecoscoreData?.adjustments;
+                  const packaging = adjustments?.packaging;
+                  const threatened = adjustments?.threatened_species;
+                  return (
+                    <>
+                      {/* Product header */}
+                      <div className="flex items-start gap-3 pt-4 mb-5">
+                        {r.imageUrl && <img src={r.imageUrl} alt="" className="w-16 h-16 rounded-2xl object-cover flex-shrink-0 border border-green-100" />}
+                        <div className="flex-1">
+                          <h2 className="text-xl font-black text-green-950 leading-tight">{r.productName || 'Unknown Product'}</h2>
+                          {r.brand && <p className="text-sm text-gray-500 font-semibold mt-0.5">{r.brand}</p>}
+                        </div>
+                      </div>
+
+                      {/* Score tiles */}
+                      <div className="grid grid-cols-2 gap-3 mb-4">
+                        {grade && (
+                          <div className="bg-green-50/60 rounded-2xl p-4">
+                            <div className="flex items-center gap-1.5 mb-1"><span className="text-lg">🌍</span><span className="text-xs font-semibold text-gray-500">Eco Score</span></div>
+                            <span className="text-3xl font-black uppercase" style={{ color: gradeColor }}>{grade}</span>
+                            <p className="text-xs text-gray-500 mt-0.5">{gradeLabel}</p>
+                          </div>
+                        )}
+                        {r.nutriscoreGrade && (
+                          <div className="bg-green-50/60 rounded-2xl p-4">
+                            <div className="flex items-center gap-1.5 mb-1"><span className="text-lg">🥗</span><span className="text-xs font-semibold text-gray-500">Nutri Score</span></div>
+                            <span className="text-3xl font-black text-green-950 uppercase">{r.nutriscoreGrade}</span>
+                          </div>
+                        )}
+                        {r.carbonFootprint100g != null && (
+                          <div className="bg-green-50/60 rounded-2xl p-4">
+                            <div className="flex items-center gap-1.5 mb-1"><span className="text-lg">🌿</span><span className="text-xs font-semibold text-gray-500">CO₂/100g</span></div>
+                            <span className="text-2xl font-black text-green-950">{r.carbonFootprint100g.toFixed(1)}g</span>
+                          </div>
+                        )}
+                        {agri?.co2_total != null && (
+                          <div className="bg-green-50/60 rounded-2xl p-4">
+                            <div className="flex items-center gap-1.5 mb-1"><span className="text-lg">♻️</span><span className="text-xs font-semibold text-gray-500">Total CO₂/kg</span></div>
+                            <span className="text-2xl font-black text-green-950">{agri.co2_total.toFixed(1)}</span>
+                            <p className="text-xs text-gray-500 mt-0.5">kg CO₂eq</p>
+                          </div>
+                        )}
+                        {r.novaGroup != null && (
+                          <div className="bg-green-50/60 rounded-2xl p-4">
+                            <div className="flex items-center gap-1.5 mb-1"><span className="text-lg">🔬</span><span className="text-xs font-semibold text-gray-500">NOVA Group</span></div>
+                            <span className="text-3xl font-black text-green-950">{r.novaGroup}</span>
+                            <p className="text-xs text-gray-500 mt-0.5">{r.novaGroup === 1 ? 'Unprocessed' : r.novaGroup === 2 ? 'Minimally processed' : r.novaGroup === 3 ? 'Processed' : 'Ultra-processed'}</p>
+                          </div>
+                        )}
+                        {r.ecoscoreScore != null && (
+                          <div className="bg-green-50/60 rounded-2xl p-4">
+                            <div className="flex items-center gap-1.5 mb-1"><span className="text-lg">📊</span><span className="text-xs font-semibold text-gray-500">Eco Score Pts</span></div>
+                            <span className="text-3xl font-black text-green-950">{r.ecoscoreScore}</span>
+                            <p className="text-xs text-gray-500 mt-0.5">out of 100</p>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Eco score progress */}
+                      {grade && (
+                        <div className="bg-green-50/60 rounded-2xl p-4 mb-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2"><span className="text-lg">💚</span><span className="text-sm font-bold text-green-950">Environmental Impact</span></div>
+                            <span className="text-sm font-black uppercase" style={{ color: gradeColor }}>{grade} · {gradeLabel}</span>
+                          </div>
+                          <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                            <div className="h-full rounded-full transition-all duration-700" style={{ width: grade === 'a' ? '90%' : grade === 'b' ? '70%' : grade === 'c' ? '50%' : grade === 'd' ? '30%' : '10%', background: gradeColor }} />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* CO2 lifecycle breakdown */}
+                      {lifecycleItems.length > 0 && (
+                        <div className="bg-green-50/60 rounded-2xl p-4 mb-4">
+                          <div className="flex items-center gap-2 mb-3"><span className="text-lg">🏭</span><span className="text-sm font-bold text-green-950">CO₂ Lifecycle Breakdown</span></div>
+                          <div className="space-y-2.5">
+                            {lifecycleItems.map(item => (
+                              <div key={item.label} className="flex items-center gap-3">
+                                <span className="text-sm w-5">{item.icon}</span>
+                                <span className="text-xs font-semibold text-gray-500 w-20">{item.label}</span>
+                                <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                  <div className="h-full rounded-full" style={{ width: `${((item.value as number) / maxVal) * 100}%`, background: '#16a34a' }} />
+                                </div>
+                                <span className="text-xs font-black text-green-950 w-10 text-right">{(item.value as number).toFixed(2)}</span>
+                              </div>
+                            ))}
+                          </div>
+                          {agri?.co2_total != null && (
+                            <p className="text-xs text-gray-400 mt-3 text-right">Total: {agri.co2_total.toFixed(2)} kg CO₂eq/kg</p>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Labor flag */}
+                      {brandFlag && (
+                        <div className="mb-4">
+                          <LaborFlagBanner flag={brandFlag} brandName={r.brand} />
+                        </div>
+                      )}
+
+                      {/* Threatened species */}
+                      {threatened && typeof threatened.value === 'number' && threatened.value < 0 && (
+                        <div className="bg-red-50 rounded-2xl p-4 mb-4 border border-red-200">
+                          <div className="flex items-center gap-2 mb-2"><span className="text-lg">⚠️</span><span className="text-sm font-bold text-red-800">Threatened Species Risk</span></div>
+                          <p className="text-sm text-red-700">Contains ingredients that impact threatened species.</p>
+                          {threatened.ingredient && <p className="text-xs text-red-600 mt-1 font-semibold">{threatened.ingredient}</p>}
+                        </div>
+                      )}
+
+                      {/* Packaging */}
+                      {packaging && packaging.packagings && packaging.packagings.length > 0 && (
+                        <div className="bg-green-50/60 rounded-2xl p-4 mb-4">
+                          <div className="flex items-center gap-2 mb-3"><span className="text-lg">📦</span><span className="text-sm font-bold text-green-950">Packaging</span></div>
+                          <div className="space-y-2">
+                            {packaging.packagings.map((pkg, i) => (
+                              <div key={i} className="flex items-center justify-between py-1.5 border-b border-green-100 last:border-0">
+                                <span className="text-xs text-gray-600 capitalize">{pkg.shape || 'Package'}{pkg.weight_measured ? ` · ${pkg.weight_measured}g` : ''}</span>
+                                <span className="text-xs font-bold text-green-950 capitalize">{pkg.material?.replace(/^en:/, '').replace(/-/g, ' ') || 'Unknown'}</span>
+                              </div>
+                            ))}
+                          </div>
+                          {typeof packaging.value === 'number' && (
+                            <p className="text-xs text-gray-500 mt-2">{packaging.value >= 10 ? '✅ Very low packaging impact' : packaging.value >= 5 ? '🟡 Low packaging impact' : packaging.value >= 0 ? '🟠 Medium packaging impact' : '🔴 High packaging impact'}</p>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Better alternatives */}
+                      {offAlternativeLoading && (
+                        <div className="flex items-center gap-3 py-3 mb-2">
+                          <Loader2 className="w-4 h-4 animate-spin text-green-600" />
+                          <span className="text-sm text-gray-500">Finding better alternatives…</span>
+                        </div>
+                      )}
+                      {offAlternatives.length > 0 && !offAlternativeLoading && (
+                        <div className="bg-green-50/60 rounded-2xl p-4 mb-4">
+                          <div className="flex items-center gap-2 mb-3"><span className="text-xl">🌱</span><span className="text-sm font-bold text-green-950">Better Alternatives</span></div>
+                          <div className="space-y-3">
+                            {offAlternatives.map((alt, i) => (
+                              <button key={`${alt.barcode}-alt-${i}`} onClick={() => viewDetailedEnvironmental(alt)} className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/70 border border-green-200/40 text-left active:scale-[0.98] transition-transform">
+                                {alt.imageUrl && <img src={alt.imageUrl} alt="" className="w-12 h-12 rounded-xl object-cover flex-shrink-0" />}
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-black text-green-950 truncate">{alt.productName || 'Unknown Product'}</p>
+                                  {alt.brand && <p className="text-xs text-gray-500">{alt.brand}</p>}
+                                  <div className="flex items-center gap-2 mt-0.5">
+                                    {alt.ecoscoreGrade && <span className="text-xs font-bold text-green-700 uppercase">Eco: {alt.ecoscoreGrade}</span>}
+                                    {alt.ecoscoreData?.agribalyse?.co2_total != null && <span className="text-xs text-gray-500">{alt.ecoscoreData.agribalyse.co2_total.toFixed(1)} kg CO₂/kg</span>}
+                                    {alt.carbonFootprint100g != null && !alt.ecoscoreData?.agribalyse?.co2_total && <span className="text-xs text-gray-500">{alt.carbonFootprint100g.toFixed(1)}g CO₂/100g</span>}
+                                  </div>
+                                </div>
+                                <span className="text-sm text-green-700 font-bold flex-shrink-0">→</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
+                <button onClick={backToSearchResults} className="w-full mt-2 py-4 rounded-2xl bg-green-900 text-white font-bold text-base">Done</button>
               </div>
             )}
 
@@ -1591,7 +1764,7 @@ const Scan = () => {
 
             {!showDetailedEnvironmental && searchResults.length === 0 && offSearchResults.length > 0 && (
               <div className="px-5 pb-6">
-                {offSearchResults.slice(0, 2).map((result, i) => (
+                {offSearchResults.slice(0, 1).map((result, i) => (
                   <div key={`${result.barcode}-${i}`} className="pt-4">
                     <div className="flex items-start gap-3 mb-5">
                       <div className="flex-1">
@@ -1631,6 +1804,33 @@ const Scan = () => {
                         </div>
                         <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
                           <div className="h-full rounded-full" style={{ width: result.ecoscoreGrade === 'a' ? '90%' : result.ecoscoreGrade === 'b' ? '70%' : result.ecoscoreGrade === 'c' ? '50%' : result.ecoscoreGrade === 'd' ? '30%' : '10%', background: result.ecoscoreGrade === 'a' ? '#16a34a' : result.ecoscoreGrade === 'b' ? '#84cc16' : result.ecoscoreGrade === 'c' ? '#eab308' : '#ef4444' }} />
+                        </div>
+                      </div>
+                    )}
+                    {offAlternativeLoading && (
+                      <div className="flex items-center gap-2 mb-3">
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-green-600" />
+                        <span className="text-xs text-gray-500">Finding better alternatives…</span>
+                      </div>
+                    )}
+                    {offAlternatives.length > 0 && !offAlternativeLoading && (
+                      <div className="bg-green-50/60 rounded-2xl p-4 mb-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-base">🌱</span>
+                          <span className="text-xs font-bold text-green-950">Better Alternatives</span>
+                          <span className="ml-auto text-xs font-semibold text-green-700">{offAlternatives.length} found</span>
+                        </div>
+                        <div className="space-y-2">
+                          {offAlternatives.slice(0, 2).map((alt, altIdx) => (
+                            <button key={`preview-alt-${altIdx}`} onClick={() => viewDetailedEnvironmental(alt)} className="w-full flex items-center gap-2 p-2 rounded-xl bg-white/60 text-left">
+                              {alt.imageUrl && <img src={alt.imageUrl} alt="" className="w-9 h-9 rounded-lg object-cover flex-shrink-0" />}
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-black text-green-950 truncate">{alt.productName || 'Product'}</p>
+                                {alt.ecoscoreGrade && <span className="text-xs font-bold text-green-700 uppercase">Eco: {alt.ecoscoreGrade}</span>}
+                              </div>
+                              <span className="text-xs text-green-700 font-bold">→</span>
+                            </button>
+                          ))}
                         </div>
                       </div>
                     )}
