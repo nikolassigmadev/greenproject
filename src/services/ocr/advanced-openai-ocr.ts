@@ -129,15 +129,16 @@ export const advancedProductOCR = async (imageDataUrl: string): Promise<Advanced
               type: 'image_url',
               image_url: {
                 url: `data:image/jpeg;base64,${compressedBase64}`,
-                detail: 'low',
               },
             },
             {
               type: 'text',
-              text: `Product image. Reply in this exact format only:
-Product: [name]
-Brand: [brand]
-Barcode: [number or none]`,
+              text: `What product is shown? Reply in exactly this format:
+Product: <product name>
+Brand: <brand name>
+Barcode: <barcode digits, or none>
+
+Only use text visible on the packaging. Do not guess.`,
             },
           ],
         },
@@ -152,8 +153,16 @@ Barcode: [number or none]`,
     const brandMatch = rawResponse.match(/Brand:\s*(.+)/i);
     const barcodeMatch = rawResponse.match(/Barcode:\s*(.+)/i);
 
-    const productName = productMatch ? productMatch[1].trim() : null;
-    const brandName = brandMatch ? brandMatch[1].trim() : null;
+    const sanitize = (v: string | null) => {
+      if (!v) return null;
+      const t = v.trim();
+      // Reject placeholder/unknown values the model sometimes returns
+      if (/^\[.*\]$|^<.*>$|^unknown|^n\/a$|^none$|^not visible$/i.test(t)) return null;
+      if (t.length < 2) return null;
+      return t;
+    };
+    const productName = sanitize(productMatch ? productMatch[1] : null);
+    const brandName = sanitize(brandMatch ? brandMatch[1] : null);
     const extractedBarcode = barcodeMatch ? barcodeMatch[1].trim() : null;
     const barcode = extractedBarcode && extractedBarcode.toLowerCase() !== 'none' && /^\d{8,14}$/.test(extractedBarcode.replace(/\s/g, ''))
       ? extractedBarcode.replace(/\s/g, '')

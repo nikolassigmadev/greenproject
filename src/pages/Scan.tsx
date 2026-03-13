@@ -64,21 +64,14 @@ const calculateEcoScore = (result: OpenFoodFactsResult): number => {
   return score;
 };
 
-// Function to filter and select best products
+// Sort by eco-data completeness and return top 3 so users can pick the right one.
 const filterBestProducts = (results: OpenFoodFactsResult[]): OpenFoodFactsResult[] => {
   if (results.length <= 3) return results;
-  
-  // Calculate eco scores for all products
-  const productsWithScores = results.map(result => ({
-    result,
-    ecoScore: calculateEcoScore(result)
-  }));
-  
-  // Sort by eco score (descending) - highest score first
-  productsWithScores.sort((a, b) => b.ecoScore - a.ecoScore);
-  
-  // Take top 3
-  return productsWithScores.slice(0, 1).map(item => item.result);
+  return results
+    .map(r => ({ r, s: calculateEcoScore(r) }))
+    .sort((a, b) => b.s - a.s)
+    .slice(0, 3)
+    .map(x => x.r);
 };
 
 type OcrWord = {
@@ -728,8 +721,9 @@ const Scan = () => {
         errorMessage = "Camera constraints not compatible";
         suggestion = "Your device may not support these camera settings.";
       } else if (message.includes('does not support')) {
-        errorMessage = "Browser not supported";
-        suggestion = "Use Chrome, Firefox, Safari, or Edge.";
+        // Browser doesn't support camera — fail silently, image upload still works
+        console.log('Camera not supported in this browser, image upload available.');
+        return;
       }
 
       toast({
@@ -1170,16 +1164,26 @@ const Scan = () => {
       // Use the same GPT-4o OCR to extract product name
       const advancedResult = await advancedProductOCR(imageData);
 
+      const cleanOcr = (v: string | null | undefined) => {
+        if (!v) return null;
+        const t = v.trim();
+        if (/^\[.*\]$|^<.*>$|^unknown|^n\/a$|^none$/i.test(t)) return null;
+        if (t.length < 2) return null;
+        return t;
+      };
+
       let searchQuery = "";
       if (advancedResult.success) {
-        if (advancedResult.productName && advancedResult.brandName) {
-          searchQuery = `${advancedResult.brandName} ${advancedResult.productName}`;
-        } else if (advancedResult.productName) {
-          searchQuery = advancedResult.productName;
-        } else if (advancedResult.brandName) {
-          searchQuery = advancedResult.brandName;
-        } else {
-          searchQuery = advancedResult.fullText;
+        const name = cleanOcr(advancedResult.productName);
+        const brand = cleanOcr(advancedResult.brandName);
+        if (brand && name) {
+          searchQuery = `${brand} ${name}`;
+        } else if (name) {
+          searchQuery = name;
+        } else if (brand) {
+          searchQuery = brand;
+        } else if (cleanOcr(advancedResult.fullText)) {
+          searchQuery = cleanOcr(advancedResult.fullText)!;
         }
 
         // If barcode was found, also do a direct barcode lookup
@@ -1352,8 +1356,8 @@ const Scan = () => {
     <div className="fixed inset-0 bg-black overflow-hidden">
       {/* Hidden elements */}
       <canvas ref={canvasRef} className="hidden" />
-      <input ref={fileInputRef} type="file" accept="image/*" capture="environment" onChange={handleFileUpload} className="hidden" />
-      <input ref={offFileInputRef} type="file" accept="image/*" capture="environment" onChange={handleOffFileUpload} className="hidden" />
+      <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
+      <input ref={offFileInputRef} type="file" accept="image/*" onChange={handleOffFileUpload} className="hidden" />
 
       {/* === BACKGROUND: Camera or uploaded image === */}
       <div className="absolute inset-0">
@@ -1775,7 +1779,7 @@ const Scan = () => {
 
             {!showDetailedEnvironmental && searchResults.length === 0 && offSearchResults.length > 0 && (
               <div className="px-5 pb-6">
-                {offSearchResults.slice(0, 1).map((result, i) => (
+                {offSearchResults.slice(0, 3).map((result, i) => (
                   <div key={`${result.barcode}-${i}`} className="pt-4">
                     <div className="flex items-start gap-3 mb-5">
                       <div className="flex-1">
