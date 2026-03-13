@@ -14,7 +14,7 @@ export function ProductCard({ product }: ProductCardProps) {
 
   return (
     <Link to={`/product/${product.id.replace('#', '')}`}>
-      <div className="group bg-white rounded-3xl border border-gray-100 overflow-hidden hover:border-gray-300 hover:shadow-xl transition-all duration-300">
+      <div className="group bg-white rounded-3xl border border-green-100 overflow-hidden hover:border-green-300 hover:shadow-xl transition-all duration-300">
         {/* Image */}
         <div className="relative h-44 bg-gray-50 overflow-hidden">
           {product.imageUrl ? (
@@ -37,7 +37,7 @@ export function ProductCard({ product }: ProductCardProps) {
             <span className={`font-black text-sm ${scoreColor}`}>{score}</span>
           </div>
           {score >= 90 && (
-            <div className="absolute top-3 left-3 bg-black rounded-xl px-2.5 py-1">
+            <div className="absolute top-3 left-3 bg-green-900 rounded-xl px-2.5 py-1">
               <span className="font-black text-white text-xs">Top Rated</span>
             </div>
           )}
@@ -46,7 +46,7 @@ export function ProductCard({ product }: ProductCardProps) {
         {/* Content */}
         <div className="p-4">
           <p className="text-xs text-gray-400 font-semibold uppercase tracking-wide mb-1">{product.category}</p>
-          <h3 className="font-black text-black text-base leading-tight line-clamp-1 mb-0.5 group-hover:text-green-700 transition-colors">{product.name}</h3>
+          <h3 className="font-black text-green-950 text-base leading-tight line-clamp-1 mb-0.5 group-hover:text-green-700 transition-colors">{product.name}</h3>
           <p className="text-sm text-gray-500 font-semibold mb-3">{product.brand}</p>
 
           <div className="flex items-center gap-2 flex-wrap">

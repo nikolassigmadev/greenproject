@@ -57,14 +57,14 @@ const Products = () => {
   }, [products, search, selectedCategory, sortBy, minScore]);
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col">
       <Header />
 
       <main className="flex-1">
         {/* Page header */}
-        <div className="border-b border-gray-100 py-8">
+        <div className="border-b border-border py-8">
           <div className="max-w-screen-xl mx-auto px-4 sm:px-6">
-            <h1 className="text-3xl sm:text-4xl font-black text-black tracking-tight mb-1">Products</h1>
+            <h1 className="text-3xl sm:text-4xl font-black text-green-950 tracking-tight mb-1">Products</h1>
             <p className="text-gray-500 font-medium">{products.length} products rated for ethics & sustainability</p>
           </div>
         </div>
@@ -78,7 +78,7 @@ const Products = () => {
                 placeholder="Search products, brands, or codes…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full h-12 rounded-2xl border border-gray-200 bg-gray-50 pl-11 pr-4 text-sm font-medium text-black placeholder:text-gray-400 focus:outline-none focus:border-black transition-colors"
+                className="w-full h-12 rounded-2xl border border-green-200 bg-green-50/50 pl-11 pr-4 text-sm font-medium text-green-950 placeholder:text-gray-400 focus:outline-none focus:border-green-700 transition-colors"
               />
             </div>
             <div className="flex items-center gap-2">
@@ -86,7 +86,7 @@ const Products = () => {
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as 'score' | 'name' | 'carbon')}
-                className="h-12 rounded-2xl border border-gray-200 bg-gray-50 px-4 text-sm font-semibold text-black focus:outline-none focus:border-black transition-colors"
+                className="h-12 rounded-2xl border border-green-200 bg-green-50/50 px-4 text-sm font-semibold text-green-950 focus:outline-none focus:border-green-700 transition-colors"
               >
                 <option value="score">Highest Score</option>
                 <option value="name">Name A–Z</option>
@@ -104,8 +104,8 @@ const Products = () => {
                 className={cn(
                   "flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold transition-all duration-200",
                   selectedCategory === cat
-                    ? "bg-black text-white"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    ? "bg-green-900 text-white"
+                    : "bg-green-100/60 text-green-800 hover:bg-green-100"
                 )}
               >
                 {cat}
@@ -128,7 +128,7 @@ const Products = () => {
           ) : (
             <div className="text-center py-20">
               <p className="text-5xl mb-4">🔍</p>
-              <p className="font-black text-xl text-black mb-2">No products found</p>
+              <p className="font-black text-xl text-green-950 mb-2">No products found</p>
               <p className="text-gray-500 font-medium">Try adjusting your search or filters</p>
             </div>
           )}

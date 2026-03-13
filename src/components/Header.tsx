@@ -15,13 +15,13 @@ export function Header() {
   return (
     <>
       {/* Top bar */}
-      <header className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-sm border-b border-gray-100">
+      <header className="sticky top-0 z-50 w-full bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="max-w-screen-xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-black rounded-xl flex items-center justify-center">
+            <div className="w-8 h-8 bg-green-900 rounded-xl flex items-center justify-center">
               <Scan className="w-4 h-4 text-white" />
             </div>
-            <span className="font-black text-lg tracking-tight text-black">
+            <span className="font-black text-lg tracking-tight text-green-950">
               Scan<span className="text-green-600">2</span>Source
             </span>
           </Link>
@@ -37,8 +37,8 @@ export function Header() {
                   className={cn(
                     "flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200",
                     isActive
-                      ? "bg-black text-white"
-                      : "text-gray-500 hover:text-black hover:bg-gray-100"
+                      ? "bg-green-900 text-white"
+                      : "text-gray-500 hover:text-green-900 hover:bg-green-50"
                   )}
                 >
                   <item.icon className="w-3.5 h-3.5" />
@@ -51,7 +51,7 @@ export function Header() {
       </header>
 
       {/* Bottom nav (mobile) */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-100 pb-safe">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border pb-safe">
         <div className="flex items-center justify-around h-16 px-2">
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
@@ -64,11 +64,11 @@ export function Header() {
               >
                 <div className={cn(
                   "w-10 h-10 rounded-2xl flex items-center justify-center transition-all",
-                  isActive ? "bg-black" : "bg-transparent"
+                  isActive ? "bg-green-900" : "bg-transparent"
                 )}>
                   <Icon className={cn("w-5 h-5", isActive ? "text-white" : "text-gray-400")} />
                 </div>
-                <span className={cn("text-[10px] font-semibold", isActive ? "text-black" : "text-gray-400")}>
+                <span className={cn("text-[10px] font-semibold", isActive ? "text-green-900" : "text-gray-400")}>
                   {item.label}
                 </span>
               </Link>

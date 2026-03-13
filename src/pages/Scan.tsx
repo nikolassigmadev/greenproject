@@ -1305,7 +1305,7 @@ const Scan = () => {
       }
 
       console.log('Photo captured:', imageData.length, 'bytes');
-      processImage(imageData);
+      processImageForOFF(imageData);
       stopCamera();
 
     } catch (error) {
@@ -1316,7 +1316,7 @@ const Scan = () => {
         variant: "destructive",
       });
     }
-  }, [processImage, stopCamera, toast]);
+  }, [processImageForOFF, stopCamera, toast]);
 
   // Handle file upload
   const handleFileUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
@@ -1385,14 +1385,14 @@ const Scan = () => {
         <>
           <div className="absolute top-[28%] left-6 z-10">
             <div className="bg-white rounded-2xl px-4 py-2 shadow-2xl">
-              <p className="font-black text-black text-xs uppercase tracking-wide">{searchResults[0]?.brand || 'Brand'}</p>
-              <p className="font-black text-2xl text-black leading-none">{calculateScore(searchResults[0])}</p>
+              <p className="font-black text-green-950 text-xs uppercase tracking-wide">{searchResults[0]?.brand || 'Brand'}</p>
+              <p className="font-black text-2xl text-green-950 leading-none">{calculateScore(searchResults[0])}</p>
             </div>
           </div>
           {searchResults.length > 1 && (
             <div className="absolute top-[40%] right-6 z-10">
               <div className="bg-white rounded-2xl px-4 py-2 shadow-2xl">
-                <p className="font-black text-black text-xs uppercase tracking-wide">{searchResults[1]?.brand || 'Alt'}</p>
+                <p className="font-black text-green-950 text-xs uppercase tracking-wide">{searchResults[1]?.brand || 'Alt'}</p>
                 <p className="font-black text-2xl text-gray-500 leading-none">{calculateScore(searchResults[1])}</p>
               </div>
             </div>
@@ -1453,7 +1453,7 @@ const Scan = () => {
 
             {!cameraActive && (
               <div className="mb-6">
-                <form onSubmit={(e) => { e.preventDefault(); if (barcodeInput.trim()) handleBarcodeLookup(barcodeInput); else if (manualSearch.trim()) searchProducts(manualSearch); }} className="flex gap-2">
+                <form onSubmit={async (e) => { e.preventDefault(); const q = (barcodeInput || manualSearch).trim(); if (!q) return; if (isValidBarcode(q)) { handleBarcodeLookup(q); } else { setOffSearchLoading(true); setOffSearchResults([]); try { const results = await searchOffProducts(q, 10); const filtered = filterBestProducts(results.filter(hasEcoScore)); setOffSearchResults(filtered.length > 0 ? filtered : results.slice(0, 3)); if (filtered.length === 0 && results.length === 0) { toast({ title: "No Results", description: `Nothing found for "${q}" on Open Food Facts.`, variant: "destructive" }); } } catch { toast({ title: "Search Error", description: "Failed to search Open Food Facts.", variant: "destructive" }); } finally { setOffSearchLoading(false); } } }} className="flex gap-2">
                   <input
                     placeholder="Barcode or product name…"
                     value={barcodeInput || manualSearch}
@@ -1488,22 +1488,22 @@ const Scan = () => {
       {/* === RESULTS BOTTOM SHEET === */}
       {(searchResults.length > 0 || offSearchResults.length > 0 || showDetailedEnvironmental) && !isProcessing && (
         <div className="absolute inset-x-0 bottom-0 z-30 animate-slide-up" style={{ maxHeight: '82vh', overflowY: 'auto' }}>
-          <div className="bg-white rounded-t-3xl shadow-2xl">
+          <div className="bg-background rounded-t-3xl shadow-2xl">
             <div className="flex justify-center pt-3 pb-1">
-              <div className="w-10 h-1 bg-gray-200 rounded-full" />
+              <div className="w-10 h-1 bg-green-200 rounded-full" />
             </div>
-            <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
-              <button onClick={() => { setSearchResults([]); setOffSearchResults([]); setShowDetailedEnvironmental(false); setSelectedEnvironmentalResult(null); setUploadedImage(null); setOffSearchImage(null); setExtractedText(''); }} className="flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-black transition-colors">
+            <div className="flex items-center justify-between px-5 py-3 border-b border-border">
+              <button onClick={() => { setSearchResults([]); setOffSearchResults([]); setShowDetailedEnvironmental(false); setSelectedEnvironmentalResult(null); setUploadedImage(null); setOffSearchImage(null); setExtractedText(''); }} className="flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-green-900 transition-colors">
                 <ArrowLeft className="w-4 h-4" />Back
               </button>
-              <span className="font-black text-base text-black">{showDetailedEnvironmental ? 'Environmental Impact' : 'Nutrition'}</span>
+              <span className="font-black text-base text-green-950">{showDetailedEnvironmental ? 'Environmental Impact' : 'Nutrition'}</span>
               <div className="w-14" />
             </div>
 
             {showDetailedEnvironmental && selectedEnvironmentalResult && (
               <div className="px-5 pb-8">
                 <EnvironmentalImpactCard result={selectedEnvironmentalResult} />
-                <button onClick={backToSearchResults} className="w-full mt-4 py-4 rounded-2xl bg-black text-white font-bold text-base">Done</button>
+                <button onClick={backToSearchResults} className="w-full mt-4 py-4 rounded-2xl bg-green-900 text-white font-bold text-base">Done</button>
               </div>
             )}
 
@@ -1516,37 +1516,37 @@ const Scan = () => {
                 <div key={product.id} className="px-5 pb-2">
                   <div className="flex items-start justify-between gap-3 mt-4 mb-5">
                     <div className="flex-1">
-                      <span className="inline-flex mb-2 px-3 py-1 rounded-full bg-black text-white text-xs font-bold">{product.category}</span>
-                      <h2 className="text-xl font-black text-black leading-tight">{product.name}</h2>
+                      <span className="inline-flex mb-2 px-3 py-1 rounded-full bg-green-900 text-white text-xs font-bold">{product.category}</span>
+                      <h2 className="text-xl font-black text-green-950 leading-tight">{product.name}</h2>
                       <p className="text-sm text-gray-500 font-semibold mt-0.5">{product.brand}</p>
                     </div>
                     <div className="flex items-center gap-2 bg-gray-100 rounded-full px-3 py-1.5 flex-shrink-0 mt-6">
                       <span className="text-gray-400 font-bold text-lg leading-none select-none">−</span>
-                      <span className="font-black text-black text-sm px-1">1</span>
+                      <span className="font-black text-green-950 text-sm px-1">1</span>
                       <span className="text-gray-400 font-bold text-lg leading-none select-none">+</span>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3 mb-4">
-                    <div className="bg-gray-50 rounded-2xl p-4">
+                    <div className="bg-green-50/60 rounded-2xl p-4">
                       <div className="flex items-center gap-1.5 mb-1"><span className="text-lg">🌱</span><span className="text-xs font-semibold text-gray-500">Ethics Score</span></div>
                       <span className={`text-3xl font-black ${scoreColor}`}>{score}</span>
                     </div>
-                    <div className="bg-gray-50 rounded-2xl p-4">
+                    <div className="bg-green-50/60 rounded-2xl p-4">
                       <div className="flex items-center gap-1.5 mb-1"><span className="text-lg">⚠️</span><span className="text-xs font-semibold text-gray-500">Labor Risk</span></div>
-                      <span className="text-xl font-black text-black">{laborEmoji} <span className="capitalize">{product.laborRisk}</span></span>
+                      <span className="text-xl font-black text-green-950">{laborEmoji} <span className="capitalize">{product.laborRisk}</span></span>
                     </div>
-                    <div className="bg-gray-50 rounded-2xl p-4">
+                    <div className="bg-green-50/60 rounded-2xl p-4">
                       <div className="flex items-center gap-1.5 mb-1"><span className="text-lg">🌿</span><span className="text-xs font-semibold text-gray-500">Carbon kg CO₂</span></div>
-                      <span className="text-3xl font-black text-black">{product.carbonFootprint}</span>
+                      <span className="text-3xl font-black text-green-950">{product.carbonFootprint}</span>
                     </div>
-                    <div className="bg-gray-50 rounded-2xl p-4">
+                    <div className="bg-green-50/60 rounded-2xl p-4">
                       <div className="flex items-center gap-1.5 mb-1"><span className="text-lg">✅</span><span className="text-xs font-semibold text-gray-500">Certifications</span></div>
-                      <span className="text-3xl font-black text-black">{product.certifications.length}</span>
+                      <span className="text-3xl font-black text-green-950">{product.certifications.length}</span>
                     </div>
                   </div>
-                  <div className="bg-gray-50 rounded-2xl p-4 mb-4">
+                  <div className="bg-green-50/60 rounded-2xl p-4 mb-4">
                     <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2"><span className="text-lg">💚</span><span className="text-sm font-bold text-black">Ethics score</span></div>
+                      <div className="flex items-center gap-2"><span className="text-lg">💚</span><span className="text-sm font-bold text-green-950">Ethics score</span></div>
                       <span className={`text-sm font-black ${scoreColor}`}>{score}/100</span>
                     </div>
                     <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
@@ -1558,16 +1558,16 @@ const Scan = () => {
                       <span className="text-2xl">🌿</span>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-bold text-green-700 uppercase tracking-wide">Greener Alternative</p>
-                        <p className="text-sm font-black text-black truncate">{alt.name}</p>
+                        <p className="text-sm font-black text-green-950 truncate">{alt.name}</p>
                         <p className="text-xs text-gray-500">{alt.brand} · Score: {calculateScore(alt)}</p>
                       </div>
                     </button>
                   )}
                   <div className="space-y-3 pb-6">
-                    <button onClick={() => navigate(`/product/${product.id.replace('#', '')}`)} className="w-full py-4 rounded-2xl border-2 border-gray-200 text-black font-bold text-base flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors">
+                    <button onClick={() => navigate(`/product/${product.id.replace('#', '')}`)} className="w-full py-4 rounded-2xl border-2 border-green-200 text-green-900 font-bold text-base flex items-center justify-center gap-2 hover:bg-green-50 transition-colors">
                       ✨ Fix Results
                     </button>
-                    <button onClick={() => { setSearchResults([]); setOffSearchResults([]); setUploadedImage(null); setExtractedText(''); }} className="w-full py-4 rounded-2xl bg-black text-white font-bold text-base">Done</button>
+                    <button onClick={() => { setSearchResults([]); setOffSearchResults([]); setUploadedImage(null); setExtractedText(''); }} className="w-full py-4 rounded-2xl bg-green-900 text-white font-bold text-base">Done</button>
                   </div>
                 </div>
               );
@@ -1579,38 +1579,38 @@ const Scan = () => {
                   <div key={`${result.barcode}-${i}`} className="pt-4">
                     <div className="flex items-start gap-3 mb-5">
                       <div className="flex-1">
-                        <span className="inline-flex mb-2 px-3 py-1 rounded-full bg-black text-white text-xs font-bold">Food Product</span>
-                        <h2 className="text-xl font-black text-black leading-tight">{result.productName || 'Unknown Product'}</h2>
+                        <span className="inline-flex mb-2 px-3 py-1 rounded-full bg-green-900 text-white text-xs font-bold">Food Product</span>
+                        <h2 className="text-xl font-black text-green-950 leading-tight">{result.productName || 'Unknown Product'}</h2>
                         {result.brand && <p className="text-sm text-gray-500 font-semibold mt-0.5">{result.brand}</p>}
                       </div>
                       {result.imageUrl && <img src={result.imageUrl} alt="" className="w-16 h-16 rounded-xl object-cover flex-shrink-0" />}
                     </div>
                     <div className="grid grid-cols-2 gap-3 mb-4">
-                      <div className="bg-gray-50 rounded-2xl p-4">
+                      <div className="bg-green-50/60 rounded-2xl p-4">
                         <div className="flex items-center gap-1.5 mb-1"><span className="text-lg">🌍</span><span className="text-xs font-semibold text-gray-500">Eco Score</span></div>
-                        <span className="text-3xl font-black text-black uppercase">{result.ecoscoreGrade || '—'}</span>
+                        <span className="text-3xl font-black text-green-950 uppercase">{result.ecoscoreGrade || '—'}</span>
                       </div>
-                      <div className="bg-gray-50 rounded-2xl p-4">
+                      <div className="bg-green-50/60 rounded-2xl p-4">
                         <div className="flex items-center gap-1.5 mb-1"><span className="text-lg">🥗</span><span className="text-xs font-semibold text-gray-500">Nutri Score</span></div>
-                        <span className="text-3xl font-black text-black uppercase">{result.nutriscoreGrade || '—'}</span>
+                        <span className="text-3xl font-black text-green-950 uppercase">{result.nutriscoreGrade || '—'}</span>
                       </div>
                       {result.carbonFootprint100g != null && (
-                        <div className="bg-gray-50 rounded-2xl p-4">
+                        <div className="bg-green-50/60 rounded-2xl p-4">
                           <div className="flex items-center gap-1.5 mb-1"><span className="text-lg">🌿</span><span className="text-xs font-semibold text-gray-500">CO₂/100g</span></div>
-                          <span className="text-2xl font-black text-black">{result.carbonFootprint100g.toFixed(1)}g</span>
+                          <span className="text-2xl font-black text-green-950">{result.carbonFootprint100g.toFixed(1)}g</span>
                         </div>
                       )}
                       {result.novaGroup != null && (
-                        <div className="bg-gray-50 rounded-2xl p-4">
+                        <div className="bg-green-50/60 rounded-2xl p-4">
                           <div className="flex items-center gap-1.5 mb-1"><span className="text-lg">🔬</span><span className="text-xs font-semibold text-gray-500">NOVA Group</span></div>
-                          <span className="text-3xl font-black text-black">{result.novaGroup}</span>
+                          <span className="text-3xl font-black text-green-950">{result.novaGroup}</span>
                         </div>
                       )}
                     </div>
                     {result.ecoscoreGrade && (
-                      <div className="bg-gray-50 rounded-2xl p-4 mb-4">
+                      <div className="bg-green-50/60 rounded-2xl p-4 mb-4">
                         <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2"><span className="text-lg">💚</span><span className="text-sm font-bold text-black">Eco score</span></div>
+                          <div className="flex items-center gap-2"><span className="text-lg">💚</span><span className="text-sm font-bold text-green-950">Eco score</span></div>
                           <span className="text-sm font-black text-green-600 uppercase">{result.ecoscoreGrade}</span>
                         </div>
                         <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
@@ -1619,8 +1619,8 @@ const Scan = () => {
                       </div>
                     )}
                     <div className="space-y-3 pb-2">
-                      <button onClick={() => viewDetailedEnvironmental(result)} className="w-full py-4 rounded-2xl border-2 border-gray-200 text-black font-bold text-base flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors">✨ Fix Results</button>
-                      <button onClick={() => { setOffSearchResults([]); setOffSearchImage(null); setUploadedImage(null); }} className="w-full py-4 rounded-2xl bg-black text-white font-bold text-base">Done</button>
+                      <button onClick={() => viewDetailedEnvironmental(result)} className="w-full py-4 rounded-2xl border-2 border-green-200 text-green-900 font-bold text-base flex items-center justify-center gap-2 hover:bg-green-50 transition-colors">✨ Fix Results</button>
+                      <button onClick={() => { setOffSearchResults([]); setOffSearchImage(null); setUploadedImage(null); }} className="w-full py-4 rounded-2xl bg-green-900 text-white font-bold text-base">Done</button>
                     </div>
                   </div>
                 ))}
