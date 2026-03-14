@@ -1254,7 +1254,7 @@ const Scan = () => {
       }
 
       console.log('Photo captured:', imageData.length, 'bytes');
-      processImage(imageData);
+      processImageForOFF(imageData);
       stopCamera();
 
     } catch (error) {
@@ -1265,7 +1265,7 @@ const Scan = () => {
         variant: "destructive",
       });
     }
-  }, [processImage, stopCamera, toast]);
+  }, [processImageForOFF, stopCamera, toast]);
 
   // Handle file upload
   const handleFileUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
@@ -1275,11 +1275,11 @@ const Scan = () => {
       reader.onload = (e) => {
         const imageData = e.target?.result as string;
         setUploadedImage(imageData);
-        processImage(imageData);
+        processImageForOFF(imageData);
       };
       reader.readAsDataURL(file);
     }
-  }, [processImage]);
+  }, [processImageForOFF]);
 
   // Manual search
   const handleManualSearch = (e: React.FormEvent) => {
