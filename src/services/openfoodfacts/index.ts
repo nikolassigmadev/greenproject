@@ -5,6 +5,7 @@ import type {
   OpenFoodFactsResult,
 } from './types';
 
+import { validateAndCleanBarcode, getAlternativeFormats } from '../../utils/barcodeValidator';
 const OFF_API_BASE = 'https://world.openfoodfacts.org';
 
 // ---------------------------------------------------------------------------
@@ -141,38 +142,88 @@ export const isValidBarcode = (code: string): boolean => {
 };
 
 export const lookupBarcode = async (barcode: string): Promise<OpenFoodFactsResult> => {
-  const cleaned = barcode.replace(/\s+/g, '').trim();
+  // Validate and clean the barcode
+  const validation = validateAndCleanBarcode(barcode);
+  const cleaned = validation.cleaned;
 
-  if (!isValidBarcode(cleaned)) {
-    return emptyResult(cleaned, 'Invalid barcode format. Expected 8-14 digits.');
+  if (!validation.isValid) {
+    console.warn(`❌ Barcode validation failed: "${barcode}" is not a valid format (${validation.format})`);
+    return emptyResult(
+      cleaned,
+      `Invalid barcode format. Got: ${validation.format}. Expected 8-14 digits.`
+    );
   }
 
-  const cacheKey = `barcode:${cleaned}`;
+  console.log(`✅ Barcode validated: "${barcode}" → "${cleaned}" (${validation.format})`);
+
+  // Try primary barcode first
+  const result = await lookupBarcodeInternal(cleaned);
+  if (result.found) {
+    return result;
+  }
+
+  // If primary lookup failed, try alternative formats
+  console.warn(`🔄 Primary barcode lookup failed, trying alternatives...`);
+  const alternatives = getAlternativeFormats(barcode);
+  
+  for (const alt of alternatives) {
+    console.log(`   Trying alternative format: ${alt}`);
+    const altResult = await lookupBarcodeInternal(alt);
+    if (altResult.found) {
+      console.log(`✅ Found product using alternative barcode: ${alt}`);
+      return altResult;
+    }
+  }
+
+  // All attempts failed
+  console.warn(`❌ All barcode lookup attempts failed for: ${barcode}`);
+  return emptyResult(
+    cleaned,
+    `Product not found on OpenFoodFacts. Tried: ${[cleaned, ...alternatives].join(', ')}`
+  );
+};
+
+/**
+ * Internal barcode lookup (single attempt)
+ */
+const lookupBarcodeInternal = async (barcode: string): Promise<OpenFoodFactsResult> => {
+  const cacheKey = `barcode:${barcode}`;
   const cached = cacheGet<OpenFoodFactsResult>(cacheKey);
-  if (cached) return cached;
+  if (cached) {
+    console.log(`📦 Using cached result for barcode: ${barcode}`);
+    return cached;
+  }
 
   try {
-    const response = await fetch(`${OFF_API_BASE}/api/v0/product/${cleaned}.json`);
+    const startTime = Date.now();
+    const response = await fetch(`${OFF_API_BASE}/api/v0/product/${barcode}.json`, {
+      signal: AbortSignal.timeout(5000), // 5 second timeout
+    });
+
+    const duration = Date.now() - startTime;
+    console.log(`   API call took ${duration}ms`);
 
     if (!response.ok) {
+      console.warn(`   HTTP ${response.status}: ${response.statusText}`);
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
 
     const data: OpenFoodFactsResponse = await response.json();
 
     if (data.status !== 1 || !data.product) {
-      return emptyResult(cleaned, data.status_verbose || 'Product not found on OpenFoodFacts');
+      console.warn(`   Status ${data.status}: ${data.status_verbose || 'Product not found'}`);
+      return emptyResult(barcode, data.status_verbose || 'Product not found on OpenFoodFacts');
     }
 
     const result = normalizeProduct(data.product);
     cacheSet(cacheKey, result);
+    
+    console.log(`✅ Product found: ${result.productName} (${result.brand})`);
     return result;
   } catch (error) {
-    console.error('OpenFoodFacts API error:', error);
-    return emptyResult(
-      cleaned,
-      error instanceof Error ? error.message : 'Failed to contact OpenFoodFacts'
-    );
+    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+    console.warn(`   Error: ${errorMsg}`);
+    return emptyResult(barcode, errorMsg);
   }
 };
 
@@ -247,6 +298,99 @@ export interface BrowseResult {
 }
 
 // Search for greener alternatives in the same category with better eco-scores and lower CO2
+
+/**
+ * Search with automatic regional fallback
+ * First tries region-filtered search, then expands globally if needed
+ */
+export const searchProductsWithRegionalFallback = async (
+  query: string,
+  limit: number = 3
+): Promise<{ results: OpenFoodFactsResult[]; expandedRegion: boolean }> => {
+  // First try with region filter
+  const results = await searchProducts(query, limit);
+  
+  if (results.length > 0) {
+    console.log(`✅ Found ${results.length} results within allowed regions`);
+    return { results, expandedRegion: false };
+  }
+
+  // No results in allowed regions - expand to all regions
+  console.warn(`⚠️ No results in allowed regions, expanding search globally...`);
+  
+  // Retry without region filter (search globally)
+  const globalResults = await searchProductsGlobal(query, limit);
+  
+  if (globalResults.length > 0) {
+    console.log(`✅ Found ${globalResults.length} global results after regional expansion`);
+  }
+  
+  return { results: globalResults, expandedRegion: true };
+};
+
+/**
+ * Global product search (no region filtering)
+ */
+const searchProductsGlobal = async (
+  query: string,
+  limit: number = 3
+): Promise<OpenFoodFactsResult[]> => {
+  const trimmed = query.trim();
+  if (!trimmed) return [];
+
+  const cacheKey = `search:global:${trimmed.toLowerCase()}:${limit}`;
+  const cached = cacheGet<OpenFoodFactsResult[]>(cacheKey);
+  if (cached) {
+    console.log(`📦 Using cached global search results`);
+    return cached;
+  }
+
+  try {
+    const params = new URLSearchParams({
+      search_terms: trimmed,
+      search_simple: '1',
+      action: 'process',
+      json: '1',
+      page_size: String(Math.min(limit * 3, 50)),
+      sort_by: 'unique_scans_n',
+      fields: [
+        'code', 'product_name', 'product_name_en', 'brands',
+        'ecoscore_grade', 'ecoscore_score', 'ecoscore_data',
+        'nutriscore_grade', 'nutriscore_score', 'nova_group',
+        'nutriments', 'labels_tags', 'labels', 'categories_tags', 'categories',
+        'origins', 'ingredients_text', 'ingredients_text_en',
+        'image_front_url', 'image_url', 'countries_tags',
+      ].join(','),
+    });
+
+    const response = await fetch(`${OFF_API_BASE}/cgi/search.pl?${params}`);
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data: OpenFoodFactsSearchResponse = await response.json();
+
+    if (!data.products || data.products.length === 0) {
+      console.warn(`   No global results found`);
+      return [];
+    }
+
+    // Return ALL results without region filtering
+    const results = data.products
+      .map(normalizeProduct)
+      .slice(0, limit);
+    
+    console.log(`   Got ${results.length} global results (region filter disabled)`);
+    
+    cacheSet(cacheKey, results);
+    return results;
+  } catch (error) {
+    console.error('OpenFoodFacts global search error:', error);
+    return [];
+  }
+};
+
 export const searchBetterAlternatives = async (
   result: OpenFoodFactsResult,
   limit: number = 3
