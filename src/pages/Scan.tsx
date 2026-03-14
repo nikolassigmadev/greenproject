@@ -422,11 +422,17 @@ const Scan = () => {
   const [offAlternativeLoading, setOffAlternativeLoading] = useState(false);
   const offFileInputRef = useRef<HTMLInputElement>(null);
 
-  // Debug: Check if video element is mounted
+  // Auto-start camera when page loads
   useEffect(() => {
-    console.log('Video ref status:', Boolean(videoRef.current));
-    console.log('Canvas ref status:', Boolean(canvasRef.current));
-  }, [cameraActive, cameraInitializing]);
+    // Small delay to ensure video element is mounted
+    const timer = setTimeout(() => {
+      if (videoRef.current && !cameraActive && !cameraInitializing) {
+        startCamera();
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Search for greener alternatives when OFF results have a poor eco-score
   useEffect(() => {
@@ -1288,115 +1294,186 @@ const Scan = () => {
       <Header />
 
       <main className="flex-1">
-        {/* Hero Section */}
-        <section className="bg-green-900 text-white">
-          <div className="max-w-screen-xl mx-auto px-4 sm:px-6 py-16 sm:py-24">
-            <div className="max-w-2xl">
-              <p className="text-green-300 font-bold text-sm uppercase tracking-widest mb-4">Product Scanner</p>
-              <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black tracking-tighter leading-none mb-6">
-                Discover the<br />
-                <span className="text-green-300">True Story</span><br />
-                Behind Every Purchase
-              </h1>
-              <p className="text-green-200/70 text-lg leading-relaxed mb-10 max-w-lg">
-                Snap a photo or scan a barcode to instantly uncover environmental impact, labor practices, and find more ethical alternatives.
-              </p>
-              <div className="flex flex-wrap gap-3">
-                <button
-                  onClick={startCamera}
-                  className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white text-green-900 font-black text-base hover:bg-green-50 transition-colors"
-                >
-                  <Camera className="w-5 h-5" />
-                  Start Scanning Now
-                </button>
-                <a
-                  href="#lookup"
-                  className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white/10 text-white font-black text-base hover:bg-white/20 transition-colors border border-white/20"
-                >
-                  Or Search by Name
-                  <ArrowRight className="w-4 h-4" />
-                </a>
+        {/* Camera Interface - Full Width */}
+        <section className="bg-black relative">
+          <div className="relative w-full" style={{ minHeight: '60vh', maxHeight: '80vh' }}>
+            {/* Video element */}
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              webkit-playsinline="true"
+              x5-playsinline="true"
+              controls={false}
+              className={`w-full h-full object-cover ${cameraActive ? 'block' : 'hidden'}`}
+              style={{
+                minHeight: '60vh',
+                maxHeight: '80vh',
+                backgroundColor: '#000',
+                WebkitTransform: 'translate3d(0,0,0)',
+                transform: 'translate3d(0,0,0)',
+                WebkitUserSelect: 'none',
+                userSelect: 'none',
+              } as React.CSSProperties}
+              onError={(e) => {
+                console.error('Video element error:', e);
+              }}
+              onLoadedMetadata={() => {
+                console.log('Video metadata loaded:', (videoRef.current as HTMLVideoElement).videoWidth, 'x', (videoRef.current as HTMLVideoElement).videoHeight);
+              }}
+            />
+            <canvas ref={canvasRef} className="hidden" />
+
+            {cameraActive && (
+              <>
+                {/* Scanning overlay */}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="relative">
+                    <div className="w-[min(78vw,26rem)] aspect-square border-2 border-green-400 rounded-2xl" />
+                    <div className="absolute top-2 left-2 w-6 h-6 border-t-2 border-l-2 border-green-400 rounded-tl-lg" />
+                    <div className="absolute top-2 right-2 w-6 h-6 border-t-2 border-r-2 border-green-400 rounded-tr-lg" />
+                    <div className="absolute bottom-2 left-2 w-6 h-6 border-b-2 border-l-2 border-green-400 rounded-bl-lg" />
+                    <div className="absolute bottom-2 right-2 w-6 h-6 border-b-2 border-r-2 border-green-400 rounded-br-lg" />
+                  </div>
+                </div>
+
+                {/* Top bar */}
+                <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/60 to-transparent p-4 sm:p-6">
+                  <div className="flex items-center justify-between max-w-screen-xl mx-auto">
+                    <div>
+                      <p className="text-white font-black text-lg">Scan Product</p>
+                      <p className="text-white/60 text-sm">Point at barcode or product label</p>
+                    </div>
+                    <Button
+                      onClick={stopCamera}
+                      variant="secondary"
+                      size="sm"
+                      className="bg-white/20 hover:bg-white/30 text-white border-0 rounded-full backdrop-blur-sm"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Bottom controls */}
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-6 sm:p-8">
+                  <div className="flex justify-center items-center gap-4">
+                    <Button
+                      onClick={() => offFileInputRef.current?.click()}
+                      variant="secondary"
+                      className="bg-white/20 hover:bg-white/30 text-white border-0 rounded-full w-12 h-12 p-0 backdrop-blur-sm"
+                    >
+                      <Upload className="w-5 h-5" />
+                    </Button>
+                    <Button
+                      onClick={capturePhoto}
+                      size="lg"
+                      className="bg-white hover:bg-green-50 text-green-900 rounded-full w-20 h-20 p-0 shadow-lg ring-4 ring-white/30"
+                    >
+                      <Camera className="w-8 h-8" />
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        stopCamera();
+                        const el = document.getElementById('lookup');
+                        if (el) el.scrollIntoView({ behavior: 'smooth' });
+                      }}
+                      variant="secondary"
+                      className="bg-white/20 hover:bg-white/30 text-white border-0 rounded-full w-12 h-12 p-0 backdrop-blur-sm"
+                    >
+                      <Search className="w-5 h-5" />
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {cameraInitializing && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black" style={{ minHeight: '60vh' }}>
+                <div className="text-center space-y-4 p-8">
+                  <Loader2 className="w-12 h-12 animate-spin text-green-400 mx-auto" />
+                  <div className="space-y-2">
+                    <p className="text-lg font-black text-white">Starting camera...</p>
+                    <p className="text-sm text-white/60">Please allow camera access when prompted</p>
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
+
+            {!cameraActive && !cameraInitializing && (
+              <div className="flex items-center justify-center bg-green-950" style={{ minHeight: '60vh' }}>
+                <div className="text-center space-y-6 p-8 max-w-md">
+                  <div className="w-20 h-20 rounded-full bg-green-900 flex items-center justify-center mx-auto">
+                    <Camera className="w-10 h-10 text-green-300" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-black text-white mb-2">Camera Access Needed</h2>
+                    <p className="text-green-200/70 text-sm leading-relaxed">
+                      Allow camera access to scan product barcodes and labels instantly
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-3">
+                    <Button
+                      onClick={startCamera}
+                      className="bg-white text-green-900 font-black hover:bg-green-50 h-14 rounded-2xl text-base"
+                      disabled={isProcessing}
+                    >
+                      <Camera className="w-5 h-5 mr-2" />
+                      Enable Camera
+                    </Button>
+                    <Button
+                      onClick={() => offFileInputRef.current?.click()}
+                      variant="outline"
+                      className="bg-white/10 text-white border-white/20 font-black hover:bg-white/20 h-12 rounded-2xl"
+                      disabled={isProcessing}
+                    >
+                      <Upload className="w-5 h-5 mr-2" />
+                      Upload Image Instead
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </section>
 
-        {/* Main Content */}
-        <div className="flex-1 py-12 sm:py-16">
+        {/* Hidden file inputs */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={handleFileUpload}
+          className="hidden"
+        />
+
+        {/* Processing State */}
+        {isProcessing && (
+          <div className="bg-green-50 border-b border-green-100">
+            <div className="max-w-screen-xl mx-auto px-4 sm:px-6 py-6 flex items-center justify-center gap-4">
+              <div className="relative">
+                <Loader2 className="w-6 h-6 animate-spin text-green-600" />
+              </div>
+              <p className="text-sm font-semibold text-green-900">
+                {isScanning ? "Reading text from image..." : "Processing image..."}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Results area */}
+        <div className="py-10 sm:py-14">
           <div className="max-w-screen-xl mx-auto px-4 sm:px-6">
 
-          {/* Quick Scanner Section */}
-          <section className="mb-12 sm:mb-16">
-            <div className="mb-8">
-              <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-green-950 mb-3">Scan Your Product</h2>
-              <p className="text-gray-600 font-medium">Choose your preferred scanning method</p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {/* Camera Scan */}
-              <Card className="border border-green-100 hover:border-green-800 hover:shadow-lg transition-all duration-200 cursor-pointer bg-white"
-                onClick={startCamera}>
-                <CardContent className="pt-8">
-                  <div className="flex flex-col items-center text-center gap-4">
-                    <div className="w-16 h-16 rounded-2xl bg-green-100 flex items-center justify-center">
-                      <Camera className="w-8 h-8 text-green-900" />
-                    </div>
-                    <div>
-                      <h3 className="font-black text-green-950 text-lg">Camera Scan</h3>
-                      <p className="text-sm text-gray-500 font-semibold mt-1">Point at barcode or product</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Image Upload */}
-              <Card className="border border-green-100 hover:border-green-800 hover:shadow-lg transition-all duration-200 cursor-pointer bg-white"
-                onClick={() => fileInputRef.current?.click()}>
-                <CardContent className="pt-8">
-                  <div className="flex flex-col items-center text-center gap-4">
-                    <div className="w-16 h-16 rounded-2xl bg-green-100 flex items-center justify-center">
-                      <Upload className="w-8 h-8 text-green-900" />
-                    </div>
-                    <div>
-                      <h3 className="font-black text-green-950 text-lg">Upload Image</h3>
-                      <p className="text-sm text-gray-500 font-semibold mt-1">Choose from your device</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Manual Search */}
-              <Card className="border border-green-100 hover:border-green-800 hover:shadow-lg transition-all duration-200 bg-white">
-                <CardContent className="pt-8">
-                  <div className="flex flex-col items-center text-center gap-4">
-                    <div className="w-16 h-16 rounded-2xl bg-green-100 flex items-center justify-center">
-                      <Search className="w-8 h-8 text-green-900" />
-                    </div>
-                    <div>
-                      <h3 className="font-black text-green-950 text-lg">Search by Name</h3>
-                      <p className="text-sm text-gray-500 font-semibold mt-1">Browse our database</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </section>
-
-          {/* Product Lookup */}
+          {/* OpenFoodFacts Lookup */}
           <section id="lookup" className="mb-12 sm:mb-16">
-            <Card className="mb-6 sm:mb-8 border-0 shadow-lg bg-gradient-to-br from-white to-slate-50/30 dark:from-slate-900 dark:to-slate-800/30">
-              <CardHeader className="pb-4">
-                <CardTitle className="flex items-center gap-3 text-lg">
-                  <div className="flex items-center justify-center w-9 h-9 rounded-full bg-emerald-100 dark:bg-emerald-900/50">
-                    <Search className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                  </div>
-                  <span className="bg-gradient-to-r from-emerald-700 to-emerald-600 bg-clip-text text-transparent">Quick Search</span>
-                </CardTitle>
-                <p className="text-sm text-muted-foreground pl-12">
-                  Search by barcode, upload image, or enter product name
-                </p>
-              </CardHeader>
-              <CardContent className="space-y-6">
+            <div className="mb-8">
+              <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-green-950">Search Products</h2>
+              <p className="text-gray-500 font-medium mt-1">Look up by barcode or upload a product image</p>
+            </div>
+            <Card className="border-0 shadow-lg bg-white">
+              <CardContent className="pt-6 space-y-6">
               {/* Barcode Input */}
               <div className="space-y-3">
                 <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Barcode Search</label>
@@ -1609,251 +1686,6 @@ const Scan = () => {
             </Card>
           </section>
 
-          {/* Scanner Card */}
-          <section className="mb-12 sm:mb-16">
-            <div className="mb-8">
-              <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-green-950 mb-3">Advanced Scanner</h2>
-              <p className="text-gray-600 font-medium">Use AI-powered recognition to identify products from photos</p>
-            </div>
-            <Card className="border-0 shadow-lg bg-white dark:bg-slate-900">
-              <CardHeader className="pb-4">
-                <CardTitle className="flex items-center gap-3 text-lg">
-                  <div className="flex items-center justify-center w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-900/50">
-                    <ScanLine className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <span className="text-slate-800 dark:text-slate-200">AI Product Recognition</span>
-                </CardTitle>
-                <p className="text-sm text-muted-foreground pl-12">
-                  Automatically extract product information from photos
-                </p>
-              </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Camera View */}
-              <div className="relative rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 aspect-[3/4] sm:aspect-video max-h-[72vh] sm:max-h-none shadow-lg border border-slate-200 dark:border-slate-700">
-                {/* Video element with improved mobile compatibility */}
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  webkit-playsinline="true"
-                  x5-playsinline="true"
-                  controls={false}
-                  className={`w-full h-full object-cover ${cameraActive ? 'block' : 'hidden'}`}
-                  style={{
-                    backgroundColor: '#000',
-                    WebkitTransform: 'translate3d(0,0,0)',
-                    transform: 'translate3d(0,0,0)',
-                    WebkitUserSelect: 'none',
-                    userSelect: 'none',
-                  } as React.CSSProperties}
-                  onError={(e) => {
-                    console.error('Video element error:', e);
-                  }}
-                  onLoadedMetadata={() => {
-                    console.log('Video metadata loaded:', (videoRef.current as HTMLVideoElement).videoWidth, 'x', (videoRef.current as HTMLVideoElement).videoHeight);
-                  }}
-                />
-                <canvas ref={canvasRef} className="hidden" />
-                
-                {cameraActive && (
-                  <>
-                    {/* Scanning overlay */}
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                      <div className="relative">
-                        <div className="w-[min(78vw,26rem)] aspect-square border-2 border-blue-500 rounded-2xl" />
-                        {/* Corner indicators */}
-                        <div className="absolute top-2 left-2 w-6 h-6 border-t-2 border-l-2 border-blue-500 rounded-tl-lg" />
-                        <div className="absolute top-2 right-2 w-6 h-6 border-t-2 border-r-2 border-blue-500 rounded-tr-lg" />
-                        <div className="absolute bottom-2 left-2 w-6 h-6 border-b-2 border-l-2 border-blue-500 rounded-bl-lg" />
-                        <div className="absolute bottom-2 right-2 w-6 h-6 border-b-2 border-r-2 border-blue-500 rounded-br-lg" />
-                      </div>
-                    </div>
-
-                    {/* Camera controls */}
-                    <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-3 px-6">
-                      <div className="bg-black/20 backdrop-blur-md rounded-full p-2 flex gap-3">
-                        <Button 
-                          onClick={capturePhoto} 
-                          size="lg" 
-                          className="bg-blue-600 hover:bg-blue-700 rounded-full w-14 h-14 p-0 shadow-lg"
-                        >
-                          <Camera className="w-6 h-6" />
-                        </Button>
-                        <Button 
-                          onClick={stopCamera} 
-                          variant="secondary" 
-                          size="lg"
-                          className="bg-white/90 hover:bg-white rounded-full w-12 h-12 p-0 shadow-lg border border-white/20"
-                        >
-                          <X className="w-5 h-5 text-slate-700" />
-                        </Button>
-                      </div>
-                    </div>
-                  </>
-                )}
-                
-                {cameraInitializing ? (
-                  <div className="absolute inset-0 flex items-center justify-center bg-slate-100 dark:bg-slate-800">
-                    <div className="text-center space-y-4 p-8">
-                      <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto" />
-                      <div className="space-y-2">
-                        <p className="text-lg font-medium text-slate-800 dark:text-slate-200">Initializing camera...</p>
-                        <p className="text-sm text-slate-600 dark:text-slate-400">Please allow camera access</p>
-                      </div>
-                    </div>
-                  </div>
-                ) : !cameraActive && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-slate-100 dark:bg-slate-800 p-8">
-                    <div className="w-full max-w-md space-y-6">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <Button
-                          onClick={startCamera}
-                          variant="outline"
-                          className="h-32 flex-col gap-3 bg-white hover:bg-gray-50 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl border-2 border-slate-200 dark:border-slate-700 hover:border-blue-400 shadow-sm"
-                          disabled={isProcessing}
-                        >
-                          <Camera className="w-8 h-8 text-blue-600" />
-                          <span className="font-medium">Use Camera</span>
-                        </Button>
-                        <Button
-                          onClick={() => fileInputRef.current?.click()}
-                          variant="outline"
-                          className="h-32 flex-col gap-3 bg-white hover:bg-gray-50 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl border-2 border-slate-200 dark:border-slate-700 hover:border-blue-400 shadow-sm"
-                          disabled={isProcessing}
-                        >
-                          <Upload className="w-8 h-8 text-blue-600" />
-                          <span className="font-medium">Upload Image</span>
-                        </Button>
-                      </div>
-                      
-                      {/* Debug button with improved styling */}
-                      <Button
-                        onClick={() => {
-                          console.log('Debug - Video ref:', videoRef.current);
-                          console.log('Debug - Canvas ref:', canvasRef.current);
-                          console.log('Debug - File input ref:', fileInputRef.current);
-                          console.log('Debug - Camera active:', cameraActive);
-                          console.log('Debug - Camera initializing:', cameraInitializing);
-                          toast({
-                            title: "Debug Info",
-                            description: `Video ref: ${videoRef.current ? '✅' : '❌'}, Canvas ref: ${canvasRef.current ? '✅' : '❌'}`,
-                          });
-                        }}
-                        variant="outline"
-                        size="sm"
-                        className="w-full bg-slate-100/50 hover:bg-slate-200/50 dark:bg-slate-700/50 dark:hover:bg-slate-600/50 transition-all duration-200 rounded-xl border border-slate-300/30 dark:border-slate-600/30"
-                      >
-                        <span className="text-xs text-slate-500 dark:text-slate-400">🔧 Debug Video Elements</span>
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                capture="environment"
-                onChange={handleFileUpload}
-                className="hidden"
-              />
-
-              {/* Processing State */}
-              {isProcessing && (
-                <div className="flex items-center justify-center gap-4 py-12">
-                  <div className="relative">
-                    <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
-                    <div className="absolute inset-0 w-8 h-8 animate-ping bg-emerald-400/20 rounded-full" />
-                  </div>
-                  <div className="text-center">
-                    <p className="text-base font-medium text-slate-700 dark:text-slate-300">
-                      {isScanning ? "Reading text from image..." : "Processing image..."}
-                    </p>
-                    <p className="text-sm text-muted-foreground mt-1">This may take a few seconds</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Image Preview */}
-              {uploadedImage && (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center">
-                      <ImageIcon className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                    </div>
-                    <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Scanned Image</p>
-                  </div>
-                  <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900 aspect-video max-h-80 shadow-lg border border-slate-200/50 dark:border-slate-700/50">
-                    <img
-                      src={uploadedImage}
-                      alt="Uploaded product"
-                      className="w-full h-full object-contain"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Extracted Text */}
-              {(extractedText || ocrMessage) && (
-                <div className="p-6 rounded-2xl bg-gradient-to-br from-emerald-50 to-emerald-100/50 dark:from-emerald-950/30 dark:to-emerald-900/20 border border-emerald-200/50 dark:border-emerald-800/30 shadow-lg">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="w-6 h-6 rounded-full bg-emerald-200 dark:bg-emerald-800 flex items-center justify-center">
-                      <ScanLine className="w-3 h-3 text-emerald-700 dark:text-emerald-300" />
-                    </div>
-                    <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">Extracted Information</p>
-                  </div>
-                  {extractedText ? (
-                    <div className="bg-white/50 dark:bg-slate-800/50 rounded-xl p-4 border border-emerald-200/30 dark:border-emerald-700/30">
-                      <p className="text-sm font-mono leading-relaxed text-slate-700 dark:text-slate-300">
-                        {extractedText.slice(0, 300)}
-                        {extractedText.length > 300 && "..."}
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-3 p-3 rounded-lg bg-amber-50/80 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-800/30">
-                      <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
-                      <p className="text-sm text-amber-800 dark:text-amber-200">{ocrMessage}</p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </CardContent>
-            </Card>
-          </section>
-
-          {/* Manual Search Section */}
-          <section className="mb-12 sm:mb-16">
-            <div className="mb-8">
-              <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-green-950 mb-3">Search Our Database</h2>
-              <p className="text-gray-600 font-medium">Find products by name, barcode, or code</p>
-            </div>
-            <Card className="border-0 shadow-lg bg-gradient-to-br from-white to-slate-50/30 dark:from-slate-900 dark:to-slate-800/30">
-              <CardHeader className="pb-4">
-                <CardTitle className="flex items-center gap-3 text-lg">
-                  <div className="flex items-center justify-center w-9 h-9 rounded-full bg-green-100 dark:bg-green-900/50">
-                    <Search className="w-4 h-4 text-green-600 dark:text-green-400" />
-                  </div>
-                  <span className="bg-gradient-to-r from-green-700 to-green-600 bg-clip-text text-transparent">Manual Search</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleManualSearch} className="flex gap-3">
-                  <Input
-                    placeholder="Enter product name, barcode, or code (e.g., #p0001)"
-                    value={manualSearch}
-                    onChange={(e) => setManualSearch(e.target.value)}
-                    className="flex-1 h-12 rounded-xl border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/50 focus:border-green-400 focus:ring-2 focus:ring-green-400/20"
-                  />
-                  <Button type="submit" className="bg-green-600 hover:bg-green-700 h-12 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300">
-                    <Search className="w-4 h-4 mr-2" />
-                    Search
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-          </section>
 
 
           {/* Search Results */}
@@ -2004,83 +1836,6 @@ const Scan = () => {
             </section>
           )}
 
-          {/* Tips & Tricks */}
-          <div className="mt-8 sm:mt-12 p-6 rounded-2xl bg-gradient-to-br from-blue-50 via-blue-100/50 to-blue-50/30 dark:from-blue-950/30 dark:via-blue-900/20 dark:to-blue-950/10 border border-blue-200/50 dark:border-blue-800/30 shadow-lg">
-            <div className="flex items-start gap-4">
-              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-200 dark:bg-blue-800 flex-shrink-0 mt-1">
-                <AlertCircle className="w-5 h-5 text-blue-700 dark:text-blue-300" />
-              </div>
-              <div className="text-sm text-slate-700 dark:text-slate-300">
-                <p className="font-semibold text-blue-900 dark:text-blue-100 mb-3 text-base">Pro Tips for Better Scanning</p>
-                <ul className="space-y-2">
-                  <li className="flex items-start gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 flex-shrink-0" />
-                    <span><strong>Position clearly:</strong> Place product labels flat and centered in the frame</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 flex-shrink-0" />
-                    <span><strong>Good lighting:</strong> Use bright, even lighting for best OCR accuracy</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 flex-shrink-0" />
-                    <span><strong>Barcode first:</strong> Scan barcodes for instant identification when available</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 flex-shrink-0" />
-                    <span><strong>Manual fallback:</strong> Use manual search if automatic scanning doesn't work</span>
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </div>
-
-          {/* Debug Information */}
-          <div className="mt-6 p-6 rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100/50 dark:from-slate-900 dark:to-slate-800/50 border border-slate-200/50 dark:border-slate-700/30 shadow-lg">
-            <div className="flex items-start gap-4">
-              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 flex-shrink-0 mt-1">
-                <AlertCircle className="w-5 h-5 text-slate-600 dark:text-slate-400" />
-              </div>
-              <div className="text-sm">
-                <p className="font-semibold text-slate-800 dark:text-slate-200 mb-3 text-base">Camera Troubleshooting</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                  <div className="space-y-2 text-slate-700 dark:text-slate-300 text-xs">
-                    <p><strong>Browser:</strong> {navigator.userAgent.match(/Chrome|Safari|Firefox|Edge|Opera/) ? navigator.userAgent.match(/Chrome|Safari|Firefox|Edge|Opera/)?.[0] : 'Unknown'}</p>
-                    <p><strong>Device:</strong> {/Mobile|Android|iPhone|iPad/.test(navigator.userAgent) ? '📱 Mobile' : '💻 Desktop'}</p>
-                    <p><strong>Protocol:</strong> {location.protocol}</p>
-                    <p><strong>Host:</strong> {location.hostname}</p>
-                  </div>
-                  <div className="space-y-2 text-slate-700 dark:text-slate-300 text-xs">
-                    <p><strong>mediaDevices:</strong> {navigator.mediaDevices ? '✅ Available' : '❌ Missing'} {!navigator.mediaDevices && <span className="text-red-600 font-medium"> (Required!)</span>}</p>
-                    <p><strong>getUserMedia:</strong> {navigator.mediaDevices?.getUserMedia ? '✅ Available' : '❌ Missing'} {!navigator.mediaDevices?.getUserMedia && <span className="text-red-600 font-medium"> (Required!)</span>}</p>
-                    <p><strong>Secure Context:</strong> {location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1' ? '✅ Yes' : '❌ No'}</p>
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  <p className="font-semibold text-slate-800 dark:text-slate-200 text-sm">If camera doesn't work:</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="space-y-2">
-                      <p className="font-medium text-slate-700 dark:text-slate-300 text-xs">🔧 Quick Fixes:</p>
-                      <ul className="space-y-1 text-slate-600 dark:text-slate-400 text-xs">
-                        <li>• Open browser console (F12) and check for errors</li>
-                        <li>• Check 🔒 lock icon for camera permissions</li>
-                        <li>• Reload page after allowing permissions</li>
-                        <li>• Close other apps using camera</li>
-                      </ul>
-                    </div>
-                    <div className="space-y-2">
-                      <p className="font-medium text-slate-700 dark:text-slate-300 text-xs">🌐 Browser & Device:</p>
-                      <ul className="space-y-1 text-slate-600 dark:text-slate-400 text-xs">
-                        <li>• Try Chrome, Firefox, Safari, or Edge</li>
-                        <li>• Mobile: Use portrait mode, Chrome browser</li>
-                        <li>• Check iOS privacy settings</li>
-                        <li>• Remote sites need HTTPS (not http://)</li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
           </div>
         </div>
       </main>
