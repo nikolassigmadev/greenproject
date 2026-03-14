@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Camera, Upload, Search, Loader2, AlertCircle, X, ScanLine, Image as ImageIcon, Plus, Leaf } from "lucide-react";
+import { Camera, Upload, Search, Loader2, AlertCircle, X, ScanLine, Image as ImageIcon, Plus, Leaf, ArrowRight } from "lucide-react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -1284,38 +1284,119 @@ const Scan = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col">
       <Header />
-      
-      <main className="flex-1 py-6 sm:py-8">
-        <div className="container max-w-4xl">
-          {/* Page Header */}
-          <div className="text-center mb-8 sm:mb-10">
-            <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-900/20 dark:to-emerald-800/20 mb-4">
-              <ScanLine className="w-8 h-8 sm:w-10 sm:h-10 text-emerald-600" />
+
+      <main className="flex-1">
+        {/* Hero Section */}
+        <section className="bg-green-900 text-white">
+          <div className="max-w-screen-xl mx-auto px-4 sm:px-6 py-16 sm:py-24">
+            <div className="max-w-2xl">
+              <p className="text-green-300 font-bold text-sm uppercase tracking-widest mb-4">Product Scanner</p>
+              <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black tracking-tighter leading-none mb-6">
+                Discover the<br />
+                <span className="text-green-300">True Story</span><br />
+                Behind Every Purchase
+              </h1>
+              <p className="text-green-200/70 text-lg leading-relaxed mb-10 max-w-lg">
+                Snap a photo or scan a barcode to instantly uncover environmental impact, labor practices, and find more ethical alternatives.
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <button
+                  onClick={startCamera}
+                  className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white text-green-900 font-black text-base hover:bg-green-50 transition-colors"
+                >
+                  <Camera className="w-5 h-5" />
+                  Start Scanning Now
+                </button>
+                <a
+                  href="#lookup"
+                  className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white/10 text-white font-black text-base hover:bg-white/20 transition-colors border border-white/20"
+                >
+                  Or Search by Name
+                  <ArrowRight className="w-4 h-4" />
+                </a>
+              </div>
             </div>
-            <h1 className="text-3xl sm:text-4xl font-display font-bold mb-3 bg-gradient-to-r from-emerald-700 to-emerald-600 dark:from-emerald-400 dark:to-emerald-300 bg-clip-text text-transparent">
-              Scan a Product
-            </h1>
-            <p className="text-base sm:text-lg text-muted-foreground max-w-md mx-auto leading-relaxed">
-              Use your camera or upload an image to instantly identify products and discover their ethical impact
-            </p>
           </div>
+        </section>
+
+        {/* Main Content */}
+        <div className="flex-1 py-12 sm:py-16">
+          <div className="max-w-screen-xl mx-auto px-4 sm:px-6">
+
+          {/* Quick Scanner Section */}
+          <section className="mb-12 sm:mb-16">
+            <div className="mb-8">
+              <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-green-950 mb-3">Scan Your Product</h2>
+              <p className="text-gray-600 font-medium">Choose your preferred scanning method</p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Camera Scan */}
+              <Card className="border border-green-100 hover:border-green-800 hover:shadow-lg transition-all duration-200 cursor-pointer bg-white"
+                onClick={startCamera}>
+                <CardContent className="pt-8">
+                  <div className="flex flex-col items-center text-center gap-4">
+                    <div className="w-16 h-16 rounded-2xl bg-green-100 flex items-center justify-center">
+                      <Camera className="w-8 h-8 text-green-900" />
+                    </div>
+                    <div>
+                      <h3 className="font-black text-green-950 text-lg">Camera Scan</h3>
+                      <p className="text-sm text-gray-500 font-semibold mt-1">Point at barcode or product</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Image Upload */}
+              <Card className="border border-green-100 hover:border-green-800 hover:shadow-lg transition-all duration-200 cursor-pointer bg-white"
+                onClick={() => fileInputRef.current?.click()}>
+                <CardContent className="pt-8">
+                  <div className="flex flex-col items-center text-center gap-4">
+                    <div className="w-16 h-16 rounded-2xl bg-green-100 flex items-center justify-center">
+                      <Upload className="w-8 h-8 text-green-900" />
+                    </div>
+                    <div>
+                      <h3 className="font-black text-green-950 text-lg">Upload Image</h3>
+                      <p className="text-sm text-gray-500 font-semibold mt-1">Choose from your device</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Manual Search */}
+              <Card className="border border-green-100 hover:border-green-800 hover:shadow-lg transition-all duration-200 bg-white">
+                <CardContent className="pt-8">
+                  <div className="flex flex-col items-center text-center gap-4">
+                    <div className="w-16 h-16 rounded-2xl bg-green-100 flex items-center justify-center">
+                      <Search className="w-8 h-8 text-green-900" />
+                    </div>
+                    <div>
+                      <h3 className="font-black text-green-950 text-lg">Search by Name</h3>
+                      <p className="text-sm text-gray-500 font-semibold mt-1">Browse our database</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </section>
 
           {/* Product Lookup */}
-          <Card className="mb-6 sm:mb-8 border-0 shadow-lg bg-gradient-to-br from-white to-slate-50/30 dark:from-slate-900 dark:to-slate-800/30">
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-3 text-lg">
-                <div className="flex items-center justify-center w-9 h-9 rounded-full bg-emerald-100 dark:bg-emerald-900/50">
-                  <Search className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                </div>
-                <span className="bg-gradient-to-r from-emerald-700 to-emerald-600 bg-clip-text text-transparent">Product Lookup</span>
-              </CardTitle>
-              <p className="text-sm text-muted-foreground pl-12">
-                Search by barcode, upload image, or enter product name
-              </p>
-            </CardHeader>
-            <CardContent className="space-y-6">
+          <section id="lookup" className="mb-12 sm:mb-16">
+            <Card className="mb-6 sm:mb-8 border-0 shadow-lg bg-gradient-to-br from-white to-slate-50/30 dark:from-slate-900 dark:to-slate-800/30">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-3 text-lg">
+                  <div className="flex items-center justify-center w-9 h-9 rounded-full bg-emerald-100 dark:bg-emerald-900/50">
+                    <Search className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <span className="bg-gradient-to-r from-emerald-700 to-emerald-600 bg-clip-text text-transparent">Quick Search</span>
+                </CardTitle>
+                <p className="text-sm text-muted-foreground pl-12">
+                  Search by barcode, upload image, or enter product name
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-6">
               {/* Barcode Input */}
               <div className="space-y-3">
                 <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Barcode Search</label>
@@ -1525,21 +1606,27 @@ const Scan = () => {
                 Powered by OpenFoodFacts database
               </p>
             </CardContent>
-          </Card>
+            </Card>
+          </section>
 
           {/* Scanner Card */}
-          <Card className="mb-6 sm:mb-8 border-0 shadow-lg bg-white dark:bg-slate-900">
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-3 text-lg">
-                <div className="flex items-center justify-center w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-900/50">
-                  <ScanLine className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                </div>
-                <span className="text-slate-800 dark:text-slate-200">Product Scanner</span>
-              </CardTitle>
-              <p className="text-sm text-muted-foreground pl-12">
-                Use camera or upload image to identify products
-              </p>
-            </CardHeader>
+          <section className="mb-12 sm:mb-16">
+            <div className="mb-8">
+              <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-green-950 mb-3">Advanced Scanner</h2>
+              <p className="text-gray-600 font-medium">Use AI-powered recognition to identify products from photos</p>
+            </div>
+            <Card className="border-0 shadow-lg bg-white dark:bg-slate-900">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-3 text-lg">
+                  <div className="flex items-center justify-center w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-900/50">
+                    <ScanLine className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <span className="text-slate-800 dark:text-slate-200">AI Product Recognition</span>
+                </CardTitle>
+                <p className="text-sm text-muted-foreground pl-12">
+                  Automatically extract product information from photos
+                </p>
+              </CardHeader>
             <CardContent className="space-y-6">
               {/* Camera View */}
               <div className="relative rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 aspect-[3/4] sm:aspect-video max-h-[72vh] sm:max-h-none shadow-lg border border-slate-200 dark:border-slate-700">
@@ -1733,53 +1820,61 @@ const Scan = () => {
                 </div>
               )}
             </CardContent>
-          </Card>
+            </Card>
+          </section>
 
-          {/* Manual Search */}
-          <Card className="mb-6 sm:mb-8 border-0 shadow-lg bg-gradient-to-br from-white to-slate-50/30 dark:from-slate-900 dark:to-slate-800/30">
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-3 text-lg">
-                <div className="flex items-center justify-center w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-900/50">
-                  <Search className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                </div>
-                <span className="bg-gradient-to-r from-blue-700 to-blue-600 bg-clip-text text-transparent">Manual Search</span>
-              </CardTitle>
-              <p className="text-sm text-muted-foreground pl-12">
-                Search by product name, barcode, or ID code
-              </p>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleManualSearch} className="flex gap-3">
-                <Input
-                  placeholder="Enter product name, barcode, or code (e.g., #p0001)"
-                  value={manualSearch}
-                  onChange={(e) => setManualSearch(e.target.value)}
-                  className="flex-1 h-12 rounded-xl border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/50 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20"
-                />
-                <Button type="submit" className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 h-12 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300">
-                  <Search className="w-4 h-4 mr-2" />
-                  Search
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
+          {/* Manual Search Section */}
+          <section className="mb-12 sm:mb-16">
+            <div className="mb-8">
+              <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-green-950 mb-3">Search Our Database</h2>
+              <p className="text-gray-600 font-medium">Find products by name, barcode, or code</p>
+            </div>
+            <Card className="border-0 shadow-lg bg-gradient-to-br from-white to-slate-50/30 dark:from-slate-900 dark:to-slate-800/30">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-3 text-lg">
+                  <div className="flex items-center justify-center w-9 h-9 rounded-full bg-green-100 dark:bg-green-900/50">
+                    <Search className="w-4 h-4 text-green-600 dark:text-green-400" />
+                  </div>
+                  <span className="bg-gradient-to-r from-green-700 to-green-600 bg-clip-text text-transparent">Manual Search</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleManualSearch} className="flex gap-3">
+                  <Input
+                    placeholder="Enter product name, barcode, or code (e.g., #p0001)"
+                    value={manualSearch}
+                    onChange={(e) => setManualSearch(e.target.value)}
+                    className="flex-1 h-12 rounded-xl border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/50 focus:border-green-400 focus:ring-2 focus:ring-green-400/20"
+                  />
+                  <Button type="submit" className="bg-green-600 hover:bg-green-700 h-12 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300">
+                    <Search className="w-4 h-4 mr-2" />
+                    Search
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          </section>
 
 
           {/* Search Results */}
           {searchResults.length > 0 && (
-            <Card className="border-0 shadow-xl bg-gradient-to-br from-white to-slate-50/30 dark:from-slate-900 dark:to-slate-800/30">
+            <section className="mb-12 sm:mb-16">
+              <div className="mb-8">
+                <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-green-950 mb-3">
+                  Found {searchResults.length} Product{searchResults.length > 1 ? "s" : ""}
+                </h2>
+                <p className="text-gray-600 font-medium">Click on any product to view detailed ethical ratings</p>
+              </div>
+              <Card className="border-0 shadow-xl bg-gradient-to-br from-white to-slate-50/30 dark:from-slate-900 dark:to-slate-800/30">
               <CardHeader className="pb-4">
                 <div className="flex items-center gap-3">
-                  <div className="flex items-center justify-center w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-900/50">
-                    <Search className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                  <div className="flex items-center justify-center w-9 h-9 rounded-full bg-green-100 dark:bg-green-900/50">
+                    <Search className="w-4 h-4 text-green-600 dark:text-green-400" />
                   </div>
-                  <CardTitle className="text-lg bg-gradient-to-r from-blue-700 to-blue-600 bg-clip-text text-transparent">
-                    Found {searchResults.length} Product{searchResults.length > 1 ? "s" : ""}
+                  <CardTitle className="text-lg bg-gradient-to-r from-green-700 to-green-600 bg-clip-text text-transparent">
+                    Results
                   </CardTitle>
                 </div>
-                <p className="text-sm text-muted-foreground pl-12">
-                  Click on any product to view detailed ethical ratings
-                </p>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -1844,12 +1939,18 @@ const Scan = () => {
                   })}
                 </div>
               </CardContent>
-            </Card>
+              </Card>
+            </section>
           )}
 
           {/* No Results Found - Add Product Option */}
           {searchResults.length === 0 && extractedText && uploadedImage && (
-            <Card className="border-0 shadow-xl bg-gradient-to-br from-amber-50 via-amber-100/50 to-amber-50/30 dark:from-amber-950/30 dark:via-amber-900/20 dark:to-amber-950/10">
+            <section className="mb-12 sm:mb-16">
+              <div className="mb-8">
+                <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-green-950 mb-3">Help Us Grow</h2>
+                <p className="text-gray-600 font-medium">Add this product to our ethical database</p>
+              </div>
+              <Card className="border-0 shadow-xl bg-gradient-to-br from-amber-50 via-amber-100/50 to-amber-50/30 dark:from-amber-950/30 dark:via-amber-900/20 dark:to-amber-950/10">
               <CardHeader className="pb-4">
                 <div className="flex items-center gap-3">
                   <div className="flex items-center justify-center w-9 h-9 rounded-full bg-amber-200 dark:bg-amber-800">
@@ -1859,9 +1960,6 @@ const Scan = () => {
                     Add New Product
                   </CardTitle>
                 </div>
-                <p className="text-sm text-amber-700 dark:text-amber-300 pl-12">
-                  Help grow our ethical database by adding this product
-                </p>
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
@@ -1902,10 +2000,11 @@ const Scan = () => {
                   </div>
                 </div>
               </CardContent>
-            </Card>
+              </Card>
+            </section>
           )}
 
-          {/* Tips */}
+          {/* Tips & Tricks */}
           <div className="mt-8 sm:mt-12 p-6 rounded-2xl bg-gradient-to-br from-blue-50 via-blue-100/50 to-blue-50/30 dark:from-blue-950/30 dark:via-blue-900/20 dark:to-blue-950/10 border border-blue-200/50 dark:border-blue-800/30 shadow-lg">
             <div className="flex items-start gap-4">
               <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-200 dark:bg-blue-800 flex-shrink-0 mt-1">
@@ -1981,6 +2080,7 @@ const Scan = () => {
                 </div>
               </div>
             </div>
+          </div>
           </div>
         </div>
       </main>
