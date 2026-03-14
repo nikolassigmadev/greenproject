@@ -1,14 +1,3 @@
-import OpenAI from 'openai';
-
-// Initialize OpenAI client
-const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
-
-if (!apiKey) {
-  console.warn('OpenAI API key not configured. Set VITE_OPENAI_API_KEY in .env.local');
-}
-
-const client = apiKey ? new OpenAI({ apiKey, dangerouslyAllowBrowser: true }) : null;
-
 export type OcrResult = {
   text: string;
   confidence: number;
@@ -17,64 +6,52 @@ export type OcrResult = {
 };
 
 /**
- * Extract text from image using OpenAI Vision API (GPT-4o)
- * @param imageDataUrl - Base64 encoded image data URL
- * @returns Extracted text and confidence score
+ * Extract text from image using server-side OCR Netlify Function
+ * The function proxies the request to OpenAI so the API key stays secret.
  */
 export const recognizeImageWithOpenAI = async (imageDataUrl: string): Promise<OcrResult> => {
-  if (!client) {
-    return {
-      text: '',
-      confidence: 0,
-      success: false,
-      error: 'OpenAI API key not configured. Please set VITE_OPENAI_API_KEY in .env.local'
-    };
-  }
-
   try {
-    // Convert data URL to base64 if needed
     let base64Image = imageDataUrl;
     if (imageDataUrl.includes(',')) {
       base64Image = imageDataUrl.split(',')[1];
     }
 
-    // Call OpenAI Vision API
-    const response = await client.chat.completions.create({
-      model: 'gpt-4o',
-      max_tokens: 1024,
-      messages: [
-        {
-          role: 'system',
-          content: 'You are an OCR expert. Extract all visible text from product images with high accuracy.',
-        },
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'image_url',
-              image_url: {
-                url: `data:image/jpeg;base64,${base64Image}`,
-              },
-            },
-            {
-              type: 'text',
-              text: 'Extract all visible text from this image. Focus on product names, brands, ingredients, and labels. Return ONLY the extracted text, no explanations.',
-            },
-          ],
-        },
-      ],
+    const response = await fetch('/.netlify/functions/ocr', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: base64Image }),
     });
 
-    const extractedText = response.choices[0]?.message?.content || '';
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      return {
+        text: '',
+        confidence: 0,
+        success: false,
+        error: errorData.error || `OCR service error: ${response.status}`,
+      };
+    }
+
+    const data = await response.json();
+
+    if (data.success) {
+      const text = [data.brandName, data.productName].filter(Boolean).join(' ');
+      return {
+        text: text || data.rawText || '',
+        confidence: 90,
+        success: true,
+      };
+    }
 
     return {
-      text: extractedText,
-      confidence: 90, // GPT-4o is very accurate
-      success: true,
+      text: data.rawText || '',
+      confidence: 0,
+      success: false,
+      error: 'Could not identify product from image',
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-    console.error('OpenAI API error:', error);
+    console.error('OCR service error:', error);
 
     return {
       text: '',
@@ -86,48 +63,27 @@ export const recognizeImageWithOpenAI = async (imageDataUrl: string): Promise<Oc
 };
 
 /**
- * Use OpenAI Vision API for product code/barcode extraction
+ * Use server-side OCR for product code/barcode extraction
  */
 export const extractProductCode = async (imageDataUrl: string): Promise<string> => {
-  if (!client) {
-    throw new Error('OpenAI API key not configured');
-  }
-
   try {
     let base64Image = imageDataUrl;
     if (imageDataUrl.includes(',')) {
       base64Image = imageDataUrl.split(',')[1];
     }
 
-    const response = await client.chat.completions.create({
-      model: 'gpt-4o',
-      max_tokens: 256,
-      messages: [
-        {
-          role: 'system',
-          content: 'You are a barcode and product code extraction expert.',
-        },
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'image_url',
-              image_url: {
-                url: `data:image/jpeg;base64,${base64Image}`,
-              },
-            },
-            {
-              type: 'text',
-              text: 'Extract the barcode number or product code from this image. Return ONLY the numeric code, nothing else.',
-            },
-          ],
-        },
-      ],
+    const response = await fetch('/.netlify/functions/ocr', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: base64Image }),
     });
 
-    const code = (response.choices[0]?.message?.content || '').trim();
+    if (!response.ok) {
+      throw new Error(`OCR service error: ${response.status}`);
+    }
 
-    return code;
+    const data = await response.json();
+    return data.barcode || '';
   } catch (error) {
     console.error('Failed to extract product code:', error);
     throw error;
@@ -135,29 +91,18 @@ export const extractProductCode = async (imageDataUrl: string): Promise<string> 
 };
 
 /**
- * Health check - verify API connection
+ * Health check - verify server-side OCR function is available
  */
 export const checkOpenAIConnection = async (): Promise<boolean> => {
-  if (!client) {
-    return false;
-  }
-
   try {
-    // Make a simple API call to verify connection
-    const response = await client.chat.completions.create({
-      model: 'gpt-4o',
-      max_tokens: 10,
-      messages: [
-        {
-          role: 'user',
-          content: 'Say "OK"',
-        },
-      ],
+    const response = await fetch('/.netlify/functions/ocr', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: '' }),
     });
-
-    return response.choices[0]?.message?.content?.length > 0;
-  } catch (error) {
-    console.error('OpenAI connection check failed:', error);
+    // 400 = function works (just missing image), 500 = API key not set
+    return response.status === 400;
+  } catch {
     return false;
   }
 };

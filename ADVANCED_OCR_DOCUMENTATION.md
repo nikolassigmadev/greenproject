@@ -152,7 +152,8 @@ Clear, detailed logging with emojis for easy debugging:
 
 ### Environment Variables
 ```
-VITE_OPENAI_API_KEY=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
+# Set OPENAI_API_KEY in Netlify site settings (Site > Configuration > Environment variables)
+OPENAI_API_KEY=your-openai-api-key-here
 ```
 
 ### Health Check

@@ -1,9 +1,3 @@
-import OpenAI from 'openai';
-
-// Initialize OpenAI client
-const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
-if (!apiKey) console.error('OpenAI API key not configured. Set VITE_OPENAI_API_KEY in .env.local');
-
 /** Resize a base64 JPEG to maxPx on the longest side and re-encode at 0.8 quality */
 const compressImageBase64 = (base64: string, maxPx: number): Promise<string> => {
   return new Promise((resolve) => {
@@ -23,56 +17,54 @@ const compressImageBase64 = (base64: string, maxPx: number): Promise<string> => 
   });
 };
 
-const client = apiKey ? new OpenAI({ apiKey, dangerouslyAllowBrowser: true }) : null;
-
-// Fallback OCR function when OpenAI is not available
+// Fallback OCR function when server-side OCR is not available
 export const fallbackOCR = async (imageDataUrl: string): Promise<AdvancedOCRResult> => {
   const startTime = performance.now();
-  
+
   try {
     // Use Tesseract.js as fallback with better preprocessing
     const Tesseract = (await import('tesseract.js')).default;
-    
+
     // Preprocess image for better OCR results
     const preprocessImage = async (dataUrl: string) => {
       const img = new Image();
       img.src = dataUrl;
       await new Promise(resolve => img.onload = resolve);
-      
+
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d')!;
-      
+
       // Scale up for better text recognition
       const scale = 2;
       canvas.width = img.width * scale;
       canvas.height = img.height * scale;
-      
+
       // Apply preprocessing
       ctx.filter = 'contrast(1.5) brightness(1.1)';
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      
+
       return canvas.toDataURL('image/jpeg', 0.9);
     };
-    
+
     const preprocessed = await preprocessImage(imageDataUrl);
-    
+
     const result = await Tesseract.recognize(preprocessed, 'eng', {
       logger: () => {} // Silent logging
     });
-    
+
     const extractedText = result.data.text.trim();
-    
+
     // Validate and clean the extracted text
     const cleanText = extractedText
       .replace(/[^\w\s\-.,]/g, ' ') // Remove special characters except hyphens, periods, commas
       .replace(/\s+/g, ' ') // Normalize whitespace
       .trim();
-    
+
     // Extract potential product name and brand from the text
     const words = cleanText.split(' ').filter(w => w.length > 2);
     let productName = null;
     let brandName = null;
-    
+
     if (words.length >= 2) {
       // Heuristic: first word might be brand, rest might be product name
       brandName = words[0];
@@ -80,7 +72,7 @@ export const fallbackOCR = async (imageDataUrl: string): Promise<AdvancedOCRResu
     } else if (words.length === 1) {
       productName = words[0];
     }
-    
+
     if (cleanText && cleanText.length > 3) {
       return {
         success: true,
@@ -97,7 +89,7 @@ export const fallbackOCR = async (imageDataUrl: string): Promise<AdvancedOCRResu
         notes: 'Tesseract.js fallback OCR with preprocessing'
       };
     }
-    
+
     return {
       success: false,
       fullText: '',
@@ -138,356 +130,111 @@ export interface AdvancedOCRResult {
 }
 
 /**
- * Optimized system prompt for product recognition
- * Focuses on brand names, product names, ingredients, and certifications
- */
-const PRODUCT_OCR_SYSTEM_PROMPT = `You are an expert OCR system specialized in recognizing and extracting product information from images.
-
-Your task is to extract the following information from product images with high precision:
-
-1. **PRODUCT NAME**: The main product/item name (e.g., "Organic Almond Butter", "Fair Trade Coffee")
-2. **BRAND NAME**: The manufacturer or brand name (e.g., "Natura", "Nature's Way", "Patagonia")
-3. **INGREDIENTS**: List all visible ingredients (especially organic, fair-trade, certifications)
-4. **BARCODE/CODE**: Any UPC, EAN, or product codes visible
-5. **CERTIFICATIONS**: Look for labels like:
-   - Organic (USDA, EU)
-   - Fair Trade
-   - Non-GMO
-   - Vegan/Vegetarian
-   - Gluten-Free
-   - Rainforest Alliance
-   - B-Corp
-   - Kosher/Halal
-6. **NUTRITION INFO**: Any visible nutritional facts
-7. **FULL TEXT**: All readable text on the product
-
-CRITICAL INSTRUCTIONS:
-- Be extremely precise with brand and product names
-- Extract EXACT text as it appears (preserve capitalization)
-- Look for hidden or small text
-- Identify quality certifications and labels
-- Return ONLY found information (don't invent)
-- Use proper JSON formatting
-
-Return your response as JSON with this exact structure:
-{
-  "productName": "extracted product name or null",
-  "brandName": "extracted brand name or null",
-  "ingredients": ["ingredient1", "ingredient2", ...],
-  "barcode": "barcode number or null",
-  "certifications": ["certification1", "certification2", ...],
-  "nutritionInfo": "nutrition text or null",
-  "fullText": "all extracted text",
-  "confidence": 0.95,
-  "notes": "any additional observations"
-}`;
-
-/**
- * Simple ChatGPT-style product analysis
+ * Product OCR via server-side Netlify Function.
+ * The function proxies the request to OpenAI so the API key stays secret.
+ * Falls back to Tesseract.js if the function is unavailable.
  */
 export const advancedProductOCR = async (imageDataUrl: string): Promise<AdvancedOCRResult> => {
   const startTime = performance.now();
 
-  if (!client) {
-    console.warn('⚠️ OpenAI API key not configured, using Tesseract.js fallback');
-    return await fallbackOCR(imageDataUrl);
-  }
-
   try {
     let base64Image = imageDataUrl;
     if (imageDataUrl.includes(',')) {
       base64Image = imageDataUrl.split(',')[1];
     }
-
 
     // Downscale image to max 800px before sending — reduces upload size ~4×
     const compressedBase64 = await compressImageBase64(base64Image, 800);
 
-    const response = await client.chat.completions.create({
-      model: 'gpt-4o-mini',
-      max_tokens: 150,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'image_url',
-              image_url: {
-                url: `data:image/jpeg;base64,${compressedBase64}`,
-              },
-            },
-            {
-              type: 'text',
-              text: `What product is shown? Reply in exactly this format:
-Product: <product name>
-Brand: <brand name>
-Barcode: <barcode digits, or none>
-
-Only use text visible on the packaging. Do not guess.`,
-            },
-          ],
-        },
-      ],
-      temperature: 0,
+    const response = await fetch('/.netlify/functions/ocr', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: compressedBase64 }),
     });
 
-    const rawResponse = response.choices[0]?.message?.content || '';
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.warn('OCR function error, falling back to Tesseract.js:', errorData);
+      return await fallbackOCR(imageDataUrl);
+    }
 
-    // Parse simple response
-    const productMatch = rawResponse.match(/Product:\s*(.+)/i);
-    const brandMatch = rawResponse.match(/Brand:\s*(.+)/i);
-    const barcodeMatch = rawResponse.match(/Barcode:\s*(.+)/i);
-
-    const sanitize = (v: string | null) => {
-      if (!v) return null;
-      const t = v.trim();
-      // Reject placeholder/unknown values the model sometimes returns
-      if (/^\[.*\]$|^<.*>$|^unknown|^n\/a$|^none$|^not visible$/i.test(t)) return null;
-      if (t.length < 2) return null;
-      return t;
-    };
-    const productName = sanitize(productMatch ? productMatch[1] : null);
-    const brandName = sanitize(brandMatch ? brandMatch[1] : null);
-    const extractedBarcode = barcodeMatch ? barcodeMatch[1].trim() : null;
-    const barcode = extractedBarcode && extractedBarcode.toLowerCase() !== 'none' && /^\d{8,14}$/.test(extractedBarcode.replace(/\s/g, ''))
-      ? extractedBarcode.replace(/\s/g, '')
-      : null;
+    const data = await response.json();
 
     const endTime = performance.now();
     const processingTime = endTime - startTime;
 
-    if (productName || brandName) {
-      const fullText = `${brandName || ''} ${productName || ''}`.trim();
+    if (data.success && (data.productName || data.brandName)) {
+      const fullText = `${data.brandName || ''} ${data.productName || ''}`.trim();
       return {
         success: true,
         fullText,
         confidence: 0.9,
-        rawExtraction: rawResponse,
+        rawExtraction: data.rawText || '',
         processingTime,
-        productName,
-        brandName,
+        productName: data.productName || undefined,
+        brandName: data.brandName || undefined,
         certifications: [],
         ingredients: [],
-        barcode: barcode,
+        barcode: data.barcode || null,
         nutritionInfo: null,
-        notes: 'ChatGPT-style image analysis'
+        notes: 'Server-side GPT-4o-mini image analysis'
       };
     } else {
-      return {
-        success: false,
-        fullText: '',
-        confidence: 0,
-        rawExtraction: rawResponse,
-        error: 'Could not identify product from image',
-        processingTime
-      };
+      // Server returned no match — try Tesseract fallback
+      console.warn('Server OCR found no product, falling back to Tesseract.js');
+      return await fallbackOCR(imageDataUrl);
     }
-
   } catch (error) {
-    const endTime = performance.now();
-    const processingTime = endTime - startTime;
-
-    return {
-      success: false,
-      fullText: '',
-      confidence: 0,
-      rawExtraction: '',
-      error: error instanceof Error ? error.message : 'Unknown error',
-      processingTime
-    };
+    console.warn('OCR function request failed, falling back to Tesseract.js:', error);
+    return await fallbackOCR(imageDataUrl);
   }
 };
 
 /**
- * Extract ONLY brand name (optimized endpoint)
+ * Extract ONLY brand name — delegates to server-side function
  */
 export const extractBrandName = async (imageDataUrl: string): Promise<string | null> => {
-  if (!client) return null;
-
   try {
-    let base64Image = imageDataUrl;
-    if (imageDataUrl.includes(',')) {
-      base64Image = imageDataUrl.split(',')[1];
-    }
-
-    const response = await client.chat.completions.create({
-      model: 'gpt-4o-mini',
-      max_tokens: 100,
-      messages: [
-        {
-          role: 'system',
-          content: 'You are a brand name extraction expert. Extract ONLY the brand/manufacturer name from product images.',
-        },
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'image_url',
-              image_url: {
-                url: `data:image/jpeg;base64,${base64Image}`,
-              },
-            },
-            {
-              type: 'text',
-              text: 'Extract ONLY the brand/manufacturer name from this product image. Return just the brand name, nothing else. If not found, return "UNKNOWN".',
-            },
-          ],
-        },
-      ],
-      temperature: 0.2,
-    });
-
-    const brandName = (response.choices[0]?.message?.content || '').trim().replace(/["']/g, '');
-
-    return brandName && brandName !== 'UNKNOWN' ? brandName : null;
-  } catch (error) {
-    console.error('Failed to extract brand name:', error);
+    const result = await advancedProductOCR(imageDataUrl);
+    return result.brandName || null;
+  } catch {
     return null;
   }
 };
 
 /**
- * Extract ONLY product name (optimized endpoint)
+ * Extract ONLY product name — delegates to server-side function
  */
 export const extractProductName = async (imageDataUrl: string): Promise<string | null> => {
-  if (!client) return null;
-
   try {
-    let base64Image = imageDataUrl;
-    if (imageDataUrl.includes(',')) {
-      base64Image = imageDataUrl.split(',')[1];
-    }
-
-    const response = await client.chat.completions.create({
-      model: 'gpt-4o-mini',
-      max_tokens: 100,
-      messages: [
-        {
-          role: 'system',
-          content: 'You are a product name extraction expert. Extract ONLY the product name from product images.',
-        },
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'image_url',
-              image_url: {
-                url: `data:image/jpeg;base64,${base64Image}`,
-              },
-            },
-            {
-              type: 'text',
-              text: 'Extract ONLY the product name/item name from this product image. Return just the product name, nothing else. If not found, return "UNKNOWN".',
-            },
-          ],
-        },
-      ],
-      temperature: 0.2,
-    });
-
-    const productName = (response.choices[0]?.message?.content || '').trim().replace(/["']/g, '');
-
-    return productName && productName !== 'UNKNOWN' ? productName : null;
-  } catch (error) {
-    console.error('Failed to extract product name:', error);
+    const result = await advancedProductOCR(imageDataUrl);
+    return result.productName || null;
+  } catch {
     return null;
   }
 };
 
 /**
- * Extract certifications/labels (optimized for ethical shopping)
+ * Extract certifications — returns empty since server function focuses on product ID
  */
-export const extractCertifications = async (imageDataUrl: string): Promise<string[]> => {
-  if (!client) return [];
-
-  try {
-    let base64Image = imageDataUrl;
-    if (imageDataUrl.includes(',')) {
-      base64Image = imageDataUrl.split(',')[1];
-    }
-
-    const response = await client.chat.completions.create({
-      model: 'gpt-4o-mini',
-      max_tokens: 200,
-      messages: [
-        {
-          role: 'system',
-          content: 'You are an ethical certification detection expert. Identify sustainability and ethical labels on products.',
-        },
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'image_url',
-              image_url: {
-                url: `data:image/jpeg;base64,${base64Image}`,
-              },
-            },
-            {
-              type: 'text',
-              text: `Look for ethical and sustainability certifications/labels on this product:
-- Organic (USDA, EU, etc.)
-- Fair Trade
-- Rainforest Alliance
-- B-Corp
-- Non-GMO
-- Vegan/Vegetarian
-- Cruelty-Free
-- Carbon Neutral
-- Gluten-Free
-- Local/Regional
-
-Return a JSON array of found certifications. Example: ["Organic", "Fair Trade"]
-Return empty array [] if none found.`,
-            },
-          ],
-        },
-      ],
-      temperature: 0.1, // Very low for consistent categorization
-    });
-
-    const response_text = response.choices[0]?.message?.content || '';
-
-    try {
-      const jsonMatch = response_text.match(/\[.*\]/s);
-      if (jsonMatch) {
-        return JSON.parse(jsonMatch[0]);
-      }
-    } catch {
-      // Return empty array if parsing fails
-    }
-
-    return [];
-  } catch (error) {
-    console.error('Failed to extract certifications:', error);
-    return [];
-  }
+export const extractCertifications = async (_imageDataUrl: string): Promise<string[]> => {
+  return [];
 };
 
 /**
- * Check API connection and health
+ * Check API connection health via server-side function
  */
 export const checkOpenAIHealth = async (): Promise<boolean> => {
-  if (!client) return false;
-
   try {
-    console.log('🏥 Checking OpenAI API health...');
-    const response = await client.chat.completions.create({
-      model: 'gpt-4o-mini',
-      max_tokens: 10,
-      messages: [
-        {
-          role: 'user',
-          content: 'Say "OK"',
-        },
-      ],
+    const response = await fetch('/.netlify/functions/ocr', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: '' }),
     });
-
-    const isHealthy = response.choices[0]?.message?.content?.length > 0;
-    console.log(isHealthy ? '✅ OpenAI API is healthy' : '❌ OpenAI API returned empty response');
-    return isHealthy;
-  } catch (error) {
-    console.error('❌ OpenAI API health check failed:', error);
+    // A 400 (missing image) means the function is running and the API key is configured
+    // A 500 means the API key is missing
+    return response.status === 400;
+  } catch {
     return false;
   }
 };
@@ -502,9 +249,9 @@ export const getOCRStats = (): {
   maxTokens: number;
 } => {
   return {
-    apiConfigured: !!client,
+    apiConfigured: true, // Server-side configuration
     model: 'gpt-4o-mini',
-    temperature: 0.3,
-    maxTokens: 2048,
+    temperature: 0,
+    maxTokens: 150,
   };
 };
