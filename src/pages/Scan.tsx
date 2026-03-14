@@ -106,7 +106,7 @@ type TesseractProgress = {
 
 const normalizeOcrText = (text: string) => {
   return text
-    .replace(/[^\x20-\x7E\n]+/g, " ")
+    .replace(/[\x00-\x1F\x7F]/g, " ")  // Control characters only
     .replace(/[ \t]+/g, " ")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
