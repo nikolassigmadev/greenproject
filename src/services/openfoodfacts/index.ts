@@ -6,6 +6,8 @@ import type {
 } from './types';
 
 import { validateAndCleanBarcode, getAlternativeFormats } from '../../utils/barcodeValidator';
+import { ocrSearchLogger } from '../../utils/ocrSearchLogger';
+
 const OFF_API_BASE = 'https://world.openfoodfacts.org';
 
 // ---------------------------------------------------------------------------
@@ -146,6 +148,9 @@ export const lookupBarcode = async (barcode: string): Promise<OpenFoodFactsResul
   const validation = validateAndCleanBarcode(barcode);
   const cleaned = validation.cleaned;
 
+  // Log barcode validation
+  ocrSearchLogger.logBarcodeValidation(barcode, cleaned, validation.isValid, validation.format);
+
   if (!validation.isValid) {
     console.warn(`❌ Barcode validation failed: "${barcode}" is not a valid format (${validation.format})`);
     return emptyResult(
@@ -159,24 +164,27 @@ export const lookupBarcode = async (barcode: string): Promise<OpenFoodFactsResul
   // Try primary barcode first
   const result = await lookupBarcodeInternal(cleaned);
   if (result.found) {
+    ocrSearchLogger.logBarcodeSearch(cleaned, true, result.productName || undefined);
     return result;
   }
 
   // If primary lookup failed, try alternative formats
   console.warn(`🔄 Primary barcode lookup failed, trying alternatives...`);
   const alternatives = getAlternativeFormats(barcode);
-  
+
   for (const alt of alternatives) {
     console.log(`   Trying alternative format: ${alt}`);
     const altResult = await lookupBarcodeInternal(alt);
     if (altResult.found) {
       console.log(`✅ Found product using alternative barcode: ${alt}`);
+      ocrSearchLogger.logBarcodeSearch(alt, true, altResult.productName || undefined);
       return altResult;
     }
   }
 
   // All attempts failed
   console.warn(`❌ All barcode lookup attempts failed for: ${barcode}`);
+  ocrSearchLogger.logBarcodeSearch(cleaned, false);
   return emptyResult(
     cleaned,
     `Product not found on OpenFoodFacts. Tried: ${[cleaned, ...alternatives].join(', ')}`
@@ -267,32 +275,43 @@ export const searchProducts = async (
     const data: OpenFoodFactsSearchResponse = await response.json();
 
     if (!data.products || data.products.length === 0) {
+      ocrSearchLogger.logTextSearch(trimmed, 0, { regionFiltered: true });
       return [];
     }
 
     // Try to get results from allowed regions first
-    let results = data.products
-      .map(normalizeProduct)
-      .filter(isAllowedRegion)
-      .slice(0, limit);
-    
+    const allNormalized = data.products.map(normalizeProduct);
+    const regionalResults = allNormalized.filter(isAllowedRegion);
+    let results = regionalResults.slice(0, limit);
+
+    // Log regional filtering
+    ocrSearchLogger.logRegionalFiltering(
+      allNormalized.length,
+      regionalResults.length,
+      false
+    );
+
     // If we got very few results after regional filtering, include global results too
     if (results.length < Math.ceil(limit * 0.5)) {
       console.warn(`⚠️ Only ${results.length} results in allowed regions, including global results...`);
-      const allResults = data.products
-        .map(normalizeProduct)
-        .slice(0, limit * 2);
-      
+      const allResults = allNormalized.slice(0, limit * 2);
+
       // Prefer regional results but fill with global ones if needed
       results = [
         ...results,
         ...allResults.filter(r => !results.some(ur => ur.barcode === r.barcode))
       ].slice(0, limit);
     }
+
+    // Log text search results
+    ocrSearchLogger.logTextSearch(trimmed, results.length, { regionFiltered: true });
+
     cacheSet(cacheKey, results);
     return results;
   } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
     console.error('OpenFoodFacts search error:', error);
+    ocrSearchLogger.logAPIError('/cgi/search.pl', errorMsg);
     return [];
   }
 };

@@ -159,9 +159,11 @@ const isAcceptableOcrToken = (token: string) => {
   const t = token.toLowerCase();
   if (t.length < 2) return false; // Reduced from 3
   if (/(.)\1{2,}/.test(t)) return false;
-  if (!/^[a-z0-9]+$/i.test(t)) return false; // Allow alphanumeric only
+  // FIXED: Allow accented characters (éàäöü etc.) in product names like "Häagen-Dazs"
+  // Pattern: alphanumeric + common accented vowels/consonants
+  if (!/^[a-z0-9áéíóúàèìòùäëïöüâêôûãõñçœæ]+$/i.test(t)) return false;
 
-  const vowels = (t.match(/[aeiouy]/gi) || []).length;
+  const vowels = (t.match(/[aeiouyáéíóúàèìòùäëïöüâêôûãõ]/gi) || []).length;
   if (vowels === 0 && t.length > 2) return false; // Allow short vowel-less words
 
   if (t.length === 2) {
@@ -185,16 +187,16 @@ const isAcceptableOcrToken = (token: string) => {
 
 const cleanupOcrTextForDisplay = (text: string) => {
   const normalized = normalizeOcrText(text);
-  // Less aggressive filtering - keep more text
-  const words = normalized.match(/\b[a-zA-Z0-9]{2,}(?:[-'][a-zA-Z0-9]{1,})*\b/g) || [];
+  // Less aggressive filtering - keep more text, including accented characters
+  const words = normalized.match(/\b[a-zA-Z0-9áéíóúàèìòùäëïöüâêôûãõñçœæ]{2,}(?:[-'][a-zA-Z0-9áéíóúàèìòùäëïöüâêôûãõñçœæ]{1,})*\b/g) || [];
   const filtered = words.filter(isAcceptableOcrToken);
   return normalizeOcrText(uniqPreserveOrder(filtered).join(" "));
 };
 
 const cleanupOcrTextForSearch = (text: string) => {
   const normalized = normalizeOcrText(text);
-  // Less aggressive filtering - keep more text including numbers and brand names
-  const words = normalized.match(/\b[a-zA-Z0-9]{2,}(?:[-'][a-zA-Z0-9]{1,})*\b/g) || [];
+  // Less aggressive filtering - keep more text including numbers, brand names, and accented characters
+  const words = normalized.match(/\b[a-zA-Z0-9áéíóúàèìòùäëïöüâêôûãõñçœæ]{2,}(?:[-'][a-zA-Z0-9áéíóúàèìòùäëïöüâêôûãõñçœæ]{1,})*\b/g) || [];
   const numericCodes = normalized.match(/\b\d{6,}\b/g) || [];
   const filtered = words.filter(isAcceptableOcrToken);
   return normalizeOcrText(uniqPreserveOrder([...filtered, ...numericCodes]).join(" "));
