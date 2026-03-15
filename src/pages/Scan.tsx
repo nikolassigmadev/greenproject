@@ -1241,16 +1241,20 @@ const Scan = () => {
       // Search OpenFoodFacts by product name - fetch more to filter
       const results = await searchOffProducts(searchQuery, 10);
 
-      // Only keep products with eco-score and breakdown
+      // Prefer products with eco-score, but fallback to all products if none have eco-score
       const withEcoScore = results.filter(hasEcoScore);
-      const filteredResults = filterBestProducts(withEcoScore);
+      let filteredResults = filterBestProducts(withEcoScore);
+      
+      // Fallback: if no products with eco-score, show all products found
+      if (filteredResults.length === 0 && results.length > 0) {
+        console.warn(`⚠️ No products with Eco-Score found, showing all results...`);
+        filteredResults = filterBestProducts(results);
+      }
 
       if (filteredResults.length === 0) {
         toast({
           title: "No Results",
-          description: results.length > 0
-            ? `Found ${results.length} products for "${searchQuery}" but none have Eco-Score data.`
-            : `No products found for "${searchQuery}" on OpenFoodFacts.`,
+          description: `No products found for "${searchQuery}" on OpenFoodFacts.`,
           variant: "destructive",
         });
       } else {
