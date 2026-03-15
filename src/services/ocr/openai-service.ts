@@ -1,13 +1,5 @@
-import OpenAI from 'openai';
-
-// Initialize OpenAI client
-const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
-
-if (!apiKey) {
-  console.warn('OpenAI API key not configured. Set VITE_OPENAI_API_KEY in .env.local');
-}
-
-const client = apiKey ? new OpenAI({ apiKey, dangerouslyAllowBrowser: true }) : null;
+// Use backend proxy for OpenAI API calls to avoid CORS issues on mobile/LAN
+const getBackendUrl = () => `${window.location.protocol}//${window.location.hostname}:3001`;
 
 export type OcrResult = {
   text: string;
@@ -17,59 +9,36 @@ export type OcrResult = {
 };
 
 /**
- * Extract text from image using OpenAI Vision API (GPT-4o)
+ * Extract text from image using OpenAI Vision API (GPT-4o) via backend proxy
  * @param imageDataUrl - Base64 encoded image data URL
  * @returns Extracted text and confidence score
  */
 export const recognizeImageWithOpenAI = async (imageDataUrl: string): Promise<OcrResult> => {
-  if (!client) {
-    return {
-      text: '',
-      confidence: 0,
-      success: false,
-      error: 'OpenAI API key not configured. Please set VITE_OPENAI_API_KEY in .env.local'
-    };
-  }
-
   try {
-    // Convert data URL to base64 if needed
     let base64Image = imageDataUrl;
     if (imageDataUrl.includes(',')) {
       base64Image = imageDataUrl.split(',')[1];
     }
 
-    // Call OpenAI Vision API
-    const response = await client.chat.completions.create({
-      model: 'gpt-4o',
-      max_tokens: 1024,
-      messages: [
-        {
-          role: 'system',
-          content: 'You are an OCR expert. Extract all visible text from product images with high accuracy.',
-        },
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'image_url',
-              image_url: {
-                url: `data:image/jpeg;base64,${base64Image}`,
-              },
-            },
-            {
-              type: 'text',
-              text: 'Extract all visible text from this image. Focus on product names, brands, ingredients, and labels. Return ONLY the extracted text, no explanations.',
-            },
-          ],
-        },
-      ],
+    const prompt = 'Extract all visible text from this image. Focus on product names, brands, ingredients, and labels. Return ONLY the extracted text, no explanations.';
+
+    const response = await fetch(`${getBackendUrl()}/api/openai/analyze-image`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imageBase64: base64Image, prompt }),
     });
 
-    const extractedText = response.choices[0]?.message?.content || '';
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
+      throw new Error(errData.error || `Backend error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const extractedText = data.content || '';
 
     return {
       text: extractedText,
-      confidence: 90, // GPT-4o is very accurate
+      confidence: 90,
       success: true,
     };
   } catch (error) {
@@ -86,48 +55,30 @@ export const recognizeImageWithOpenAI = async (imageDataUrl: string): Promise<Oc
 };
 
 /**
- * Use OpenAI Vision API for product code/barcode extraction
+ * Use OpenAI Vision API for product code/barcode extraction via backend proxy
  */
 export const extractProductCode = async (imageDataUrl: string): Promise<string> => {
-  if (!client) {
-    throw new Error('OpenAI API key not configured');
-  }
-
   try {
     let base64Image = imageDataUrl;
     if (imageDataUrl.includes(',')) {
       base64Image = imageDataUrl.split(',')[1];
     }
 
-    const response = await client.chat.completions.create({
-      model: 'gpt-4o',
-      max_tokens: 256,
-      messages: [
-        {
-          role: 'system',
-          content: 'You are a barcode and product code extraction expert.',
-        },
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'image_url',
-              image_url: {
-                url: `data:image/jpeg;base64,${base64Image}`,
-              },
-            },
-            {
-              type: 'text',
-              text: 'Extract the barcode number or product code from this image. Return ONLY the numeric code, nothing else.',
-            },
-          ],
-        },
-      ],
+    const prompt = 'Extract the barcode number or product code from this image. Return ONLY the numeric code, nothing else.';
+
+    const response = await fetch(`${getBackendUrl()}/api/openai/analyze-image`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imageBase64: base64Image, prompt }),
     });
 
-    const code = (response.choices[0]?.message?.content || '').trim();
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
+      throw new Error(errData.error || `Backend error: ${response.status}`);
+    }
 
-    return code;
+    const data = await response.json();
+    return (data.content || '').trim();
   } catch (error) {
     console.error('Failed to extract product code:', error);
     throw error;
@@ -135,27 +86,13 @@ export const extractProductCode = async (imageDataUrl: string): Promise<string> 
 };
 
 /**
- * Health check - verify API connection
+ * Health check - verify API connection via backend
  */
 export const checkOpenAIConnection = async (): Promise<boolean> => {
-  if (!client) {
-    return false;
-  }
-
   try {
-    // Make a simple API call to verify connection
-    const response = await client.chat.completions.create({
-      model: 'gpt-4o',
-      max_tokens: 10,
-      messages: [
-        {
-          role: 'user',
-          content: 'Say "OK"',
-        },
-      ],
-    });
-
-    return response.choices[0]?.message?.content?.length > 0;
+    const response = await fetch(`${getBackendUrl()}/api/health`);
+    const data = await response.json();
+    return data.status === 'ok' && data.openaiConfigured;
   } catch (error) {
     console.error('OpenAI connection check failed:', error);
     return false;

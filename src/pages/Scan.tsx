@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Camera, Upload, Search, Loader2, AlertCircle, X, ScanLine, Image as ImageIcon, Plus, Leaf } from "lucide-react";
+import { Camera, Upload, Search, Loader2, AlertCircle, X, ScanLine, Image as ImageIcon, Plus, Leaf, BarChart3, QrCode } from "lucide-react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Input } from "@/components/ui/input";
@@ -502,12 +502,30 @@ const Scan = () => {
   const [offAlternatives, setOffAlternatives] = useState<OpenFoodFactsResult[]>([]);
   const [offAlternativeLoading, setOffAlternativeLoading] = useState(false);
   const offFileInputRef = useRef<HTMLInputElement>(null);
+  const [scanProgress, setScanProgress] = useState(0);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Debug: Check if video element is mounted
   useEffect(() => {
     console.log('Video ref status:', Boolean(videoRef.current));
     console.log('Canvas ref status:', Boolean(canvasRef.current));
   }, [cameraActive, cameraInitializing]);
+
+  // Animated scan progress
+  useEffect(() => {
+    if (!offSearchLoading) {
+      setScanProgress(0);
+      return;
+    }
+    setScanProgress(5);
+    const interval = setInterval(() => {
+      setScanProgress(prev => {
+        if (prev >= 90) return prev;
+        return Math.min(90, prev + Math.random() * 8 + 2);
+      });
+    }, 300);
+    return () => clearInterval(interval);
+  }, [offSearchLoading]);
 
   // Search for greener alternatives when OFF results have a poor eco-score
   useEffect(() => {
@@ -1387,11 +1405,303 @@ const Scan = () => {
             </p>
           </div>
 
+          {/* Scanner Viewfinder */}
+          <div
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.currentTarget.style.boxShadow = '0 0 30px rgba(34, 120, 70, 0.5)';
+            }}
+            onDragLeave={(e) => {
+              e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.15)';
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.15)';
+              const files = e.dataTransfer.files;
+              if (files.length > 0) {
+                const file = files[0];
+                if (file.type.startsWith('image/')) {
+                  const reader = new FileReader();
+                  reader.onload = (event) => {
+                    setOffSearchImage(event.target?.result as string);
+                    handleOffFileUpload({ target: { files: [file] } } as any);
+                  };
+                  reader.readAsDataURL(file);
+                }
+              }
+            }}
+            style={{
+              position: 'relative',
+              maxWidth: '400px',
+              margin: '0 auto 2rem',
+              borderRadius: '2rem',
+              border: '4px solid hsl(152 45% 30%)',
+              overflow: 'hidden',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
+              transition: 'box-shadow 0.3s ease',
+            }}
+          >
+            {/* Viewfinder Area */}
+            <div style={{
+              position: 'relative',
+              width: '100%',
+              aspectRatio: '3 / 4',
+              backgroundColor: '#1a1a2e',
+              overflow: 'hidden',
+            }}>
+              {/* Background: uploaded image or dark gradient */}
+              {offSearchImage ? (
+                <img
+                  src={offSearchImage}
+                  alt="Scanned product"
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                  }}
+                />
+              ) : (
+                <div style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  background: 'radial-gradient(ellipse at center, #2a2a4a 0%, #1a1a2e 60%, #0f0f1a 100%)',
+                }} />
+              )}
+
+              {/* Scan line animation overlay */}
+              {offSearchLoading && (
+                <div style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: '10%',
+                  right: '10%',
+                  height: '2px',
+                  backgroundColor: 'hsl(152 45% 50%)',
+                  boxShadow: '0 0 15px hsl(152 45% 50%), 0 0 30px hsl(152 45% 40%)',
+                  animation: 'scanLine 2s ease-in-out infinite',
+                  zIndex: 5,
+                }} />
+              )}
+
+              {/* Corner Brackets */}
+              {/* Top Left */}
+              <div style={{
+                position: 'absolute', top: '15%', left: '10%',
+                width: '50px', height: '50px',
+                borderTop: '3px solid rgba(255,255,255,0.9)',
+                borderLeft: '3px solid rgba(255,255,255,0.9)',
+                borderRadius: '4px 0 0 0',
+                zIndex: 4,
+              }} />
+              {/* Top Right */}
+              <div style={{
+                position: 'absolute', top: '15%', right: '10%',
+                width: '50px', height: '50px',
+                borderTop: '3px solid rgba(255,255,255,0.9)',
+                borderRight: '3px solid rgba(255,255,255,0.9)',
+                borderRadius: '0 4px 0 0',
+                zIndex: 4,
+              }} />
+              {/* Bottom Left */}
+              <div style={{
+                position: 'absolute', bottom: '28%', left: '10%',
+                width: '50px', height: '50px',
+                borderBottom: '3px solid rgba(255,255,255,0.9)',
+                borderLeft: '3px solid rgba(255,255,255,0.9)',
+                borderRadius: '0 0 0 4px',
+                zIndex: 4,
+              }} />
+              {/* Bottom Right */}
+              <div style={{
+                position: 'absolute', bottom: '28%', right: '10%',
+                width: '50px', height: '50px',
+                borderBottom: '3px solid rgba(255,255,255,0.9)',
+                borderRight: '3px solid rgba(255,255,255,0.9)',
+                borderRadius: '0 0 4px 0',
+                zIndex: 4,
+              }} />
+
+              {/* Status Pill */}
+              <div style={{
+                position: 'absolute',
+                top: '6%',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                backgroundColor: offSearchLoading ? 'rgba(34, 120, 70, 0.7)' : 'rgba(0, 0, 0, 0.5)',
+                backdropFilter: 'blur(8px)',
+                color: 'white',
+                padding: '6px 16px',
+                borderRadius: '999px',
+                fontSize: '0.75rem',
+                fontWeight: '600',
+                zIndex: 10,
+                letterSpacing: '0.02em',
+              }}>
+                {offSearchLoading ? (
+                  <>
+                    <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} />
+                    <span>Scanning... {Math.round(scanProgress)}%</span>
+                  </>
+                ) : (
+                  <>
+                    <Camera size={12} />
+                    <span>Ready to Scan</span>
+                  </>
+                )}
+              </div>
+
+              {/* Action Buttons Row */}
+              <div style={{
+                position: 'absolute',
+                bottom: '6%',
+                left: 0,
+                right: 0,
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                gap: '2rem',
+                zIndex: 10,
+              }}>
+                {/* Left: Analytics/Results */}
+                <button
+                  onClick={() => {
+                    const resultsEl = document.getElementById('scan-results');
+                    if (resultsEl) {
+                      resultsEl.scrollIntoView({ behavior: 'smooth' });
+                    } else {
+                      toast({ title: 'No Results', description: 'Scan a product first to see results' });
+                    }
+                  }}
+                  style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '50%',
+                    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                    backdropFilter: 'blur(4px)',
+                    border: '2px solid rgba(255, 255, 255, 0.3)',
+                    color: 'white',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.25)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.15)'; }}
+                  title="View Results"
+                >
+                  <BarChart3 size={20} />
+                </button>
+
+                {/* Center: Camera/Upload */}
+                <button
+                  onClick={() => offFileInputRef.current?.click()}
+                  disabled={offSearchLoading}
+                  style={{
+                    width: '72px',
+                    height: '72px',
+                    borderRadius: '50%',
+                    backgroundColor: offSearchLoading ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.2)',
+                    border: '4px solid white',
+                    color: 'white',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: offSearchLoading ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.2s ease',
+                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
+                  }}
+                  onMouseEnter={(e) => { if (!offSearchLoading) e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.35)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = offSearchLoading ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.2)'; }}
+                  title="Capture / Upload Photo"
+                >
+                  {offSearchLoading ? <Loader2 size={28} style={{ animation: 'spin 1s linear infinite' }} /> : <Camera size={28} />}
+                </button>
+
+                {/* Right: Search/QR */}
+                <button
+                  onClick={() => {
+                    searchInputRef.current?.focus();
+                    searchInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }}
+                  style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '50%',
+                    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                    backdropFilter: 'blur(4px)',
+                    border: '2px solid rgba(255, 255, 255, 0.3)',
+                    color: 'white',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.25)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.15)'; }}
+                  title="Search by Name"
+                >
+                  <QrCode size={20} />
+                </button>
+              </div>
+
+              {/* Drag & drop hint text */}
+              {!offSearchImage && !offSearchLoading && (
+                <div style={{
+                  position: 'absolute',
+                  bottom: '22%',
+                  left: 0,
+                  right: 0,
+                  textAlign: 'center',
+                  color: 'rgba(255, 255, 255, 0.4)',
+                  fontSize: '0.75rem',
+                  fontStyle: 'italic',
+                  zIndex: 4,
+                }}>
+                  Tap capture or drag & drop an image
+                </div>
+              )}
+            </div>
+
+            {/* Animations */}
+            <style>{`
+              @keyframes scanLine {
+                0% { top: 15%; opacity: 1; }
+                50% { top: 65%; opacity: 0.8; }
+                100% { top: 15%; opacity: 1; }
+              }
+              @keyframes spin {
+                from { transform: rotate(0deg); }
+                to { transform: rotate(360deg); }
+              }
+            `}</style>
+          </div>
+
+          <input
+            ref={offFileInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={handleOffFileUpload}
+            style={{ display: 'none' }}
+          />
+
           {/* Product Search */}
           <div style={{ marginBottom: '2rem', padding: '1.5rem', backgroundColor: 'hsl(40 30% 98%)', borderRadius: '0.5rem', border: '1px solid hsl(40 20% 85%)' }}>
             <h2 style={{ fontSize: '1.125rem', fontWeight: 'bold', marginBottom: '1rem', color: 'hsl(150 20% 15%)' }}>🔍 Product Search</h2>
             <form onSubmit={(e) => { e.preventDefault(); handleProductSearch(barcodeInput); }} style={{ display: 'flex', gap: '0.75rem' }}>
               <Input
+                ref={searchInputRef}
                 placeholder="Search by product name (e.g., Coca-Cola, Häagen-Dazs)"
                 value={barcodeInput}
                 onChange={(e) => setBarcodeInput(e.target.value)}
@@ -1411,149 +1721,8 @@ const Scan = () => {
             </form>
           </div>
 
-          {/* Scanner Interface */}
-          <div
-            onClick={() => offFileInputRef.current?.click()}
-            onDragOver={(e) => {
-              e.preventDefault();
-              e.currentTarget.style.borderColor = 'hsl(152 45% 30%)';
-              e.currentTarget.style.backgroundColor = 'hsl(40 25% 93%)';
-            }}
-            onDragLeave={(e) => {
-              e.currentTarget.style.borderColor = 'hsl(40 20% 85%)';
-              e.currentTarget.style.backgroundColor = 'hsl(40 30% 98%)';
-            }}
-            onDrop={(e) => {
-              e.preventDefault();
-              e.currentTarget.style.borderColor = 'hsl(40 20% 85%)';
-              e.currentTarget.style.backgroundColor = 'hsl(40 30% 98%)';
-              const files = e.dataTransfer.files;
-              if (files.length > 0) {
-                const file = files[0];
-                if (file.type.startsWith('image/')) {
-                  offFileInputRef.current?.form?.dispatchEvent(
-                    new Event('change', { bubbles: true })
-                  );
-                  const reader = new FileReader();
-                  reader.onload = (event) => {
-                    setOffSearchImage(event.target?.result as string);
-                    handleOffFileUpload({ target: { files: [file] } } as any);
-                  };
-                  reader.readAsDataURL(file);
-                }
-              }
-            }}
-            style={{
-              marginBottom: '2rem',
-              padding: '3rem 2rem',
-              backgroundColor: 'hsl(40 30% 98%)',
-              borderRadius: '0.75rem',
-              border: '2px dashed hsl(40 20% 85%)',
-              cursor: 'pointer',
-              transition: 'all 0.3s ease',
-              textAlign: 'center',
-              minHeight: '280px',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '1.5rem',
-            }}
-          >
-            {/* Large Camera Icon */}
-            <div style={{
-              fontSize: '5rem',
-              filter: offSearchLoading ? 'opacity(0.6)' : 'opacity(1)',
-              animation: offSearchLoading ? 'pulse 2s infinite' : 'none',
-            }}>
-              {offSearchLoading ? '⏳' : '📷'}
-            </div>
-
-            {/* Main Heading */}
-            <div>
-              <h2 style={{
-                fontSize: '1.5rem',
-                fontWeight: 'bold',
-                color: 'hsl(150 20% 15%)',
-                marginBottom: '0.5rem',
-                margin: 0,
-              }}>
-                Scan Product
-              </h2>
-              <p style={{
-                fontSize: '0.95rem',
-                color: 'hsl(150 10% 45%)',
-                margin: 0,
-              }}>
-                {offSearchLoading ? 'Analyzing image...' : 'Take or upload a photo of any product'}
-              </p>
-            </div>
-
-            {/* Action Buttons */}
-            <div style={{
-              display: 'flex',
-              gap: '1rem',
-              width: '100%',
-              maxWidth: '300px',
-              flexDirection: 'column',
-            }}>
-              <CalAIButton
-                onClick={(e) => {
-                  e.stopPropagation();
-                  offFileInputRef.current?.click();
-                }}
-                loading={offSearchLoading}
-                emoji={offSearchLoading ? '⏳' : '📤'}
-                style={{ width: '100%' }}
-              >
-                {offSearchLoading ? 'Analyzing...' : 'Choose Image'}
-              </CalAIButton>
-            </div>
-
-            {/* Secondary Text */}
-            <p style={{
-              fontSize: '0.875rem',
-              color: 'hsl(150 10% 55%)',
-              margin: 0,
-              fontStyle: 'italic',
-            }}>
-              Or drag & drop an image
-            </p>
-
-            <style>{`
-              @keyframes pulse {
-                0%, 100% { opacity: 1; }
-                50% { opacity: 0.6; }
-              }
-            `}</style>
-          </div>
-
-          <input
-            ref={offFileInputRef}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            onChange={handleOffFileUpload}
-            style={{ display: 'none' }}
-          />
-
-          {/* Image Preview */}
-          {offSearchImage && (
-            <div style={{ marginBottom: '2rem' }}>
-              <div style={{
-                borderRadius: '0.5rem',
-                overflow: 'hidden',
-                aspectRatio: '16/9',
-                maxHeight: '200px',
-                backgroundColor: 'hsl(40 30% 98%)',
-                border: '1px solid hsl(40 20% 85%)'
-              }}>
-                <img src={offSearchImage} alt="Scanned" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-              </div>
-            </div>
-          )}
-
           {/* Status Messages */}
+          <div id="scan-results" />
           {ocrMessage && (
             <AlertBox type="warning" title="OCR Status" message={ocrMessage} onClose={() => setOcrMessage(null)} />
           )}
