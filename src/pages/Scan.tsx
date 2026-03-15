@@ -1821,9 +1821,10 @@ const Scan = () => {
               )}
             </CardContent>
           </Card>
+          */}
 
-          {/* ARCHIVED: Manual Search, Pro Tips, and Camera Troubleshooting Sections
-          <Card className="mb-6 sm:mb-8 border-0 shadow-lg bg-gradient-to-br from-white to-slate-50/30 dark:from-slate-900 dark:to-slate-800/30">
+          {/* ARCHIVED: Manual Search, Pro Tips, and Camera Troubleshooting Sections */}
+          {/* <Card className="mb-6 sm:mb-8 border-0 shadow-lg bg-gradient-to-br from-white to-slate-50/30 dark:from-slate-900 dark:to-slate-800/30">
             <CardHeader className="pb-4">
               <CardTitle className="flex items-center gap-3 text-lg">
                 <div className="flex items-center justify-center w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-900/50">
