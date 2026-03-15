@@ -58,17 +58,17 @@ const Products = () => {
     return filtered;
   }, [products, search, selectedCategory, sortBy, minScore]);
 
-  return (<div className="min-h-screen flex flex-col bg-[#1a2332] text-[#f0f4f8] min-h-screen">
+  return (<div className="min-h-screen flex flex-col bg-[#f0ebe1] text-[#1f2e22] min-h-screen">
       <Header />
       
       <main className="flex-1 py-8">
         <div className="container">
           {/* Page Header */}
           <div className="mb-8">
-            <h1 className="text-3xl sm:text-4xl font-display font-bold mb-2" style={{ color: 'hsl(210 15% 94%)' }}>
+            <h1 className="text-3xl sm:text-4xl font-display font-bold mb-2" style={{ color: 'hsl(150 20% 15%)' }}>
               Product Database
             </h1>
-            <p style={{ color: 'hsl(210 15% 63%)' }}>
+            <p style={{ color: 'hsl(150 10% 45%)' }}>
               Browse {products.length} products and discover their sustainability scores
             </p>
           </div>
@@ -77,23 +77,23 @@ const Products = () => {
           <div className="flex flex-col sm:flex-row gap-4 mb-8">
             {/* Search */}
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'hsl(210 15% 63%)' }} />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'hsl(150 10% 45%)' }} />
               <Input
                 placeholder="Search products, brands, or codes..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-10"
-                style={{ backgroundColor: 'hsl(210 35% 22%)', color: 'hsl(210 15% 94%)', borderColor: 'hsl(210 30% 20%)' }}
+                style={{ backgroundColor: 'hsl(40 25% 93%)', color: 'hsl(150 20% 15%)', borderColor: 'hsl(40 20% 85%)' }}
               />
             </div>
 
             {/* Sort */}
             <div className="flex items-center gap-2">
-              <SlidersHorizontal className="w-4 h-4" style={{ color: 'hsl(210 15% 63%)' }} />
+              <SlidersHorizontal className="w-4 h-4" style={{ color: 'hsl(150 10% 45%)' }} />
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as any)}
-                style={{ backgroundColor: 'hsl(210 35% 22%)', color: 'hsl(210 15% 94%)', borderColor: 'hsl(210 30% 20%)', borderRadius: '0.5rem', padding: '0.5rem 0.75rem', fontSize: '0.875rem' }}
+                style={{ backgroundColor: 'hsl(40 25% 93%)', color: 'hsl(150 20% 15%)', borderColor: 'hsl(40 20% 85%)', borderRadius: '0.5rem', padding: '0.5rem 0.75rem', fontSize: '0.875rem' }}
               >
                 <option value="score">Highest Score</option>
                 <option value="name">Name A-Z</option>
@@ -104,7 +104,7 @@ const Products = () => {
 
           {/* Categories */}
           <div className="flex flex-wrap gap-2 mb-8">
-            <Filter className="w-4 h-4 mt-1.5" style={{ color: 'hsl(210 15% 63%)' }} />
+            <Filter className="w-4 h-4 mt-1.5" style={{ color: 'hsl(150 10% 45%)' }} />
             {categories.map((category) => (
               <Badge
                 key={category}
@@ -113,8 +113,8 @@ const Products = () => {
                   "cursor-pointer transition-all duration-200"
                 )}
                 style={selectedCategory === category
-                  ? { backgroundColor: 'hsl(38 92% 50%)', color: 'white', border: 'none' }
-                  : { backgroundColor: 'transparent', color: 'hsl(210 15% 94%)', borderColor: 'hsl(210 30% 20%)' }
+                  ? { backgroundColor: 'hsl(152 45% 30%)', color: 'white', border: 'none' }
+                  : { backgroundColor: 'transparent', color: 'hsl(150 20% 15%)', borderColor: 'hsl(40 20% 85%)' }
                 }
                 onClick={() => setSelectedCategory(category)}
               >
@@ -124,7 +124,7 @@ const Products = () => {
           </div>
 
           {/* Results count */}
-          <p className="text-sm mb-6" style={{ color: 'hsl(210 15% 63%)' }}>
+          <p className="text-sm mb-6" style={{ color: 'hsl(150 10% 45%)' }}>
             Showing {filteredProducts.length} of {products.length} products
           </p>
 
@@ -137,7 +137,7 @@ const Products = () => {
             </div>
           ) : (
             <div className="text-center py-16">
-              <p style={{ color: 'hsl(210 15% 63%)' }}>No products found matching your criteria.</p>
+              <p style={{ color: 'hsl(150 10% 45%)' }}>No products found matching your criteria.</p>
             </div>
           )}
         </div>

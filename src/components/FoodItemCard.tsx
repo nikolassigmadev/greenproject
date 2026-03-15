@@ -43,7 +43,7 @@ export const FoodItemCard: React.FC<FoodItemCardProps> = ({
       {imageUrl ? (
         <img src={imageUrl} alt={name} className="food-item-image" />
       ) : (
-        <div className="food-item-image flex items-center justify-center bg-gradient-to-br from-orange-400 to-orange-600 text-white text-2xl font-bold">
+        <div className="food-item-image flex items-center justify-center bg-gradient-to-br from-green-600 to-green-800 text-white text-2xl font-bold">
           🍽️
         </div>
       )}

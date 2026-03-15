@@ -51,20 +51,20 @@ const Index = () => {
     .map(({ product }) => product)
     .slice(0, 4);
 
-  return (<div className="min-h-screen flex flex-col bg-[#1a2332] text-[#f0f4f8] min-h-screen">
+  return (<div className="min-h-screen flex flex-col bg-[#f0ebe1] text-[#1f2e22] min-h-screen">
       <Header />
       
       <main className="flex-1">
         <HeroSection />
 
         {/* Categories Section */}
-        <section className="py-16" style={{ backgroundColor: 'hsl(210 35% 18%)' }}>
+        <section className="py-16" style={{ backgroundColor: 'hsl(40 30% 98%)' }}>
           <div className="container">
             <div className="text-center mb-12">
-              <h2 className="text-3xl sm:text-4xl font-display font-bold mb-4" style={{ color: 'hsl(210 15% 94%)' }}>
+              <h2 className="text-3xl sm:text-4xl font-display font-bold mb-4" style={{ color: 'hsl(150 20% 15%)' }}>
                 Shop by Category
               </h2>
-              <p className="text-lg max-w-2xl mx-auto leading-relaxed" style={{ color: 'hsl(210 15% 63%)' }}>
+              <p className="text-lg max-w-2xl mx-auto leading-relaxed" style={{ color: 'hsl(150 10% 45%)' }}>
                 Explore our curated categories and discover sustainable products that align with your values
               </p>
             </div>
@@ -74,32 +74,32 @@ const Index = () => {
                 const Icon = config.icon;
                 return (
                   <Link key={category} to={`/products?category=${encodeURIComponent(category)}`}>
-                    <Card className="group hover:shadow-lg transition-all duration-300 cursor-pointer" style={{ backgroundColor: 'hsl(210 35% 18%)', borderColor: 'hsl(210 30% 20%)', borderWidth: '2px' }}>
+                    <Card className="group hover:shadow-lg transition-all duration-300 cursor-pointer" style={{ backgroundColor: 'hsl(40 30% 98%)', borderColor: 'hsl(40 20% 85%)', borderWidth: '2px' }}>
                       <CardContent className="p-6">
                         <div className="flex items-center justify-between mb-4">
                           <div className={`w-12 h-12 rounded-xl ${config.color} flex items-center justify-center group-hover:scale-110 transition-transform`}>
                             <Icon className="w-6 h-6" />
                           </div>
-                          <span className="text-sm font-medium px-2 py-1 rounded-full" style={{ backgroundColor: 'hsl(210 35% 22%)', color: 'hsl(210 15% 63%)' }}>
+                          <span className="text-sm font-medium px-2 py-1 rounded-full" style={{ backgroundColor: 'hsl(40 25% 93%)', color: 'hsl(150 10% 45%)' }}>
                             {count} products
                           </span>
                         </div>
 
-                        <h3 className="font-semibold text-lg mb-2 transition-colors group-hover:" style={{ color: 'hsl(210 15% 94%)' }}>
+                        <h3 className="font-semibold text-lg mb-2 transition-colors group-hover:" style={{ color: 'hsl(150 20% 15%)' }}>
                           {category}
                         </h3>
 
-                        <p className="text-sm mb-4" style={{ color: 'hsl(210 15% 63%)' }}>
+                        <p className="text-sm mb-4" style={{ color: 'hsl(150 10% 45%)' }}>
                           {config.description}
                         </p>
 
                         {featured && (
-                          <div className="flex items-center justify-between p-3 rounded-lg" style={{ backgroundColor: 'hsl(210 35% 22%)' }}>
+                          <div className="flex items-center justify-between p-3 rounded-lg" style={{ backgroundColor: 'hsl(40 25% 93%)' }}>
                             <div className="flex-1 min-w-0">
-                              <p className="text-xs mb-1" style={{ color: 'hsl(210 15% 63%)' }}>Featured</p>
-                              <p className="text-sm font-medium truncate" style={{ color: 'hsl(210 15% 94%)' }}>{featured.name}</p>
+                              <p className="text-xs mb-1" style={{ color: 'hsl(150 10% 45%)' }}>Featured</p>
+                              <p className="text-sm font-medium truncate" style={{ color: 'hsl(150 20% 15%)' }}>{featured.name}</p>
                             </div>
-                            <ArrowRight className="w-4 h-4 transition-colors" style={{ color: 'hsl(38 92% 50%)' }} />
+                            <ArrowRight className="w-4 h-4 transition-colors" style={{ color: 'hsl(152 45% 30%)' }} />
                           </div>
                         )}
                       </CardContent>
@@ -121,14 +121,14 @@ const Index = () => {
         </section>
 
         {alternativeProducts.length > 0 && (
-          <section className="py-16" style={{ backgroundColor: 'hsl(210 40% 10%)' }}>
+          <section className="py-16" style={{ backgroundColor: 'hsl(40 33% 95%)' }}>
             <div className="container">
               <div className="flex items-end justify-between gap-4 mb-10">
                 <div>
-                  <h2 className="text-3xl sm:text-4xl font-display font-bold mb-2" style={{ color: 'hsl(210 15% 94%)' }}>
+                  <h2 className="text-3xl sm:text-4xl font-display font-bold mb-2" style={{ color: 'hsl(150 20% 15%)' }}>
                     The Alternative
                   </h2>
-                  <p className="text-lg leading-relaxed" style={{ color: 'hsl(210 15% 63%)' }}>
+                  <p className="text-lg leading-relaxed" style={{ color: 'hsl(150 10% 45%)' }}>
                     Products with a sustainability score of 97 or higher.
                   </p>
                 </div>
@@ -147,13 +147,13 @@ const Index = () => {
         )}
 
         {/* How It Works Section */}
-        <section className="py-16" style={{ backgroundColor: 'hsl(210 35% 18%)' }}>
+        <section className="py-16" style={{ backgroundColor: 'hsl(40 30% 98%)' }}>
           <div className="container">
             <div className="text-center mb-12">
-              <h2 className="text-3xl sm:text-4xl font-display font-bold mb-4" style={{ color: 'hsl(210 15% 94%)' }}>
+              <h2 className="text-3xl sm:text-4xl font-display font-bold mb-4" style={{ color: 'hsl(150 20% 15%)' }}>
                 How It Works
               </h2>
-              <p className="text-lg max-w-2xl mx-auto leading-relaxed" style={{ color: 'hsl(210 15% 63%)' }}>
+              <p className="text-lg max-w-2xl mx-auto leading-relaxed" style={{ color: 'hsl(150 10% 45%)' }}>
                 Three simple steps to make more informed purchasing decisions
               </p>
             </div>
@@ -204,11 +204,11 @@ const Index = () => {
 function StepCard({ number, title, description }: { number: number; title: string; description: string }) {
   return (
     <div className="text-center">
-      <div className="w-14 h-14 rounded-2xl font-display font-bold text-2xl flex items-center justify-center mx-auto mb-4 shadow-soft" style={{ backgroundColor: 'hsl(38 92% 50%)', color: 'white' }}>
+      <div className="w-14 h-14 rounded-2xl font-display font-bold text-2xl flex items-center justify-center mx-auto mb-4 shadow-soft" style={{ backgroundColor: 'hsl(152 45% 30%)', color: 'white' }}>
         {number}
       </div>
-      <h3 className="font-display font-semibold text-lg mb-2" style={{ color: 'hsl(210 15% 94%)' }}>{title}</h3>
-      <p className="text-sm" style={{ color: 'hsl(210 15% 63%)' }}>{description}</p>
+      <h3 className="font-display font-semibold text-lg mb-2" style={{ color: 'hsl(150 20% 15%)' }}>{title}</h3>
+      <p className="text-sm" style={{ color: 'hsl(150 10% 45%)' }}>{description}</p>
     </div>
   );
 }
