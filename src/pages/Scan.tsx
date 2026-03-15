@@ -1390,16 +1390,16 @@ const Scan = () => {
           </div>
 
           {/* Product Lookup */}
-          <Card className="mb-6 sm:mb-8 border-0 shadow-lg bg-gradient-to-br from-white to-slate-50/30 dark:from-slate-900 dark:to-slate-800/30">
-            <CardHeader className="pb-4">
+          <Card className="mb-6 sm:mb-8 border-0 shadow-lg" style={{ backgroundColor: 'hsl(210 35% 18%)', borderColor: 'hsl(38 92% 50%)' }}>
+            <CardHeader className="pb-4" style={{ borderBottom: '2px solid hsl(38 92% 50%)' }}>
               <CardTitle className="flex items-center gap-3 text-lg">
-                <div className="flex items-center justify-center w-9 h-9 rounded-full bg-emerald-100 dark:bg-emerald-900/50">
-                  <Search className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                <div className="flex items-center justify-center w-10 h-10 rounded-full" style={{ backgroundColor: 'hsl(38 92% 50%)' }}>
+                  <Search className="w-5 h-5" style={{ color: 'white' }} />
                 </div>
-                <span className="bg-gradient-to-r from-emerald-700 to-emerald-600 bg-clip-text text-transparent">Product Lookup</span>
+                <span style={{ color: 'hsl(38 92% 50%)', fontSize: '1.25rem', fontWeight: 'bold' }}>🔍 Product Lookup</span>
               </CardTitle>
-              <p className="text-sm text-muted-foreground pl-12">
-                Search by barcode, upload image, or enter product name
+              <p className="text-sm pl-12" style={{ color: 'hsl(210 15% 63%)' }}>
+                Search by barcode, upload image, or find products instantly
               </p>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -1420,7 +1420,7 @@ const Scan = () => {
                     className="flex-1 h-11 rounded-lg border-slate-200 dark:border-slate-700 bg-[#202d42]/50 dark:bg-slate-800/50 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/20"
                     inputMode="numeric"
                   />
-                  <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700 h-11 px-5 rounded-lg shadow-md hover:shadow-lg transition-all duration-300" disabled={offLoading}>
+                  <Button type="submit" className="h-11 px-5 rounded-lg shadow-md hover:shadow-lg transition-all duration-300" style={{ backgroundColor: 'hsl(38 92% 50%)', color: 'white' }} disabled={offLoading}>
                     {offLoading ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
@@ -1432,12 +1432,12 @@ const Scan = () => {
 
               {/* Image Upload */}
               <div className="space-y-3">
-                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Image Search</label>
+                <label className="text-sm font-medium" style={{ color: 'hsl(210 15% 94%)' }}>📸 Image Search</label>
                 <Button
                   onClick={() => offFileInputRef.current?.click()}
                   disabled={offSearchLoading}
-                  className="w-full h-11 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-lg transition-all duration-300"
-                  variant="outline"
+                  className="w-full h-11 rounded-lg transition-all duration-300 font-medium"
+                  style={{ backgroundColor: 'hsl(210 35% 22%)', color: 'hsl(210 15% 94%)', border: '2px solid hsl(38 92% 50%)' }}
                 >
                   {offSearchLoading ? (
                     <>
@@ -1614,7 +1614,7 @@ const Scan = () => {
             </CardContent>
           </Card>
 
-          {/* Scanner Card */}
+          {/* ARCHIVED: Product Scanner Section
           <Card className="mb-6 sm:mb-8 border-0 shadow-lg bg-[#202d42] dark:bg-slate-900">
             <CardHeader className="pb-4">
               <CardTitle className="flex items-center gap-3 text-lg">
@@ -1822,7 +1822,7 @@ const Scan = () => {
             </CardContent>
           </Card>
 
-          {/* Manual Search */}
+          {/* ARCHIVED: Manual Search, Pro Tips, and Camera Troubleshooting Sections
           <Card className="mb-6 sm:mb-8 border-0 shadow-lg bg-gradient-to-br from-white to-slate-50/30 dark:from-slate-900 dark:to-slate-800/30">
             <CardHeader className="pb-4">
               <CardTitle className="flex items-center gap-3 text-lg">
@@ -2069,6 +2069,7 @@ const Scan = () => {
               </div>
             </div>
           </div>
+          */}
         </div>
       </main>
 
