@@ -1371,8 +1371,7 @@ const Scan = () => {
     }
   };
 
-  return (
-    <div className="min-h-screen flex flex-col">
+  return (<div className="min-h-screen flex flex-col bg-[#1a2332] text-[#f0f4f8] min-h-screen">
       <Header />
       
       <main className="flex-1 py-6 sm:py-8">
@@ -1418,7 +1417,7 @@ const Scan = () => {
                     placeholder="Enter barcode (e.g., 3017620422003)"
                     value={barcodeInput}
                     onChange={(e) => setBarcodeInput(e.target.value)}
-                    className="flex-1 h-11 rounded-lg border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/50 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/20"
+                    className="flex-1 h-11 rounded-lg border-slate-200 dark:border-slate-700 bg-[#202d42]/50 dark:bg-slate-800/50 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/20"
                     inputMode="numeric"
                   />
                   <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700 h-11 px-5 rounded-lg shadow-md hover:shadow-lg transition-all duration-300" disabled={offLoading}>
@@ -1530,7 +1529,7 @@ const Scan = () => {
                       </div>
                       <div className="space-y-3">
                         {offAlternatives.map((alt, i) => (
-                          <div key={`${alt.barcode}-alt-${i}`} className="flex items-start gap-3 p-3 rounded-xl bg-white/60 dark:bg-slate-800/40 border border-emerald-200/40 dark:border-emerald-700/40">
+                          <div key={`${alt.barcode}-alt-${i}`} className="flex items-start gap-3 p-3 rounded-xl bg-[#202d42]/60 dark:bg-slate-800/40 border border-emerald-200/40 dark:border-emerald-700/40">
                             {alt.imageUrl && (
                               <img
                                 src={alt.imageUrl}
@@ -1616,7 +1615,7 @@ const Scan = () => {
           </Card>
 
           {/* Scanner Card */}
-          <Card className="mb-6 sm:mb-8 border-0 shadow-lg bg-white dark:bg-slate-900">
+          <Card className="mb-6 sm:mb-8 border-0 shadow-lg bg-[#202d42] dark:bg-slate-900">
             <CardHeader className="pb-4">
               <CardTitle className="flex items-center gap-3 text-lg">
                 <div className="flex items-center justify-center w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-900/50">
@@ -1685,7 +1684,7 @@ const Scan = () => {
                           onClick={stopCamera} 
                           variant="secondary" 
                           size="lg"
-                          className="bg-white/90 hover:bg-white rounded-full w-12 h-12 p-0 shadow-lg border border-white/20"
+                          className="bg-[#202d42]/90 hover:bg-[#202d42] rounded-full w-12 h-12 p-0 shadow-lg border border-white/20"
                         >
                           <X className="w-5 h-5 text-slate-700" />
                         </Button>
@@ -1711,7 +1710,7 @@ const Scan = () => {
                         <Button
                           onClick={startCamera}
                           variant="outline"
-                          className="h-32 flex-col gap-3 bg-white hover:bg-gray-50 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl border-2 border-slate-200 dark:border-slate-700 hover:border-blue-400 shadow-sm"
+                          className="h-32 flex-col gap-3 bg-[#202d42] hover:bg-gray-50 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl border-2 border-slate-200 dark:border-slate-700 hover:border-blue-400 shadow-sm"
                           disabled={isProcessing}
                         >
                           <Camera className="w-8 h-8 text-blue-600" />
@@ -1720,7 +1719,7 @@ const Scan = () => {
                         <Button
                           onClick={() => fileInputRef.current?.click()}
                           variant="outline"
-                          className="h-32 flex-col gap-3 bg-white hover:bg-gray-50 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl border-2 border-slate-200 dark:border-slate-700 hover:border-blue-400 shadow-sm"
+                          className="h-32 flex-col gap-3 bg-[#202d42] hover:bg-gray-50 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl border-2 border-slate-200 dark:border-slate-700 hover:border-blue-400 shadow-sm"
                           disabled={isProcessing}
                         >
                           <Upload className="w-8 h-8 text-blue-600" />
@@ -1806,7 +1805,7 @@ const Scan = () => {
                     <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">Extracted Information</p>
                   </div>
                   {extractedText ? (
-                    <div className="bg-white/50 dark:bg-slate-800/50 rounded-xl p-4 border border-emerald-200/30 dark:border-emerald-700/30">
+                    <div className="bg-[#202d42]/50 dark:bg-slate-800/50 rounded-xl p-4 border border-emerald-200/30 dark:border-emerald-700/30">
                       <p className="text-sm font-mono leading-relaxed text-slate-700 dark:text-slate-300">
                         {extractedText.slice(0, 300)}
                         {extractedText.length > 300 && "..."}
@@ -1842,7 +1841,7 @@ const Scan = () => {
                   placeholder="Enter product name, barcode, or code (e.g., #p0001)"
                   value={manualSearch}
                   onChange={(e) => setManualSearch(e.target.value)}
-                  className="flex-1 h-12 rounded-xl border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/50 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20"
+                  className="flex-1 h-12 rounded-xl border-slate-200 dark:border-slate-700 bg-[#202d42]/50 dark:bg-slate-800/50 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20"
                 />
                 <Button type="submit" className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 h-12 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300">
                   <Search className="w-4 h-4 mr-2" />
@@ -1953,7 +1952,7 @@ const Scan = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
-                  <div className="p-4 rounded-xl bg-white/70 dark:bg-slate-800/70 border border-amber-200/50 dark:border-amber-800/30">
+                  <div className="p-4 rounded-xl bg-[#202d42]/70 dark:bg-slate-800/70 border border-amber-200/50 dark:border-amber-800/30">
                     <div className="flex items-center gap-2 mb-3">
                       <ScanLine className="w-4 h-4 text-amber-600 dark:text-amber-400" />
                       <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">Extracted Information</p>

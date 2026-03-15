@@ -22,8 +22,7 @@ const ProductDetail = () => {
   const product = products.find((p) => p.id === `#${id}`);
 
   if (!product) {
-    return (
-      <div className="min-h-screen flex flex-col">
+    return (<div className="min-h-screen flex flex-col bg-[#1a2332] text-[#f0f4f8] min-h-screen">
         <Header />
         <main className="flex-1 flex items-center justify-center">
           <div className="text-center">
