@@ -58,13 +58,13 @@ const Index = () => {
         <HeroSection />
 
         {/* Categories Section */}
-        <section className="py-16 bg-muted/30">
+        <section className="py-16" style={{ backgroundColor: 'hsl(210 35% 18%)' }}>
           <div className="container">
             <div className="text-center mb-12">
-              <h2 className="text-3xl sm:text-4xl font-display font-bold mb-4">
+              <h2 className="text-3xl sm:text-4xl font-display font-bold mb-4" style={{ color: 'hsl(210 15% 94%)' }}>
                 Shop by Category
               </h2>
-              <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+              <p className="text-lg max-w-2xl mx-auto leading-relaxed" style={{ color: 'hsl(210 15% 63%)' }}>
                 Explore our curated categories and discover sustainable products that align with your values
               </p>
             </div>
@@ -74,32 +74,32 @@ const Index = () => {
                 const Icon = config.icon;
                 return (
                   <Link key={category} to={`/products?category=${encodeURIComponent(category)}`}>
-                    <Card className="group hover:shadow-lg transition-all duration-300 border-2 hover:border-primary/20 cursor-pointer">
+                    <Card className="group hover:shadow-lg transition-all duration-300 cursor-pointer" style={{ backgroundColor: 'hsl(210 35% 18%)', borderColor: 'hsl(210 30% 20%)', borderWidth: '2px' }}>
                       <CardContent className="p-6">
                         <div className="flex items-center justify-between mb-4">
                           <div className={`w-12 h-12 rounded-xl ${config.color} flex items-center justify-center group-hover:scale-110 transition-transform`}>
                             <Icon className="w-6 h-6" />
                           </div>
-                          <span className="text-sm font-medium text-muted-foreground bg-muted px-2 py-1 rounded-full">
+                          <span className="text-sm font-medium px-2 py-1 rounded-full" style={{ backgroundColor: 'hsl(210 35% 22%)', color: 'hsl(210 15% 63%)' }}>
                             {count} products
                           </span>
                         </div>
-                        
-                        <h3 className="font-semibold text-lg mb-2 group-hover:text-primary transition-colors">
+
+                        <h3 className="font-semibold text-lg mb-2 transition-colors group-hover:" style={{ color: 'hsl(210 15% 94%)' }}>
                           {category}
                         </h3>
-                        
-                        <p className="text-sm text-muted-foreground mb-4">
+
+                        <p className="text-sm mb-4" style={{ color: 'hsl(210 15% 63%)' }}>
                           {config.description}
                         </p>
-                        
+
                         {featured && (
-                          <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                          <div className="flex items-center justify-between p-3 rounded-lg" style={{ backgroundColor: 'hsl(210 35% 22%)' }}>
                             <div className="flex-1 min-w-0">
-                              <p className="text-xs text-muted-foreground mb-1">Featured</p>
-                              <p className="text-sm font-medium truncate">{featured.name}</p>
+                              <p className="text-xs mb-1" style={{ color: 'hsl(210 15% 63%)' }}>Featured</p>
+                              <p className="text-sm font-medium truncate" style={{ color: 'hsl(210 15% 94%)' }}>{featured.name}</p>
                             </div>
-                            <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                            <ArrowRight className="w-4 h-4 transition-colors" style={{ color: 'hsl(38 92% 50%)' }} />
                           </div>
                         )}
                       </CardContent>
@@ -121,14 +121,14 @@ const Index = () => {
         </section>
 
         {alternativeProducts.length > 0 && (
-          <section className="py-16">
+          <section className="py-16" style={{ backgroundColor: 'hsl(210 40% 10%)' }}>
             <div className="container">
               <div className="flex items-end justify-between gap-4 mb-10">
                 <div>
-                  <h2 className="text-3xl sm:text-4xl font-display font-bold mb-2">
+                  <h2 className="text-3xl sm:text-4xl font-display font-bold mb-2" style={{ color: 'hsl(210 15% 94%)' }}>
                     The Alternative
                   </h2>
-                  <p className="text-lg text-muted-foreground leading-relaxed">
+                  <p className="text-lg leading-relaxed" style={{ color: 'hsl(210 15% 63%)' }}>
                     Products with a sustainability score of 97 or higher.
                   </p>
                 </div>
@@ -147,13 +147,13 @@ const Index = () => {
         )}
 
         {/* How It Works Section */}
-        <section className="py-16">
+        <section className="py-16" style={{ backgroundColor: 'hsl(210 35% 18%)' }}>
           <div className="container">
             <div className="text-center mb-12">
-              <h2 className="text-3xl sm:text-4xl font-display font-bold mb-4">
+              <h2 className="text-3xl sm:text-4xl font-display font-bold mb-4" style={{ color: 'hsl(210 15% 94%)' }}>
                 How It Works
               </h2>
-              <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+              <p className="text-lg max-w-2xl mx-auto leading-relaxed" style={{ color: 'hsl(210 15% 63%)' }}>
                 Three simple steps to make more informed purchasing decisions
               </p>
             </div>
@@ -204,11 +204,11 @@ const Index = () => {
 function StepCard({ number, title, description }: { number: number; title: string; description: string }) {
   return (
     <div className="text-center">
-      <div className="w-14 h-14 rounded-2xl bg-gradient-hero text-primary-foreground font-display font-bold text-2xl flex items-center justify-center mx-auto mb-4 shadow-soft">
+      <div className="w-14 h-14 rounded-2xl font-display font-bold text-2xl flex items-center justify-center mx-auto mb-4 shadow-soft" style={{ backgroundColor: 'hsl(38 92% 50%)', color: 'white' }}>
         {number}
       </div>
-      <h3 className="font-display font-semibold text-lg mb-2">{title}</h3>
-      <p className="text-muted-foreground text-sm">{description}</p>
+      <h3 className="font-display font-semibold text-lg mb-2" style={{ color: 'hsl(210 15% 94%)' }}>{title}</h3>
+      <p className="text-sm" style={{ color: 'hsl(210 15% 63%)' }}>{description}</p>
     </div>
   );
 }
