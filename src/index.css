@@ -6,39 +6,40 @@
 
 @layer base {
   :root {
-    /* Eco-conscious color palette */
-    --background: 45 30% 97%;
-    --foreground: 150 25% 15%;
+    /* CalAI Dark Theme */
+    --background: 210 40% 12%;        /* Very dark blue-gray */
+    --foreground: 210 20% 95%;        /* Off-white */
 
-    --card: 45 25% 99%;
-    --card-foreground: 150 25% 15%;
+    --card: 210 35% 20%;              /* Dark card background */
+    --card-foreground: 210 20% 95%;   /* Light text */
 
-    --popover: 45 25% 99%;
-    --popover-foreground: 150 25% 15%;
+    --popover: 210 35% 20%;
+    --popover-foreground: 210 20% 95%;
 
-    /* Forest green primary */
-    --primary: 152 45% 28%;
-    --primary-foreground: 45 30% 97%;
+    /* Orange primary accent (like CalAI) */
+    --primary: 38 92% 50%;            /* Orange */
+    --primary-foreground: 210 40% 12%;
 
-    /* Warm earth secondary */
-    --secondary: 35 45% 92%;
-    --secondary-foreground: 150 25% 20%;
+    /* Dark secondary */
+    --secondary: 210 35% 20%;
+    --secondary-foreground: 210 20% 95%;
 
-    --muted: 45 20% 93%;
-    --muted-foreground: 150 10% 45%;
+    /* Muted colors for dark theme */
+    --muted: 210 20% 40%;
+    --muted-foreground: 210 20% 70%;
 
-    /* Amber accent */
-    --accent: 38 92% 50%;
-    --accent-foreground: 150 25% 15%;
+    /* Accent color (same as primary) */
+    --accent: 38 92% 50%;             /* Orange */
+    --accent-foreground: 210 40% 12%;
 
     --destructive: 0 72% 51%;
-    --destructive-foreground: 45 30% 97%;
+    --destructive-foreground: 210 20% 95%;
 
-    --border: 45 20% 88%;
-    --input: 45 20% 88%;
-    --ring: 152 45% 28%;
+    --border: 210 30% 35%;            /* Dark borders */
+    --input: 210 30% 35%;
+    --ring: 38 92% 50%;               /* Orange ring focus */
 
-    --radius: 0.75rem;
+    --radius: 0.5rem;
 
     /* Custom eco colors */
     --eco-forest: 152 45% 28%;
