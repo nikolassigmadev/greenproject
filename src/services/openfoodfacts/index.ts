@@ -270,10 +270,25 @@ export const searchProducts = async (
       return [];
     }
 
-    const results = data.products
+    // Try to get results from allowed regions first
+    let results = data.products
       .map(normalizeProduct)
       .filter(isAllowedRegion)
       .slice(0, limit);
+    
+    // If we got very few results after regional filtering, include global results too
+    if (results.length < Math.ceil(limit * 0.5)) {
+      console.warn(`⚠️ Only ${results.length} results in allowed regions, including global results...`);
+      const allResults = data.products
+        .map(normalizeProduct)
+        .slice(0, limit * 2);
+      
+      // Prefer regional results but fill with global ones if needed
+      results = [
+        ...results,
+        ...allResults.filter(r => !results.some(ur => ur.barcode === r.barcode))
+      ].slice(0, limit);
+    }
     cacheSet(cacheKey, results);
     return results;
   } catch (error) {
@@ -389,6 +404,45 @@ const searchProductsGlobal = async (
     console.error('OpenFoodFacts global search error:', error);
     return [];
   }
+};
+
+
+/**
+ * Search with fallback to simpler queries
+ * If full query returns no results, try searching by just the brand name
+ */
+export const searchWithFallback = async (
+  query: string,
+  limit: number = 3
+): Promise<OpenFoodFactsResult[]> => {
+  const trimmed = query.trim();
+  if (!trimmed) return [];
+
+  // Extract parts (usually brand first, then product)
+  const parts = trimmed.split(/\s+/).filter(p => p.length > 0);
+
+  // Try searches in order of specificity
+  const searchVariations = [
+    trimmed,  // Full query first
+    parts[0],  // Just the brand (usually first)
+    parts.slice(0, 2).join(' '),  // First two words
+  ].filter((v, i, arr) => arr.indexOf(v) === i); // Remove duplicates
+
+  console.log(`🔍 Trying search variations: ${searchVariations.join(' | ')}`);
+
+  for (const searchQuery of searchVariations) {
+    console.log(`   Attempting: "${searchQuery}"`);
+    const results = await searchProducts(searchQuery, limit * 2);
+    
+    if (results.length > 0) {
+      console.log(`   ✅ Found ${results.length} results with "${searchQuery}"`);
+      return results.slice(0, limit);
+    }
+    console.log(`   ❌ No results for "${searchQuery}", trying next variation...`);
+  }
+
+  console.warn(`⚠️ No results found for any search variation of "${query}"`);
+  return [];
 };
 
 export const searchBetterAlternatives = async (
