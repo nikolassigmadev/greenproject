@@ -1,23 +1,7 @@
-import OpenAI from 'openai';
+// Use backend proxy for OpenAI API calls to avoid CORS issues on mobile/LAN
+const getBackendUrl = () => `${window.location.protocol}//${window.location.hostname}:3001`;
 
-// Initialize OpenAI client with new API key
-const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
-
-console.log('🔑 Environment check:', {
-  hasApiKey: !!apiKey,
-  apiKeyLength: apiKey?.length,
-  isProduction: import.meta.env.PROD,
-  mode: import.meta.env.MODE,
-  envSource: import.meta.env.DEV ? '.env.local' : '.env.production'
-});
-
-if (!apiKey) {
-  console.error('❌ OpenAI API key not configured. Set VITE_OPENAI_API_KEY in .env.local or .env.production');
-} else {
-  console.log('✅ OpenAI API key configured successfully');
-}
-
-const client = apiKey ? new OpenAI({ apiKey, dangerouslyAllowBrowser: true }) : null;
+console.log('🔑 OpenAI OCR: Using backend proxy at', getBackendUrl());
 
 /**
  * Advanced OCR Result Type
@@ -89,26 +73,7 @@ Return your response as JSON with this exact structure:
 export const advancedProductOCR = async (imageDataUrl: string): Promise<AdvancedOCRResult> => {
   const startTime = performance.now();
 
-  console.log('🚀 Starting ChatGPT-style OCR analysis...');
-  console.log('🌍 Environment info:', {
-    isProduction: import.meta.env.PROD,
-    mode: import.meta.env.MODE,
-    hasClient: !!client,
-    apiKeyLength: import.meta.env.VITE_OPENAI_API_KEY?.length
-  });
-
-  if (!client) {
-    const error = 'OpenAI API key not configured. Please set VITE_OPENAI_API_KEY in .env.local or .env.production';
-    console.error('❌', error);
-    return {
-      success: false,
-      fullText: '',
-      confidence: 0,
-      rawExtraction: '',
-      error,
-      processingTime: performance.now() - startTime
-    };
-  }
+  console.log('🚀 Starting ChatGPT-style OCR analysis via backend proxy...');
 
   try {
     let base64Image = imageDataUrl;
@@ -116,53 +81,38 @@ export const advancedProductOCR = async (imageDataUrl: string): Promise<Advanced
       base64Image = imageDataUrl.split(',')[1];
     }
 
-    console.log('� Image data processed:', {
+    console.log('📷 Image data processed:', {
       hasBase64: !!base64Image,
       base64Length: base64Image?.length,
-      imageType: imageDataUrl.split(':')[0]?.split(';')[0]
     });
 
-    console.log('🤖 Calling OpenAI API with GPT-4o...');
+    console.log('🤖 Calling OpenAI API via backend proxy...');
 
-    // Simple ChatGPT-style image analysis
-    const response = await client.chat.completions.create({
-      model: 'gpt-4o',
-      max_tokens: 500,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'image_url',
-              image_url: {
-                url: `data:image/jpeg;base64,${base64Image}`,
-              },
-            },
-            {
-              type: 'text',
-              text: `Look at this image and tell me what product this is. Give me the information in this exact format:
+    const prompt = `Look at this image and tell me what product this is. Give me the information in this exact format:
 
 Product: [Product Name]
 Brand: [Brand Name]
 Barcode: [barcode number if visible, otherwise "none"]
 
 If you can't identify the product clearly, say "Unknown Product" and "Unknown Brand".
-Look carefully for any barcode numbers (UPC, EAN) printed on the packaging.`,
-            },
-          ],
-        },
-      ],
-      temperature: 0.2,
+Look carefully for any barcode numbers (UPC, EAN) printed on the packaging.`;
+
+    const proxyResponse = await fetch(`${getBackendUrl()}/api/openai/analyze-image`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imageBase64: base64Image, prompt }),
     });
 
-    console.log('✅ OpenAI API response received:', {
-      hasResponse: !!response,
-      hasChoices: !!response.choices,
-      choiceCount: response.choices?.length,
-      firstChoice: response.choices[0]
-    });
+    if (!proxyResponse.ok) {
+      const errData = await proxyResponse.json().catch(() => ({ error: `HTTP ${proxyResponse.status}` }));
+      throw new Error(errData.error || `Backend error: ${proxyResponse.status}`);
+    }
 
-    const rawResponse = response.choices[0]?.message?.content || '';
+    const data = await proxyResponse.json();
+
+    console.log('✅ OpenAI API response received via backend proxy');
+
+    const rawResponse = data.content || '';
     console.log('🤖 ChatGPT Response:', rawResponse);
 
     // Parse simple response
@@ -236,43 +186,24 @@ Look carefully for any barcode numbers (UPC, EAN) printed on the packaging.`,
  * Extract ONLY brand name (optimized endpoint)
  */
 export const extractBrandName = async (imageDataUrl: string): Promise<string | null> => {
-  if (!client) return null;
-
   try {
     let base64Image = imageDataUrl;
     if (imageDataUrl.includes(',')) {
       base64Image = imageDataUrl.split(',')[1];
     }
 
-    const response = await client.chat.completions.create({
-      model: 'gpt-4o', // Updated to use GPT-4o
-      max_tokens: 100,
-      messages: [
-        {
-          role: 'system',
-          content: 'You are a brand name extraction expert. Extract ONLY the brand/manufacturer name from product images.',
-        },
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'image_url',
-              image_url: {
-                url: `data:image/jpeg;base64,${base64Image}`,
-              },
-            },
-            {
-              type: 'text',
-              text: 'Extract ONLY the brand/manufacturer name from this product image. Return just the brand name, nothing else. If not found, return "UNKNOWN".',
-            },
-          ],
-        },
-      ],
-      temperature: 0.2,
+    const response = await fetch(`${getBackendUrl()}/api/openai/analyze-image`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        imageBase64: base64Image,
+        prompt: 'Extract ONLY the brand/manufacturer name from this product image. Return just the brand name, nothing else. If not found, return "UNKNOWN".',
+      }),
     });
 
-    const brandName = (response.choices[0]?.message?.content || '').trim().replace(/["']/g, '');
-
+    if (!response.ok) throw new Error(`Backend error: ${response.status}`);
+    const data = await response.json();
+    const brandName = (data.content || '').trim().replace(/["']/g, '');
     return brandName && brandName !== 'UNKNOWN' ? brandName : null;
   } catch (error) {
     console.error('Failed to extract brand name:', error);
@@ -284,43 +215,24 @@ export const extractBrandName = async (imageDataUrl: string): Promise<string | n
  * Extract ONLY product name (optimized endpoint)
  */
 export const extractProductName = async (imageDataUrl: string): Promise<string | null> => {
-  if (!client) return null;
-
   try {
     let base64Image = imageDataUrl;
     if (imageDataUrl.includes(',')) {
       base64Image = imageDataUrl.split(',')[1];
     }
 
-    const response = await client.chat.completions.create({
-      model: 'gpt-4o', // Updated to use GPT-4o
-      max_tokens: 100,
-      messages: [
-        {
-          role: 'system',
-          content: 'You are a product name extraction expert. Extract ONLY the product name from product images.',
-        },
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'image_url',
-              image_url: {
-                url: `data:image/jpeg;base64,${base64Image}`,
-              },
-            },
-            {
-              type: 'text',
-              text: 'Extract ONLY the product name/item name from this product image. Return just the product name, nothing else. If not found, return "UNKNOWN".',
-            },
-          ],
-        },
-      ],
-      temperature: 0.2,
+    const response = await fetch(`${getBackendUrl()}/api/openai/analyze-image`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        imageBase64: base64Image,
+        prompt: 'Extract ONLY the product name/item name from this product image. Return just the product name, nothing else. If not found, return "UNKNOWN".',
+      }),
     });
 
-    const productName = (response.choices[0]?.message?.content || '').trim().replace(/["']/g, '');
-
+    if (!response.ok) throw new Error(`Backend error: ${response.status}`);
+    const data = await response.json();
+    const productName = (data.content || '').trim().replace(/["']/g, '');
     return productName && productName !== 'UNKNOWN' ? productName : null;
   } catch (error) {
     console.error('Failed to extract product name:', error);
@@ -332,34 +244,13 @@ export const extractProductName = async (imageDataUrl: string): Promise<string |
  * Extract certifications/labels (optimized for ethical shopping)
  */
 export const extractCertifications = async (imageDataUrl: string): Promise<string[]> => {
-  if (!client) return [];
-
   try {
     let base64Image = imageDataUrl;
     if (imageDataUrl.includes(',')) {
       base64Image = imageDataUrl.split(',')[1];
     }
 
-    const response = await client.chat.completions.create({
-      model: 'gpt-4o', // Updated to use GPT-4o
-      max_tokens: 200,
-      messages: [
-        {
-          role: 'system',
-          content: 'You are an ethical certification detection expert. Identify sustainability and ethical labels on products.',
-        },
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'image_url',
-              image_url: {
-                url: `data:image/jpeg;base64,${base64Image}`,
-              },
-            },
-            {
-              type: 'text',
-              text: `Look for ethical and sustainability certifications/labels on this product:
+    const prompt = `Look for ethical and sustainability certifications/labels on this product:
 - Organic (USDA, EU, etc.)
 - Fair Trade
 - Rainforest Alliance
@@ -372,18 +263,20 @@ export const extractCertifications = async (imageDataUrl: string): Promise<strin
 - Local/Regional
 
 Return a JSON array of found certifications. Example: ["Organic", "Fair Trade"]
-Return empty array [] if none found.`,
-            },
-          ],
-        },
-      ],
-      temperature: 0.1, // Very low for consistent categorization
+Return empty array [] if none found.`;
+
+    const response = await fetch(`${getBackendUrl()}/api/openai/analyze-image`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imageBase64: base64Image, prompt }),
     });
 
-    const response_text = response.choices[0]?.message?.content || '';
+    if (!response.ok) throw new Error(`Backend error: ${response.status}`);
+    const data = await response.json();
+    const responseText = data.content || '';
 
     try {
-      const jsonMatch = response_text.match(/\[.*\]/s);
+      const jsonMatch = responseText.match(/\[.*\]/s);
       if (jsonMatch) {
         return JSON.parse(jsonMatch[0]);
       }
@@ -402,26 +295,15 @@ Return empty array [] if none found.`,
  * Check API connection and health
  */
 export const checkOpenAIHealth = async (): Promise<boolean> => {
-  if (!client) return false;
-
   try {
-    console.log('🏥 Checking OpenAI API health...');
-    const response = await client.chat.completions.create({
-      model: 'gpt-4o', // Updated to use GPT-4o
-      max_tokens: 10,
-      messages: [
-        {
-          role: 'user',
-          content: 'Say "OK"',
-        },
-      ],
-    });
-
-    const isHealthy = response.choices[0]?.message?.content?.length > 0;
-    console.log(isHealthy ? '✅ OpenAI API is healthy' : '❌ OpenAI API returned empty response');
+    console.log('🏥 Checking backend health...');
+    const response = await fetch(`${getBackendUrl()}/api/health`);
+    const data = await response.json();
+    const isHealthy = data.status === 'ok' && data.openaiConfigured;
+    console.log(isHealthy ? '✅ Backend + OpenAI is healthy' : '❌ Backend health check failed');
     return isHealthy;
   } catch (error) {
-    console.error('❌ OpenAI API health check failed:', error);
+    console.error('❌ Backend health check failed:', error);
     return false;
   }
 };
@@ -436,8 +318,8 @@ export const getOCRStats = (): {
   maxTokens: number;
 } => {
   return {
-    apiConfigured: !!client,
-    model: 'gpt-4o', // Updated to current model
+    apiConfigured: true, // Configured on backend
+    model: 'gpt-4o',
     temperature: 0.3,
     maxTokens: 2048,
   };

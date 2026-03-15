@@ -148,19 +148,72 @@ export default function OpenFoodFactsDetail() {
     if (!product) return null;
 
     const grade = product.ecoscoreGrade?.toLowerCase();
-    const novaGroup = product.novaGroup;
+    const laborRecord = findLaborAllegations(product);
+    const laborCount = laborRecord?.allegations.length || 0;
 
-    // Verdict logic: A/B = BUY, C = CONSIDER, D/E = AVOID
-    let verdict = { emoji: "❓", label: "UNKNOWN", color: "hsl(150 10% 45%)", action: "Review Details" };
+    // Step 1: Base verdict from eco-score grade or numeric score
+    const score = product.ecoscoreScore;
+    const hasEcoData = grade || (score !== null && score !== undefined);
+    const scoreLabel = grade ? `Eco-Score: ${grade.toUpperCase()}` : (score !== null && score !== undefined ? `Eco-Score: ${score}/100` : "No eco-score data available");
+
+    let verdict = { emoji: "❓", label: "UNKNOWN", color: "hsl(150 10% 45%)", action: "Review Details", reason: "No eco-score data available" };
 
     if (grade === "a" || grade === "b") {
-      verdict = { emoji: "✅", label: "BUY - Excellent Choice!", color: "hsl(142 71% 45%)", action: "Perfect" };
+      verdict = { emoji: "✅", label: "BUY - Excellent Choice!", color: "hsl(142 71% 45%)", action: "Perfect", reason: scoreLabel };
     } else if (grade === "c") {
-      verdict = { emoji: "🤔", label: "CONSIDER - Moderate Impact", color: "hsl(45 93% 47%)", action: "Review" };
+      verdict = { emoji: "🤔", label: "CONSIDER - Moderate Impact", color: "hsl(45 93% 47%)", action: "Review", reason: scoreLabel };
     } else if (grade === "d") {
-      verdict = { emoji: "⚠️", label: "CAUTION - High Impact", color: "hsl(0 84% 60%)", action: "Avoid if Possible" };
-    } else if (grade === "e") {
-      verdict = { emoji: "🚫", label: "AVOID - Very High Impact", color: "hsl(0 84% 60%)", action: "Strong Caution" };
+      verdict = { emoji: "⚠️", label: "CAUTION - High Impact", color: "hsl(0 84% 60%)", action: "Avoid if Possible", reason: scoreLabel };
+    } else if (grade === "e" || grade === "f") {
+      verdict = { emoji: "🚫", label: "AVOID - Very High Impact", color: "hsl(0 84% 60%)", action: "Strong Caution", reason: scoreLabel };
+    } else if (!grade && score !== null && score !== undefined) {
+      // No letter grade but has numeric score
+      if (score >= 60) {
+        verdict = { emoji: "✅", label: "BUY - Excellent Choice!", color: "hsl(142 71% 45%)", action: "Perfect", reason: scoreLabel };
+      } else if (score >= 40) {
+        verdict = { emoji: "🤔", label: "CONSIDER - Moderate Impact", color: "hsl(45 93% 47%)", action: "Review", reason: scoreLabel };
+      } else if (score >= 20) {
+        verdict = { emoji: "⚠️", label: "CAUTION - High Impact", color: "hsl(0 84% 60%)", action: "Avoid if Possible", reason: scoreLabel };
+      } else {
+        verdict = { emoji: "🚫", label: "AVOID - Very High Impact", color: "hsl(0 84% 60%)", action: "Strong Caution", reason: scoreLabel };
+      }
+    }
+
+    // Step 2: Downgrade verdict if labor allegations exist
+    // Labor allegations are serious — they override eco-score in severity
+    if (laborCount > 0) {
+      if (laborCount >= 3) {
+        // 3+ allegations = always AVOID regardless of current verdict
+        verdict = {
+          emoji: "🚫",
+          label: "AVOID - Severe Labor Concerns",
+          color: "hsl(0 84% 50%)",
+          action: "Strong Caution",
+          reason: `${laborCount} labor/human rights allegations against ${laborRecord!.parentCompany}`,
+        };
+      } else if (laborCount >= 2) {
+        // 2 allegations = at minimum CAUTION, can be worse
+        if (verdict.emoji === "✅" || verdict.emoji === "🤔" || verdict.emoji === "❓") {
+          verdict = {
+            emoji: "⚠️",
+            label: "CAUTION - Labor Concerns",
+            color: "hsl(0 84% 60%)",
+            action: "Avoid if Possible",
+            reason: `${laborCount} labor allegations against ${laborRecord!.parentCompany}`,
+          };
+        }
+      } else {
+        // 1 allegation = at minimum CONSIDER, can be worse
+        if (verdict.emoji === "✅" || verdict.emoji === "❓") {
+          verdict = {
+            emoji: "🤔",
+            label: "CONSIDER - Labor Concerns",
+            color: "hsl(45 93% 47%)",
+            action: "Review",
+            reason: `1 labor allegation against ${laborRecord!.parentCompany}`,
+          };
+        }
+      }
     }
 
     return verdict;
@@ -225,11 +278,19 @@ export default function OpenFoodFactsDetail() {
               <h1 style={{ fontSize: "1.875rem", fontWeight: "bold", marginBottom: "0.5rem", color: verdict.color }}>
                 {verdict.label}
               </h1>
-              <p style={{ fontSize: "1rem", color: "hsl(150 10% 45%)", marginBottom: "1.5rem" }}>
-                {product.ecoscoreGrade
-                  ? `Environmental Score: ${product.ecoscoreGrade.toUpperCase()} (${product.ecoscoreScore}/100)`
-                  : "No eco-score available"}
+              <p style={{ fontSize: "1rem", color: "hsl(150 10% 45%)", marginBottom: "0.5rem" }}>
+                {verdict.reason}
               </p>
+              {laborRecord && (product.ecoscoreGrade || product.ecoscoreScore !== null) && (
+                <p style={{ fontSize: "0.875rem", color: "hsl(150 10% 45%)", marginBottom: "1rem" }}>
+                  Environmental Score: {product.ecoscoreGrade ? `${product.ecoscoreGrade.toUpperCase()} (${product.ecoscoreScore}/100)` : `${product.ecoscoreScore}/100`}
+                </p>
+              )}
+              {!laborRecord && !product.ecoscoreGrade && (product.ecoscoreScore === null || product.ecoscoreScore === undefined) && (
+                <p style={{ fontSize: "0.875rem", color: "hsl(150 10% 45%)", marginBottom: "1rem" }}>
+                  No eco-score available
+                </p>
+              )}
               <CalAIButton emoji={verdict.emoji} onClick={() => document.getElementById("details")?.scrollIntoView({ behavior: "smooth" })}>
                 {verdict.action}
               </CalAIButton>
@@ -354,16 +415,21 @@ export default function OpenFoodFactsDetail() {
                     fontWeight: "bold",
                     padding: "0.5rem 1rem",
                     borderRadius: "0.375rem",
-                    backgroundColor: "hsl(152 45% 30%)",
+                    backgroundColor: (product.ecoscoreScore !== null && product.ecoscoreScore !== undefined)
+                      ? product.ecoscoreScore < 30 ? "hsl(0 84% 55%)" : product.ecoscoreScore < 50 ? "hsl(45 93% 47%)" : "hsl(152 45% 30%)"
+                      : ["a", "b"].includes(product.ecoscoreGrade?.toLowerCase?.() || "") ? "hsl(152 45% 30%)" : ["d", "e", "f"].includes(product.ecoscoreGrade?.toLowerCase?.() || "") ? "hsl(0 84% 55%)" : "hsl(45 93% 47%)",
                     color: "white"
                   }}>
                     {product.ecoscoreGrade.toUpperCase()}
                   </span>
                 </div>
-                {product.ecoscoreScore !== null && (
+                {product.ecoscoreScore !== null && product.ecoscoreScore !== undefined && (
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
                     <span style={{ color: "hsl(150 10% 45%)" }}>Score:</span>
-                    <span style={{ fontWeight: "bold", color: "hsl(152 45% 30%)" }}>
+                    <span style={{
+                      fontWeight: "bold",
+                      color: product.ecoscoreScore < 30 ? "hsl(0 84% 55%)" : product.ecoscoreScore < 50 ? "hsl(45 93% 47%)" : "hsl(152 45% 30%)"
+                    }}>
                       {product.ecoscoreScore}/100
                     </span>
                   </div>
