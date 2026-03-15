@@ -1381,13 +1381,11 @@ const Scan = () => {
         <div className="container max-w-4xl">
           {/* Page Header */}
           <div className="text-center mb-8 sm:mb-10">
-            <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-900/20 dark:to-emerald-800/20 mb-4">
-              <ScanLine className="w-8 h-8 sm:w-10 sm:h-10 text-emerald-600" />
-            </div>
-            <h1 className="text-3xl sm:text-4xl font-display font-bold mb-3 bg-gradient-to-r from-emerald-700 to-emerald-600 dark:from-emerald-400 dark:to-emerald-300 bg-clip-text text-transparent">
+            <div className="text-5xl sm:text-6xl mb-4">📸</div>
+            <h1 className="text-3xl sm:text-4xl font-bold mb-3" style={{ color: 'hsl(38 92% 50%)' }}>
               Scan a Product
             </h1>
-            <p className="text-base sm:text-lg text-muted-foreground max-w-md mx-auto leading-relaxed">
+            <p className="text-base sm:text-lg max-w-md mx-auto leading-relaxed" style={{ color: 'hsl(210 15% 63%)' }}>
               Use your camera or upload an image to instantly identify products and discover their ethical impact
             </p>
           </div>
@@ -1408,7 +1406,7 @@ const Scan = () => {
             <CardContent className="space-y-6">
               {/* Barcode Input */}
               <div className="space-y-3">
-                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Barcode Search</label>
+                <label className="text-sm font-medium" style={{ color: 'hsl(210 15% 94%)' }}>📱 Barcode Search</label>
                 <form
                   onSubmit={(e) => {
                     e.preventDefault();
@@ -1420,7 +1418,12 @@ const Scan = () => {
                     placeholder="Enter barcode (e.g., 3017620422003)"
                     value={barcodeInput}
                     onChange={(e) => setBarcodeInput(e.target.value)}
-                    className="flex-1 h-11 rounded-lg border-slate-200 dark:border-slate-700 bg-[#202d42]/50 dark:bg-slate-800/50 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/20"
+                    className="flex-1 h-11 rounded-lg"
+                    style={{
+                      backgroundColor: 'hsl(210 35% 22%)',
+                      color: 'hsl(210 15% 94%)',
+                      border: '1px solid hsl(210 15% 30%)'
+                    }}
                     inputMode="numeric"
                   />
                   <Button type="submit" className="h-11 px-5 rounded-lg shadow-md hover:shadow-lg transition-all duration-300" style={{ backgroundColor: 'hsl(38 92% 50%)', color: 'white' }} disabled={offLoading}>
@@ -1620,17 +1623,15 @@ const Scan = () => {
 
           {/* Search Results */}
           {searchResults.length > 0 && (
-            <Card className="border-0 shadow-xl bg-gradient-to-br from-white to-slate-50/30 dark:from-slate-900 dark:to-slate-800/30">
-              <CardHeader className="pb-4">
+            <Card className="border-0 shadow-lg mt-6" style={{ backgroundColor: 'hsl(210 35% 18%)' }}>
+              <CardHeader className="pb-4" style={{ borderBottom: '1px solid hsl(210 15% 30%)' }}>
                 <div className="flex items-center gap-3">
-                  <div className="flex items-center justify-center w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-900/50">
-                    <Search className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <CardTitle className="text-lg bg-gradient-to-r from-blue-700 to-blue-600 bg-clip-text text-transparent">
+                  <div style={{ fontSize: '1.5rem' }}>🔍</div>
+                  <CardTitle className="text-lg" style={{ color: 'hsl(38 92% 50%)' }}>
                     Found {searchResults.length} Product{searchResults.length > 1 ? "s" : ""}
                   </CardTitle>
                 </div>
-                <p className="text-sm text-muted-foreground pl-12">
+                <p className="text-sm pl-8" style={{ color: 'hsl(210 15% 63%)' }}>
                   Click on any product to view detailed ethical ratings
                 </p>
               </CardHeader>
@@ -1643,30 +1644,37 @@ const Scan = () => {
                       <div key={product.id} className="space-y-3">
                         <button
                           onClick={() => navigate(`/product/${product.id.replace("#", "")}`)}
-                          className="w-full p-5 rounded-2xl border border-slate-200/50 dark:border-slate-700/50 hover:border-blue-400/50 hover:bg-gradient-to-r hover:from-blue-50/30 hover:to-blue-100/30 dark:hover:from-blue-950/20 dark:hover:to-blue-900/20 transition-all duration-300 text-left flex items-center gap-4 group shadow-sm hover:shadow-lg"
+                          className="w-full p-4 rounded-lg transition-all duration-300 text-left flex items-center gap-4 group hover:shadow-md"
+                          style={{
+                            backgroundColor: 'hsl(210 35% 22%)',
+                            border: '1px solid hsl(210 15% 30%)',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = 'hsl(210 35% 26%)';
+                            e.currentTarget.style.borderColor = 'hsl(38 92% 50%)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'hsl(210 35% 22%)';
+                            e.currentTarget.style.borderColor = 'hsl(210 15% 30%)';
+                          }}
                         >
-                          <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-700 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
+                          <div className="w-16 h-16 rounded-lg bg-slate-700 flex items-center justify-center flex-shrink-0 overflow-hidden">
                             {uploadedImage ? (
-                              <img src={uploadedImage} alt="" className="w-full h-full object-cover rounded-lg" />
+                              <img src={uploadedImage} alt="" className="w-full h-full object-cover" />
                             ) : (
-                              <ScanLine className="w-8 h-8 text-blue-500/50" />
+                              <span style={{ fontSize: '2rem' }}>📦</span>
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-base text-slate-800 dark:text-slate-200 truncate group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors">
+                            <p className="font-semibold text-base truncate" style={{ color: 'hsl(210 15% 94%)' }}>
                               {product.name}
                             </p>
-                            <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
-                              {product.brand} • <span className="font-mono text-xs bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">{product.id}</span>
+                            <p className="text-sm mb-2" style={{ color: 'hsl(210 15% 63%)' }}>
+                              {product.brand}
                             </p>
-                            <div className="flex items-center gap-4">
-                              <div className="text-sm">
-                                <span className="font-medium text-slate-700 dark:text-slate-300">Score: </span>
-                                <span className="font-bold text-blue-600 dark:text-blue-400">{score}</span>
-                              </div>
-                              <div className="flex-1">
-                                <ScoreBreakdownSlider product={product} />
-                              </div>
+                            <div className="flex items-center gap-2">
+                              <span style={{ color: 'hsl(210 15% 63%)', fontSize: '0.85rem' }}>Score:</span>
+                              <span style={{ color: 'hsl(38 92% 50%)', fontWeight: 'bold' }}>{score}</span>
                             </div>
                           </div>
                         </button>
@@ -1702,17 +1710,15 @@ const Scan = () => {
 
           {/* No Results Found - Add Product Option */}
           {searchResults.length === 0 && extractedText && uploadedImage && (
-            <Card className="border-0 shadow-xl bg-gradient-to-br from-amber-50 via-amber-100/50 to-amber-50/30 dark:from-amber-950/30 dark:via-amber-900/20 dark:to-amber-950/10">
-              <CardHeader className="pb-4">
+            <Card className="border-0 shadow-lg mt-6" style={{ backgroundColor: 'hsl(210 35% 18%)' }}>
+              <CardHeader className="pb-4" style={{ borderBottom: '1px solid hsl(210 15% 30%)' }}>
                 <div className="flex items-center gap-3">
-                  <div className="flex items-center justify-center w-9 h-9 rounded-full bg-amber-200 dark:bg-amber-800">
-                    <Plus className="w-4 h-4 text-amber-700 dark:text-amber-300" />
-                  </div>
-                  <CardTitle className="text-lg text-amber-800 dark:text-amber-200">
+                  <div style={{ fontSize: '1.5rem' }}>➕</div>
+                  <CardTitle className="text-lg" style={{ color: 'hsl(38 92% 50%)' }}>
                     Add New Product
                   </CardTitle>
                 </div>
-                <p className="text-sm text-amber-700 dark:text-amber-300 pl-12">
+                <p className="text-sm pl-8" style={{ color: 'hsl(210 15% 63%)' }}>
                   Help grow our ethical database by adding this product
                 </p>
               </CardHeader>
