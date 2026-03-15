@@ -65,10 +65,10 @@ const Products = () => {
         <div className="container">
           {/* Page Header */}
           <div className="mb-8">
-            <h1 className="text-3xl sm:text-4xl font-display font-bold mb-2">
+            <h1 className="text-3xl sm:text-4xl font-display font-bold mb-2" style={{ color: 'hsl(210 15% 94%)' }}>
               Product Database
             </h1>
-            <p className="text-muted-foreground">
+            <p style={{ color: 'hsl(210 15% 63%)' }}>
               Browse {products.length} products and discover their sustainability scores
             </p>
           </div>
@@ -77,22 +77,23 @@ const Products = () => {
           <div className="flex flex-col sm:flex-row gap-4 mb-8">
             {/* Search */}
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'hsl(210 15% 63%)' }} />
               <Input
                 placeholder="Search products, brands, or codes..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-10"
+                style={{ backgroundColor: 'hsl(210 35% 22%)', color: 'hsl(210 15% 94%)', borderColor: 'hsl(210 30% 20%)' }}
               />
             </div>
 
             {/* Sort */}
             <div className="flex items-center gap-2">
-              <SlidersHorizontal className="w-4 h-4 text-muted-foreground" />
+              <SlidersHorizontal className="w-4 h-4" style={{ color: 'hsl(210 15% 63%)' }} />
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as any)}
-                className="bg-card border border-input rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                style={{ backgroundColor: 'hsl(210 35% 22%)', color: 'hsl(210 15% 94%)', borderColor: 'hsl(210 30% 20%)', borderRadius: '0.5rem', padding: '0.5rem 0.75rem', fontSize: '0.875rem' }}
               >
                 <option value="score">Highest Score</option>
                 <option value="name">Name A-Z</option>
@@ -103,17 +104,18 @@ const Products = () => {
 
           {/* Categories */}
           <div className="flex flex-wrap gap-2 mb-8">
-            <Filter className="w-4 h-4 text-muted-foreground mt-1.5" />
+            <Filter className="w-4 h-4 mt-1.5" style={{ color: 'hsl(210 15% 63%)' }} />
             {categories.map((category) => (
               <Badge
                 key={category}
                 variant={selectedCategory === category ? "default" : "outline"}
                 className={cn(
-                  "cursor-pointer transition-all duration-200",
-                  selectedCategory === category 
-                    ? "bg-primary text-primary-foreground" 
-                    : "hover:bg-primary/10"
+                  "cursor-pointer transition-all duration-200"
                 )}
+                style={selectedCategory === category
+                  ? { backgroundColor: 'hsl(38 92% 50%)', color: 'white', border: 'none' }
+                  : { backgroundColor: 'transparent', color: 'hsl(210 15% 94%)', borderColor: 'hsl(210 30% 20%)' }
+                }
                 onClick={() => setSelectedCategory(category)}
               >
                 {category}
@@ -122,7 +124,7 @@ const Products = () => {
           </div>
 
           {/* Results count */}
-          <p className="text-sm text-muted-foreground mb-6">
+          <p className="text-sm mb-6" style={{ color: 'hsl(210 15% 63%)' }}>
             Showing {filteredProducts.length} of {products.length} products
           </p>
 
@@ -135,7 +137,7 @@ const Products = () => {
             </div>
           ) : (
             <div className="text-center py-16">
-              <p className="text-muted-foreground">No products found matching your criteria.</p>
+              <p style={{ color: 'hsl(210 15% 63%)' }}>No products found matching your criteria.</p>
             </div>
           )}
         </div>

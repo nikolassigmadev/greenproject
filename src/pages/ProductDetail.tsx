@@ -26,8 +26,8 @@ const ProductDetail = () => {
         <Header />
         <main className="flex-1 flex items-center justify-center">
           <div className="text-center">
-            <h1 className="text-2xl font-display font-bold mb-4">Product Not Found</h1>
-            <p className="text-muted-foreground mb-6">The product you're looking for doesn't exist.</p>
+            <h1 className="text-2xl font-display font-bold mb-4" style={{ color: 'hsl(210 15% 94%)' }}>Product Not Found</h1>
+            <p className="mb-6" style={{ color: 'hsl(210 15% 63%)' }}>The product you're looking for doesn't exist.</p>
             <Button asChild>
               <Link to="/products">
                 <ArrowLeft className="w-4 h-4 mr-2" />
