@@ -30,14 +30,14 @@ export const CalAIShowcase: React.FC = () => {
 
   return (
     <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
-      <h1 style={{ color: 'hsl(210 15% 94%)', marginBottom: '2rem' }}>
+      <h1 style={{ color: 'hsl(150 20% 15%)', marginBottom: '2rem' }}>
         🎨 CalAI Design System Showcase
       </h1>
 
       {/* Alert List */}
       {alerts.length > 0 && (
         <section style={{ marginBottom: '3rem' }}>
-          <h2 style={{ color: 'hsl(210 15% 94%)', marginBottom: '1rem' }}>Alert Examples</h2>
+          <h2 style={{ color: 'hsl(150 20% 15%)', marginBottom: '1rem' }}>Alert Examples</h2>
           <AlertList
             alerts={alerts}
             onRemove={(id) => setAlerts((a) => a.filter((x) => x.id !== id))}
@@ -47,7 +47,7 @@ export const CalAIShowcase: React.FC = () => {
 
       {/* Buttons */}
       <section style={{ marginBottom: '3rem' }}>
-        <h2 style={{ color: 'hsl(210 15% 94%)', marginBottom: '1rem' }}>Buttons with Emojis</h2>
+        <h2 style={{ color: 'hsl(150 20% 15%)', marginBottom: '1rem' }}>Buttons with Emojis</h2>
         <ButtonGroup direction="column" gap="0.5rem">
           <ButtonGroup>
             <CalAIButton
@@ -88,13 +88,13 @@ export const CalAIShowcase: React.FC = () => {
 
       {/* Nutrition Display */}
       <section style={{ marginBottom: '3rem' }}>
-        <h2 style={{ color: 'hsl(210 15% 94%)', marginBottom: '1rem' }}>Nutrition Display</h2>
+        <h2 style={{ color: 'hsl(150 20% 15%)', marginBottom: '1rem' }}>Nutrition Display</h2>
         <NutritionDisplay calories={450} protein={25} carbs={55} fats={12} />
       </section>
 
       {/* Macro Badges */}
       <section style={{ marginBottom: '3rem' }}>
-        <h2 style={{ color: 'hsl(210 15% 94%)', marginBottom: '1rem' }}>Macro Badges</h2>
+        <h2 style={{ color: 'hsl(150 20% 15%)', marginBottom: '1rem' }}>Macro Badges</h2>
         <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
           <MacroBadge type="protein" value={25} />
           <MacroBadge type="carbs" value={55} />
@@ -104,13 +104,13 @@ export const CalAIShowcase: React.FC = () => {
 
       {/* Calorie Display */}
       <section style={{ marginBottom: '3rem' }}>
-        <h2 style={{ color: 'hsl(210 15% 94%)', marginBottom: '1rem' }}>Calorie Display</h2>
+        <h2 style={{ color: 'hsl(150 20% 15%)', marginBottom: '1rem' }}>Calorie Display</h2>
         <CalorieDisplay calories={450} />
       </section>
 
       {/* Food Item Cards */}
       <section style={{ marginBottom: '3rem' }}>
-        <h2 style={{ color: 'hsl(210 15% 94%)', marginBottom: '1rem' }}>Food Item Cards</h2>
+        <h2 style={{ color: 'hsl(150 20% 15%)', marginBottom: '1rem' }}>Food Item Cards</h2>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <FoodItemCard
             name="Grilled Salmon"
@@ -145,7 +145,7 @@ export const CalAIShowcase: React.FC = () => {
 
       {/* Stats Display */}
       <section style={{ marginBottom: '3rem' }}>
-        <h2 style={{ color: 'hsl(210 15% 94%)', marginBottom: '1rem' }}>Statistics</h2>
+        <h2 style={{ color: 'hsl(150 20% 15%)', marginBottom: '1rem' }}>Statistics</h2>
         <StatsDisplay
           stats={[
             { label: 'Total Calories', value: '2150', emoji: '🔥' },
@@ -162,7 +162,7 @@ export const CalAIShowcase: React.FC = () => {
 
       {/* Individual Stat Boxes */}
       <section style={{ marginBottom: '3rem' }}>
-        <h2 style={{ color: 'hsl(210 15% 94%)', marginBottom: '1rem' }}>Highlighted Stats</h2>
+        <h2 style={{ color: 'hsl(150 20% 15%)', marginBottom: '1rem' }}>Highlighted Stats</h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem' }}>
           <StatBox label="Goal Progress" value="75%" emoji="🎯" highlight={true} />
           <StatBox label="Streak" value="12" emoji="🔥" />
@@ -172,31 +172,31 @@ export const CalAIShowcase: React.FC = () => {
 
       {/* Color Palette Reference */}
       <section style={{ marginBottom: '3rem' }}>
-        <h2 style={{ color: 'hsl(210 15% 94%)', marginBottom: '1rem' }}>Color Palette</h2>
+        <h2 style={{ color: 'hsl(150 20% 15%)', marginBottom: '1rem' }}>Color Palette</h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-          <div style={{ padding: '1.5rem', borderRadius: '0.5rem', backgroundColor: 'hsl(210 40% 10%)', border: '1px solid hsl(210 30% 20%)' }}>
-            <p style={{ color: 'hsl(210 15% 94%)', fontWeight: 'bold' }}>Background</p>
-            <p style={{ color: 'hsl(210 15% 63%)', fontSize: '0.875rem' }}>#1a2332</p>
+          <div style={{ padding: '1.5rem', borderRadius: '0.5rem', backgroundColor: 'hsl(40 33% 95%)', border: '1px solid hsl(40 20% 85%)' }}>
+            <p style={{ color: 'hsl(150 20% 15%)', fontWeight: 'bold' }}>Background</p>
+            <p style={{ color: 'hsl(150 10% 45%)', fontSize: '0.875rem' }}>#f0ebe1</p>
           </div>
-          <div style={{ padding: '1.5rem', borderRadius: '0.5rem', backgroundColor: 'hsl(210 35% 18%)', border: '1px solid hsl(210 30% 20%)' }}>
-            <p style={{ color: 'hsl(210 15% 94%)', fontWeight: 'bold' }}>Card</p>
-            <p style={{ color: 'hsl(210 15% 63%)', fontSize: '0.875rem' }}>#202d42</p>
+          <div style={{ padding: '1.5rem', borderRadius: '0.5rem', backgroundColor: 'hsl(40 30% 98%)', border: '1px solid hsl(40 20% 85%)' }}>
+            <p style={{ color: 'hsl(150 20% 15%)', fontWeight: 'bold' }}>Card</p>
+            <p style={{ color: 'hsl(150 10% 45%)', fontSize: '0.875rem' }}>#202d42</p>
           </div>
-          <div style={{ padding: '1.5rem', borderRadius: '0.5rem', backgroundColor: 'hsl(38 92% 50%)', border: '1px solid hsl(38 92% 60%)' }}>
-            <p style={{ color: 'white', fontWeight: 'bold' }}>Primary (Orange)</p>
+          <div style={{ padding: '1.5rem', borderRadius: '0.5rem', backgroundColor: 'hsl(152 45% 30%)', border: '1px solid hsl(152 45% 40%)' }}>
+            <p style={{ color: 'white', fontWeight: 'bold' }}>Primary (Green)</p>
             <p style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '0.875rem' }}>#f97316</p>
           </div>
-          <div style={{ padding: '1.5rem', borderRadius: '0.5rem', backgroundColor: 'hsl(210 15% 94%)', border: '1px solid hsl(210 15% 80%)' }}>
-            <p style={{ color: 'hsl(210 40% 10%)', fontWeight: 'bold' }}>Text</p>
-            <p style={{ color: 'hsl(210 15% 63%)', fontSize: '0.875rem' }}>#f0f4f8</p>
+          <div style={{ padding: '1.5rem', borderRadius: '0.5rem', backgroundColor: 'hsl(150 20% 15%)', border: '1px solid hsl(150 10% 70%)' }}>
+            <p style={{ color: 'hsl(40 33% 95%)', fontWeight: 'bold' }}>Text</p>
+            <p style={{ color: 'hsl(150 10% 45%)', fontSize: '0.875rem' }}>#f0f4f8</p>
           </div>
         </div>
       </section>
 
       <section>
-        <h2 style={{ color: 'hsl(210 15% 94%)', marginBottom: '1rem' }}>Implementation Tips</h2>
+        <h2 style={{ color: 'hsl(150 20% 15%)', marginBottom: '1rem' }}>Implementation Tips</h2>
         <div className="card" style={{ padding: '1.5rem' }}>
-          <ul style={{ color: 'hsl(210 15% 94%)', lineHeight: '1.8', listStylePosition: 'inside' }}>
+          <ul style={{ color: 'hsl(150 20% 15%)', lineHeight: '1.8', listStylePosition: 'inside' }}>
             <li>✅ All components use CSS classes from App.css</li>
             <li>✅ Emojis are built-in for better UX</li>
             <li>✅ Dark theme colors are predefined (HSL color system)</li>

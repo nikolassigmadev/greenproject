@@ -24,7 +24,7 @@ export const StatsDisplay: React.FC<StatsDisplayProps> = ({
   return (
     <div>
       {title && (
-        <h3 className="text-lg font-semibold text-white mb-4" style={{ color: 'hsl(210 15% 94%)' }}>
+        <h3 className="text-lg font-semibold mb-4" style={{ color: 'hsl(150 20% 15%)' }}>
           {title}
         </h3>
       )}
@@ -53,7 +53,7 @@ interface SingleStatProps {
  */
 export const StatBox: React.FC<SingleStatProps> = ({ label, value, emoji, highlight }) => {
   return (
-    <div className={`stat-box ${highlight ? 'ring-2 ring-orange-400' : ''}`}>
+    <div className={`stat-box ${highlight ? 'ring-2 ring-green-600' : ''}`}>
       <div className="stat-emoji">{emoji}</div>
       <div className="stat-value">{value}</div>
       <div className="stat-label">{label}</div>

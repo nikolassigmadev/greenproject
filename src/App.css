@@ -6,13 +6,13 @@
 }
 
 /* ============================================
-   CalAI DESIGN SYSTEM - COMPLETE IMPLEMENTATION
+   CalAI DESIGN SYSTEM - LIGHT BEIGE & GREEN THEME
    ============================================ */
 
-/* Base Dark Theme */
+/* Base Light Beige Theme */
 body {
-  background-color: hsl(210 40% 10%);
-  color: hsl(210 15% 94%);
+  background-color: hsl(40 33% 95%);
+  color: hsl(150 20% 15%);
   transition: background-color 0.3s ease;
 }
 
@@ -42,25 +42,25 @@ body {
   gap: 0.5rem;
   padding: 0.75rem 1rem;
   border-radius: 0.5rem;
-  background-color: hsl(210 35% 18%);
-  border: 1px solid hsl(210 30% 20%);
-  color: hsl(210 15% 94%);
+  background-color: hsl(40 30% 98%);
+  border: 1px solid hsl(40 20% 85%);
+  color: hsl(150 20% 15%);
   font-weight: 600;
 }
 
 .macro-badge.protein {
   border-color: hsl(0 84% 60%);
-  color: hsl(0 84% 60%);
+  color: hsl(0 84% 45%);
 }
 
 .macro-badge.carbs {
-  border-color: hsl(38 92% 50%);
-  color: hsl(38 92% 50%);
+  border-color: hsl(152 45% 30%);
+  color: hsl(152 45% 30%);
 }
 
 .macro-badge.fats {
-  border-color: hsl(217 91% 60%);
-  color: hsl(217 91% 60%);
+  border-color: hsl(217 91% 50%);
+  color: hsl(217 91% 50%);
 }
 
 /* ============================================
@@ -68,10 +68,10 @@ body {
    ============================================ */
 
 .nutrition-card {
-  background-color: hsl(210 35% 18%);
+  background-color: hsl(40 30% 98%);
   border-radius: 0.5rem;
   padding: 2rem;
-  border: 1px solid hsl(210 30% 20%);
+  border: 1px solid hsl(40 20% 85%);
   margin: 1rem 0;
 }
 
@@ -82,7 +82,7 @@ body {
   margin-bottom: 1.5rem;
   font-size: 1.5rem;
   font-weight: bold;
-  color: hsl(210 15% 94%);
+  color: hsl(150 20% 15%);
 }
 
 .nutrition-header-emoji {
@@ -104,12 +104,12 @@ body {
 .calories-number {
   font-size: 3.5rem;
   font-weight: 900;
-  color: hsl(38 92% 50%);
+  color: hsl(152 45% 30%);
 }
 
 .calories-label {
   font-size: 0.875rem;
-  color: hsl(210 15% 63%);
+  color: hsl(150 10% 45%);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -126,9 +126,9 @@ body {
   align-items: center;
   gap: 0.5rem;
   padding: 1rem;
-  background-color: hsl(210 35% 22%);
+  background-color: hsl(40 25% 93%);
   border-radius: 0.5rem;
-  border: 1px solid hsl(210 30% 25%);
+  border: 1px solid hsl(40 15% 80%);
 }
 
 .macro-emoji {
@@ -138,12 +138,12 @@ body {
 .macro-value {
   font-size: 1.5rem;
   font-weight: 700;
-  color: hsl(210 15% 94%);
+  color: hsl(150 20% 15%);
 }
 
 .macro-name {
   font-size: 0.75rem;
-  color: hsl(210 15% 63%);
+  color: hsl(150 10% 45%);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -155,18 +155,18 @@ body {
 .food-item-card {
   display: flex;
   gap: 1rem;
-  background-color: hsl(210 35% 18%);
+  background-color: hsl(40 30% 98%);
   border-radius: 0.5rem;
   padding: 1rem;
-  border: 1px solid hsl(210 30% 20%);
+  border: 1px solid hsl(40 20% 85%);
   overflow: hidden;
   transition: all 0.2s ease;
   margin-bottom: 1rem;
 }
 
 .food-item-card:hover {
-  border-color: hsl(38 92% 50%);
-  background-color: hsl(210 35% 22%);
+  border-color: hsl(152 45% 30%);
+  background-color: hsl(40 25% 93%);
 }
 
 .food-item-image {
@@ -183,7 +183,7 @@ body {
 }
 
 .food-item-name {
-  color: hsl(210 15% 94%);
+  color: hsl(150 20% 15%);
   font-weight: 600;
   font-size: 1rem;
   margin: 0;
@@ -194,7 +194,7 @@ body {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: hsl(38 92% 50%);
+  color: hsl(152 45% 30%);
   font-weight: 600;
   margin-bottom: 0.5rem;
 }
@@ -203,12 +203,12 @@ body {
   display: flex;
   gap: 1rem;
   font-size: 0.875rem;
-  color: hsl(210 15% 63%);
+  color: hsl(150 10% 45%);
 }
 
 .food-item-time {
   font-size: 0.75rem;
-  color: hsl(210 15% 63%);
+  color: hsl(150 10% 45%);
   flex-shrink: 0;
   text-align: right;
 }
@@ -218,7 +218,7 @@ body {
    ============================================ */
 
 .btn-primary {
-  background-color: hsl(38 92% 50%);
+  background-color: hsl(152 45% 30%);
   color: white;
   border: none;
   padding: 0.75rem 1.5rem;
@@ -233,20 +233,20 @@ body {
 }
 
 .btn-primary:hover {
-  background-color: hsl(38 92% 55%);
+  background-color: hsl(152 45% 35%);
   transform: translateY(-2px);
-  box-shadow: 0 8px 12px rgba(249, 115, 22, 0.3);
+  box-shadow: 0 8px 12px rgba(34, 120, 70, 0.3);
 }
 
 .btn-primary:active {
-  background-color: hsl(38 92% 45%);
+  background-color: hsl(152 45% 25%);
   transform: translateY(0);
 }
 
 .btn-secondary {
-  background-color: hsl(210 35% 22%);
-  color: hsl(210 15% 94%);
-  border: 1px solid hsl(210 30% 20%);
+  background-color: hsl(40 25% 93%);
+  color: hsl(150 20% 15%);
+  border: 1px solid hsl(40 20% 85%);
   padding: 0.75rem 1.5rem;
   border-radius: 0.5rem;
   font-weight: 600;
@@ -259,8 +259,8 @@ body {
 }
 
 .btn-secondary:hover {
-  border-color: hsl(38 92% 50%);
-  background-color: hsl(210 35% 25%);
+  border-color: hsl(152 45% 30%);
+  background-color: hsl(40 20% 90%);
 }
 
 /* ============================================
@@ -284,20 +284,20 @@ body {
 
 .alert-success {
   background-color: rgba(34, 197, 94, 0.1);
-  border-color: hsl(142 71% 45%);
-  color: hsl(142 71% 55%);
+  border-color: hsl(142 71% 40%);
+  color: hsl(142 71% 30%);
 }
 
 .alert-error {
   background-color: rgba(239, 68, 68, 0.1);
-  border-color: hsl(0 84% 60%);
-  color: hsl(0 84% 65%);
+  border-color: hsl(0 84% 55%);
+  color: hsl(0 84% 40%);
 }
 
 .alert-warning {
   background-color: rgba(234, 179, 8, 0.1);
-  border-color: hsl(45 93% 47%);
-  color: hsl(45 93% 55%);
+  border-color: hsl(45 93% 42%);
+  color: hsl(45 93% 35%);
 }
 
 /* ============================================
@@ -312,8 +312,8 @@ body {
 }
 
 .stat-box {
-  background-color: hsl(210 35% 18%);
-  border: 1px solid hsl(210 30% 20%);
+  background-color: hsl(40 30% 98%);
+  border: 1px solid hsl(40 20% 85%);
   border-radius: 0.5rem;
   padding: 1.5rem;
   display: flex;
@@ -329,12 +329,12 @@ body {
 .stat-value {
   font-size: 1.75rem;
   font-weight: 900;
-  color: hsl(38 92% 50%);
+  color: hsl(152 45% 30%);
 }
 
 .stat-label {
   font-size: 0.875rem;
-  color: hsl(210 15% 63%);
+  color: hsl(150 10% 45%);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -348,8 +348,8 @@ body {
   bottom: 0;
   left: 0;
   right: 0;
-  background-color: hsl(210 50% 8%);
-  border-top: 1px solid hsl(210 30% 20%);
+  background-color: hsl(150 25% 12%);
+  border-top: 1px solid hsl(40 20% 85%);
   display: flex;
   justify-content: space-around;
   align-items: center;
@@ -363,7 +363,7 @@ body {
   align-items: center;
   justify-content: center;
   padding: 0.75rem;
-  color: hsl(210 15% 63%);
+  color: hsl(150 10% 45%);
   text-decoration: none;
   transition: all 0.2s ease;
   flex: 1;
@@ -372,7 +372,7 @@ body {
 
 .nav-item:hover,
 .nav-item.active {
-  color: hsl(38 92% 50%);
+  color: hsl(152 45% 30%);
 }
 
 .nav-emoji {
@@ -394,7 +394,7 @@ body {
   right: 1.5rem;
   width: 4rem;
   height: 4rem;
-  background-color: hsl(38 92% 50%);
+  background-color: hsl(152 45% 30%);
   border-radius: 9999px;
   display: flex;
   align-items: center;
@@ -403,19 +403,19 @@ body {
   font-size: 2rem;
   border: none;
   cursor: pointer;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
   transition: all 0.2s ease;
   z-index: 40;
 }
 
 .fab:hover {
-  background-color: hsl(38 92% 55%);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
+  background-color: hsl(152 45% 35%);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
   transform: scale(1.1);
 }
 
 .fab:active {
-  background-color: hsl(38 92% 45%);
+  background-color: hsl(152 45% 25%);
   transform: scale(0.95);
 }
 
@@ -424,22 +424,22 @@ body {
    ============================================ */
 
 h1, h2, h3, h4, h5, h6 {
-  color: hsl(210 15% 94%);
+  color: hsl(150 20% 15%);
   margin: 0;
 }
 
 p, span {
-  color: hsl(210 15% 94%);
+  color: hsl(150 20% 15%);
 }
 
 a {
-  color: hsl(38 92% 50%);
+  color: hsl(152 45% 30%);
   text-decoration: none;
   transition: color 0.2s ease;
 }
 
 a:hover {
-  color: hsl(38 92% 55%);
+  color: hsl(152 45% 35%);
   text-decoration: underline;
 }
 
@@ -448,9 +448,9 @@ a:hover {
    ============================================ */
 
 input, textarea, select {
-  background-color: hsl(210 35% 22%);
-  color: hsl(210 15% 94%);
-  border: 1px solid hsl(210 30% 20%);
+  background-color: hsl(40 25% 93%);
+  color: hsl(150 20% 15%);
+  border: 1px solid hsl(40 20% 85%);
   padding: 0.75rem;
   border-radius: 0.5rem;
   font-family: inherit;
@@ -459,8 +459,8 @@ input, textarea, select {
 
 input:focus, textarea:focus, select:focus {
   outline: none;
-  border-color: hsl(38 92% 50%);
-  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
+  border-color: hsl(152 45% 30%);
+  box-shadow: 0 0 0 3px rgba(34, 120, 70, 0.1);
 }
 
 /* ============================================
@@ -499,16 +499,16 @@ input:focus, textarea:focus, select:focus {
 }
 
 ::-webkit-scrollbar-track {
-  background: hsl(210 35% 18%);
+  background: hsl(40 25% 93%);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: hsl(38 92% 50%);
+  background: hsl(152 45% 30%);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(38 92% 55%);
+  background: hsl(152 45% 35%);
 }
 
 /* ============================================
@@ -524,15 +524,14 @@ input:focus, textarea:focus, select:focus {
    ============================================ */
 
 .card {
-  background-color: hsl(210 35% 18%);
-  border: 1px solid hsl(210 30% 20%);
+  background-color: hsl(40 30% 98%);
+  border: 1px solid hsl(40 20% 85%);
   border-radius: 0.5rem;
   padding: 1rem;
-  color: hsl(210 15% 94%);
+  color: hsl(150 20% 15%);
 }
 
 .card:hover {
-  border-color: hsl(38 92% 50%);
-  background-color: hsl(210 35% 22%);
+  border-color: hsl(152 45% 30%);
+  background-color: hsl(40 25% 93%);
 }
-

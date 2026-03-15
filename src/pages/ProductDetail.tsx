@@ -22,12 +22,12 @@ const ProductDetail = () => {
   const product = products.find((p) => p.id === `#${id}`);
 
   if (!product) {
-    return (<div className="min-h-screen flex flex-col bg-[#1a2332] text-[#f0f4f8] min-h-screen">
+    return (<div className="min-h-screen flex flex-col bg-[#f0ebe1] text-[#1f2e22] min-h-screen">
         <Header />
         <main className="flex-1 flex items-center justify-center">
           <div className="text-center">
-            <h1 className="text-2xl font-display font-bold mb-4" style={{ color: 'hsl(210 15% 94%)' }}>Product Not Found</h1>
-            <p className="mb-6" style={{ color: 'hsl(210 15% 63%)' }}>The product you're looking for doesn't exist.</p>
+            <h1 className="text-2xl font-display font-bold mb-4" style={{ color: 'hsl(150 20% 15%)' }}>Product Not Found</h1>
+            <p className="mb-6" style={{ color: 'hsl(150 10% 45%)' }}>The product you're looking for doesn't exist.</p>
             <Button asChild>
               <Link to="/products">
                 <ArrowLeft className="w-4 h-4 mr-2" />

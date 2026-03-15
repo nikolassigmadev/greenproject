@@ -1133,44 +1133,38 @@ const Scan = () => {
   }, [searchProducts, toast]);
 
   // Manual barcode lookup on OpenFoodFacts
-  const handleBarcodeLookup = useCallback(async (barcode: string) => {
-    if (!barcode.trim()) return;
+  const handleProductSearch = useCallback(async (productName: string) => {
+    if (!productName.trim()) return;
 
     setOffLoading(true);
     setOffResult(null);
     setOffSearchResults([]);
 
     try {
-      const result = await lookupBarcode(barcode.trim());
-      setOffResult(result);
+      // Fetch a larger pool (20) so we can pick the 3 with the most eco data
+      const results = await searchOffProducts(productName.trim(), 20);
 
-      if (result.found && hasEcoScore(result)) {
-        // Also populate search results so they display in the UI
-        setOffSearchResults([result]);
-        // Automatically show detailed environmental view for barcode lookups
-        viewDetailedEnvironmental(result);
+      // Filter to show only the best 3 results (ranked by eco data completeness)
+      const topResults = filterBestProducts(results);
+
+      if (topResults.length > 0) {
+        setOffSearchResults(topResults);
         toast({
-          title: "Product Found on OpenFoodFacts",
-          description: `${result.brand || ""} ${result.productName || "Unknown Product"}`.trim(),
-        });
-      } else if (result.found) {
-        toast({
-          title: "No Environmental Data",
-          description: `"${result.productName || "This product"}" was found but has no Eco-Score or environmental breakdown.`,
-          variant: "destructive",
+          title: "Products Found",
+          description: `Found ${topResults.length} products for "${productName}"`,
         });
       } else {
         toast({
-          title: "Not Found",
-          description: result.error || "Product not found on OpenFoodFacts.",
+          title: "No Products Found",
+          description: `No products found for "${productName}"`,
           variant: "destructive",
         });
       }
     } catch (error) {
-      console.error("Barcode lookup error:", error);
+      console.error("Product search error:", error);
       toast({
-        title: "Lookup Error",
-        description: "Failed to query OpenFoodFacts. Please try again.",
+        title: "Search Error",
+        description: "Failed to search products. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -1376,7 +1370,7 @@ const Scan = () => {
   };
 
   return (
-    <div style={{ backgroundColor: 'hsl(210 40% 10%)', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ backgroundColor: 'hsl(40 33% 95%)', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <Header />
       
       <main style={{ flex: 1, paddingTop: '1.5rem', paddingBottom: '1.5rem' }}>
@@ -1385,32 +1379,31 @@ const Scan = () => {
           {/* Page Header */}
           <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
             <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📸</div>
-            <h1 style={{ fontSize: '1.875rem', fontWeight: 'bold', marginBottom: '0.75rem', color: 'hsl(38 92% 50%)' }}>
+            <h1 style={{ fontSize: '1.875rem', fontWeight: 'bold', marginBottom: '0.75rem', color: 'hsl(152 45% 30%)' }}>
               Scan a Product
             </h1>
-            <p style={{ fontSize: '1rem', color: 'hsl(210 15% 63%)' }}>
+            <p style={{ fontSize: '1rem', color: 'hsl(150 10% 45%)' }}>
               Discover the true cost of your purchase
             </p>
           </div>
 
-          {/* Product Lookup - Barcode Search */}
-          <div style={{ marginBottom: '2rem', padding: '1.5rem', backgroundColor: 'hsl(210 35% 18%)', borderRadius: '0.5rem', border: '1px solid hsl(210 15% 30%)' }}>
-            <h2 style={{ fontSize: '1.125rem', fontWeight: 'bold', marginBottom: '1rem', color: 'hsl(210 15% 94%)' }}>📱 Barcode Search</h2>
-            <form onSubmit={(e) => { e.preventDefault(); handleBarcodeLookup(barcodeInput); }} style={{ display: 'flex', gap: '0.75rem' }}>
+          {/* Product Search */}
+          <div style={{ marginBottom: '2rem', padding: '1.5rem', backgroundColor: 'hsl(40 30% 98%)', borderRadius: '0.5rem', border: '1px solid hsl(40 20% 85%)' }}>
+            <h2 style={{ fontSize: '1.125rem', fontWeight: 'bold', marginBottom: '1rem', color: 'hsl(150 20% 15%)' }}>🔍 Product Search</h2>
+            <form onSubmit={(e) => { e.preventDefault(); handleProductSearch(barcodeInput); }} style={{ display: 'flex', gap: '0.75rem' }}>
               <Input
-                placeholder="Enter barcode (e.g., 3017620422003)"
+                placeholder="Search by product name (e.g., Coca-Cola, Häagen-Dazs)"
                 value={barcodeInput}
                 onChange={(e) => setBarcodeInput(e.target.value)}
                 style={{
                   flex: 1,
                   height: '2.75rem',
-                  backgroundColor: 'hsl(210 35% 22%)',
-                  color: 'hsl(210 15% 94%)',
-                  border: '1px solid hsl(210 15% 30%)',
+                  backgroundColor: 'hsl(40 25% 93%)',
+                  color: 'hsl(150 20% 15%)',
+                  border: '1px solid hsl(40 20% 85%)',
                   borderRadius: '0.375rem',
                   padding: '0 1rem'
                 }}
-                inputMode="numeric"
               />
               <CalAIButton type="submit" emoji="🔍" loading={offLoading}>
                 Search
@@ -1423,17 +1416,17 @@ const Scan = () => {
             onClick={() => offFileInputRef.current?.click()}
             onDragOver={(e) => {
               e.preventDefault();
-              e.currentTarget.style.borderColor = 'hsl(38 92% 50%)';
-              e.currentTarget.style.backgroundColor = 'hsl(210 35% 22%)';
+              e.currentTarget.style.borderColor = 'hsl(152 45% 30%)';
+              e.currentTarget.style.backgroundColor = 'hsl(40 25% 93%)';
             }}
             onDragLeave={(e) => {
-              e.currentTarget.style.borderColor = 'hsl(210 15% 30%)';
-              e.currentTarget.style.backgroundColor = 'hsl(210 35% 18%)';
+              e.currentTarget.style.borderColor = 'hsl(40 20% 85%)';
+              e.currentTarget.style.backgroundColor = 'hsl(40 30% 98%)';
             }}
             onDrop={(e) => {
               e.preventDefault();
-              e.currentTarget.style.borderColor = 'hsl(210 15% 30%)';
-              e.currentTarget.style.backgroundColor = 'hsl(210 35% 18%)';
+              e.currentTarget.style.borderColor = 'hsl(40 20% 85%)';
+              e.currentTarget.style.backgroundColor = 'hsl(40 30% 98%)';
               const files = e.dataTransfer.files;
               if (files.length > 0) {
                 const file = files[0];
@@ -1453,9 +1446,9 @@ const Scan = () => {
             style={{
               marginBottom: '2rem',
               padding: '3rem 2rem',
-              backgroundColor: 'hsl(210 35% 18%)',
+              backgroundColor: 'hsl(40 30% 98%)',
               borderRadius: '0.75rem',
-              border: '2px dashed hsl(210 15% 30%)',
+              border: '2px dashed hsl(40 20% 85%)',
               cursor: 'pointer',
               transition: 'all 0.3s ease',
               textAlign: 'center',
@@ -1481,7 +1474,7 @@ const Scan = () => {
               <h2 style={{
                 fontSize: '1.5rem',
                 fontWeight: 'bold',
-                color: 'hsl(210 15% 94%)',
+                color: 'hsl(150 20% 15%)',
                 marginBottom: '0.5rem',
                 margin: 0,
               }}>
@@ -1489,7 +1482,7 @@ const Scan = () => {
               </h2>
               <p style={{
                 fontSize: '0.95rem',
-                color: 'hsl(210 15% 63%)',
+                color: 'hsl(150 10% 45%)',
                 margin: 0,
               }}>
                 {offSearchLoading ? 'Analyzing image...' : 'Take or upload a photo of any product'}
@@ -1520,7 +1513,7 @@ const Scan = () => {
             {/* Secondary Text */}
             <p style={{
               fontSize: '0.875rem',
-              color: 'hsl(210 15% 45%)',
+              color: 'hsl(150 10% 55%)',
               margin: 0,
               fontStyle: 'italic',
             }}>
@@ -1552,8 +1545,8 @@ const Scan = () => {
                 overflow: 'hidden',
                 aspectRatio: '16/9',
                 maxHeight: '200px',
-                backgroundColor: 'hsl(210 35% 18%)',
-                border: '1px solid hsl(210 15% 30%)'
+                backgroundColor: 'hsl(40 30% 98%)',
+                border: '1px solid hsl(40 20% 85%)'
               }}>
                 <img src={offSearchImage} alt="Scanned" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
               </div>
@@ -1612,7 +1605,7 @@ const Scan = () => {
           {/* Better Alternatives */}
           {offAlternatives.length > 0 && (
             <div style={{ marginBottom: '2rem' }}>
-              <h2 style={{ fontSize: '1.125rem', fontWeight: 'bold', marginBottom: '1rem', color: 'hsl(210 15% 94%)' }}>
+              <h2 style={{ fontSize: '1.125rem', fontWeight: 'bold', marginBottom: '1rem', color: 'hsl(150 20% 15%)' }}>
                 🌱 Greener Alternatives
               </h2>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>

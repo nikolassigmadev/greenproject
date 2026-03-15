@@ -6,65 +6,65 @@
 
 @layer base {
   :root {
-    /* CalAI Design System Colors */
-    --background: 210 40% 10%;           /* #1a2332 Dark background */
-    --foreground: 210 15% 94%;           /* #f0f4f8 Off-white text */
+    /* Light Beige & Dark Green Design System */
+    --background: 40 33% 95%;              /* Light beige background */
+    --foreground: 150 20% 15%;             /* Dark green-gray text */
 
-    --card: 210 35% 18%;                 /* #202d42 Card background */
-    --card-foreground: 210 15% 94%;      /* #f0f4f8 Text on cards */
+    --card: 40 30% 98%;                    /* White/cream card background */
+    --card-foreground: 150 20% 15%;        /* Dark text on cards */
 
-    --popover: 210 35% 18%;
-    --popover-foreground: 210 15% 94%;
+    --popover: 40 30% 98%;
+    --popover-foreground: 150 20% 15%;
 
-    /* Orange accent (consistent throughout) */
-    --primary: 38 92% 50%;               /* #f97316 Orange */
-    --primary-foreground: 210 40% 10%;
+    /* Dark green accent */
+    --primary: 152 45% 30%;                /* Forest green */
+    --primary-foreground: 40 33% 95%;
 
-    --secondary: 210 35% 18%;
-    --secondary-foreground: 210 15% 94%;
+    --secondary: 40 25% 93%;
+    --secondary-foreground: 150 20% 15%;
 
-    /* Text colors for dark theme */
-    --muted: 210 20% 40%;                /* #4a5a7a Muted text */
-    --muted-foreground: 210 15% 63%;     /* #a0aac0 Secondary text */
+    /* Text colors for light theme */
+    --muted: 40 15% 80%;                   /* Muted border/bg */
+    --muted-foreground: 150 10% 45%;       /* Secondary text */
 
-    --accent: 38 92% 50%;                /* #f97316 Orange */
-    --accent-foreground: 210 40% 10%;
+    --accent: 152 45% 30%;                 /* Forest green */
+    --accent-foreground: 40 33% 95%;
 
     --destructive: 0 72% 51%;
-    --destructive-foreground: 210 15% 94%;
+    --destructive-foreground: 40 30% 98%;
 
-    --border: 210 30% 20%;               /* #333333 Dark borders */
-    --input: 210 30% 25%;                /* #2a3a52 Input background */
-    --ring: 38 92% 50%;                  /* #f97316 Orange focus ring */
+    --border: 40 20% 85%;                  /* Light borders */
+    --input: 40 25% 93%;                   /* Input background */
+    --ring: 152 45% 30%;                   /* Green focus ring */
 
     --radius: 0.5rem;
 
     /* CalAI Macro Colors */
-    --color-protein: 0 84% 60%;          /* #ef4444 Red for protein */
-    --color-carbs: 38 92% 50%;           /* #f97316 Orange for carbs */
-    --color-fats: 217 91% 60%;           /* #3b82f6 Blue for fats */
-    --color-calories: 38 92% 50%;        /* #f97316 Orange for calories */
+    --color-protein: 0 84% 45%;            /* Red for protein */
+    --color-carbs: 152 45% 30%;            /* Green for carbs */
+    --color-fats: 217 91% 50%;             /* Blue for fats */
+    --color-calories: 152 45% 30%;         /* Green for calories */
 
     /* Custom eco colors */
     --eco-forest: 152 45% 28%;
     --eco-leaf: 142 55% 42%;
     --eco-sage: 145 30% 65%;
-    --eco-cream: 45 30% 97%;
+    --eco-cream: 40 30% 97%;
     --eco-sand: 35 35% 85%;
-    --eco-amber: 38 92% 50%;
+    --eco-amber: 152 45% 30%;
     --eco-terracotta: 18 65% 55%;
     --eco-ocean: 195 70% 45%;
 
     /* Score colors */
-    --score-excellent: 152 60% 40%;
-    --score-good: 80 55% 45%;
-    --score-fair: 45 90% 50%;
-    --score-poor: 25 80% 50%;
-    --score-critical: 0 70% 50%;
+    --score-excellent: 152 60% 35%;
+    --score-good: 80 55% 40%;
+    --score-fair: 45 90% 45%;
+    --score-poor: 25 80% 45%;
+    --score-critical: 0 70% 45%;
 
     /* Gradients */
     --gradient-hero: linear-gradient(135deg, hsl(152 45% 28%) 0%, hsl(142 55% 35%) 50%, hsl(145 40% 45%) 100%);
-    --gradient-card: linear-gradient(180deg, hsl(45 25% 99%) 0%, hsl(45 30% 96%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(40 30% 99%) 0%, hsl(40 30% 96%) 100%);
     --gradient-score: linear-gradient(90deg, hsl(0 70% 50%) 0%, hsl(45 90% 50%) 50%, hsl(152 60% 40%) 100%);
 
     /* Shadows */
@@ -72,13 +72,13 @@
     --shadow-card: 0 8px 30px -8px hsl(150 20% 20% / 0.12);
     --shadow-elevated: 0 20px 50px -12px hsl(150 20% 20% / 0.2);
 
-    --sidebar-background: 45 25% 98%;
+    --sidebar-background: 40 25% 98%;
     --sidebar-foreground: 150 25% 20%;
     --sidebar-primary: 152 45% 28%;
-    --sidebar-primary-foreground: 45 30% 97%;
+    --sidebar-primary-foreground: 40 30% 97%;
     --sidebar-accent: 145 30% 92%;
     --sidebar-accent-foreground: 150 25% 20%;
-    --sidebar-border: 45 20% 88%;
+    --sidebar-border: 40 20% 88%;
     --sidebar-ring: 152 45% 28%;
   }
 
