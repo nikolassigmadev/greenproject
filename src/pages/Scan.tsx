@@ -1418,21 +1418,131 @@ const Scan = () => {
             </form>
           </div>
 
-          {/* Image Upload */}
-          <div style={{ marginBottom: '2rem', padding: '1.5rem', backgroundColor: 'hsl(210 35% 18%)', borderRadius: '0.5rem', border: '1px solid hsl(210 15% 30%)' }}>
-            <h2 style={{ fontSize: '1.125rem', fontWeight: 'bold', marginBottom: '1rem', color: 'hsl(210 15% 94%)' }}>📸 Image Search</h2>
-            <CalAIButton onClick={() => offFileInputRef.current?.click()} loading={offSearchLoading} emoji={offSearchLoading ? '⏳' : '📤'} style={{ width: '100%' }}>
-              {offSearchLoading ? 'Analyzing...' : 'Choose Product Image'}
-            </CalAIButton>
-            <input
-              ref={offFileInputRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              onChange={handleOffFileUpload}
-              style={{ display: 'none' }}
-            />
+          {/* Scanner Interface */}
+          <div
+            onClick={() => offFileInputRef.current?.click()}
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.currentTarget.style.borderColor = 'hsl(38 92% 50%)';
+              e.currentTarget.style.backgroundColor = 'hsl(210 35% 22%)';
+            }}
+            onDragLeave={(e) => {
+              e.currentTarget.style.borderColor = 'hsl(210 15% 30%)';
+              e.currentTarget.style.backgroundColor = 'hsl(210 35% 18%)';
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              e.currentTarget.style.borderColor = 'hsl(210 15% 30%)';
+              e.currentTarget.style.backgroundColor = 'hsl(210 35% 18%)';
+              const files = e.dataTransfer.files;
+              if (files.length > 0) {
+                const file = files[0];
+                if (file.type.startsWith('image/')) {
+                  offFileInputRef.current?.form?.dispatchEvent(
+                    new Event('change', { bubbles: true })
+                  );
+                  const reader = new FileReader();
+                  reader.onload = (event) => {
+                    setOffSearchImage(event.target?.result as string);
+                    handleOffFileUpload({ target: { files: [file] } } as any);
+                  };
+                  reader.readAsDataURL(file);
+                }
+              }
+            }}
+            style={{
+              marginBottom: '2rem',
+              padding: '3rem 2rem',
+              backgroundColor: 'hsl(210 35% 18%)',
+              borderRadius: '0.75rem',
+              border: '2px dashed hsl(210 15% 30%)',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              textAlign: 'center',
+              minHeight: '280px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '1.5rem',
+            }}
+          >
+            {/* Large Camera Icon */}
+            <div style={{
+              fontSize: '5rem',
+              filter: offSearchLoading ? 'opacity(0.6)' : 'opacity(1)',
+              animation: offSearchLoading ? 'pulse 2s infinite' : 'none',
+            }}>
+              {offSearchLoading ? '⏳' : '📷'}
+            </div>
+
+            {/* Main Heading */}
+            <div>
+              <h2 style={{
+                fontSize: '1.5rem',
+                fontWeight: 'bold',
+                color: 'hsl(210 15% 94%)',
+                marginBottom: '0.5rem',
+                margin: 0,
+              }}>
+                Scan Product
+              </h2>
+              <p style={{
+                fontSize: '0.95rem',
+                color: 'hsl(210 15% 63%)',
+                margin: 0,
+              }}>
+                {offSearchLoading ? 'Analyzing image...' : 'Take or upload a photo of any product'}
+              </p>
+            </div>
+
+            {/* Action Buttons */}
+            <div style={{
+              display: 'flex',
+              gap: '1rem',
+              width: '100%',
+              maxWidth: '300px',
+              flexDirection: 'column',
+            }}>
+              <CalAIButton
+                onClick={(e) => {
+                  e.stopPropagation();
+                  offFileInputRef.current?.click();
+                }}
+                loading={offSearchLoading}
+                emoji={offSearchLoading ? '⏳' : '📤'}
+                style={{ width: '100%' }}
+              >
+                {offSearchLoading ? 'Analyzing...' : 'Choose Image'}
+              </CalAIButton>
+            </div>
+
+            {/* Secondary Text */}
+            <p style={{
+              fontSize: '0.875rem',
+              color: 'hsl(210 15% 45%)',
+              margin: 0,
+              fontStyle: 'italic',
+            }}>
+              Or drag & drop an image
+            </p>
+
+            <style>{`
+              @keyframes pulse {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0.6; }
+              }
+            `}</style>
           </div>
+
+          <input
+            ref={offFileInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={handleOffFileUpload}
+            style={{ display: 'none' }}
+          />
 
           {/* Image Preview */}
           {offSearchImage && (
