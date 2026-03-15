@@ -112,6 +112,22 @@ const normalizeOcrText = (text: string) => {
     .trim();
 };
 
+/**
+ * Removes duplicate words from search query
+ * Example: "Coca-Cola Coca-Cola" → "Coca-Cola"
+ */
+const deduplicateSearchQuery = (query: string): string => {
+  return query
+    .split(/\s+/)  // Split by whitespace
+    .filter((word, index, arr) => {
+      // Keep word if it's the first occurrence or different from previous word (case-insensitive)
+      return index === 0 || word.toLowerCase() !== arr[index - 1].toLowerCase();
+    })
+    .join(" ")
+    .trim();
+};
+
+
 const uniqPreserveOrder = (values: string[]) => {
   const seen = new Set<string>();
   const result: string[] = [];
@@ -1180,6 +1196,9 @@ const Scan = () => {
         } else {
           searchQuery = advancedResult.fullText;
         }
+
+        // Remove duplicate words from search query (e.g., "Coca-Cola Coca-Cola" → "Coca-Cola")
+        searchQuery = deduplicateSearchQuery(searchQuery);
 
         // If barcode was found, also do a direct barcode lookup
         if (advancedResult.barcode && isValidBarcode(advancedResult.barcode)) {
