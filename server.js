@@ -13,19 +13,20 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import fetch from 'node-fetch';
 
-// Load environment variables
+// Load environment variables (check .env.local first, then .env)
+dotenv.config({ path: '.env.local' });
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.VITE_OPENAI_API_KEY;
 
 // Middleware
 // Middleware
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests from localhost on any port
-    if (!origin || /^http:\/\/localhost(:\d+)?$/.test(origin)) {
+    // Allow requests from localhost or local network IPs on any port
+    if (!origin || /^http:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+)(:\d+)?$/.test(origin)) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
@@ -72,7 +73,7 @@ app.post('/api/openai/analyze-image', async (req, res) => {
         'Authorization': `Bearer ${OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: 'gpt-4-vision-preview',
+        model: 'gpt-4o',
         messages: [
           {
             role: 'user',
@@ -276,7 +277,7 @@ app.use((err, req, res, next) => {
 // START SERVER
 // =====================================================
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log('');
   console.log('╔════════════════════════════════════════════════════════╗');
   console.log('║                                                        ║');

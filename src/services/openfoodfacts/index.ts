@@ -248,7 +248,8 @@ export const searchProducts = async (
 
   try {
     // Use backend proxy to avoid CORS issues
-    const response = await fetch('http://localhost:3001/api/openfoodfacts/search', {
+    const backendUrl = `${window.location.protocol}//${window.location.hostname}:3001`;
+    const response = await fetch(`${backendUrl}/api/openfoodfacts/search`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
