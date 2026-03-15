@@ -9,7 +9,7 @@ export interface SearchPipelineLog {
   timestamp: number;
   status: 'success' | 'warning' | 'error' | 'info';
   details: string;
-  data: Record<string, any>;
+  data: Record<string, string | number | boolean | undefined | (string | number | boolean)[]>;
 }
 
 class OCRSearchLogger {
@@ -23,7 +23,7 @@ class OCRSearchLogger {
     stage: string,
     status: 'success' | 'warning' | 'error' | 'info',
     details: string,
-    data: Record<string, any> = {}
+    data: Record<string, string | number | boolean | undefined | (string | number | boolean)[]> = {}
   ) {
     const entry: SearchPipelineLog = {
       stage,

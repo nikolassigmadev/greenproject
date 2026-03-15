@@ -106,6 +106,7 @@ type TesseractProgress = {
 
 const normalizeOcrText = (text: string) => {
   return text
+    // eslint-disable-next-line no-control-regex
     .replace(/[\x00-\x1F\x7F]/g, " ")  // Control characters only
     .replace(/[ \t]+/g, " ")
     .replace(/\n{3,}/g, "\n\n")
@@ -1615,32 +1616,6 @@ const Scan = () => {
               </p>
             </CardContent>
           </Card>
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-3 text-lg">
-                <div className="flex items-center justify-center w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-900/50">
-                  <Search className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                </div>
-                <span className="bg-gradient-to-r from-blue-700 to-blue-600 bg-clip-text text-transparent">Manual Search</span>
-              </CardTitle>
-              <p className="text-sm text-muted-foreground pl-12">
-                Search by product name, barcode, or ID code
-              </p>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleManualSearch} className="flex gap-3">
-                <Input
-                  placeholder="Enter product name, barcode, or code (e.g., #p0001)"
-                  value={manualSearch}
-                  onChange={(e) => setManualSearch(e.target.value)}
-                  className="flex-1 h-12 rounded-xl border-slate-200 dark:border-slate-700 bg-[#202d42]/50 dark:bg-slate-800/50 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20"
-                />
-                <Button type="submit" className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 h-12 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300">
-                  <Search className="w-4 h-4 mr-2" />
-                  Search
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
 
 
           {/* Search Results */}
@@ -1812,54 +1787,6 @@ const Scan = () => {
               </div>
             </div>
           </div>
-
-          {/* Debug Information */}
-          <div className="mt-6 p-6 rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100/50 dark:from-slate-900 dark:to-slate-800/50 border border-slate-200/50 dark:border-slate-700/30 shadow-lg">
-            <div className="flex items-start gap-4">
-              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 flex-shrink-0 mt-1">
-                <AlertCircle className="w-5 h-5 text-slate-600 dark:text-slate-400" />
-              </div>
-              <div className="text-sm">
-                <p className="font-semibold text-slate-800 dark:text-slate-200 mb-3 text-base">Camera Troubleshooting</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                  <div className="space-y-2 text-slate-700 dark:text-slate-300 text-xs">
-                    <p><strong>Browser:</strong> {navigator.userAgent.match(/Chrome|Safari|Firefox|Edge|Opera/) ? navigator.userAgent.match(/Chrome|Safari|Firefox|Edge|Opera/)?.[0] : 'Unknown'}</p>
-                    <p><strong>Device:</strong> {/Mobile|Android|iPhone|iPad/.test(navigator.userAgent) ? '📱 Mobile' : '💻 Desktop'}</p>
-                    <p><strong>Protocol:</strong> {location.protocol}</p>
-                    <p><strong>Host:</strong> {location.hostname}</p>
-                  </div>
-                  <div className="space-y-2 text-slate-700 dark:text-slate-300 text-xs">
-                    <p><strong>mediaDevices:</strong> {navigator.mediaDevices ? '✅ Available' : '❌ Missing'} {!navigator.mediaDevices && <span className="text-red-600 font-medium"> (Required!)</span>}</p>
-                    <p><strong>getUserMedia:</strong> {navigator.mediaDevices?.getUserMedia ? '✅ Available' : '❌ Missing'} {!navigator.mediaDevices?.getUserMedia && <span className="text-red-600 font-medium"> (Required!)</span>}</p>
-                    <p><strong>Secure Context:</strong> {location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1' ? '✅ Yes' : '❌ No'}</p>
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  <p className="font-semibold text-slate-800 dark:text-slate-200 text-sm">If camera doesn't work:</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="space-y-2">
-                      <p className="font-medium text-slate-700 dark:text-slate-300 text-xs">🔧 Quick Fixes:</p>
-                      <ul className="space-y-1 text-slate-600 dark:text-slate-400 text-xs">
-                        <li>• Open browser console (F12) and check for errors</li>
-                        <li>• Check 🔒 lock icon for camera permissions</li>
-                        <li>• Reload page after allowing permissions</li>
-                        <li>• Close other apps using camera</li>
-                      </ul>
-                    </div>
-                    <div className="space-y-2">
-                      <p className="font-medium text-slate-700 dark:text-slate-300 text-xs">🌐 Browser & Device:</p>
-                      <ul className="space-y-1 text-slate-600 dark:text-slate-400 text-xs">
-                        <li>• Try Chrome, Firefox, Safari, or Edge</li>
-                        <li>• Mobile: Use portrait mode, Chrome browser</li>
-                        <li>• Check iOS privacy settings</li>
-                        <li>• Remote sites need HTTPS (not http://)</li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div> */}
         </div>
       </main>
 
