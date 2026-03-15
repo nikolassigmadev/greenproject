@@ -5,6 +5,7 @@ import ProductDetail from "./pages/ProductDetail";
 import Scan from "./pages/Scan";
 import Database from "./pages/Database";
 import NotFound from "./pages/NotFound";
+import { CalAIShowcase } from "./components/CalAIShowcase";
 
 // Import admin components - uncomment to enable
 import Admin from "./pages/Admin";
@@ -30,6 +31,10 @@ export const router = createBrowserRouter([
   {
     path: "/database",
     element: <Database />,
+  },
+  {
+    path: "/design-system",
+    element: <CalAIShowcase />,
   },
   // Uncomment admin routes to enable
  {

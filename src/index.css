@@ -6,40 +6,45 @@
 
 @layer base {
   :root {
-    /* CalAI Dark Theme */
-    --background: 210 40% 12%;        /* Very dark blue-gray */
-    --foreground: 210 20% 95%;        /* Off-white */
+    /* CalAI Design System Colors */
+    --background: 210 40% 10%;           /* #1a2332 Dark background */
+    --foreground: 210 15% 94%;           /* #f0f4f8 Off-white text */
 
-    --card: 210 35% 20%;              /* Dark card background */
-    --card-foreground: 210 20% 95%;   /* Light text */
+    --card: 210 35% 18%;                 /* #202d42 Card background */
+    --card-foreground: 210 15% 94%;      /* #f0f4f8 Text on cards */
 
-    --popover: 210 35% 20%;
-    --popover-foreground: 210 20% 95%;
+    --popover: 210 35% 18%;
+    --popover-foreground: 210 15% 94%;
 
-    /* Orange primary accent (like CalAI) */
-    --primary: 38 92% 50%;            /* Orange */
-    --primary-foreground: 210 40% 12%;
+    /* Orange accent (consistent throughout) */
+    --primary: 38 92% 50%;               /* #f97316 Orange */
+    --primary-foreground: 210 40% 10%;
 
-    /* Dark secondary */
-    --secondary: 210 35% 20%;
-    --secondary-foreground: 210 20% 95%;
+    --secondary: 210 35% 18%;
+    --secondary-foreground: 210 15% 94%;
 
-    /* Muted colors for dark theme */
-    --muted: 210 20% 40%;
-    --muted-foreground: 210 20% 70%;
+    /* Text colors for dark theme */
+    --muted: 210 20% 40%;                /* #4a5a7a Muted text */
+    --muted-foreground: 210 15% 63%;     /* #a0aac0 Secondary text */
 
-    /* Accent color (same as primary) */
-    --accent: 38 92% 50%;             /* Orange */
-    --accent-foreground: 210 40% 12%;
+    --accent: 38 92% 50%;                /* #f97316 Orange */
+    --accent-foreground: 210 40% 10%;
 
     --destructive: 0 72% 51%;
-    --destructive-foreground: 210 20% 95%;
+    --destructive-foreground: 210 15% 94%;
 
-    --border: 210 30% 35%;            /* Dark borders */
-    --input: 210 30% 35%;
-    --ring: 38 92% 50%;               /* Orange ring focus */
+    --border: 210 30% 20%;               /* #333333 Dark borders */
+    --input: 210 30% 25%;                /* #2a3a52 Input background */
+    --ring: 38 92% 50%;                  /* #f97316 Orange focus ring */
 
     --radius: 0.5rem;
+
+    /* CalAI Macro Colors */
+    --color-protein: 0 84% 60%;          /* #ef4444 Red for protein */
+    --color-carbs: 38 92% 50%;           /* #f97316 Orange for carbs */
+    --color-fats: 217 91% 60%;           /* #3b82f6 Blue for fats */
+    --color-calories: 38 92% 50%;        /* #f97316 Orange for calories */
+  }
 
     /* Custom eco colors */
     --eco-forest: 152 45% 28%;

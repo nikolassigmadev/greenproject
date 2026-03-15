@@ -1,126 +1,171 @@
 #root {
   max-width: 1280px;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 0;
   text-align: center;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
-}
-
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
-}
-
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
-}
-
 /* ============================================
-   CalAI DARK THEME STYLING
+   CalAI DESIGN SYSTEM - COMPLETE IMPLEMENTATION
    ============================================ */
 
-/* Dark mode styling */
+/* Base Dark Theme */
 body {
-  background-color: hsl(210 40% 12%);
-  color: hsl(210 20% 95%);
+  background-color: hsl(210 40% 10%);
+  color: hsl(210 15% 94%);
   transition: background-color 0.3s ease;
 }
 
-/* Circular Progress Indicator Base */
-.circular-progress {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
+/* ============================================
+   MACRO INDICATORS WITH EMOJIS
+   ============================================ */
 
-.circular-progress-bg {
-  position: absolute;
-  inset: 0;
-  border-radius: 9999px;
-  background-color: hsl(210 35% 20%);
-}
-
-.circular-progress-text {
-  position: relative;
-  z-index: 10;
+/* Calorie Display */
+.calorie-display {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  gap: 0.5rem;
+  font-size: 3rem;
 }
 
-/* Nutrition Card Styles */
-.nutrition-card {
-  background-color: hsl(210 35% 20%);
-  border-radius: 0.5rem;
-  padding: 1.5rem;
-  border: 1px solid rgba(51, 51, 51, 0.5);
+.calorie-emoji {
+  font-size: 4rem;
+  animation: float 2s ease-in-out infinite;
 }
 
-/* Macro Ring Styles */
-.macro-ring {
-  position: relative;
+/* Macro Badges with Emojis */
+.macro-badge {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 9999px;
-  background-color: hsl(210 35% 20%);
-  border-width: 4px;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  background-color: hsl(210 35% 18%);
+  border: 1px solid hsl(210 30% 20%);
+  color: hsl(210 15% 94%);
+  font-weight: 600;
 }
 
-.macro-ring.protein {
+.macro-badge.protein {
   border-color: hsl(0 84% 60%);
+  color: hsl(0 84% 60%);
 }
 
-.macro-ring.carbs {
+.macro-badge.carbs {
   border-color: hsl(38 92% 50%);
+  color: hsl(38 92% 50%);
 }
 
-.macro-ring.fats {
+.macro-badge.fats {
   border-color: hsl(217 91% 60%);
+  color: hsl(217 91% 60%);
 }
 
-/* Food Item Card - Compact Horizontal */
+/* ============================================
+   NUTRITION CARD WITH EMOJIS
+   ============================================ */
+
+.nutrition-card {
+  background-color: hsl(210 35% 18%);
+  border-radius: 0.5rem;
+  padding: 2rem;
+  border: 1px solid hsl(210 30% 20%);
+  margin: 1rem 0;
+}
+
+.nutrition-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: hsl(210 15% 94%);
+}
+
+.nutrition-header-emoji {
+  font-size: 2rem;
+}
+
+.calories-main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.calories-emoji {
+  font-size: 5rem;
+}
+
+.calories-number {
+  font-size: 3.5rem;
+  font-weight: 900;
+  color: hsl(38 92% 50%);
+}
+
+.calories-label {
+  font-size: 0.875rem;
+  color: hsl(210 15% 63%);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.macros-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.macro-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  background-color: hsl(210 35% 22%);
+  border-radius: 0.5rem;
+  border: 1px solid hsl(210 30% 25%);
+}
+
+.macro-emoji {
+  font-size: 2.5rem;
+}
+
+.macro-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: hsl(210 15% 94%);
+}
+
+.macro-name {
+  font-size: 0.75rem;
+  color: hsl(210 15% 63%);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ============================================
+   FOOD ITEM CARD WITH EMOJI
+   ============================================ */
+
 .food-item-card {
   display: flex;
   gap: 1rem;
-  background-color: hsl(210 35% 20%);
+  background-color: hsl(210 35% 18%);
   border-radius: 0.5rem;
   padding: 1rem;
-  border: 1px solid rgba(51, 51, 51, 0.5);
+  border: 1px solid hsl(210 30% 20%);
   overflow: hidden;
   transition: all 0.2s ease;
+  margin-bottom: 1rem;
 }
 
 .food-item-card:hover {
-  border-color: rgba(68, 68, 68, 0.5);
+  border-color: hsl(38 92% 50%);
   background-color: hsl(210 35% 22%);
 }
 
@@ -134,48 +179,182 @@ body {
 
 .food-item-info {
   flex: 1;
+  text-align: left;
 }
 
 .food-item-name {
-  color: white;
+  color: hsl(210 15% 94%);
   font-weight: 600;
-  font-size: 0.875rem;
+  font-size: 1rem;
   margin: 0;
+  margin-bottom: 0.5rem;
 }
 
 .food-item-calories {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   color: hsl(38 92% 50%);
-  font-weight: 500;
-  font-size: 0.875rem;
-  margin-top: 0.25rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
 }
 
 .food-item-macros {
   display: flex;
-  gap: 0.75rem;
-  margin-top: 0.5rem;
-  font-size: 0.75rem;
-  color: hsl(210 20% 80%);
+  gap: 1rem;
+  font-size: 0.875rem;
+  color: hsl(210 15% 63%);
 }
 
 .food-item-time {
   font-size: 0.75rem;
-  color: hsl(210 20% 60%);
+  color: hsl(210 15% 63%);
+  flex-shrink: 0;
+  text-align: right;
+}
+
+/* ============================================
+   BUTTONS WITH EMOJIS
+   ============================================ */
+
+.btn-primary {
+  background-color: hsl(38 92% 50%);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+}
+
+.btn-primary:hover {
+  background-color: hsl(38 92% 55%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 12px rgba(249, 115, 22, 0.3);
+}
+
+.btn-primary:active {
+  background-color: hsl(38 92% 45%);
+  transform: translateY(0);
+}
+
+.btn-secondary {
+  background-color: hsl(210 35% 22%);
+  color: hsl(210 15% 94%);
+  border: 1px solid hsl(210 30% 20%);
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+}
+
+.btn-secondary:hover {
+  border-color: hsl(38 92% 50%);
+  background-color: hsl(210 35% 25%);
+}
+
+/* ============================================
+   ALERT COMPONENTS WITH EMOJIS
+   ============================================ */
+
+.alert {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid;
+  margin: 1rem 0;
+  align-items: flex-start;
+}
+
+.alert-emoji {
+  font-size: 1.5rem;
   flex-shrink: 0;
 }
 
-/* Bottom Navigation */
+.alert-success {
+  background-color: rgba(34, 197, 94, 0.1);
+  border-color: hsl(142 71% 45%);
+  color: hsl(142 71% 55%);
+}
+
+.alert-error {
+  background-color: rgba(239, 68, 68, 0.1);
+  border-color: hsl(0 84% 60%);
+  color: hsl(0 84% 65%);
+}
+
+.alert-warning {
+  background-color: rgba(234, 179, 8, 0.1);
+  border-color: hsl(45 93% 47%);
+  color: hsl(45 93% 55%);
+}
+
+/* ============================================
+   STATS DISPLAY WITH EMOJIS
+   ============================================ */
+
+.stats-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.stat-box {
+  background-color: hsl(210 35% 18%);
+  border: 1px solid hsl(210 30% 20%);
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.stat-emoji {
+  font-size: 2rem;
+}
+
+.stat-value {
+  font-size: 1.75rem;
+  font-weight: 900;
+  color: hsl(38 92% 50%);
+}
+
+.stat-label {
+  font-size: 0.875rem;
+  color: hsl(210 15% 63%);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ============================================
+   BOTTOM NAVIGATION WITH EMOJIS
+   ============================================ */
+
 .bottom-nav {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  background-color: hsl(210 45% 8%);
-  border-top: 1px solid hsl(210 30% 35%);
+  background-color: hsl(210 50% 8%);
+  border-top: 1px solid hsl(210 30% 20%);
   display: flex;
   justify-content: space-around;
   align-items: center;
   z-index: 50;
+  padding: 0.5rem 0;
 }
 
 .nav-item {
@@ -183,11 +362,12 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 1rem;
-  color: hsl(210 20% 70%);
+  padding: 0.75rem;
+  color: hsl(210 15% 63%);
   text-decoration: none;
-  transition: color 0.2s ease;
+  transition: all 0.2s ease;
   flex: 1;
+  gap: 0.25rem;
 }
 
 .nav-item:hover,
@@ -195,16 +375,19 @@ body {
   color: hsl(38 92% 50%);
 }
 
-.nav-icon {
-  font-size: 1.25rem;
-  margin-bottom: 0.25rem;
+.nav-emoji {
+  font-size: 1.5rem;
 }
 
 .nav-label {
   font-size: 0.75rem;
+  font-weight: 500;
 }
 
-/* Floating Action Button */
+/* ============================================
+   FLOATING ACTION BUTTON WITH EMOJI
+   ============================================ */
+
 .fab {
   position: fixed;
   bottom: 6rem;
@@ -217,8 +400,7 @@ body {
   align-items: center;
   justify-content: center;
   color: white;
-  font-size: 1.5rem;
-  font-weight: bold;
+  font-size: 2rem;
   border: none;
   cursor: pointer;
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
@@ -229,45 +411,69 @@ body {
 .fab:hover {
   background-color: hsl(38 92% 55%);
   box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
+  transform: scale(1.1);
 }
 
 .fab:active {
   background-color: hsl(38 92% 45%);
+  transform: scale(0.95);
 }
 
-/* Page Padding (for fixed nav) */
-.page-with-nav {
-  padding-bottom: 5rem;
+/* ============================================
+   TEXT & TYPOGRAPHY
+   ============================================ */
+
+h1, h2, h3, h4, h5, h6 {
+  color: hsl(210 15% 94%);
+  margin: 0;
 }
 
-/* Dark Card Hover Effect */
-.card-dark {
-  background-color: hsl(210 35% 20%);
+p, span {
+  color: hsl(210 15% 94%);
+}
+
+a {
+  color: hsl(38 92% 50%);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  color: hsl(38 92% 55%);
+  text-decoration: underline;
+}
+
+/* ============================================
+   FORM ELEMENTS
+   ============================================ */
+
+input, textarea, select {
+  background-color: hsl(210 35% 22%);
+  color: hsl(210 15% 94%);
+  border: 1px solid hsl(210 30% 20%);
+  padding: 0.75rem;
   border-radius: 0.5rem;
-  border: 1px solid hsl(210 30% 35%);
+  font-family: inherit;
   transition: all 0.2s ease;
 }
 
-.card-dark:hover {
-  background-color: hsl(210 35% 22%);
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: hsl(38 92% 50%);
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
 }
 
-/* Orange Accent Text */
-.text-accent {
-  color: hsl(38 92% 50%);
-}
+/* ============================================
+   ANIMATIONS
+   ============================================ */
 
-/* Subtle divider */
-.divider {
-  background-color: hsl(210 30% 35%);
-  height: 1px;
-}
-
-/* Skeleton loading state */
-.skeleton {
-  background-color: hsl(210 35% 22%);
-  border-radius: 0.5rem;
-  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
 }
 
 @keyframes pulse {
@@ -279,65 +485,21 @@ body {
   }
 }
 
-/* Ensure text is readable on dark background */
-h1, h2, h3, h4, h5, h6 {
-  color: hsl(210 20% 95%);
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
-p, span, a {
-  color: hsl(210 20% 90%);
-}
+/* ============================================
+   SCROLLBAR
+   ============================================ */
 
-a {
-  color: hsl(38 92% 50%);
-  text-decoration: none;
-  transition: color 0.2s ease;
-}
-
-a:hover {
-  color: hsl(38 92% 55%);
-}
-
-/* Input fields */
-input, textarea, select {
-  background-color: hsl(210 35% 20%);
-  color: hsl(210 20% 95%);
-  border: 1px solid hsl(210 30% 35%);
-}
-
-input:focus, textarea:focus, select:focus {
-  outline: none;
-  border-color: hsl(38 92% 50%);
-  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
-}
-
-/* Buttons */
-button {
-  background-color: hsl(38 92% 50%);
-  color: white;
-  border: none;
-  border-radius: 0.5rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-weight: 500;
-}
-
-button:hover {
-  background-color: hsl(38 92% 55%);
-}
-
-button:active {
-  background-color: hsl(38 92% 45%);
-}
-
-/* Dark theme scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: hsl(210 35% 20%);
+  background: hsl(210 35% 18%);
 }
 
 ::-webkit-scrollbar-thumb {
@@ -348,3 +510,29 @@ button:active {
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(38 92% 55%);
 }
+
+/* ============================================
+   PAGE WITH FIXED NAV
+   ============================================ */
+
+.page-with-nav {
+  padding-bottom: 5rem;
+}
+
+/* ============================================
+   CARD STYLING
+   ============================================ */
+
+.card {
+  background-color: hsl(210 35% 18%);
+  border: 1px solid hsl(210 30% 20%);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  color: hsl(210 15% 94%);
+}
+
+.card:hover {
+  border-color: hsl(38 92% 50%);
+  background-color: hsl(210 35% 22%);
+}
+
