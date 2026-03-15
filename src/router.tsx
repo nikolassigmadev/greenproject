@@ -2,6 +2,7 @@ import { createBrowserRouter } from "react-router-dom";
 import Index from "./pages/Index";
 import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
+import OpenFoodFactsDetail from "./pages/OpenFoodFactsDetail";
 import Scan from "./pages/Scan";
 import Database from "./pages/Database";
 import NotFound from "./pages/NotFound";
@@ -23,6 +24,10 @@ export const router = createBrowserRouter([
   {
     path: "/product/:id",
     element: <ProductDetail />,
+  },
+  {
+    path: "/product-off/:barcode",
+    element: <OpenFoodFactsDetail />,
   },
   {
     path: "/scan",
