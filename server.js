@@ -21,8 +21,16 @@ const PORT = process.env.PORT || 3001;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 // Middleware
+// Middleware
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  origin: (origin, callback) => {
+    // Allow requests from localhost on any port
+    if (!origin || /^http:\/\/localhost(:\d+)?$/.test(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
 }));
 app.use(express.json({ limit: '50mb' }));
@@ -178,6 +186,64 @@ app.post('/api/openai/chat', async (req, res) => {
     res.status(500).json({
       success: false,
       error: error.message || 'Failed to process chat',
+    });
+  }
+});
+
+/**
+ * POST /api/openfoodfacts/search
+ * Search for products on OpenFoodFacts by name
+ */
+app.post('/api/openfoodfacts/search', async (req, res) => {
+  try {
+    const { query, limit = 50 } = req.body;
+
+    if (!query || !query.trim()) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing search query',
+      });
+    }
+
+    console.log(`🔄 Searching OpenFoodFacts for: "${query}"`);
+
+    const params = new URLSearchParams({
+      search_terms: query.trim(),
+      search_simple: '1',
+      action: 'process',
+      json: '1',
+      page_size: String(Math.min(limit, 50)),
+      sort_by: 'unique_scans_n',
+      fields: [
+        'code', 'product_name', 'product_name_en', 'brands',
+        'ecoscore_grade', 'ecoscore_score', 'ecoscore_data',
+        'nutriscore_grade', 'nutriscore_score', 'nova_group',
+        'nutriments', 'labels_tags', 'labels', 'categories_tags', 'categories',
+        'origins', 'ingredients_text', 'ingredients_text_en',
+        'image_front_url', 'image_url', 'countries_tags',
+      ].join(','),
+    });
+
+    const response = await fetch(`https://world.openfoodfacts.org/cgi/search.pl?${params}`);
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+
+    console.log(`✅ OpenFoodFacts search successful - found ${data.products?.length || 0} products`);
+
+    res.json({
+      success: true,
+      products: data.products || [],
+      count: data.count || 0,
+    });
+  } catch (error) {
+    console.error('❌ OpenFoodFacts search error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to search OpenFoodFacts',
     });
   }
 });
