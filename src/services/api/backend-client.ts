@@ -4,7 +4,7 @@
  * Keeps API keys secure by using server-side proxying
  */
 
-const BACKEND_URL = process.env.VITE_BACKEND_URL || 'http://localhost:3001';
+const BACKEND_URL = process.env.VITE_BACKEND_URL || `${window.location.protocol}//${window.location.hostname}:3001`;
 
 interface ImageAnalysisResponse {
   success: boolean;
