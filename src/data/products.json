@@ -113,6 +113,35 @@
     "Grass-fed (+2)"
   ],
   "transportMode": "truck"
+},
+{
+  "id": "#p0006",
+  "name": "Snickers Bar",
+  "brand": "Mars",
+  "category": "Food & Beverage",
+  "origin": {
+    "country": "USA",
+    "region": "California"
+  },
+  "materials": [
+    "Chocolate",
+    "Peanuts",
+    "Caramel"
+  ],
+  "laborRisk": "medium",
+  "transportDistance": 8000,
+  "certifications": [],
+  "carbonFootprint": 2.5,
+  "keywords": [
+    "candy",
+    "chocolate",
+    "snack",
+    "Mars"
+  ],
+  "barcode": "40000032549",
+  "comments": "Popular chocolate candy bar",
+  "laborViolations": "limited-transparency",
+  "animalWelfareConditions": "factory-farmed"
 }
 
   

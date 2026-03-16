@@ -5,6 +5,7 @@ import { Progress } from "@/components/ui/progress";
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
 import { getBrandFlag } from "@/data/brandFlags";
 import { LaborFlagBanner } from "@/components/LaborFlagBanner";
+import { AnimalWelfareFlagBadge } from "@/components/AnimalWelfareFlagBadge";
 import { checkBoycott } from "@/data/boycottBrands";
 
 interface OpenFoodFactsCardProps {
@@ -87,6 +88,9 @@ export function OpenFoodFactsCard({ result }: OpenFoodFactsCardProps) {
 
         {/* Labor flag */}
         {brandFlag && <LaborFlagBanner flag={brandFlag} brandName={result.brand} />}
+
+        {/* Animal Welfare Flag */}
+        <AnimalWelfareFlagBadge brand={result.brand} showDetails={true} />
 
         {/* Boycott / BDS note */}
         {boycottMatch && (

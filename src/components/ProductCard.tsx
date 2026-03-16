@@ -3,6 +3,7 @@ import { MapPin, Leaf, AlertTriangle, Star, TrendingUp, Package } from "lucide-r
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScoreDisplay } from "@/components/ScoreDisplay";
+import { AnimalWelfareFlagBadge } from "@/components/AnimalWelfareFlagBadge";
 import { Product, calculateScore } from "@/data/products";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -138,8 +139,8 @@ export function ProductCard({ product }: ProductCardProps) {
             {product.certifications.length > 0 && (
               <div className="flex gap-1 flex-wrap">
                 {product.certifications.slice(0, 2).map((cert, i) => (
-                  <Badge 
-                    key={i} 
+                  <Badge
+                    key={i}
                     className="text-xs bg-primary/10 text-primary border-0 hover:bg-primary/20 transition-all duration-300 hover:scale-105"
                   >
                     {cert}
@@ -152,7 +153,10 @@ export function ProductCard({ product }: ProductCardProps) {
                 )}
               </div>
             )}
-            
+
+            {/* Animal Welfare Flag - shown in database listing only */}
+            <AnimalWelfareFlagBadge brand={product.brand} showDetails={false} />
+
             {/* Quick action hint */}
             <div className={`text-xs text-center text-muted-foreground transition-all duration-300 ${
               isHovered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'

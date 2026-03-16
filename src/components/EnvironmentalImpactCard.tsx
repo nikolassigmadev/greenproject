@@ -23,6 +23,8 @@ import { Progress } from "@/components/ui/progress";
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
 import { getBrandFlag, type BrandFlag } from "@/data/brandFlags";
 import { LaborFlagBanner } from "@/components/LaborFlagBanner";
+import { checkAnimalWelfareFlag } from "@/utils/animalWelfareFlags";
+import { AnimalWelfareFlagBadge } from "@/components/AnimalWelfareFlagBadge";
 
 interface EnvironmentalImpactCardProps {
   result: OpenFoodFactsResult;
@@ -126,6 +128,21 @@ function computeVerdict(
     } else {
       score += 15;
       reasons.push("Brand has unresolved labor concerns");
+    }
+  }
+
+  // 1b. Animal welfare flag
+  const welfareFlag = checkAnimalWelfareFlag(result.brand);
+  if (welfareFlag.isFlagged) {
+    if (welfareFlag.severity === "critical") {
+      score += 30;
+      reasons.push(`${welfareFlag.company!.companyName} has critical animal welfare concerns (BBFAW Tier ${welfareFlag.company!.bbfawTier})`);
+    } else if (welfareFlag.severity === "high") {
+      score += 20;
+      reasons.push(`${welfareFlag.company!.companyName} has poor animal welfare practices`);
+    } else {
+      score += 10;
+      reasons.push("Company has animal welfare concerns");
     }
   }
 
@@ -276,6 +293,9 @@ export function EnvironmentalImpactCard({ result }: EnvironmentalImpactCardProps
 
       {/* Labor flag */}
       {brandFlag && <LaborFlagBanner flag={brandFlag} brandName={result.brand} />}
+
+      {/* Animal Welfare Flag */}
+      <AnimalWelfareFlagBadge brand={result.brand} showDetails={true} />
 
       {/* Environment Section */}
       <Card>

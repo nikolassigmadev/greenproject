@@ -1,5 +1,6 @@
 import type { Product } from "@/data/products";
 import { extractSimpleLivestockFactors } from "@/data/simpleLivestockScoring";
+import { checkAnimalWelfareFlag, adjustScoreForAnimalWelfareFlag } from "@/utils/animalWelfareFlags";
 
 export type ScoreFactorKey = "labor" | "animalWelfare" | "carbon" | "transport" | "certifications" | "manual";
 export type ScoreFactorDirection = "penalty" | "bonus";
@@ -202,6 +203,14 @@ const animalWelfareScore = (product: Product): number => {
     if (certs.some((c) => c.includes("animal welfare approved") || c === "awa")) score += 3;
     if (certs.some((c) => c.includes("grass-fed") || c.includes("grass fed"))) score += 2;
     if (certs.some((c) => c.includes("cruelty-free") || c.includes("cruelty free") || c.includes("vegan"))) score += 2;
+  }
+
+  // Check for poor animal welfare companies and apply penalty
+  const welfareFlag = checkAnimalWelfareFlag(product.brand);
+  if (welfareFlag.isFlagged) {
+    console.log(`Animal welfare flag detected for brand "${product.brand}": ${welfareFlag.company?.companyName} (${welfareFlag.severity})`);
+    score = adjustScoreForAnimalWelfareFlag(score, welfareFlag.severity);
+    console.log(`Score adjusted to ${score} due to poor animal welfare company`);
   }
 
   return clamp(score, 0, 30);

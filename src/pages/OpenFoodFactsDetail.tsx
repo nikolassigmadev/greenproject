@@ -9,6 +9,8 @@ import { CalAIButton } from "@/components/CalAIButton";
 import { AlertBox } from "@/components/AlertBox";
 import { loadPriorities, saveScanToHistory, loadScanHistory, type UserPriorities } from "@/utils/userPreferences";
 import { checkBoycott } from "@/data/boycottBrands";
+import { checkAnimalWelfareFlag } from "@/utils/animalWelfareFlags";
+import { AnimalWelfareFlagBadge } from "@/components/AnimalWelfareFlagBadge";
 
 // Known forced/child labor allegations database with sources
 interface LaborAllegation {
@@ -349,6 +351,35 @@ export default function OpenFoodFactsDetail() {
       }
     }
 
+    // Step 4: Downgrade if company has poor animal welfare record
+    const welfareFlag = checkAnimalWelfareFlag(product.brand);
+    if (welfareFlag.isFlagged) {
+      const company = welfareFlag.company!;
+      if (welfareFlag.severity === 'critical') {
+        // Critical: at minimum CAUTION
+        if (verdict.emoji === "✅" || verdict.emoji === "🤔" || verdict.emoji === "❓") {
+          verdict = {
+            emoji: "⚠️",
+            label: "CAUTION - Poor Animal Welfare",
+            color: "hsl(0 84% 60%)",
+            action: "Avoid if Possible",
+            reason: `${company.companyName} has critical animal welfare concerns (BBFAW Tier ${company.bbfawTier})`,
+          };
+        }
+      } else if (welfareFlag.severity === 'high') {
+        // High: at minimum CONSIDER
+        if (verdict.emoji === "✅" || verdict.emoji === "❓") {
+          verdict = {
+            emoji: "🤔",
+            label: "CONSIDER - Animal Welfare Concerns",
+            color: "hsl(45 93% 47%)",
+            action: "Review",
+            reason: `${company.companyName} has animal welfare concerns (BBFAW Tier ${company.bbfawTier})`,
+          };
+        }
+      }
+    }
+
     return verdict;
   };
 
@@ -527,6 +558,11 @@ export default function OpenFoodFactsDetail() {
               </p>
             </div>
           )}
+
+          {/* Animal Welfare Flag */}
+          <div style={{ maxWidth: "56rem", margin: "0 auto" }}>
+            <AnimalWelfareFlagBadge brand={product.brand} showDetails={true} />
+          </div>
 
           {/* Boycott / BDS Note */}
           {boycottMatch && (
