@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Scan, Database, Home, Camera, Menu, X, ShoppingBag } from "lucide-react";
+import { Scan, Database, Home, Camera, Menu, X, ShoppingBag, Settings, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,8 @@ export function Header() {
     { path: '/products', label: 'Products', icon: ShoppingBag },
     { path: '/database', label: 'Database', icon: Database },
     { path: '/scan', label: 'Scan', icon: Camera },
+    { path: '/dashboard', label: 'Dashboard', icon: BarChart3 },
+    { path: '/preferences', label: 'Priorities', icon: Settings },
   ];
 
   return (

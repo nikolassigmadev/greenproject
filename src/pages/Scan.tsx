@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { Camera, Upload, Search, Loader2, AlertCircle, X, ScanLine, Image as ImageIcon, Plus, Leaf, BarChart3, QrCode } from "lucide-react";
+import { useNavigate, useLocation, Link } from "react-router-dom";
+import { Camera, Upload, Search, Loader2, AlertCircle, X, ScanLine, Image as ImageIcon, Plus, Leaf, BarChart3, QrCode, Settings, Users, Heart, Apple, ChevronRight, Check } from "lucide-react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,7 @@ import { calculateScore, findLowCO2Alternative } from "@/data/products";
 import { recognizeImageWithOpenAI } from "@/services/ocr/openai-service";
 import { advancedProductOCR, extractBrandName, extractProductName, extractCertifications, checkOpenAIHealth } from "@/services/ocr/advanced-openai-ocr";
 import { copySingleProductCode } from "@/utils/productExporter";
+import { loadPriorities, DEFAULT_PRIORITIES, type UserPriorities } from "@/utils/userPreferences";
 import { lookupBarcode, isValidBarcode, searchProducts as searchOffProducts, searchBetterAlternatives } from "@/services/openfoodfacts";
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
 import Tesseract from "tesseract.js";
@@ -504,6 +505,44 @@ const Scan = () => {
   const offFileInputRef = useRef<HTMLInputElement>(null);
   const [scanProgress, setScanProgress] = useState(0);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const viewfinderRef = useRef<HTMLDivElement>(null);
+  const resultsRef = useRef<HTMLDivElement>(null);
+  const location = useLocation();
+  const [priorities, setPriorities] = useState<UserPriorities>(loadPriorities());
+  const [prioritiesDismissed, setPrioritiesDismissed] = useState(false);
+  const [prioritiesJustSaved, setPrioritiesJustSaved] = useState(false);
+
+  // When arriving from Preferences save, scroll to viewfinder and show message
+  useEffect(() => {
+    if ((location.state as any)?.prioritiesJustSaved) {
+      setPrioritiesJustSaved(true);
+      // Clear the navigation state so refresh doesn't re-trigger
+      window.history.replaceState({}, '');
+      // Scroll to viewfinder
+      setTimeout(() => {
+        viewfinderRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
+      // Clear the message after 3 seconds
+      setTimeout(() => setPrioritiesJustSaved(false), 3000);
+    }
+  }, [location.state]);
+
+  // Reload priorities when they change (e.g., user returns from Preferences page)
+  useEffect(() => {
+    const handler = () => setPriorities(loadPriorities());
+    window.addEventListener('prioritiesUpdated', handler);
+    window.addEventListener('focus', handler);
+    return () => {
+      window.removeEventListener('prioritiesUpdated', handler);
+      window.removeEventListener('focus', handler);
+    };
+  }, []);
+
+  const isDefaultPriorities =
+    priorities.environment === DEFAULT_PRIORITIES.environment &&
+    priorities.laborRights === DEFAULT_PRIORITIES.laborRights &&
+    priorities.animalWelfare === DEFAULT_PRIORITIES.animalWelfare &&
+    priorities.nutrition === DEFAULT_PRIORITIES.nutrition;
 
   // Debug: Check if video element is mounted
   useEffect(() => {
@@ -526,6 +565,15 @@ const Scan = () => {
     }, 300);
     return () => clearInterval(interval);
   }, [offSearchLoading]);
+
+  // Auto-scroll to results when products are found
+  useEffect(() => {
+    if ((offSearchResults.length > 0 || (offResult && offResult.found)) && resultsRef.current) {
+      setTimeout(() => {
+        resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 150);
+    }
+  }, [offSearchResults, offResult]);
 
   // Search for greener alternatives when OFF results have a poor eco-score
   useEffect(() => {
@@ -1150,9 +1198,25 @@ const Scan = () => {
     }
   }, [searchProducts, toast]);
 
+  // Block scanning if priorities not set
+  const requirePriorities = useCallback((): boolean => {
+    if (isDefaultPriorities) {
+      toast({
+        title: "Set Your Priorities First",
+        description: "Tell us what matters most to you before scanning.",
+        variant: "destructive",
+      });
+      // Scroll to priorities banner
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return false;
+    }
+    return true;
+  }, [isDefaultPriorities, toast]);
+
   // Manual barcode lookup on OpenFoodFacts
   const handleProductSearch = useCallback(async (productName: string) => {
     if (!productName.trim()) return;
+    if (!requirePriorities()) return;
 
     setOffLoading(true);
     setOffResult(null);
@@ -1188,10 +1252,11 @@ const Scan = () => {
     } finally {
       setOffLoading(false);
     }
-  }, [toast]);
+  }, [toast, requirePriorities]);
 
   // Process image for OpenFoodFacts search (separate from internal DB scan)
   const processImageForOFF = useCallback(async (imageData: string) => {
+    if (!requirePriorities()) return;
     setOffSearchLoading(true);
     setOffSearchResults([]);
     setOffSearchText("");
@@ -1290,7 +1355,7 @@ const Scan = () => {
     } finally {
       setOffSearchLoading(false);
     }
-  }, [toast]);
+  }, [toast, requirePriorities]);
 
   // Handle file upload for OFF search
   const handleOffFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1395,18 +1460,105 @@ const Scan = () => {
         <div style={{ maxWidth: '56rem', margin: '0 auto', padding: '0 1rem' }}>
           
           {/* Page Header */}
-          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📸</div>
-            <h1 style={{ fontSize: '1.875rem', fontWeight: 'bold', marginBottom: '0.75rem', color: 'hsl(152 45% 30%)' }}>
-              Scan a Product
-            </h1>
-            <p style={{ fontSize: '1rem', color: 'hsl(150 10% 45%)' }}>
-              Discover the true cost of your purchase
-            </p>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '0.75rem',
+            marginBottom: '1rem',
+          }}>
+            <span style={{ fontSize: '1.75rem', lineHeight: 1 }}>📸</span>
+            <div>
+              <h1 style={{ fontSize: '1.375rem', fontWeight: 'bold', color: 'hsl(152 45% 30%)', lineHeight: 1.2 }}>
+                Scan a Product
+              </h1>
+              <p style={{ fontSize: '0.8rem', color: 'hsl(150 10% 45%)', marginTop: '0.1rem' }}>
+                {isDefaultPriorities ? 'Set your priorities first' : 'Personalized to your values'}
+              </p>
+            </div>
           </div>
+
+          {/* Priorities Warning / Status Banner */}
+          {isDefaultPriorities ? (
+            <Link
+              to="/preferences"
+              style={{
+                display: 'flex', alignItems: 'center', gap: '0.75rem',
+                padding: '1rem 1.25rem',
+                marginBottom: '1.25rem',
+                backgroundColor: 'hsl(45 70% 95%)',
+                border: '2px solid hsl(45 60% 75%)',
+                borderRadius: '1rem',
+                textDecoration: 'none',
+                color: 'hsl(150 20% 15%)',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              <div style={{
+                width: '2.5rem', height: '2.5rem', borderRadius: '0.75rem',
+                background: 'linear-gradient(135deg, hsl(45 93% 50%), hsl(40 90% 45%))',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0,
+              }}>
+                <AlertCircle size={18} color="white" />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '0.875rem', fontWeight: '700', color: 'hsl(40 50% 25%)' }}>
+                  Set Your Priorities First
+                </div>
+                <div style={{ fontSize: '0.75rem', color: 'hsl(40 30% 40%)', marginTop: '0.1rem' }}>
+                  Tell us what matters most — scanning is locked until priorities are set
+                </div>
+              </div>
+              <ChevronRight size={18} style={{ color: 'hsl(45 60% 40%)', flexShrink: 0 }} />
+            </Link>
+          ) : !prioritiesDismissed ? (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '0.5rem',
+              padding: '0.6rem 1rem',
+              marginBottom: '1.25rem',
+              backgroundColor: 'hsl(142 40% 96%)',
+              border: '1px solid hsl(152 30% 80%)',
+              borderRadius: '0.75rem',
+            }}>
+              <Check size={14} style={{ color: 'hsl(152 45% 35%)', flexShrink: 0 }} />
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', flex: 1 }}>
+                {[
+                  { key: 'laborRights' as keyof UserPriorities, label: 'Labor', icon: Users, color: 'hsl(0 70% 50%)' },
+                  { key: 'environment' as keyof UserPriorities, label: 'Env', icon: Leaf, color: 'hsl(152 45% 30%)' },
+                  { key: 'animalWelfare' as keyof UserPriorities, label: 'Animal', icon: Heart, color: 'hsl(280 60% 50%)' },
+                  { key: 'nutrition' as keyof UserPriorities, label: 'Nutr', icon: Apple, color: 'hsl(45 93% 40%)' },
+                ].map((item) => {
+                  const val = priorities[item.key];
+                  const Icon = item.icon;
+                  return (
+                    <span key={item.key} style={{
+                      display: 'inline-flex', alignItems: 'center', gap: '0.2rem',
+                      padding: '0.15rem 0.45rem', borderRadius: '999px',
+                      fontSize: '0.65rem', fontWeight: '600',
+                      backgroundColor: `${item.color}12`,
+                      color: item.color,
+                    }}>
+                      <Icon size={10} />{val}
+                    </span>
+                  );
+                })}
+              </div>
+              <Link to="/preferences" style={{ display: 'flex', color: 'hsl(152 45% 30%)' }}>
+                <ChevronRight size={16} />
+              </Link>
+              <button
+                onClick={() => setPrioritiesDismissed(true)}
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: 'hsl(150 10% 65%)', padding: '0', display: 'flex',
+                }}
+              >
+                <X size={12} />
+              </button>
+            </div>
+          ) : null}
 
           {/* Scanner Viewfinder */}
           <div
+            ref={viewfinderRef}
             onDragOver={(e) => {
               e.preventDefault();
               e.currentTarget.style.boxShadow = '0 0 30px rgba(34, 120, 70, 0.5)';
@@ -1536,7 +1688,7 @@ const Scan = () => {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
-                backgroundColor: offSearchLoading ? 'rgba(34, 120, 70, 0.7)' : 'rgba(0, 0, 0, 0.5)',
+                backgroundColor: isDefaultPriorities ? 'rgba(180, 120, 0, 0.75)' : offSearchLoading ? 'rgba(34, 120, 70, 0.7)' : prioritiesJustSaved ? 'rgba(34, 120, 70, 0.8)' : 'rgba(0, 0, 0, 0.5)',
                 backdropFilter: 'blur(8px)',
                 color: 'white',
                 padding: '6px 16px',
@@ -1546,10 +1698,20 @@ const Scan = () => {
                 zIndex: 10,
                 letterSpacing: '0.02em',
               }}>
-                {offSearchLoading ? (
+                {isDefaultPriorities ? (
+                  <>
+                    <AlertCircle size={12} />
+                    <span>Set priorities to unlock scanning</span>
+                  </>
+                ) : offSearchLoading ? (
                   <>
                     <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} />
                     <span>Scanning... {Math.round(scanProgress)}%</span>
+                  </>
+                ) : prioritiesJustSaved ? (
+                  <>
+                    <Check size={12} />
+                    <span>Priorities set, ready to scan</span>
                   </>
                 ) : (
                   <>
@@ -1604,7 +1766,13 @@ const Scan = () => {
 
                 {/* Center: Camera/Upload */}
                 <button
-                  onClick={() => offFileInputRef.current?.click()}
+                  onClick={() => {
+                    if (isDefaultPriorities) {
+                      requirePriorities();
+                      return;
+                    }
+                    offFileInputRef.current?.click();
+                  }}
                   disabled={offSearchLoading}
                   style={{
                     width: '72px',
@@ -1722,7 +1890,7 @@ const Scan = () => {
           </div>
 
           {/* Status Messages */}
-          <div id="scan-results" />
+          <div id="scan-results" ref={resultsRef} />
           {ocrMessage && (
             <AlertBox type="warning" title="OCR Status" message={ocrMessage} onClose={() => setOcrMessage(null)} />
           )}
