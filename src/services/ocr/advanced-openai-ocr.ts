@@ -1,5 +1,4 @@
-// Use backend proxy for OpenAI API calls to avoid CORS issues on mobile/LAN
-const getBackendUrl = () => `${window.location.protocol}//${window.location.hostname}:3001`;
+import { getBackendUrl } from '@/config/backend';
 
 console.log('🔑 OpenAI OCR: Using backend proxy at', getBackendUrl());
 
