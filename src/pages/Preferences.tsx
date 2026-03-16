@@ -48,6 +48,10 @@ export default function Preferences() {
 
   useEffect(() => {
     setPriorities(loadPriorities());
+
+    const handler = () => setPriorities(loadPriorities());
+    window.addEventListener('prioritiesUpdated', handler);
+    return () => window.removeEventListener('prioritiesUpdated', handler);
   }, []);
 
   const handleChange = (key: keyof UserPriorities, value: number) => {
