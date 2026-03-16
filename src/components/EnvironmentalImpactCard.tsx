@@ -427,7 +427,7 @@ export function EnvironmentalImpactCard({ result }: EnvironmentalImpactCardProps
                       <div className="flex items-center gap-2">
                         <Package className="w-3 h-3 text-gray-400" />
                         <span className="text-sm">
-                          1 × {pkg.shape || 'Package'} 
+                          1 × {(pkg.shape || 'Package').replace(/^en:/, '').replace(/-/g, ' ')}
                           {pkg.weight_measured && ` (${pkg.weight_measured}g)`}
                         </span>
                       </div>
@@ -510,7 +510,7 @@ export function EnvironmentalImpactCard({ result }: EnvironmentalImpactCardProps
                 <div className="space-y-1">
                   {origins.aggregated_origins.map((origin, i) => (
                     <div key={i} className="flex items-center justify-between text-sm">
-                      <span>{origin.origin}</span>
+                      <span className="capitalize">{(origin.origin || '').replace(/^en:/, '').replace(/-/g, ' ')}</span>
                       <Badge variant="outline">{origin.percent}%</Badge>
                     </div>
                   ))}
@@ -557,7 +557,7 @@ export function EnvironmentalImpactCard({ result }: EnvironmentalImpactCardProps
               {threatened.ingredient && (
                 <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800">
                   <p className="text-sm text-red-800 dark:text-red-200">
-                    <strong>Concern:</strong> {threatened.ingredient}
+                    <strong>Concern:</strong> {threatened.ingredient.replace(/^en:/, '').replace(/-/g, ' ')}
                   </p>
                   <p className="text-xs text-red-600 dark:text-red-400 mt-1">
                     Drives deforestation and threatens species such as the orangutan, if available

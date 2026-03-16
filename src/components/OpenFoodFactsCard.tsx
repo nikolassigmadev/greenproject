@@ -322,7 +322,7 @@ export function OpenFoodFactsCard({ result }: OpenFoodFactsCardProps) {
                   </div>
                   {adjustments.threatened_species.ingredient && (
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      Due to: {adjustments.threatened_species.ingredient}
+                      Due to: {adjustments.threatened_species.ingredient.replace(/^en:/, '').replace(/-/g, ' ')}
                     </p>
                   )}
                 </div>
