@@ -1,10 +1,11 @@
-import { Leaf, AlertTriangle, Info, ExternalLink, Package, Droplets, Factory, Truck } from "lucide-react";
+import { Leaf, AlertTriangle, Info, ExternalLink, Package, Droplets, Factory, Truck, Flag } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
 import { getBrandFlag } from "@/data/brandFlags";
 import { LaborFlagBanner } from "@/components/LaborFlagBanner";
+import { checkBoycott } from "@/data/boycottBrands";
 
 interface OpenFoodFactsCardProps {
   result: OpenFoodFactsResult;
@@ -37,6 +38,7 @@ export function OpenFoodFactsCard({ result }: OpenFoodFactsCardProps) {
   if (!result.found) return null;
 
   const brandFlag = getBrandFlag(result.brand);
+  const boycottMatch = checkBoycott(result.brand);
   const agri = result.ecoscoreData?.agribalyse;
   const adjustments = result.ecoscoreData?.adjustments;
 
@@ -85,6 +87,30 @@ export function OpenFoodFactsCard({ result }: OpenFoodFactsCardProps) {
 
         {/* Labor flag */}
         {brandFlag && <LaborFlagBanner flag={brandFlag} brandName={result.brand} />}
+
+        {/* Boycott / BDS note */}
+        {boycottMatch && (
+          <div className="flex items-start gap-2.5 p-3 rounded-lg border-2 border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-950/40">
+            <Flag className="w-4 h-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-red-800 dark:text-red-200">
+                Supports Israel — {boycottMatch.parent}
+              </p>
+              <p className="text-xs text-red-600 dark:text-red-400 mt-0.5">
+                {boycottMatch.reason}
+              </p>
+              <a
+                href="https://boycott-israel.org/boycott.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs text-red-500 hover:text-red-700 mt-1"
+                onClick={(e) => e.stopPropagation()}
+              >
+                Source: BDS Boycott List <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+          </div>
+        )}
 
         {/* Score badges */}
         <div className="flex flex-wrap gap-3">
