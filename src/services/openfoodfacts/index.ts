@@ -1,3 +1,4 @@
+import { getBackendUrl } from '@/config/backend';
 import type {
   OpenFoodFactsResponse,
   OpenFoodFactsSearchResponse,
@@ -211,7 +212,7 @@ const lookupBarcodeInternal = async (barcode: string): Promise<OpenFoodFactsResu
   }
 
   // Try backend proxy first (handles CORS, User-Agent, retries server-side)
-  const backendUrl = `${window.location.protocol}//${window.location.hostname}:3001`;
+  const backendUrl = getBackendUrl();
 
   try {
     const startTime = Date.now();
@@ -298,7 +299,7 @@ export const searchProducts = async (
 
   try {
     // Use backend proxy to avoid CORS issues
-    const backendUrl = `${window.location.protocol}//${window.location.hostname}:3001`;
+    const backendUrl = getBackendUrl();
     const response = await fetch(`${backendUrl}/api/openfoodfacts/search`, {
       method: 'POST',
       headers: {

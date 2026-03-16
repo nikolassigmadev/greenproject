@@ -29,8 +29,20 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.VITE_OPENAI_API
 // Middleware
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests from localhost or local network IPs on any port
-    if (!origin || /^http:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+)(:\d+)?$/.test(origin)) {
+    // Allow requests from:
+    // - No origin (server-to-server, Capacitor native)
+    // - localhost / local network IPs
+    // - Capacitor WebView origins
+    // - Our Hostinger domain
+    if (
+      !origin ||
+      /^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+)(:\d+)?$/.test(origin) ||
+      origin === 'capacitor://localhost' ||
+      origin === 'http://localhost' ||
+      /darkviolet-whale-491214\.hostingersite\.com/.test(origin) ||
+      /lightgray-sheep-324503\.hostingersite\.com/.test(origin) ||
+      /\.hostingersite\.com$/.test(origin)
+    ) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
