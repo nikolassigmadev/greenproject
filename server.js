@@ -39,7 +39,9 @@ app.use(cors({
       /^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+)(:\d+)?$/.test(origin) ||
       origin === 'capacitor://localhost' ||
       origin === 'http://localhost' ||
-      /darkviolet-whale-491214\.hostingersite\.com/.test(origin)
+      /darkviolet-whale-491214\.hostingersite\.com/.test(origin) ||
+      /lightgray-sheep-324503\.hostingersite\.com/.test(origin) ||
+      /\.hostingersite\.com$/.test(origin)
     ) {
       callback(null, true);
     } else {
