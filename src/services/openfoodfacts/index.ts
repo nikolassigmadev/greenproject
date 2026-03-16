@@ -168,7 +168,15 @@ export const lookupBarcode = async (barcode: string): Promise<OpenFoodFactsResul
     return result;
   }
 
-  // If primary lookup failed, try alternative formats
+  // If primary timed out (network issue), skip alternatives to avoid long waits
+  const isTimeout = result.error?.includes('timed out') || result.error?.includes('abort');
+  if (isTimeout) {
+    console.warn(`⏱️ Primary lookup timed out, skipping alternatives for: ${barcode}`);
+    ocrSearchLogger.logBarcodeSearch(cleaned, false);
+    return emptyResult(cleaned, `Network timeout looking up barcode ${cleaned}`);
+  }
+
+  // If primary lookup failed but network works, try alternative formats
   console.warn(`🔄 Primary barcode lookup failed, trying alternatives...`);
   const alternatives = getAlternativeFormats(barcode);
 
@@ -202,37 +210,79 @@ const lookupBarcodeInternal = async (barcode: string): Promise<OpenFoodFactsResu
     return cached;
   }
 
+  // Try backend proxy first (handles CORS, User-Agent, retries server-side)
+  const backendUrl = `${window.location.protocol}//${window.location.hostname}:3001`;
+
   try {
     const startTime = Date.now();
-    const response = await fetch(`${OFF_API_BASE}/api/v0/product/${barcode}.json`, {
-      signal: AbortSignal.timeout(5000), // 5 second timeout
+    console.log(`   Trying backend proxy for barcode: ${barcode}`);
+    const response = await fetch(`${backendUrl}/api/openfoodfacts/product/${barcode}`, {
+      signal: AbortSignal.timeout(20000),
     });
 
     const duration = Date.now() - startTime;
-    console.log(`   API call took ${duration}ms`);
+    console.log(`   Backend proxy took ${duration}ms`);
 
-    if (!response.ok) {
-      console.warn(`   HTTP ${response.status}: ${response.statusText}`);
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    if (response.ok) {
+      const data: OpenFoodFactsResponse = await response.json();
+      if (data.status === 1 && data.product) {
+        const result = normalizeProduct(data.product);
+        cacheSet(cacheKey, result);
+        console.log(`✅ Product found via proxy: ${result.productName} (${result.brand})`);
+        return result;
+      }
+      if (data.status_verbose) {
+        return emptyResult(barcode, data.status_verbose);
+      }
     }
-
-    const data: OpenFoodFactsResponse = await response.json();
-
-    if (data.status !== 1 || !data.product) {
-      console.warn(`   Status ${data.status}: ${data.status_verbose || 'Product not found'}`);
-      return emptyResult(barcode, data.status_verbose || 'Product not found on OpenFoodFacts');
-    }
-
-    const result = normalizeProduct(data.product);
-    cacheSet(cacheKey, result);
-    
-    console.log(`✅ Product found: ${result.productName} (${result.brand})`);
-    return result;
-  } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-    console.warn(`   Error: ${errorMsg}`);
-    return emptyResult(barcode, errorMsg);
+  } catch (proxyError) {
+    const msg = proxyError instanceof Error ? proxyError.message : 'Unknown';
+    console.warn(`   Backend proxy failed: ${msg}, trying direct API...`);
   }
+
+  // Fallback: direct API call with field filtering to reduce response size
+  const fields = 'code,product_name,product_name_en,brands,ecoscore_grade,ecoscore_score,ecoscore_data,nutriscore_grade,nutriscore_score,nova_group,nutriments,labels_tags,labels,categories_tags,categories,origins,ingredients_text,ingredients_text_en,image_front_url,image_url,countries_tags';
+
+  const endpoints = [
+    `${OFF_API_BASE}/api/v2/product/${barcode}?fields=${fields}`,
+    `${OFF_API_BASE}/api/v0/product/${barcode}.json?fields=${fields}`,
+  ];
+
+  for (const url of endpoints) {
+    try {
+      const startTime = Date.now();
+      const response = await fetch(url, {
+        signal: AbortSignal.timeout(15000),
+      });
+
+      const duration = Date.now() - startTime;
+      console.log(`   ${url.includes('v2') ? 'v2' : 'v0'} direct call took ${duration}ms`);
+
+      if (!response.ok) {
+        console.warn(`   HTTP ${response.status}: ${response.statusText}`);
+        continue;
+      }
+
+      const data: OpenFoodFactsResponse = await response.json();
+
+      if (data.status !== 1 || !data.product) {
+        console.warn(`   Status ${data.status}: ${data.status_verbose || 'Product not found'}`);
+        return emptyResult(barcode, data.status_verbose || 'Product not found on OpenFoodFacts');
+      }
+
+      const result = normalizeProduct(data.product);
+      cacheSet(cacheKey, result);
+
+      console.log(`✅ Product found: ${result.productName} (${result.brand})`);
+      return result;
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      console.warn(`   ${url.includes('v2') ? 'v2' : 'v0'} Error: ${errorMsg}`);
+    }
+  }
+
+  // All endpoints failed
+  return emptyResult(barcode, 'signal timed out');
 };
 
 export const searchProducts = async (

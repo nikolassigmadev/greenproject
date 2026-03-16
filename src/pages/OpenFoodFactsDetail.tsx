@@ -7,6 +7,8 @@ import { lookupBarcode } from "@/services/openfoodfacts";
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
 import { CalAIButton } from "@/components/CalAIButton";
 import { AlertBox } from "@/components/AlertBox";
+import { loadPriorities, saveScanToHistory, loadScanHistory, type UserPriorities } from "@/utils/userPreferences";
+import { checkBoycott } from "@/data/boycottBrands";
 
 // Known forced/child labor allegations database with sources
 interface LaborAllegation {
@@ -121,12 +123,57 @@ export default function OpenFoodFactsDetail() {
   const [product, setProduct] = useState<OpenFoodFactsResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [priorities, setPriorities] = useState<UserPriorities>(loadPriorities());
 
   useEffect(() => {
     if (barcode) {
       loadProduct(barcode);
     }
   }, [barcode]);
+
+  // Listen for priority changes
+  useEffect(() => {
+    const handler = () => setPriorities(loadPriorities());
+    window.addEventListener('prioritiesUpdated', handler);
+    return () => window.removeEventListener('prioritiesUpdated', handler);
+  }, []);
+
+  // Save to scan history when product loads
+  useEffect(() => {
+    if (product) {
+      const laborRecord = findLaborAllegations(product);
+      const grade = product.ecoscoreGrade?.toLowerCase();
+      const laborCount = laborRecord?.allegations.length || 0;
+      // Compute a simple verdict emoji for history
+      let emoji = "❓";
+      if (laborCount >= 3) emoji = "🚫";
+      else if (laborCount >= 2) emoji = "⚠️";
+      else if (grade === "a" || grade === "b") emoji = laborCount > 0 ? "🤔" : "✅";
+      else if (grade === "c") emoji = "🤔";
+      else if (grade === "d") emoji = "⚠️";
+      else if (grade === "e" || grade === "f") emoji = "🚫";
+
+      const labelMap: Record<string, string> = { "✅": "BUY", "🤔": "CONSIDER", "⚠️": "CAUTION", "🚫": "AVOID", "❓": "UNKNOWN" };
+      const colorMap: Record<string, string> = { "✅": "hsl(142 71% 45%)", "🤔": "hsl(45 93% 47%)", "⚠️": "hsl(0 84% 60%)", "🚫": "hsl(0 84% 50%)", "❓": "hsl(150 10% 45%)" };
+
+      saveScanToHistory({
+        id: `${product.barcode}-${Date.now()}`,
+        barcode: product.barcode,
+        productName: product.productName || "Unknown Product",
+        brand: product.brand,
+        imageUrl: product.imageUrl,
+        timestamp: Date.now(),
+        verdict: { emoji, label: labelMap[emoji] || "UNKNOWN", color: colorMap[emoji] || "hsl(150 10% 45%)" },
+        scores: {
+          ecoScore: product.ecoscoreScore,
+          ecoGrade: product.ecoscoreGrade,
+          nutriScore: product.nutriscoreGrade,
+          laborAllegations: laborCount,
+          novaGroup: product.novaGroup,
+        },
+      });
+    }
+  }, [product?.barcode]);
 
   const loadProduct = async (code: string) => {
     setLoading(true);
@@ -135,10 +182,62 @@ export default function OpenFoodFactsDetail() {
       if (result.found) {
         setProduct(result);
       } else {
-        setError("Product not found in OpenFoodFacts database");
+        // Try to build a minimal product from scan history
+        const cached = loadScanHistory().find(h => h.barcode === code);
+        if (cached) {
+          setProduct({
+            found: true,
+            barcode: cached.barcode,
+            productName: cached.productName,
+            brand: cached.brand,
+            imageUrl: cached.imageUrl,
+            ecoscoreGrade: cached.scores.ecoGrade,
+            ecoscoreScore: cached.scores.ecoScore,
+            nutriscoreGrade: cached.scores.nutriScore,
+            nutriscoreScore: null,
+            novaGroup: cached.scores.novaGroup,
+            carbonFootprint100g: null,
+            carbonFootprintProduct: null,
+            carbonFootprintServing: null,
+            labels: [],
+            categories: [],
+            origins: null,
+            ingredientsText: null,
+            ecoscoreData: null,
+            rawProduct: null,
+          });
+        } else {
+          setError("Product not found in OpenFoodFacts database");
+        }
       }
     } catch (err) {
-      setError("Failed to load product details");
+      // On network error, also try scan history cache
+      const cached = loadScanHistory().find(h => h.barcode === code);
+      if (cached) {
+        setProduct({
+          found: true,
+          barcode: cached.barcode,
+          productName: cached.productName,
+          brand: cached.brand,
+          imageUrl: cached.imageUrl,
+          ecoscoreGrade: cached.scores.ecoGrade,
+          ecoscoreScore: cached.scores.ecoScore,
+          nutriscoreGrade: cached.scores.nutriScore,
+          nutriscoreScore: null,
+          novaGroup: cached.scores.novaGroup,
+          carbonFootprint100g: null,
+          carbonFootprintProduct: null,
+          carbonFootprintServing: null,
+          labels: [],
+          categories: [],
+          origins: null,
+          ingredientsText: null,
+          ecoscoreData: null,
+          rawProduct: null,
+        });
+      } else {
+        setError("Failed to load product details");
+      }
     } finally {
       setLoading(false);
     }
@@ -151,6 +250,10 @@ export default function OpenFoodFactsDetail() {
     const laborRecord = findLaborAllegations(product);
     const laborCount = laborRecord?.allegations.length || 0;
 
+    // User priority weights (0-100 scale, normalized to multiplier)
+    const envWeight = priorities.environment / 50;       // 1.0 = default, 2.0 = max priority
+    const laborWeight = priorities.laborRights / 50;     // 1.0 = default, 2.0 = max priority
+
     // Step 1: Base verdict from eco-score grade or numeric score
     const score = product.ecoscoreScore;
     const hasEcoData = grade || (score !== null && score !== undefined);
@@ -158,21 +261,32 @@ export default function OpenFoodFactsDetail() {
 
     let verdict = { emoji: "❓", label: "UNKNOWN", color: "hsl(150 10% 45%)", action: "Review Details", reason: "No eco-score data available" };
 
+    // When environment priority is high, be stricter with eco-scores
     if (grade === "a" || grade === "b") {
       verdict = { emoji: "✅", label: "BUY - Excellent Choice!", color: "hsl(142 71% 45%)", action: "Perfect", reason: scoreLabel };
     } else if (grade === "c") {
-      verdict = { emoji: "🤔", label: "CONSIDER - Moderate Impact", color: "hsl(45 93% 47%)", action: "Review", reason: scoreLabel };
+      // If environment priority is high (>1.4x), treat C as caution instead of moderate
+      if (envWeight > 1.4) {
+        verdict = { emoji: "⚠️", label: "CAUTION - Moderate Eco Impact", color: "hsl(0 84% 60%)", action: "Avoid if Possible", reason: `${scoreLabel} (your eco priority is high)` };
+      } else {
+        verdict = { emoji: "🤔", label: "CONSIDER - Moderate Impact", color: "hsl(45 93% 47%)", action: "Review", reason: scoreLabel };
+      }
     } else if (grade === "d") {
       verdict = { emoji: "⚠️", label: "CAUTION - High Impact", color: "hsl(0 84% 60%)", action: "Avoid if Possible", reason: scoreLabel };
     } else if (grade === "e" || grade === "f") {
       verdict = { emoji: "🚫", label: "AVOID - Very High Impact", color: "hsl(0 84% 60%)", action: "Strong Caution", reason: scoreLabel };
     } else if (!grade && score !== null && score !== undefined) {
-      // No letter grade but has numeric score
-      if (score >= 60) {
+      // No letter grade but has numeric score — apply environment weight
+      const adjustedThresholds = {
+        good: 60 + (envWeight - 1) * 15,      // higher priority = harder to be "good"
+        moderate: 40 + (envWeight - 1) * 10,
+        caution: 20 + (envWeight - 1) * 5,
+      };
+      if (score >= adjustedThresholds.good) {
         verdict = { emoji: "✅", label: "BUY - Excellent Choice!", color: "hsl(142 71% 45%)", action: "Perfect", reason: scoreLabel };
-      } else if (score >= 40) {
+      } else if (score >= adjustedThresholds.moderate) {
         verdict = { emoji: "🤔", label: "CONSIDER - Moderate Impact", color: "hsl(45 93% 47%)", action: "Review", reason: scoreLabel };
-      } else if (score >= 20) {
+      } else if (score >= adjustedThresholds.caution) {
         verdict = { emoji: "⚠️", label: "CAUTION - High Impact", color: "hsl(0 84% 60%)", action: "Avoid if Possible", reason: scoreLabel };
       } else {
         verdict = { emoji: "🚫", label: "AVOID - Very High Impact", color: "hsl(0 84% 60%)", action: "Strong Caution", reason: scoreLabel };
@@ -180,10 +294,13 @@ export default function OpenFoodFactsDetail() {
     }
 
     // Step 2: Downgrade verdict if labor allegations exist
-    // Labor allegations are serious — they override eco-score in severity
+    // Apply labor priority weight — higher priority = more aggressive downgrading
     if (laborCount > 0) {
-      if (laborCount >= 3) {
-        // 3+ allegations = always AVOID regardless of current verdict
+      // Effective labor severity = allegation count amplified by user's labor priority
+      const effectiveSeverity = laborCount * laborWeight;
+
+      if (effectiveSeverity >= 2.5 || laborCount >= 3) {
+        // Severe: 3+ allegations always, or 2 with high priority, or 1 with critical priority
         verdict = {
           emoji: "🚫",
           label: "AVOID - Severe Labor Concerns",
@@ -191,8 +308,8 @@ export default function OpenFoodFactsDetail() {
           action: "Strong Caution",
           reason: `${laborCount} labor/human rights allegations against ${laborRecord!.parentCompany}`,
         };
-      } else if (laborCount >= 2) {
-        // 2 allegations = at minimum CAUTION, can be worse
+      } else if (effectiveSeverity >= 1.5) {
+        // Moderate-high: at minimum CAUTION
         if (verdict.emoji === "✅" || verdict.emoji === "🤔" || verdict.emoji === "❓") {
           verdict = {
             emoji: "⚠️",
@@ -202,17 +319,33 @@ export default function OpenFoodFactsDetail() {
             reason: `${laborCount} labor allegations against ${laborRecord!.parentCompany}`,
           };
         }
-      } else {
-        // 1 allegation = at minimum CONSIDER, can be worse
+      } else if (effectiveSeverity >= 0.5) {
+        // Low-moderate: at minimum CONSIDER
         if (verdict.emoji === "✅" || verdict.emoji === "❓") {
           verdict = {
             emoji: "🤔",
             label: "CONSIDER - Labor Concerns",
             color: "hsl(45 93% 47%)",
             action: "Review",
-            reason: `1 labor allegation against ${laborRecord!.parentCompany}`,
+            reason: `${laborCount} labor allegation${laborCount > 1 ? 's' : ''} against ${laborRecord!.parentCompany}`,
           };
         }
+      }
+      // If labor weight is very low (< 0.5 effective), labor won't downgrade at all
+    }
+
+    // Step 3: Downgrade if brand is on BDS boycott list
+    const boycott = checkBoycott(product.brand);
+    if (boycott) {
+      // At minimum CONSIDER if currently a BUY
+      if (verdict.emoji === "✅") {
+        verdict = {
+          emoji: "🤔",
+          label: "CONSIDER - Boycott Listed Brand",
+          color: "hsl(45 93% 47%)",
+          action: "Review",
+          reason: `${boycott.parent} is on the BDS boycott list`,
+        };
       }
     }
 
@@ -252,6 +385,7 @@ export default function OpenFoodFactsDetail() {
   const agri = product.ecoscoreData?.agribalyse;
   const adjustments = product.ecoscoreData?.adjustments;
   const laborRecord = findLaborAllegations(product);
+  const boycottMatch = checkBoycott(product.brand);
 
   return (
     <div style={{ backgroundColor: "hsl(40 33% 95%)", minHeight: "100vh", display: "flex", flexDirection: "column" }}>
@@ -394,6 +528,38 @@ export default function OpenFoodFactsDetail() {
             </div>
           )}
 
+          {/* Boycott / BDS Note */}
+          {boycottMatch && (
+            <div style={{
+              backgroundColor: "hsl(0 50% 97%)",
+              border: "2px solid hsl(0 60% 65%)",
+              borderRadius: "0.75rem",
+              padding: "1.25rem",
+              marginBottom: "2rem",
+              display: "flex",
+              alignItems: "flex-start",
+              gap: "0.75rem",
+            }}>
+              <span style={{ fontSize: "1.25rem", flexShrink: 0, marginTop: "0.1rem" }}>🚩</span>
+              <div style={{ flex: 1 }}>
+                <p style={{ fontSize: "1rem", fontWeight: "700", color: "hsl(0 70% 35%)", marginBottom: "0.25rem" }}>
+                  Supports Israel — {boycottMatch.parent}
+                </p>
+                <p style={{ fontSize: "0.85rem", color: "hsl(0 40% 40%)", lineHeight: 1.5 }}>
+                  {boycottMatch.reason}
+                </p>
+                <a
+                  href="https://boycott-israel.org/boycott.html"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ fontSize: "0.75rem", color: "hsl(0 50% 50%)", textDecoration: "underline", marginTop: "0.5rem", display: "inline-block" }}
+                >
+                  Source: BDS Boycott List
+                </a>
+              </div>
+            </div>
+          )}
+
           {/* Detailed Breakdown */}
           <div id="details" style={{ marginBottom: "2rem" }}>
             <h2 style={{ fontSize: "1.5rem", fontWeight: "bold", marginBottom: "1rem", color: "hsl(150 20% 15%)" }}>
@@ -437,50 +603,74 @@ export default function OpenFoodFactsDetail() {
               </div>
             )}
 
-            {/* Carbon Footprint */}
+            {/* Carbon Footprint Total */}
             {agri?.co2_total !== undefined && (
               <div style={{
                 backgroundColor: "hsl(40 30% 98%)",
-                borderRadius: "0.5rem",
-                padding: "1.5rem",
-                marginBottom: "1rem"
+                borderRadius: "0.75rem",
+                padding: "1.25rem",
+                marginBottom: "1rem",
+                border: "1px solid hsl(40 20% 90%)",
               }}>
-                <h3 style={{ fontSize: "1.125rem", fontWeight: "bold", marginBottom: "1rem", color: "hsl(150 20% 15%)" }}>
+                <h3 style={{ fontSize: "1rem", fontWeight: "bold", marginBottom: "0.75rem", color: "hsl(150 20% 15%)", display: "flex", alignItems: "center", gap: "0.5rem" }}>
                   🌱 Carbon Footprint
                 </h3>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
-                  {agri.co2_total !== undefined && (
-                    <div>
-                      <span style={{ color: "hsl(150 10% 45%)", fontSize: "0.875rem" }}>Total CO₂</span>
-                      <p style={{ fontSize: "1.5rem", fontWeight: "bold", color: "hsl(152 45% 30%)" }}>
-                        {agri.co2_total.toFixed(2)} kg
-                      </p>
-                    </div>
-                  )}
-                  {agri.co2_agriculture !== undefined && (
-                    <div>
-                      <span style={{ color: "hsl(150 10% 45%)", fontSize: "0.875rem" }}>Agriculture</span>
-                      <p style={{ fontSize: "1.25rem", fontWeight: "bold", color: "hsl(150 20% 15%)" }}>
-                        {agri.co2_agriculture.toFixed(2)} kg
-                      </p>
-                    </div>
-                  )}
-                  {agri.co2_processing !== undefined && (
-                    <div>
-                      <span style={{ color: "hsl(150 10% 45%)", fontSize: "0.875rem" }}>Processing</span>
-                      <p style={{ fontSize: "1.25rem", fontWeight: "bold", color: "hsl(150 20% 15%)" }}>
-                        {agri.co2_processing.toFixed(2)} kg
-                      </p>
-                    </div>
-                  )}
-                  {agri.co2_packaging !== undefined && (
-                    <div>
-                      <span style={{ color: "hsl(150 10% 45%)", fontSize: "0.875rem" }}>Packaging</span>
-                      <p style={{ fontSize: "1.25rem", fontWeight: "bold", color: "hsl(150 20% 15%)" }}>
-                        {agri.co2_packaging.toFixed(2)} kg
-                      </p>
-                    </div>
-                  )}
+                <div style={{ display: "flex", alignItems: "baseline", gap: "0.5rem" }}>
+                  <span style={{ fontSize: "2rem", fontWeight: "800", color: "hsl(152 45% 30%)" }}>
+                    {agri.co2_total.toFixed(2)}
+                  </span>
+                  <span style={{ fontSize: "0.875rem", color: "hsl(150 10% 45%)" }}>kg CO₂eq / kg product</span>
+                </div>
+              </div>
+            )}
+
+            {/* Lifecycle Breakdown Bars */}
+            {agri && (agri.co2_agriculture !== undefined || agri.co2_processing !== undefined || agri.co2_packaging !== undefined || agri.co2_transportation !== undefined || agri.co2_distribution !== undefined) && (
+              <div style={{
+                backgroundColor: "hsl(40 30% 98%)",
+                borderRadius: "0.75rem",
+                padding: "1.25rem",
+                marginBottom: "1rem",
+                border: "1px solid hsl(40 20% 90%)",
+              }}>
+                <h3 style={{ fontSize: "1rem", fontWeight: "bold", marginBottom: "1rem", color: "hsl(150 20% 15%)", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  📊 Lifecycle Breakdown
+                </h3>
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                  {[
+                    { label: "Agriculture", value: agri.co2_agriculture, icon: "🌾" },
+                    { label: "Processing", value: agri.co2_processing, icon: "🏭" },
+                    { label: "Packaging", value: agri.co2_packaging, icon: "📦" },
+                    { label: "Transportation", value: agri.co2_transportation, icon: "🚚" },
+                    { label: "Distribution", value: agri.co2_distribution, icon: "🏪" },
+                    { label: "Consumption", value: agri.co2_consumption, icon: "🍽️" },
+                  ]
+                    .filter((item) => typeof item.value === "number")
+                    .map((item) => {
+                      const pct = agri.co2_total && agri.co2_total > 0
+                        ? ((item.value! / agri.co2_total) * 100)
+                        : 0;
+                      return (
+                        <div key={item.label} style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                          <span style={{ fontSize: "1.1rem", width: "1.5rem", textAlign: "center" }}>{item.icon}</span>
+                          <span style={{ fontSize: "0.8rem", fontWeight: "600", color: "hsl(150 20% 15%)", width: "6.5rem", flexShrink: 0 }}>
+                            {item.label}
+                          </span>
+                          <div style={{ flex: 1, height: "0.6rem", backgroundColor: "hsl(40 25% 88%)", borderRadius: "999px", overflow: "hidden" }}>
+                            <div style={{
+                              height: "100%",
+                              width: `${Math.max(pct, 1)}%`,
+                              backgroundColor: "hsl(152 45% 30%)",
+                              borderRadius: "999px",
+                              transition: "width 0.5s ease",
+                            }} />
+                          </div>
+                          <span style={{ fontSize: "0.8rem", fontWeight: "700", color: "hsl(150 20% 15%)", width: "2.5rem", textAlign: "right" }}>
+                            {pct.toFixed(0)}%
+                          </span>
+                        </div>
+                      );
+                    })}
                 </div>
               </div>
             )}
