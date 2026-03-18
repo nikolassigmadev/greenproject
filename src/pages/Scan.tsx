@@ -3,6 +3,7 @@ import { useNavigate, useLocation, Link } from "react-router-dom";
 import { Camera, Upload, Search, Loader2, AlertCircle, X, ScanLine, Image as ImageIcon, Plus, Leaf, BarChart3, QrCode, Settings, Users, Heart, Apple, ChevronRight, Check } from "lucide-react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { BottomNav } from "@/components/BottomNav";
 import { Input } from "@/components/ui/input";
 import { CalAIButton, ButtonGroup } from "@/components/CalAIButton";
 import { AlertBox, AlertList } from "@/components/AlertBox";
@@ -74,19 +75,19 @@ const calculateEcoScore = (result: OpenFoodFactsResult): number => {
 
 // Function to filter and select best products
 const filterBestProducts = (results: OpenFoodFactsResult[]): OpenFoodFactsResult[] => {
-  if (results.length <= 3) return results;
-  
+  if (results.length <= 5) return results;
+
   // Calculate eco scores for all products
   const productsWithScores = results.map(result => ({
     result,
     ecoScore: calculateEcoScore(result)
   }));
-  
+
   // Sort by eco score (descending) - highest score first
   productsWithScores.sort((a, b) => b.ecoScore - a.ecoScore);
-  
-  // Take top 3
-  return productsWithScores.slice(0, 3).map(item => item.result);
+
+  // Take top 5 to give user enough alternatives
+  return productsWithScores.slice(0, 5).map(item => item.result);
 };
 
 type OcrWord = {
@@ -1073,11 +1074,8 @@ const Scan = () => {
               .then((result) => {
                 console.log("OpenFoodFacts result:", result);
                 if (result.found && hasEcoScore(result)) {
-                  setOffResult(result);
-                  toast({
-                    title: "Found on OpenFoodFacts",
-                    description: `${result.brand || ""} ${result.productName || "Unknown Product"}`.trim(),
-                  });
+                  sessionStorage.setItem('scan_candidates', JSON.stringify([result]));
+                  navigate(`/product-off/${result.barcode}?from=scan`);
                 } else if (result.found) {
                   toast({
                     title: "No Environmental Data",
@@ -1230,11 +1228,8 @@ const Scan = () => {
       const topResults = filterBestProducts(results);
 
       if (topResults.length > 0) {
-        setOffSearchResults(topResults);
-        toast({
-          title: "Products Found",
-          description: `Found ${topResults.length} products for "${productName}"`,
-        });
+        sessionStorage.setItem('scan_candidates', JSON.stringify(topResults));
+        navigate(`/product-off/${topResults[0].barcode}?from=scan`);
       } else {
         toast({
           title: "No Products Found",
@@ -1285,15 +1280,9 @@ const Scan = () => {
         if (advancedResult.barcode && isValidBarcode(advancedResult.barcode)) {
           const barcodeResult = await lookupBarcode(advancedResult.barcode);
           if (barcodeResult.found && hasEcoScore(barcodeResult)) {
-            setOffSearchResults([barcodeResult]);
-            setOffSearchText(`Barcode: ${advancedResult.barcode}`);
+            sessionStorage.setItem('scan_candidates', JSON.stringify([barcodeResult]));
             setOffSearchLoading(false);
-            // Automatically show detailed environmental view for barcode lookups from images
-            viewDetailedEnvironmental(barcodeResult);
-            toast({
-              title: "Product Found",
-              description: `${barcodeResult.brand || ""} ${barcodeResult.productName || ""}`.trim(),
-            });
+            navigate(`/product-off/${barcodeResult.barcode}?from=scan`);
             return;
           } else if (barcodeResult.found) {
             toast({
@@ -1339,11 +1328,8 @@ const Scan = () => {
           variant: "destructive",
         });
       } else {
-        toast({
-          title: `${filteredResults.length} Product${filteredResults.length > 1 ? "s" : ""} Found`,
-          description: `Showing products with Eco-Score data for "${searchQuery}".`,
-        });
-        setOffSearchResults(filteredResults);
+        sessionStorage.setItem('scan_candidates', JSON.stringify(filteredResults));
+        navigate(`/product-off/${filteredResults[0].barcode}?from=scan`);
       }
     } catch (error) {
       console.error("OFF image search error:", error);
@@ -1453,103 +1439,75 @@ const Scan = () => {
   };
 
   return (
-    <div style={{ backgroundColor: 'hsl(40 33% 95%)', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div className="min-h-screen flex flex-col bg-background">
       <Header />
-      
-      <main style={{ flex: 1, paddingTop: '1.5rem', paddingBottom: '1.5rem' }}>
-        <div style={{ maxWidth: '56rem', margin: '0 auto', padding: '0 1rem' }}>
-          
-          {/* Page Header */}
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: '0.75rem',
-            marginBottom: '1rem',
-          }}>
-            <span style={{ fontSize: '1.75rem', lineHeight: 1 }}>📸</span>
-            <div>
-              <h1 style={{ fontSize: '1.375rem', fontWeight: 'bold', color: 'hsl(152 45% 30%)', lineHeight: 1.2 }}>
-                Scan a Product
-              </h1>
-              <p style={{ fontSize: '0.8rem', color: 'hsl(150 10% 45%)', marginTop: '0.1rem' }}>
-                {isDefaultPriorities ? 'Set your priorities first' : 'Personalized to your values'}
-              </p>
-            </div>
-          </div>
 
-          {/* Priorities Warning / Status Banner */}
+      <main style={{ flex: 1, paddingBottom: '6rem' }}>
+
+        {/* Hero */}
+        <div
+          className="px-5 pt-8 pb-14 text-center"
+          style={{ background: 'var(--gradient-hero)' }}
+        >
+          <div className="max-w-xl mx-auto">
+            <h1 className="text-2xl font-display font-extrabold tracking-tight mb-1.5" style={{ color: '#ffffff' }}>
+              Scan a Product
+            </h1>
+            <p className="text-sm" style={{ color: 'rgba(255,255,255,0.72)' }}>
+              {isDefaultPriorities ? 'Set your priorities to unlock personalised results' : 'Personalised to your values'}
+            </p>
+          </div>
+        </div>
+
+        <div className="max-w-xl mx-auto px-5 -mt-8 relative z-10">
+
+          {/* Priority status */}
           {isDefaultPriorities ? (
             <Link
               to="/preferences"
-              style={{
-                display: 'flex', alignItems: 'center', gap: '0.75rem',
-                padding: '1rem 1.25rem',
-                marginBottom: '1.25rem',
-                backgroundColor: 'hsl(45 70% 95%)',
-                border: '2px solid hsl(45 60% 75%)',
-                borderRadius: '1rem',
-                textDecoration: 'none',
-                color: 'hsl(150 20% 15%)',
-                transition: 'all 0.2s ease',
-              }}
+              className="flex items-center gap-3 p-4 mb-5 rounded-2xl border-2 shadow-card transition-all hover:shadow-elevated"
+              style={{ backgroundColor: 'hsl(38 70% 97%)', borderColor: 'hsl(38 70% 80%)', textDecoration: 'none' }}
             >
-              <div style={{
-                width: '2.5rem', height: '2.5rem', borderRadius: '0.75rem',
-                background: 'linear-gradient(135deg, hsl(45 93% 50%), hsl(40 90% 45%))',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                flexShrink: 0,
-              }}>
-                <AlertCircle size={18} color="white" />
+              <div
+                className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ background: 'linear-gradient(135deg, hsl(38 88% 46%), hsl(35 85% 42%))' }}
+              >
+                <AlertCircle className="w-5 h-5 text-white" />
               </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '0.875rem', fontWeight: '700', color: 'hsl(40 50% 25%)' }}>
-                  Set Your Priorities First
-                </div>
-                <div style={{ fontSize: '0.75rem', color: 'hsl(40 30% 40%)', marginTop: '0.1rem' }}>
-                  Tell us what matters most — scanning is locked until priorities are set
-                </div>
+              <div className="flex-1">
+                <div className="text-sm font-bold" style={{ color: 'hsl(35 50% 25%)' }}>Set Your Priorities First</div>
+                <div className="text-xs mt-0.5" style={{ color: 'hsl(35 30% 42%)' }}>Tell us what matters most to personalise every result</div>
               </div>
-              <ChevronRight size={18} style={{ color: 'hsl(45 60% 40%)', flexShrink: 0 }} />
+              <ChevronRight className="w-4 h-4 flex-shrink-0" style={{ color: 'hsl(38 60% 45%)' }} />
             </Link>
           ) : !prioritiesDismissed ? (
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: '0.5rem',
-              padding: '0.6rem 1rem',
-              marginBottom: '1.25rem',
-              backgroundColor: 'hsl(142 40% 96%)',
-              border: '1px solid hsl(152 30% 80%)',
-              borderRadius: '0.75rem',
-            }}>
-              <Check size={14} style={{ color: 'hsl(152 45% 35%)', flexShrink: 0 }} />
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', flex: 1 }}>
+            <div
+              className="flex items-center gap-2.5 px-3.5 py-2.5 mb-5 rounded-2xl border"
+              style={{ backgroundColor: 'hsl(142 40% 96%)', borderColor: 'hsl(152 30% 80%)' }}
+            >
+              <Check className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'hsl(152 48% 36%)' }} />
+              <div className="flex flex-wrap gap-1.5 flex-1">
                 {[
                   { key: 'laborRights' as keyof UserPriorities, label: 'Labor', icon: Users, color: 'hsl(0 70% 50%)' },
-                  { key: 'environment' as keyof UserPriorities, label: 'Env', icon: Leaf, color: 'hsl(152 45% 30%)' },
+                  { key: 'environment' as keyof UserPriorities, label: 'Env', icon: Leaf, color: 'hsl(152 48% 30%)' },
                   { key: 'animalWelfare' as keyof UserPriorities, label: 'Animal', icon: Heart, color: 'hsl(280 60% 50%)' },
-                  { key: 'nutrition' as keyof UserPriorities, label: 'Nutr', icon: Apple, color: 'hsl(45 93% 40%)' },
+                  { key: 'nutrition' as keyof UserPriorities, label: 'Nutr', icon: Apple, color: 'hsl(38 88% 40%)' },
                 ].map((item) => {
                   const val = priorities[item.key];
                   const Icon = item.icon;
                   return (
-                    <span key={item.key} style={{
-                      display: 'inline-flex', alignItems: 'center', gap: '0.2rem',
-                      padding: '0.15rem 0.45rem', borderRadius: '999px',
-                      fontSize: '0.65rem', fontWeight: '600',
-                      backgroundColor: `${item.color}12`,
-                      color: item.color,
-                    }}>
-                      <Icon size={10} />{val}
+                    <span key={item.key} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold" style={{ color: item.color, backgroundColor: `${item.color}12` }}>
+                      <Icon size={10} /> {val}%
                     </span>
                   );
                 })}
               </div>
-              <Link to="/preferences" style={{ display: 'flex', color: 'hsl(152 45% 30%)' }}>
-                <ChevronRight size={16} />
+              <Link to="/preferences" className="flex items-center" style={{ color: 'hsl(152 48% 32%)' }}>
+                <ChevronRight className="w-4 h-4" />
               </Link>
               <button
                 onClick={() => setPrioritiesDismissed(true)}
-                style={{
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  color: 'hsl(150 10% 65%)', padding: '0', display: 'flex',
-                }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'hsl(150 10% 65%)', padding: 0, display: 'flex' }}
               >
                 <X size={12} />
               </button>
@@ -1561,14 +1519,14 @@ const Scan = () => {
             ref={viewfinderRef}
             onDragOver={(e) => {
               e.preventDefault();
-              e.currentTarget.style.boxShadow = '0 0 30px rgba(34, 120, 70, 0.5)';
+              e.currentTarget.style.boxShadow = '0 0 0 3px hsl(152 48% 40%), 0 8px 32px rgba(0,0,0,0.2)';
             }}
             onDragLeave={(e) => {
-              e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.15)';
+              e.currentTarget.style.boxShadow = '';
             }}
             onDrop={(e) => {
               e.preventDefault();
-              e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.15)';
+              e.currentTarget.style.boxShadow = '';
               const files = e.dataTransfer.files;
               if (files.length > 0) {
                 const file = files[0];
@@ -1582,15 +1540,10 @@ const Scan = () => {
                 }
               }
             }}
+            className="rounded-3xl overflow-hidden shadow-elevated mb-5"
             style={{
-              position: 'relative',
-              maxWidth: '400px',
-              margin: '0 auto 2rem',
-              borderRadius: '2rem',
-              border: '4px solid hsl(152 45% 30%)',
-              overflow: 'hidden',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
-              transition: 'box-shadow 0.3s ease',
+              border: '3px solid hsl(152 48% 28%)',
+              transition: 'box-shadow 0.25s ease',
             }}
           >
             {/* Viewfinder Area */}
@@ -1864,28 +1817,35 @@ const Scan = () => {
             style={{ display: 'none' }}
           />
 
-          {/* Product Search */}
-          <div style={{ marginBottom: '2rem', padding: '1.5rem', backgroundColor: 'hsl(40 30% 98%)', borderRadius: '0.5rem', border: '1px solid hsl(40 20% 85%)' }}>
-            <h2 style={{ fontSize: '1.125rem', fontWeight: 'bold', marginBottom: '1rem', color: 'hsl(150 20% 15%)' }}>🔍 Product Search</h2>
-            <form onSubmit={(e) => { e.preventDefault(); handleProductSearch(barcodeInput); }} style={{ display: 'flex', gap: '0.75rem' }}>
-              <Input
-                ref={searchInputRef}
-                placeholder="Search by product name (e.g., Coca-Cola, Häagen-Dazs)"
-                value={barcodeInput}
-                onChange={(e) => setBarcodeInput(e.target.value)}
-                style={{
-                  flex: 1,
-                  height: '2.75rem',
-                  backgroundColor: 'hsl(40 25% 93%)',
-                  color: 'hsl(150 20% 15%)',
-                  border: '1px solid hsl(40 20% 85%)',
-                  borderRadius: '0.375rem',
-                  padding: '0 1rem'
-                }}
-              />
-              <CalAIButton type="submit" emoji="🔍" loading={offLoading}>
+          {/* Divider */}
+          <div className="flex items-center gap-3 mb-4">
+            <div className="flex-1 h-px bg-border" />
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">or search by name</span>
+            <div className="flex-1 h-px bg-border" />
+          </div>
+
+          {/* Search */}
+          <div className="bg-card rounded-2xl border border-border/60 shadow-soft p-4 mb-5">
+            <form onSubmit={(e) => { e.preventDefault(); handleProductSearch(barcodeInput); }} className="flex gap-2.5">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                <Input
+                  ref={searchInputRef}
+                  placeholder="e.g. Coca-Cola, Häagen-Dazs..."
+                  value={barcodeInput}
+                  onChange={(e) => setBarcodeInput(e.target.value)}
+                  className="pl-9 h-11 bg-muted/50 border-0 focus-visible:ring-1 text-sm"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={offLoading || !barcodeInput.trim()}
+                className="flex items-center gap-1.5 px-4 h-11 rounded-xl font-semibold text-sm transition-all duration-200 flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ backgroundColor: 'hsl(152 48% 28%)', color: 'white' }}
+              >
+                {offLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
                 Search
-              </CalAIButton>
+              </button>
             </form>
           </div>
 
@@ -1895,14 +1855,17 @@ const Scan = () => {
             <AlertBox type="warning" title="OCR Status" message={ocrMessage} onClose={() => setOcrMessage(null)} />
           )}
 
+          {/* Single result found */}
           {offResult && offResult.found && (
-            <div style={{ marginBottom: '2rem' }}>
-              <AlertBox type="success" message={`✅ Found: ${offResult.productName}`} />
+            <div className="mb-5">
+              <div className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl mb-3" style={{ backgroundColor: 'hsl(142 40% 96%)', border: '1px solid hsl(152 30% 80%)' }}>
+                <Check className="w-4 h-4 flex-shrink-0" style={{ color: 'hsl(152 48% 36%)' }} />
+                <span className="text-sm font-semibold" style={{ color: 'hsl(152 30% 25%)' }}>Found: {offResult.productName}</span>
+              </div>
               <button
                 onClick={() => navigate(`/product-off/${offResult.barcode}`)}
-                style={{ width: '100%', cursor: 'pointer', marginTop: '1rem', textAlign: 'left', background: 'none', border: 'none', padding: 0 }}
-                onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.8')}
-                onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
+                className="w-full cursor-pointer text-left transition-opacity hover:opacity-80"
+                style={{ background: 'none', border: 'none', padding: 0 }}
               >
                 <OpenFoodFactsCard result={offResult} />
               </button>
@@ -1910,27 +1873,25 @@ const Scan = () => {
           )}
 
           {offResult && !offResult.found && (
-            <AlertBox type="warning" message="Product not found in OpenFoodFacts database" />
+            <AlertBox type="warning" message="Product not found in the Open Food Facts database." />
           )}
 
-          {/* Search Results  */}
+          {/* Multiple search results */}
           {offSearchResults.length > 0 && (
-            <div style={{ marginBottom: '2rem' }}>
-              <StatsDisplay
-                stats={[
-                  { label: 'Products Found', value: String(offSearchResults.length), emoji: '📦' },
-                  { label: 'Alternatives', value: String(offAlternatives.length), emoji: '♻️' },
-                ]}
-                columns={2}
-              />
-              <div style={{ marginTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div className="mb-5">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-sm font-bold text-foreground">{offSearchResults.length} Products Found</h2>
+                {offAlternatives.length > 0 && (
+                  <span className="text-xs text-muted-foreground">{offAlternatives.length} greener alternatives</span>
+                )}
+              </div>
+              <div className="flex flex-col gap-2.5">
                 {offSearchResults.map((result) => (
                   <button
                     key={result.barcode}
                     onClick={() => navigate(`/product-off/${result.barcode}`)}
-                    style={{ width: '100%', cursor: 'pointer', textAlign: 'left', background: 'none', border: 'none', padding: 0 }}
-                    onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.8')}
-                    onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
+                    className="w-full cursor-pointer text-left transition-opacity hover:opacity-80"
+                    style={{ background: 'none', border: 'none', padding: 0 }}
                   >
                     <OpenFoodFactsCard result={result} />
                   </button>
@@ -1939,20 +1900,22 @@ const Scan = () => {
             </div>
           )}
 
-          {/* Better Alternatives */}
+          {/* Greener alternatives */}
           {offAlternatives.length > 0 && (
-            <div style={{ marginBottom: '2rem' }}>
-              <h2 style={{ fontSize: '1.125rem', fontWeight: 'bold', marginBottom: '1rem', color: 'hsl(150 20% 15%)' }}>
-                🌱 Greener Alternatives
-              </h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div className="mb-5">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'hsl(152 42% 96%)' }}>
+                  <Leaf className="w-3.5 h-3.5" style={{ color: 'hsl(152 48% 30%)' }} />
+                </div>
+                <h2 className="text-sm font-bold text-foreground">Greener Alternatives</h2>
+              </div>
+              <div className="flex flex-col gap-2.5">
                 {offAlternatives.map((alt) => (
                   <button
                     key={alt.barcode}
                     onClick={() => navigate(`/product-off/${alt.barcode}`)}
-                    style={{ width: '100%', cursor: 'pointer', textAlign: 'left', background: 'none', border: 'none', padding: 0 }}
-                    onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.8')}
-                    onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
+                    className="w-full cursor-pointer text-left transition-opacity hover:opacity-80"
+                    style={{ background: 'none', border: 'none', padding: 0 }}
                   >
                     <OpenFoodFactsCard result={alt} />
                   </button>
@@ -1965,6 +1928,7 @@ const Scan = () => {
       </main>
 
       <Footer />
+      <BottomNav />
     </div>
   );
 };

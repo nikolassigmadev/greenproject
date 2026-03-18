@@ -1,407 +1,309 @@
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { BottomNav } from "@/components/BottomNav";
 import { Link } from "react-router-dom";
 import {
-  Camera, ArrowRight, Leaf, Users, Heart, Apple,
-  Settings, BarChart3, Search, Sparkles, Shield, Globe,
-  ChevronRight, ScanLine, TrendingUp, Eye,
+  Camera, Leaf, Users, Heart, Apple,
+  Settings, Globe, Shield, Search,
+  ChevronRight, BarChart3, TrendingUp,
 } from "lucide-react";
+
+const CONTAINER = "w-full max-w-xl mx-auto px-5";
+
+const analysisCategories = [
+  { icon: Globe, title: "Origin", desc: "Supply chain tracing", color: "hsl(220 70% 50%)", bg: "hsl(220 60% 96%)" },
+  { icon: Shield, title: "Labor", desc: "Forced & child labor", color: "hsl(0 70% 50%)", bg: "hsl(0 50% 97%)" },
+  { icon: Leaf, title: "Carbon", desc: "CO₂ lifecycle data", color: "hsl(152 48% 30%)", bg: "hsl(152 40% 96%)" },
+  { icon: TrendingUp, title: "Alternatives", desc: "Greener options", color: "hsl(280 55% 50%)", bg: "hsl(280 40% 96%)" },
+  { icon: Search, title: "AI Scan", desc: "Label recognition", color: "hsl(38 88% 40%)", bg: "hsl(38 70% 96%)" },
+  { icon: Heart, title: "Animal", desc: "Cruelty-free check", color: "hsl(340 65% 50%)", bg: "hsl(340 50% 97%)" },
+];
+
+const steps = [
+  {
+    step: "01",
+    icon: Camera,
+    title: "Scan a Product",
+    desc: "Photo, barcode, or search by name — AI reads labels instantly",
+    colorBg: "hsl(152 42% 96%)",
+    badgeColor: "hsl(152 45% 35%)",
+    gradient: "from-[hsl(152_48%_28%)] to-[hsl(148_52%_38%)]",
+  },
+  {
+    step: "02",
+    icon: Settings,
+    title: "Set Your Priorities",
+    desc: "Personalise every result by weighting what matters to you",
+    colorBg: "hsl(38 70% 96%)",
+    badgeColor: "hsl(38 80% 38%)",
+    gradient: "from-[hsl(38_88%_40%)] to-[hsl(40_85%_50%)]",
+    pills: [
+      { label: "Labor Rights", icon: Users, color: "hsl(0 70% 50%)" },
+      { label: "Environment", icon: Leaf, color: "hsl(152 48% 30%)" },
+      { label: "Animal", icon: Heart, color: "hsl(280 60% 50%)" },
+      { label: "Nutrition", icon: Apple, color: "hsl(38 88% 40%)" },
+    ],
+  },
+  {
+    step: "03",
+    icon: TrendingUp,
+    title: "Get Verdict & Alternatives",
+    desc: "Eco-scores, labor flags, carbon data, and greener swaps weighted to your values",
+    colorBg: "hsl(280 40% 96%)",
+    badgeColor: "hsl(280 50% 46%)",
+    gradient: "from-[hsl(280_60%_50%)] to-[hsl(280_55%_62%)]",
+  },
+  {
+    step: "04",
+    icon: BarChart3,
+    title: "Track Your Impact",
+    desc: "Scanning history, weekly trends & how your habits improve over time",
+    colorBg: "hsl(218 60% 96%)",
+    badgeColor: "hsl(218 62% 46%)",
+    gradient: "from-[hsl(218_70%_50%)] to-[hsl(216_65%_62%)]",
+    bars: [
+      { h: 70, color: "hsl(152 48% 36%)" },
+      { h: 45, color: "hsl(152 48% 44%)" },
+      { h: 85, color: "hsl(152 48% 30%)" },
+      { h: 35, color: "hsl(38 88% 50%)" },
+      { h: 60, color: "hsl(152 48% 40%)" },
+      { h: 78, color: "hsl(152 48% 34%)" },
+      { h: 25, color: "hsl(0 65% 55%)" },
+    ],
+  },
+];
 
 const Index = () => {
   return (
-    <div style={{ backgroundColor: "#f4f6f3", minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+    <div className="min-h-screen flex flex-col bg-background">
       <Header />
 
-      <main style={{ flex: 1 }}>
+      <main className="flex-1 pb-nav">
 
-        {/* Hero — green gradient top like the banking app */}
-        <section style={{
-          background: "linear-gradient(165deg, hsl(152 45% 28%) 0%, hsl(152 50% 38%) 60%, hsl(160 45% 45%) 100%)",
-          padding: "2.5rem 1.25rem 4rem",
-          borderRadius: "0 0 2rem 2rem",
-          position: "relative",
-          overflow: "hidden",
-        }}>
-          {/* Decorative circles */}
-          <div style={{
-            position: "absolute", top: "-40px", right: "-30px",
-            width: "160px", height: "160px", borderRadius: "50%",
-            backgroundColor: "rgba(255,255,255,0.06)",
-          }} />
-          <div style={{
-            position: "absolute", bottom: "20px", left: "-20px",
-            width: "100px", height: "100px", borderRadius: "50%",
-            backgroundColor: "rgba(255,255,255,0.04)",
-          }} />
+        {/* ── Hero ── */}
+        <section
+          className="relative overflow-hidden px-5 pt-10 pb-16 text-center"
+          style={{ background: "var(--gradient-hero)" }}
+        >
+          {/* Decorative blobs */}
+          <div className="absolute -top-10 -right-8 w-44 h-44 rounded-full" style={{ backgroundColor: "rgba(255,255,255,0.05)" }} />
+          <div className="absolute bottom-4 -left-6 w-28 h-28 rounded-full" style={{ backgroundColor: "rgba(255,255,255,0.04)" }} />
 
-          <div style={{ maxWidth: "26rem", margin: "0 auto", position: "relative", zIndex: 1 }}>
-            {/* App icon */}
-            <div style={{
-              width: "3.5rem", height: "3.5rem", borderRadius: "1rem",
-              backgroundColor: "rgba(255,255,255,0.15)", backdropFilter: "blur(10px)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              margin: "0 auto 1.25rem",
-              border: "1px solid rgba(255,255,255,0.2)",
-            }}>
-              <Leaf size={24} color="white" />
+          <div className="max-w-xs mx-auto relative z-10">
+            <div className="inline-flex w-14 h-14 rounded-2xl items-center justify-center mb-5 shadow-card" style={{ backgroundColor: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.2)" }}>
+              <Leaf className="w-7 h-7" style={{ color: "#ffffff" }} strokeWidth={2} />
             </div>
 
-            <h1 style={{
-              fontSize: "1.75rem", fontWeight: "800", color: "white",
-              lineHeight: 1.2, marginBottom: "0.6rem", textAlign: "center",
-              letterSpacing: "-0.02em",
-            }}>
+            <h1 className="text-[1.9rem] font-display font-extrabold leading-tight tracking-tight mb-3" style={{ color: "#ffffff" }}>
               Know the True Cost
             </h1>
-            <p style={{
-              fontSize: "0.85rem", color: "rgba(255,255,255,0.75)",
-              lineHeight: 1.5, textAlign: "center", marginBottom: "1.5rem",
-              maxWidth: "20rem", margin: "0 auto 1.5rem",
-            }}>
+            <p className="text-sm leading-relaxed mb-7" style={{ color: "rgba(255,255,255,0.72)" }}>
               Scan products to reveal environmental impact, labor practices & ethical alternatives
             </p>
 
-            {/* Two action buttons side by side */}
-            <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center" }}>
-              <Link to="/scan" style={{
-                display: "flex", alignItems: "center", gap: "0.4rem",
-                padding: "0.75rem 1.5rem", borderRadius: "0.875rem",
-                backgroundColor: "white", color: "hsl(152 45% 28%)",
-                textDecoration: "none", fontWeight: "700", fontSize: "0.85rem",
-                boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
-              }}>
-                <Camera size={16} /> Scan Now
+            <div className="flex gap-3 justify-center flex-wrap">
+              <Link
+                to="/scan"
+                className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl font-bold text-sm shadow-elevated hover:scale-[1.02] transition-all duration-200 active:scale-[0.98]"
+                style={{ backgroundColor: "#ffffff", color: "hsl(152 48% 28%)" }}
+              >
+                <Camera className="w-4 h-4" />
+                Scan Now
               </Link>
-              <Link to="/preferences" style={{
-                display: "flex", alignItems: "center", gap: "0.4rem",
-                padding: "0.75rem 1.5rem", borderRadius: "0.875rem",
-                backgroundColor: "rgba(255,255,255,0.15)",
-                border: "1px solid rgba(255,255,255,0.3)",
-                color: "white", textDecoration: "none", fontWeight: "600", fontSize: "0.85rem",
-                backdropFilter: "blur(10px)",
-              }}>
-                <Settings size={16} /> Priorities
+              <Link
+                to="/preferences"
+                className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl font-semibold text-sm transition-all duration-200"
+                style={{ backgroundColor: "rgba(255,255,255,0.14)", border: "1px solid rgba(255,255,255,0.25)", color: "#ffffff" }}
+              >
+                <Settings className="w-4 h-4" />
+                Priorities
               </Link>
             </div>
           </div>
         </section>
 
-        {/* Quick Stats Row — overlapping cards */}
-        <section style={{ padding: "0 1.25rem", marginTop: "-1.5rem", position: "relative", zIndex: 2 }}>
-          <div style={{ maxWidth: "26rem", margin: "0 auto" }}>
-            <div style={{
-              display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.6rem",
-            }}>
+        {/* ── Quick actions (overlapping hero) ── */}
+        <section className="relative z-10 -mt-6">
+          <div className={CONTAINER}>
+            <div className="grid grid-cols-3 gap-2.5">
               {[
-                { label: "Scan", value: "🔍", sub: "Products", to: "/scan" },
-                { label: "Get Insights", value: "💡", sub: "Verdicts", to: "/scan" },
-                { label: "Choose Better", value: "🌱", sub: "Alternatives", to: "/products" },
+                { emoji: "🔍", label: "Scan", sub: "Any product", to: "/scan" },
+                { emoji: "💡", label: "Insights", sub: "Get verdicts", to: "/scan" },
+                { emoji: "🌱", label: "Better", sub: "Alternatives", to: "/products" },
               ].map((item) => (
-                <Link key={item.label} to={item.to} style={{
-                  backgroundColor: "white", borderRadius: "1rem",
-                  padding: "1rem 0.5rem", textAlign: "center",
-                  boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
-                  textDecoration: "none",
-                  border: "1px solid rgba(0,0,0,0.04)",
-                }}>
-                  <div style={{ fontSize: "1.5rem", marginBottom: "0.25rem" }}>{item.value}</div>
-                  <div style={{ fontSize: "0.75rem", fontWeight: "700", color: "hsl(150 20% 15%)" }}>{item.label}</div>
-                  <div style={{ fontSize: "0.6rem", color: "hsl(150 10% 50%)", marginTop: "0.1rem" }}>{item.sub}</div>
+                <Link
+                  key={item.label}
+                  to={item.to}
+                  className="bg-card rounded-2xl py-4 px-2 text-center border border-border/60 shadow-card hover:shadow-elevated hover:-translate-y-0.5 transition-all duration-200 active:scale-[0.97]"
+                >
+                  <div className="text-2xl mb-1.5">{item.emoji}</div>
+                  <div className="text-xs font-bold text-foreground leading-tight">{item.label}</div>
+                  <div className="text-[10px] text-muted-foreground mt-0.5">{item.sub}</div>
                 </Link>
               ))}
             </div>
           </div>
         </section>
 
-        {/* How It Works — white card sections */}
-        <section style={{ padding: "1.75rem 1.25rem 0" }}>
-          <div style={{ maxWidth: "26rem", margin: "0 auto" }}>
-            <div style={{
-              display: "flex", alignItems: "center", justifyContent: "space-between",
-              marginBottom: "1rem",
-            }}>
-              <h2 style={{ fontSize: "1.1rem", fontWeight: "800", color: "hsl(150 20% 15%)" }}>
-                How It Works
+        {/* ── How It Works ── */}
+        <section className="pt-8">
+          <div className={CONTAINER}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-display font-extrabold text-foreground">How It Works</h2>
+              <Link
+                to="/scan"
+                className="text-xs font-semibold text-primary flex items-center gap-0.5 hover:gap-1.5 transition-all"
+              >
+                Try it <ChevronRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              {steps.map((s) => {
+                const Icon = s.icon;
+                return (
+                  <div
+                    key={s.step}
+                    className="bg-card rounded-2xl p-4 border border-border/60 shadow-soft"
+                  >
+                    <div className="flex gap-3.5 items-start">
+                      <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 bg-gradient-to-br ${s.gradient}`}>
+                        <Icon className="w-5 h-5 text-white" strokeWidth={2} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="mb-1">
+                          <span
+                            className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
+                            style={{ color: s.badgeColor, backgroundColor: s.colorBg }}
+                          >
+                            Step {s.step}
+                          </span>
+                        </div>
+                        <h3 className="text-sm font-bold text-foreground mb-0.5">{s.title}</h3>
+                        <p className="text-xs text-muted-foreground leading-relaxed">{s.desc}</p>
+                      </div>
+                    </div>
+
+                    {/* Priority pills — step 2 */}
+                    {s.pills && (
+                      <div className="flex flex-wrap gap-1.5 mt-3 pl-[3.625rem]">
+                        {s.pills.map((pill) => {
+                          const PillIcon = pill.icon;
+                          return (
+                            <span
+                              key={pill.label}
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-semibold"
+                              style={{ color: pill.color, backgroundColor: `${pill.color}12` }}
+                            >
+                              <PillIcon className="w-2.5 h-2.5" />
+                              {pill.label}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Mini bar chart — step 4 */}
+                    {s.bars && (
+                      <div className="pl-[3.625rem] mt-3">
+                        <div className="flex items-end gap-1.5 h-10">
+                          {s.bars.map((bar, i) => (
+                            <div
+                              key={i}
+                              className="flex-1 rounded-t-sm opacity-85"
+                              style={{ height: `${bar.h}%`, backgroundColor: bar.color }}
+                            />
+                          ))}
+                        </div>
+                        <div className="flex justify-between mt-1">
+                          <span className="text-[9px] text-muted-foreground/60">Mon</span>
+                          <span className="text-[9px] text-muted-foreground/60">Sun</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* ── What We Analyze ── */}
+        <section className="pt-8">
+          <div className={CONTAINER}>
+            <h2 className="text-lg font-display font-extrabold text-foreground mb-4">What We Analyze</h2>
+          </div>
+          {/* Scroll container starts at the same left edge as the container */}
+          <div className="overflow-x-auto pb-3" style={{ scrollSnapType: "x mandatory", WebkitOverflowScrolling: "touch" }}>
+            <div className="flex gap-2.5 px-5 w-max max-w-none">
+              {analysisCategories.map((cat) => {
+                const Icon = cat.icon;
+                return (
+                  <div
+                    key={cat.title}
+                    className="bg-card rounded-2xl p-3.5 border border-border/60 shadow-soft hover:shadow-card transition-all duration-200"
+                    style={{ minWidth: "8rem", scrollSnapAlign: "start" }}
+                  >
+                    <div
+                      className="w-9 h-9 rounded-xl flex items-center justify-center mb-2.5"
+                      style={{ backgroundColor: cat.bg }}
+                    >
+                      <Icon style={{ color: cat.color, width: "1.125rem", height: "1.125rem" }} />
+                    </div>
+                    <div className="text-xs font-bold text-foreground mb-0.5">{cat.title}</div>
+                    <div className="text-[10px] text-muted-foreground leading-snug">{cat.desc}</div>
+                  </div>
+                );
+              })}
+              {/* Right padding sentinel */}
+              <div className="w-5 flex-shrink-0" />
+            </div>
+          </div>
+        </section>
+
+        {/* ── Bottom CTA ── */}
+        <section className="pt-8 pb-2 px-5">
+          <div
+            className="max-w-xl mx-auto rounded-3xl px-6 py-8 text-center overflow-hidden relative"
+            style={{ background: "var(--gradient-hero)" }}
+          >
+            <div className="absolute -top-8 -right-6 w-32 h-32 rounded-full" style={{ backgroundColor: "rgba(255,255,255,0.05)" }} />
+            <div className="absolute -bottom-4 -left-4 w-20 h-20 rounded-full" style={{ backgroundColor: "rgba(255,255,255,0.04)" }} />
+            <div className="relative z-10">
+              <div className="text-3xl mb-3">🌱</div>
+              <h2 className="text-xl font-display font-extrabold mb-2" style={{ color: "#ffffff" }}>
+                Ready to Shop Consciously?
               </h2>
-              <Link to="/scan" style={{
-                fontSize: "0.75rem", fontWeight: "600", color: "hsl(152 45% 35%)",
-                textDecoration: "none", display: "flex", alignItems: "center", gap: "0.2rem",
-              }}>
-                Try it <ChevronRight size={14} />
-              </Link>
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-
-              {/* Step 1 */}
-              <div style={{
-                backgroundColor: "white", borderRadius: "1.125rem",
-                padding: "1.1rem 1.25rem",
-                boxShadow: "0 1px 8px rgba(0,0,0,0.04)",
-                border: "1px solid rgba(0,0,0,0.04)",
-                display: "flex", gap: "1rem", alignItems: "flex-start",
-              }}>
-                <div style={{
-                  width: "2.75rem", height: "2.75rem", borderRadius: "0.875rem",
-                  background: "linear-gradient(135deg, hsl(152 45% 30%), hsl(152 50% 40%))",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  flexShrink: 0,
-                }}>
-                  <Camera size={18} color="white" />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginBottom: "0.2rem" }}>
-                    <span style={{
-                      fontSize: "0.55rem", fontWeight: "700", color: "hsl(152 45% 35%)",
-                      backgroundColor: "hsl(152 40% 95%)", padding: "0.1rem 0.4rem",
-                      borderRadius: "999px", textTransform: "uppercase", letterSpacing: "0.05em",
-                    }}>Step 1</span>
-                  </div>
-                  <h3 style={{ fontSize: "0.9rem", fontWeight: "700", color: "hsl(150 20% 15%)", marginBottom: "0.2rem" }}>
-                    Scan a Product
-                  </h3>
-                  <p style={{ fontSize: "0.75rem", color: "hsl(150 10% 45%)", lineHeight: 1.5 }}>
-                    Photo, barcode, or search by name — AI reads labels instantly
-                  </p>
-                </div>
-              </div>
-
-              {/* Step 2 */}
-              <div style={{
-                backgroundColor: "white", borderRadius: "1.125rem",
-                padding: "1.1rem 1.25rem",
-                boxShadow: "0 1px 8px rgba(0,0,0,0.04)",
-                border: "1px solid rgba(0,0,0,0.04)",
-              }}>
-                <div style={{ display: "flex", gap: "1rem", alignItems: "flex-start" }}>
-                  <div style={{
-                    width: "2.75rem", height: "2.75rem", borderRadius: "0.875rem",
-                    background: "linear-gradient(135deg, hsl(45 93% 40%), hsl(40 90% 50%))",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    flexShrink: 0,
-                  }}>
-                    <Settings size={18} color="white" />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginBottom: "0.2rem" }}>
-                      <span style={{
-                        fontSize: "0.55rem", fontWeight: "700", color: "hsl(45 80% 35%)",
-                        backgroundColor: "hsl(45 60% 94%)", padding: "0.1rem 0.4rem",
-                        borderRadius: "999px", textTransform: "uppercase", letterSpacing: "0.05em",
-                      }}>Step 2</span>
-                    </div>
-                    <h3 style={{ fontSize: "0.9rem", fontWeight: "700", color: "hsl(150 20% 15%)", marginBottom: "0.2rem" }}>
-                      Set Your Priorities
-                    </h3>
-                    <p style={{ fontSize: "0.75rem", color: "hsl(150 10% 45%)", lineHeight: 1.5 }}>
-                      Tell us what matters most and we personalize every result
-                    </p>
-                  </div>
-                </div>
-                {/* Priority pills */}
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem", marginTop: "0.75rem", paddingLeft: "3.75rem" }}>
-                  {[
-                    { label: "Labor Rights", icon: <Users size={10} />, color: "hsl(0 70% 50%)" },
-                    { label: "Environment", icon: <Leaf size={10} />, color: "hsl(152 45% 35%)" },
-                    { label: "Animal", icon: <Heart size={10} />, color: "hsl(280 60% 50%)" },
-                    { label: "Nutrition", icon: <Apple size={10} />, color: "hsl(45 93% 40%)" },
-                  ].map((t) => (
-                    <span key={t.label} style={{
-                      display: "inline-flex", alignItems: "center", gap: "0.2rem",
-                      padding: "0.2rem 0.5rem", borderRadius: "999px",
-                      fontSize: "0.6rem", fontWeight: "600",
-                      backgroundColor: `${t.color}10`, color: t.color,
-                    }}>
-                      {t.icon} {t.label}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              {/* Step 3 */}
-              <div style={{
-                backgroundColor: "white", borderRadius: "1.125rem",
-                padding: "1.1rem 1.25rem",
-                boxShadow: "0 1px 8px rgba(0,0,0,0.04)",
-                border: "1px solid rgba(0,0,0,0.04)",
-                display: "flex", gap: "1rem", alignItems: "flex-start",
-              }}>
-                <div style={{
-                  width: "2.75rem", height: "2.75rem", borderRadius: "0.875rem",
-                  background: "linear-gradient(135deg, hsl(280 60% 50%), hsl(280 55% 60%))",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  flexShrink: 0,
-                }}>
-                  <Eye size={18} color="white" />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginBottom: "0.2rem" }}>
-                    <span style={{
-                      fontSize: "0.55rem", fontWeight: "700", color: "hsl(280 50% 45%)",
-                      backgroundColor: "hsl(280 40% 95%)", padding: "0.1rem 0.4rem",
-                      borderRadius: "999px", textTransform: "uppercase", letterSpacing: "0.05em",
-                    }}>Step 3</span>
-                  </div>
-                  <h3 style={{ fontSize: "0.9rem", fontWeight: "700", color: "hsl(150 20% 15%)", marginBottom: "0.2rem" }}>
-                    Get Verdicts & Alternatives
-                  </h3>
-                  <p style={{ fontSize: "0.75rem", color: "hsl(150 10% 45%)", lineHeight: 1.5 }}>
-                    Eco-scores, labor flags, carbon data, and greener swaps — weighted to your values
-                  </p>
-                </div>
-              </div>
-
-              {/* Step 4 */}
-              <div style={{
-                backgroundColor: "white", borderRadius: "1.125rem",
-                padding: "1.1rem 1.25rem",
-                boxShadow: "0 1px 8px rgba(0,0,0,0.04)",
-                border: "1px solid rgba(0,0,0,0.04)",
-              }}>
-                <div style={{ display: "flex", gap: "1rem", alignItems: "flex-start" }}>
-                  <div style={{
-                    width: "2.75rem", height: "2.75rem", borderRadius: "0.875rem",
-                    background: "linear-gradient(135deg, hsl(220 70% 50%), hsl(220 65% 60%))",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    flexShrink: 0,
-                  }}>
-                    <BarChart3 size={18} color="white" />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginBottom: "0.2rem" }}>
-                      <span style={{
-                        fontSize: "0.55rem", fontWeight: "700", color: "hsl(220 60% 45%)",
-                        backgroundColor: "hsl(220 50% 95%)", padding: "0.1rem 0.4rem",
-                        borderRadius: "999px", textTransform: "uppercase", letterSpacing: "0.05em",
-                      }}>Step 4</span>
-                    </div>
-                    <h3 style={{ fontSize: "0.9rem", fontWeight: "700", color: "hsl(150 20% 15%)", marginBottom: "0.2rem" }}>
-                      Track Your Impact
-                    </h3>
-                    <p style={{ fontSize: "0.75rem", color: "hsl(150 10% 45%)", lineHeight: 1.5 }}>
-                      Scanning history, weekly trends & how your habits improve
-                    </p>
-                  </div>
-                </div>
-                {/* Mini chart */}
-                <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.75rem", paddingLeft: "3.75rem", alignItems: "flex-end" }}>
-                  {[
-                    { h: "1.6rem", color: "hsl(152 45% 35%)" },
-                    { h: "1.1rem", color: "hsl(152 45% 45%)" },
-                    { h: "2rem", color: "hsl(152 45% 30%)" },
-                    { h: "0.8rem", color: "hsl(45 90% 50%)" },
-                    { h: "1.4rem", color: "hsl(152 45% 40%)" },
-                    { h: "1.8rem", color: "hsl(152 45% 32%)" },
-                    { h: "0.6rem", color: "hsl(0 65% 55%)" },
-                  ].map((bar, i) => (
-                    <div key={i} style={{
-                      flex: 1, height: bar.h, backgroundColor: bar.color,
-                      borderRadius: "0.25rem 0.25rem 0 0",
-                      opacity: 0.85,
-                    }} />
-                  ))}
-                </div>
-                <div style={{
-                  display: "flex", justifyContent: "space-between",
-                  paddingLeft: "3.75rem", marginTop: "0.3rem",
-                }}>
-                  <span style={{ fontSize: "0.55rem", color: "hsl(150 10% 60%)" }}>Mon</span>
-                  <span style={{ fontSize: "0.55rem", color: "hsl(150 10% 60%)" }}>Sun</span>
-                </div>
+              <p className="text-sm mb-6 leading-relaxed" style={{ color: "rgba(255,255,255,0.72)" }}>
+                Set your priorities, scan your first product, and start building better shopping habits today.
+              </p>
+              <div className="flex gap-3 justify-center flex-wrap">
+                <Link
+                  to="/scan"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm shadow-elevated hover:scale-[1.02] transition-all duration-200 active:scale-[0.98]"
+                  style={{ backgroundColor: "#ffffff", color: "hsl(152 48% 28%)" }}
+                >
+                  <Camera className="w-4 h-4" />
+                  Start Scanning
+                </Link>
+                <Link
+                  to="/preferences"
+                  className="inline-flex items-center gap-1.5 px-5 py-3 rounded-2xl font-semibold text-sm transition-all"
+                  style={{ backgroundColor: "rgba(255,255,255,0.14)", border: "1px solid rgba(255,255,255,0.25)", color: "#ffffff" }}
+                >
+                  <Settings className="w-3.5 h-3.5" />
+                  Priorities <ChevronRight className="w-3.5 h-3.5" />
+                </Link>
               </div>
             </div>
           </div>
         </section>
 
-        {/* What We Analyze — horizontal scroll cards */}
-        <section style={{ padding: "1.75rem 0 1.75rem 1.25rem" }}>
-          <div style={{ maxWidth: "26rem", margin: "0 auto" }}>
-            <h2 style={{ fontSize: "1.1rem", fontWeight: "800", color: "hsl(150 20% 15%)", marginBottom: "1rem" }}>
-              What We Analyze
-            </h2>
-          </div>
-          <div style={{
-            display: "flex", gap: "0.6rem",
-            overflowX: "auto", paddingBottom: "0.5rem",
-            scrollSnapType: "x mandatory",
-            WebkitOverflowScrolling: "touch",
-            maxWidth: "26rem", margin: "0 auto",
-            paddingRight: "1.25rem",
-          }}>
-            {[
-              { icon: <Globe size={20} />, title: "Origin", desc: "Supply chain tracing", color: "hsl(220 70% 50%)", bg: "hsl(220 60% 96%)" },
-              { icon: <Shield size={20} />, title: "Labor", desc: "Forced & child labor", color: "hsl(0 70% 50%)", bg: "hsl(0 50% 97%)" },
-              { icon: <Leaf size={20} />, title: "Carbon", desc: "CO₂ lifecycle data", color: "hsl(152 45% 32%)", bg: "hsl(152 40% 96%)" },
-              { icon: <TrendingUp size={20} />, title: "Alternatives", desc: "Greener options", color: "hsl(280 55% 50%)", bg: "hsl(280 40% 96%)" },
-              { icon: <Search size={20} />, title: "AI OCR", desc: "Label scanning", color: "hsl(45 80% 38%)", bg: "hsl(45 60% 95%)" },
-              { icon: <Heart size={20} />, title: "Animal", desc: "Cruelty-free check", color: "hsl(340 65% 50%)", bg: "hsl(340 50% 96%)" },
-            ].map((f) => (
-              <div key={f.title} style={{
-                minWidth: "8rem", backgroundColor: "white",
-                borderRadius: "1rem", padding: "1rem",
-                boxShadow: "0 1px 8px rgba(0,0,0,0.04)",
-                border: "1px solid rgba(0,0,0,0.04)",
-                scrollSnapAlign: "start", flexShrink: 0,
-              }}>
-                <div style={{
-                  width: "2.25rem", height: "2.25rem", borderRadius: "0.625rem",
-                  backgroundColor: f.bg, display: "flex", alignItems: "center", justifyContent: "center",
-                  marginBottom: "0.6rem", color: f.color,
-                }}>
-                  {f.icon}
-                </div>
-                <div style={{ fontWeight: "700", fontSize: "0.8rem", color: "hsl(150 20% 15%)", marginBottom: "0.15rem" }}>
-                  {f.title}
-                </div>
-                <div style={{ fontSize: "0.65rem", color: "hsl(150 10% 50%)", lineHeight: 1.4 }}>
-                  {f.desc}
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Bottom CTA */}
-        <section style={{
-          padding: "2rem 1.25rem 2.5rem",
-          background: "linear-gradient(165deg, hsl(152 45% 28%) 0%, hsl(152 50% 36%) 100%)",
-          borderRadius: "1.5rem 1.5rem 0 0",
-          textAlign: "center",
-          marginTop: "0.5rem",
-        }}>
-          <div style={{ maxWidth: "26rem", margin: "0 auto" }}>
-            <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>🌱</div>
-            <h2 style={{ fontSize: "1.3rem", fontWeight: "800", color: "white", marginBottom: "0.5rem" }}>
-              Ready to Shop Consciously?
-            </h2>
-            <p style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.7)", marginBottom: "1.5rem", lineHeight: 1.5 }}>
-              Set your priorities, scan your first product, and start building better shopping habits today.
-            </p>
-            <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center", flexWrap: "wrap" }}>
-              <Link to="/scan" style={{
-                display: "flex", alignItems: "center", gap: "0.4rem",
-                padding: "0.8rem 1.75rem", borderRadius: "0.875rem",
-                backgroundColor: "white", color: "hsl(152 45% 28%)",
-                textDecoration: "none", fontWeight: "700", fontSize: "0.9rem",
-                boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
-              }}>
-                <Camera size={16} /> Start Scanning
-              </Link>
-              <Link to="/preferences" style={{
-                display: "flex", alignItems: "center", gap: "0.35rem",
-                padding: "0.8rem 1.5rem", borderRadius: "0.875rem",
-                backgroundColor: "rgba(255,255,255,0.12)",
-                border: "1px solid rgba(255,255,255,0.25)",
-                color: "white", textDecoration: "none", fontWeight: "600", fontSize: "0.85rem",
-              }}>
-                <Settings size={14} /> Priorities <ChevronRight size={14} />
-              </Link>
-            </div>
-          </div>
-        </section>
-
+        <div className="h-4" />
       </main>
+
       <Footer />
+      <BottomNav />
     </div>
   );
 };

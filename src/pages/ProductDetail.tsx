@@ -1,14 +1,11 @@
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, MapPin, Truck, Leaf, AlertTriangle, Award, Package, ArrowRight, Loader2 } from "lucide-react";
+import { ArrowLeft, MapPin, Truck, Leaf, AlertTriangle, Award, Package, Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { BottomNav } from "@/components/BottomNav";
 import { ScoreDisplay } from "@/components/ScoreDisplay";
 import { ProductCard } from "@/components/ProductCard";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { calculateScore, findAlternatives } from "@/data/products";
 import { useProducts } from "@/hooks/useProducts";
 import { cn } from "@/lib/utils";
@@ -22,21 +19,27 @@ const ProductDetail = () => {
   const product = products.find((p) => p.id === `#${id}`);
 
   if (!product) {
-    return (<div className="min-h-screen flex flex-col bg-[#f0ebe1] text-[#1f2e22] min-h-screen">
+    return (
+      <div className="min-h-screen flex flex-col bg-background">
         <Header />
-        <main className="flex-1 flex items-center justify-center">
+        <main className="flex-1 flex items-center justify-center px-5">
           <div className="text-center">
-            <h1 className="text-2xl font-display font-bold mb-4" style={{ color: 'hsl(150 20% 15%)' }}>Product Not Found</h1>
-            <p className="mb-6" style={{ color: 'hsl(150 10% 45%)' }}>The product you're looking for doesn't exist.</p>
-            <Button asChild>
-              <Link to="/products">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Products
-              </Link>
-            </Button>
+            <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-4">
+              <Package className="w-8 h-8 text-muted-foreground" />
+            </div>
+            <h1 className="text-xl font-display font-bold text-foreground mb-2">Product Not Found</h1>
+            <p className="text-sm text-muted-foreground mb-6">The product you're looking for doesn't exist.</p>
+            <Link
+              to="/products"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-bold shadow-soft hover:bg-primary/90 transition-all"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Products
+            </Link>
           </div>
         </main>
         <Footer />
+        <BottomNav />
       </div>
     );
   }
@@ -53,254 +56,226 @@ const ProductDetail = () => {
   });
 
   const laborRiskConfig = {
-    low: { label: 'Low Risk', color: 'text-score-excellent', bg: 'bg-score-excellent/10', progress: 20 },
-    medium: { label: 'Medium Risk', color: 'text-score-fair', bg: 'bg-score-fair/10', progress: 50 },
-    high: { label: 'High Risk', color: 'text-score-critical', bg: 'bg-score-critical/10', progress: 90 },
+    low: { label: 'Low Risk', color: 'hsl(152 48% 30%)', bg: 'hsl(152 42% 96%)', progress: 20, desc: 'Minimal indicators of child or forced labor in supply chain.' },
+    medium: { label: 'Medium Risk', color: 'hsl(38 88% 44%)', bg: 'hsl(38 70% 96%)', progress: 50, desc: 'Some supply chain concerns exist. Further investigation recommended.' },
+    high: { label: 'High Risk', color: 'hsl(0 68% 50%)', bg: 'hsl(0 50% 97%)', progress: 90, desc: 'Significant risk indicators detected. Consider ethical alternatives.' },
   };
 
-  const materialsLabel = 'Contents';
+  const riskCfg = laborRiskConfig[product.laborRisk];
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-background">
       <Header />
-      
-      <main className="flex-1 py-8">
-        <div className="container">
-          {/* Back button */}
-          <Button asChild variant="ghost" className="mb-6">
-            <Link to="/products">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Products
-            </Link>
-          </Button>
 
-          <div className="grid lg:grid-cols-3 gap-8">
-            {/* Main Content */}
-            <div className="lg:col-span-2 space-y-6">
-              {/* Product Header */}
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex flex-col sm:flex-row gap-6">
-                    {/* Product Image with fallback to package icon */}
-                    <div className="w-full sm:w-48 h-48 rounded-xl bg-gradient-to-br from-eco-sage/20 to-eco-leaf/10 flex items-center justify-center flex-shrink-0 relative overflow-hidden">
-                      {product.imageUrl ? (
-                        <img 
-                          src={product.imageUrl} 
-                          alt={product.name}
-                          className="w-full h-full object-cover rounded-xl"
-                          onError={(e) => {
-                            // Fallback to package icon if image fails to load
-                            const target = e.target as HTMLImageElement;
-                            target.style.display = 'none';
-                            const parent = target.parentElement;
-                            if (parent) {
-                              const packageIcon = document.createElement('div');
-                              packageIcon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-16 h-16 text-primary/30"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" x2="12" y1="22.08" y2="12"/></svg>';
-                              packageIcon.className = 'absolute inset-0 flex items-center justify-center';
-                              parent.appendChild(packageIcon);
-                            }
-                          }}
-                        />
-                      ) : (
-                        <Package className="w-16 h-16 text-primary/30" />
-                      )}
-                    </div>
+      <main className="flex-1 pb-nav">
+        {/* Hero */}
+        <div
+          className="px-5 pt-10 pb-16 relative"
+          style={{ background: "var(--gradient-hero)" }}
+        >
+          <Link
+            to="/products"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold mb-6 hover:opacity-80 transition-opacity"
+            style={{ color: "rgba(255,255,255,0.85)" }}
+          >
+            <ArrowLeft className="w-4 h-4" /> Products
+          </Link>
 
-                    <div className="flex-1 space-y-4">
-                      <div>
-                        <p className="text-sm font-mono text-muted-foreground">{product.id}</p>
-                        <h1 className="text-2xl sm:text-3xl font-display font-bold">{product.name}</h1>
-                        <p className="text-lg text-muted-foreground">{product.brand}</p>
-                      </div>
-
-                      <div className="flex flex-wrap items-center gap-3">
-                        <Badge variant="secondary">{product.category}</Badge>
-                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                          <MapPin className="w-4 h-4" />
-                          <span>{product.origin.country}{product.origin.region && `, ${product.origin.region}`}</span>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-wrap gap-2">
-                        {product.certifications.map((cert, i) => (
-                          <Badge key={i} className="bg-primary/10 text-primary border-0">
-                            <Award className="w-3 h-3 mr-1" />
-                            {cert}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Materials */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Package className="w-5 h-5 text-primary" />
-                    {materialsLabel}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-wrap gap-2">
-                    {product.materials.map((material, i) => (
-                      <Badge key={i} variant="outline" className="text-sm py-1.5">
-                        {material}
-                      </Badge>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Product Comments */}
-              {product.comments && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Award className="w-5 h-5 text-primary" />
-                      Product Information
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="prose prose-sm max-w-none">
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                        {product.comments}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
+          <div className="max-w-xl mx-auto flex items-center gap-4">
+            <div className="w-16 h-16 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
+              {product.imageUrl ? (
+                <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
+              ) : (
+                <Package className="w-8 h-8" style={{ color: "rgba(255,255,255,0.7)" }} />
               )}
-
-              {/* Impact Metrics */}
-              <div className="grid sm:grid-cols-2 gap-6">
-                {/* Labor Risk */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <AlertTriangle className="w-5 h-5 text-primary" />
-                      Labor Risk Assessment
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className={cn("inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium", laborRiskConfig[product.laborRisk].bg, laborRiskConfig[product.laborRisk].color)}>
-                      <AlertTriangle className="w-4 h-4" />
-                      {laborRiskConfig[product.laborRisk].label}
-                    </div>
-                    <div>
-                      <div className="flex justify-between text-sm mb-2">
-                        <span className="text-muted-foreground">Risk Level</span>
-                        <span className={laborRiskConfig[product.laborRisk].color}>
-                          {laborRiskConfig[product.laborRisk].progress}%
-                        </span>
-                      </div>
-                      <Progress 
-                        value={laborRiskConfig[product.laborRisk].progress} 
-                        className="h-2"
-                      />
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      {product.laborRisk === 'low' && 'This product shows minimal indicators of child or forced labor in its supply chain.'}
-                      {product.laborRisk === 'medium' && 'Some supply chain concerns exist. Further investigation recommended.'}
-                      {product.laborRisk === 'high' && 'Significant risk indicators detected. Consider ethical alternatives.'}
-                    </p>
-                  </CardContent>
-                </Card>
-
-                {/* Carbon Impact */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Leaf className="w-5 h-5 text-primary" />
-                      Carbon Impact
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="text-3xl font-display font-bold text-primary">
-                      {product.carbonFootprint} <span className="text-lg font-normal text-muted-foreground">kg CO₂</span>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-sm">
-                        <Truck className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-muted-foreground">Transport Distance:</span>
-                        <span className="font-medium">{product.transportDistance.toLocaleString()} km</span>
-                      </div>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      {product.carbonFootprint < 10 && 'Excellent! This product has a low carbon footprint.'}
-                      {product.carbonFootprint >= 10 && product.carbonFootprint < 25 && 'Moderate carbon impact. Room for improvement.'}
-                      {product.carbonFootprint >= 25 && 'High carbon footprint. Consider local or sustainable alternatives.'}
-                    </p>
-                  </CardContent>
-                </Card>
-              </div>
             </div>
-
-            {/* Sidebar */}
-            <div className="space-y-6">
-              {/* Score Card */}
-              <Card className="text-center">
-                <CardHeader>
-                  <CardTitle>Sustainability Score</CardTitle>
-                </CardHeader>
-                <CardContent className="pb-6">
-                  <ScoreDisplay score={score} size="lg" />
-                  <p className="text-sm text-muted-foreground mt-4">
-                    Based on labor practices, carbon footprint, transport distance, and certifications.
-                  </p>
-                  <div className="mt-6 text-left">
-                    <ScoreBreakdownSlider product={product} />
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Barcode */}
-              {product.barcode && (
-                <Card>
-                  <CardContent className="p-4 text-center">
-                    <p className="text-xs text-muted-foreground mb-1">Barcode</p>
-                    <p className="font-mono text-sm">{product.barcode}</p>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* OpenFoodFacts Data */}
-              {offQuery.isLoading && product.barcode && (
-                <Card>
-                  <CardContent className="flex items-center justify-center gap-2 py-4">
-                    <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
-                    <span className="text-sm text-muted-foreground">Fetching environmental data...</span>
-                  </CardContent>
-                </Card>
-              )}
-              {offQuery.data && (
-                <OpenFoodFactsCard result={offQuery.data} />
-              )}
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-mono mb-0.5" style={{ color: "rgba(255,255,255,0.55)" }}>
+                {product.id} · {product.category}
+              </p>
+              <h1 className="text-lg font-display font-extrabold leading-tight truncate" style={{ color: "#ffffff" }}>
+                {product.name}
+              </h1>
+              <p className="text-sm" style={{ color: "rgba(255,255,255,0.72)" }}>{product.brand}</p>
             </div>
           </div>
+        </div>
 
-          {/* Alternatives */}
-          {alternatives.length > 0 && (
-            <section className="mt-12">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h2 className="text-2xl font-display font-bold">Better Alternatives</h2>
-                  <p className="text-muted-foreground">
-                    More sustainable options based on similar products
+        <div className="px-5 -mt-8 relative z-10">
+          <div className="max-w-xl mx-auto space-y-3">
+
+            {/* Score + breakdown card */}
+            <div className="bg-card rounded-2xl border border-border/60 shadow-elevated p-5">
+              <div className="flex items-center gap-5">
+                <ScoreDisplay score={score} size="lg" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">Sustainability Score</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Based on labor practices, carbon footprint, transport, and certifications.
                   </p>
                 </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {alternatives.map((alt) => (
-                  <ProductCard key={alt.id} product={alt} />
-                ))}
+              <div className="mt-4 pt-4 border-t border-border/60">
+                <ScoreBreakdownSlider product={product} />
               </div>
-            </section>
-          )}
+            </div>
+
+            {/* Product info card */}
+            <div className="bg-card rounded-2xl border border-border/60 shadow-soft p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Award className="w-4 h-4 text-primary" />
+                <h3 className="text-sm font-bold text-foreground">Product Details</h3>
+              </div>
+
+              {/* Origin + transport row */}
+              <div className="grid grid-cols-2 gap-2 mb-3">
+                <div className="rounded-xl p-3 bg-muted/60">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <MapPin className="w-3 h-3 text-muted-foreground" />
+                    <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Origin</span>
+                  </div>
+                  <p className="text-xs font-semibold text-foreground">
+                    {product.origin.country}{product.origin.region && `, ${product.origin.region}`}
+                  </p>
+                </div>
+                <div className="rounded-xl p-3 bg-muted/60">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Truck className="w-3 h-3 text-muted-foreground" />
+                    <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Transport</span>
+                  </div>
+                  <p className="text-xs font-semibold text-foreground">
+                    {product.transportDistance.toLocaleString()} km
+                  </p>
+                </div>
+              </div>
+
+              {/* Certifications */}
+              {product.certifications.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mb-3">
+                  {product.certifications.map((cert, i) => (
+                    <span
+                      key={i}
+                      className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-semibold"
+                      style={{ backgroundColor: "hsl(152 42% 96%)", color: "hsl(152 48% 28%)" }}
+                    >
+                      <Award className="w-2.5 h-2.5" />
+                      {cert}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Materials */}
+              <div>
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Contents</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {product.materials.map((material, i) => (
+                    <span
+                      key={i}
+                      className="px-2.5 py-1 rounded-full border text-[10px] font-semibold text-muted-foreground border-border/70"
+                    >
+                      {material}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Product comments */}
+            {product.comments && (
+              <div className="bg-card rounded-2xl border border-border/60 shadow-soft p-4">
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">Product Information</p>
+                <p className="text-xs text-foreground leading-relaxed whitespace-pre-wrap">{product.comments}</p>
+              </div>
+            )}
+
+            {/* Labor risk */}
+            <div className="bg-card rounded-2xl border border-border/60 shadow-soft p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <AlertTriangle className="w-4 h-4" style={{ color: riskCfg.color }} />
+                <h3 className="text-sm font-bold text-foreground">Labor Risk Assessment</h3>
+              </div>
+              <div
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold mb-3"
+                style={{ backgroundColor: riskCfg.bg, color: riskCfg.color }}
+              >
+                {riskCfg.label}
+              </div>
+              <div className="mb-2">
+                <div className="flex justify-between text-[10px] text-muted-foreground mb-1.5">
+                  <span>Risk Level</span>
+                  <span className="font-semibold" style={{ color: riskCfg.color }}>{riskCfg.progress}%</span>
+                </div>
+                <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-700"
+                    style={{ width: `${riskCfg.progress}%`, backgroundColor: riskCfg.color }}
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">{riskCfg.desc}</p>
+            </div>
+
+            {/* Carbon impact */}
+            <div className="bg-card rounded-2xl border border-border/60 shadow-soft p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Leaf className="w-4 h-4 text-primary" />
+                <h3 className="text-sm font-bold text-foreground">Carbon Impact</h3>
+              </div>
+              <div className="flex items-baseline gap-2 mb-1">
+                <span className="text-3xl font-display font-extrabold text-primary">{product.carbonFootprint}</span>
+                <span className="text-sm text-muted-foreground">kg CO₂</span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {product.carbonFootprint < 10 && 'Low carbon footprint — excellent choice.'}
+                {product.carbonFootprint >= 10 && product.carbonFootprint < 25 && 'Moderate carbon impact. Room for improvement.'}
+                {product.carbonFootprint >= 25 && 'High carbon footprint. Consider local or sustainable alternatives.'}
+              </p>
+            </div>
+
+            {/* Barcode */}
+            {product.barcode && (
+              <div className="bg-card rounded-2xl border border-border/60 shadow-soft p-4 text-center">
+                <p className="text-[10px] text-muted-foreground mb-1">Barcode</p>
+                <p className="font-mono text-sm font-semibold">{product.barcode}</p>
+              </div>
+            )}
+
+            {/* OpenFoodFacts */}
+            {offQuery.isLoading && product.barcode && (
+              <div className="bg-card rounded-2xl border border-border/60 shadow-soft p-4 flex items-center justify-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                <span className="text-xs text-muted-foreground">Fetching environmental data...</span>
+              </div>
+            )}
+            {offQuery.data && (
+              <div className="[&>*]:rounded-2xl [&>*]:border [&>*]:border-border/60 [&>*]:shadow-soft">
+                <OpenFoodFactsCard result={offQuery.data} />
+              </div>
+            )}
+
+            {/* Alternatives */}
+            {alternatives.length > 0 && (
+              <div>
+                <div className="mb-3">
+                  <h2 className="text-base font-display font-extrabold text-foreground">Better Alternatives</h2>
+                  <p className="text-xs text-muted-foreground">More sustainable options in the same category</p>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  {alternatives.map((alt) => (
+                    <ProductCard key={alt.id} product={alt} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="h-2" />
+          </div>
         </div>
       </main>
 
       <Footer />
+      <BottomNav />
     </div>
   );
 };

@@ -2,9 +2,9 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
-import { CalAIButton } from "@/components/CalAIButton";
+import { BottomNav } from "@/components/BottomNav";
 import { loadPriorities, savePriorities, DEFAULT_PRIORITIES, type UserPriorities } from "@/utils/userPreferences";
-import { Leaf, Users, Heart, Apple, RotateCcw, Check } from "lucide-react";
+import { Leaf, Users, Heart, Apple, RotateCcw, Check, Info } from "lucide-react";
 
 const priorityConfig = [
   {
@@ -20,7 +20,7 @@ const priorityConfig = [
     label: "Environmental Impact",
     description: "Carbon footprint, eco-score, packaging, sustainability",
     icon: Leaf,
-    color: "hsl(152 45% 30%)",
+    color: "hsl(152 48% 30%)",
     bgColor: "hsl(142 40% 96%)",
   },
   {
@@ -36,10 +36,26 @@ const priorityConfig = [
     label: "Nutrition & Health",
     description: "Nutri-score, processing level, additives",
     icon: Apple,
-    color: "hsl(45 93% 40%)",
-    bgColor: "hsl(45 60% 96%)",
+    color: "hsl(38 88% 40%)",
+    bgColor: "hsl(38 70% 96%)",
   },
 ];
+
+const getWeightLabel = (value: number) => {
+  if (value >= 80) return "Critical";
+  if (value >= 60) return "High";
+  if (value >= 40) return "Moderate";
+  if (value >= 20) return "Low";
+  return "Minimal";
+};
+
+const getWeightColor = (value: number) => {
+  if (value >= 80) return "hsl(0 70% 50%)";
+  if (value >= 60) return "hsl(25 80% 50%)";
+  if (value >= 40) return "hsl(38 88% 44%)";
+  if (value >= 20) return "hsl(152 48% 40%)";
+  return "hsl(150 10% 55%)";
+};
 
 export default function Preferences() {
   const navigate = useNavigate();
@@ -48,22 +64,20 @@ export default function Preferences() {
 
   useEffect(() => {
     setPriorities(loadPriorities());
-
     const handler = () => setPriorities(loadPriorities());
-    window.addEventListener('prioritiesUpdated', handler);
-    return () => window.removeEventListener('prioritiesUpdated', handler);
+    window.addEventListener("prioritiesUpdated", handler);
+    return () => window.removeEventListener("prioritiesUpdated", handler);
   }, []);
 
   const handleChange = (key: keyof UserPriorities, value: number) => {
-    const updated = { ...priorities, [key]: value };
-    setPriorities(updated);
+    setPriorities((prev) => ({ ...prev, [key]: value }));
     setSaved(false);
   };
 
   const handleSave = () => {
     savePriorities(priorities);
     setSaved(true);
-    setTimeout(() => navigate('/scan', { state: { prioritiesJustSaved: true } }), 600);
+    setTimeout(() => navigate("/scan", { state: { prioritiesJustSaved: true } }), 700);
   };
 
   const handleReset = () => {
@@ -71,171 +85,150 @@ export default function Preferences() {
     setSaved(false);
   };
 
-  const getWeightLabel = (value: number) => {
-    if (value >= 80) return "Critical";
-    if (value >= 60) return "High";
-    if (value >= 40) return "Moderate";
-    if (value >= 20) return "Low";
-    return "Minimal";
-  };
-
-  const getWeightColor = (value: number) => {
-    if (value >= 80) return "hsl(0 70% 50%)";
-    if (value >= 60) return "hsl(25 80% 50%)";
-    if (value >= 40) return "hsl(45 93% 47%)";
-    if (value >= 20) return "hsl(152 45% 40%)";
-    return "hsl(150 10% 55%)";
-  };
-
   return (
-    <div style={{ backgroundColor: "hsl(40 33% 95%)", minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+    <div className="min-h-screen flex flex-col bg-background">
       <Header />
 
-      <main style={{ flex: 1, paddingTop: "2rem", paddingBottom: "2rem" }}>
-        <div style={{ maxWidth: "40rem", margin: "0 auto", padding: "0 1rem" }}>
-          {/* Page Title */}
-          <div style={{ marginBottom: "2rem" }}>
-            <h1 style={{ fontSize: "2rem", fontWeight: "bold", color: "hsl(150 20% 15%)", marginBottom: "0.5rem" }}>
-              ⚙️ My Priorities
+      <main className="flex-1 pb-nav">
+        {/* Hero header */}
+        <div
+          className="px-5 pt-10 pb-12 text-center"
+          style={{ background: "var(--gradient-hero)" }}
+        >
+          <div className="max-w-lg mx-auto">
+            <h1 className="text-2xl font-display font-extrabold tracking-tight mb-1.5" style={{ color: "#ffffff" }}>
+              My Priorities
             </h1>
-            <p style={{ color: "hsl(150 10% 45%)", lineHeight: "1.6" }}>
-              Tell us what matters most to you. We'll adjust product verdicts based on your values.
-              Slide each priority to reflect how important it is in your purchasing decisions.
+            <p className="text-sm leading-relaxed" style={{ color: "rgba(255,255,255,0.72)" }}>
+              Adjust the sliders to weight what matters most. Every product verdict adapts to your values.
             </p>
           </div>
+        </div>
 
-          {/* Priority Sliders */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem", marginBottom: "2rem" }}>
+        <div className="px-5 -mt-5 relative z-10">
+          <div className="max-w-lg mx-auto space-y-3">
+            {/* Priority cards */}
             {priorityConfig.map((config) => {
               const value = priorities[config.key];
               const Icon = config.icon;
+              const weightLabel = getWeightLabel(value);
+              const weightColor = getWeightColor(value);
+              const isHighPriority = value >= 60;
+
               return (
                 <div
                   key={config.key}
+                  className="bg-card rounded-2xl border shadow-soft p-4 transition-all duration-200"
                   style={{
-                    backgroundColor: "hsl(40 30% 98%)",
-                    borderRadius: "0.75rem",
-                    padding: "1.5rem",
-                    border: `1px solid ${value >= 60 ? config.color : "hsl(40 20% 85%)"}`,
-                    transition: "border-color 0.3s ease",
+                    borderColor: isHighPriority ? `${config.color}40` : "hsl(var(--border))",
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.75rem" }}>
-                    <div style={{
-                      width: "2.5rem",
-                      height: "2.5rem",
-                      borderRadius: "0.5rem",
-                      backgroundColor: config.bgColor,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}>
-                      <Icon size={18} style={{ color: config.color }} />
+                  {/* Header row */}
+                  <div className="flex items-center gap-3 mb-4">
+                    <div
+                      className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                      style={{ backgroundColor: config.bgColor }}
+                    >
+                      <Icon className="w-5 h-5" style={{ color: config.color }} strokeWidth={2} />
                     </div>
-                    <div style={{ flex: 1 }}>
-                      <h3 style={{ fontWeight: "600", color: "hsl(150 20% 15%)", fontSize: "1rem" }}>
-                        {config.label}
-                      </h3>
-                      <p style={{ fontSize: "0.8rem", color: "hsl(150 10% 45%)" }}>
-                        {config.description}
-                      </p>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-sm font-bold text-foreground leading-tight">{config.label}</h3>
+                      <p className="text-xs text-muted-foreground mt-0.5 leading-snug">{config.description}</p>
                     </div>
-                    <div style={{ textAlign: "right" }}>
-                      <span style={{
-                        fontSize: "0.8rem",
-                        fontWeight: "600",
-                        color: getWeightColor(value),
-                        padding: "0.2rem 0.6rem",
-                        borderRadius: "9999px",
-                        backgroundColor: `${getWeightColor(value)}15`,
-                      }}>
-                        {getWeightLabel(value)}
-                      </span>
-                    </div>
+                    <span
+                      className="text-xs font-bold px-2.5 py-1 rounded-full flex-shrink-0 tabular-nums"
+                      style={{
+                        color: weightColor,
+                        backgroundColor: `${weightColor}14`,
+                      }}
+                    >
+                      {weightLabel}
+                    </span>
                   </div>
 
                   {/* Slider */}
-                  <div style={{ position: "relative" }}>
+                  <div className="space-y-1.5">
                     <input
                       type="range"
                       min={0}
                       max={100}
+                      step={5}
                       value={value}
                       onChange={(e) => handleChange(config.key, parseInt(e.target.value))}
+                      aria-label={`${config.label} priority: ${value}%`}
+                      className="w-full h-1.5 rounded-full appearance-none cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                       style={{
-                        width: "100%",
-                        height: "6px",
-                        borderRadius: "3px",
-                        appearance: "none",
-                        WebkitAppearance: "none",
-                        background: `linear-gradient(to right, ${config.color} 0%, ${config.color} ${value}%, hsl(40 20% 85%) ${value}%, hsl(40 20% 85%) 100%)`,
-                        outline: "none",
-                        cursor: "pointer",
+                        background: `linear-gradient(to right, ${config.color} 0%, ${config.color} ${value}%, hsl(var(--muted)) ${value}%, hsl(var(--muted)) 100%)`,
                         accentColor: config.color,
                       }}
                     />
-                    <div style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      marginTop: "0.25rem",
-                    }}>
-                      <span style={{ fontSize: "0.7rem", color: "hsl(150 10% 55%)" }}>Don't care</span>
-                      <span style={{ fontSize: "0.75rem", fontWeight: "bold", color: config.color }}>{value}%</span>
-                      <span style={{ fontSize: "0.7rem", color: "hsl(150 10% 55%)" }}>Top priority</span>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] text-muted-foreground/70">Don't care</span>
+                      <span className="text-xs font-bold tabular-nums" style={{ color: config.color }}>
+                        {value}%
+                      </span>
+                      <span className="text-[10px] text-muted-foreground/70">Top priority</span>
                     </div>
                   </div>
                 </div>
               );
             })}
-          </div>
 
-          {/* How it works */}
-          <div style={{
-            backgroundColor: "hsl(142 40% 96%)",
-            borderRadius: "0.75rem",
-            padding: "1.5rem",
-            marginBottom: "2rem",
-            border: "1px solid hsl(152 30% 80%)",
-          }}>
-            <h3 style={{ fontWeight: "bold", color: "hsl(150 20% 15%)", marginBottom: "0.75rem" }}>
-              💡 How Priorities Work
-            </h3>
-            <ul style={{ color: "hsl(150 10% 35%)", fontSize: "0.9rem", lineHeight: "1.8", paddingLeft: "1.25rem" }}>
-              <li>When a priority is set to <strong>Critical</strong> (80+), even minor concerns in that area will heavily downgrade a product's verdict.</li>
-              <li>At <strong>Moderate</strong> (40-60), the default balanced scoring is used.</li>
-              <li>At <strong>Minimal</strong> (0-20), that factor has very little influence on the overall verdict.</li>
-              <li>Your priorities are saved locally and apply to all future product scans.</li>
-            </ul>
-          </div>
+            {/* How priorities work */}
+            <div className="bg-primary/6 border border-primary/20 rounded-2xl p-4">
+              <div className="flex items-start gap-2.5 mb-3">
+                <Info className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                <h3 className="text-sm font-bold text-foreground">How Priorities Work</h3>
+              </div>
+              <ul className="space-y-1.5 text-xs text-muted-foreground leading-relaxed list-none">
+                <li className="flex items-start gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary/60 mt-1.5 flex-shrink-0" />
+                  <span><strong className="text-foreground">Critical (80+)</strong> — even minor concerns heavily downgrade a verdict</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary/60 mt-1.5 flex-shrink-0" />
+                  <span><strong className="text-foreground">Moderate (40–60)</strong> — balanced default scoring</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary/60 mt-1.5 flex-shrink-0" />
+                  <span><strong className="text-foreground">Minimal (0–20)</strong> — very little influence on the overall verdict</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary/60 mt-1.5 flex-shrink-0" />
+                  <span>Priorities are saved locally and apply to all future scans</span>
+                </li>
+              </ul>
+            </div>
 
-          {/* Actions */}
-          <div style={{ display: "flex", gap: "1rem", justifyContent: "center", flexWrap: "wrap" }}>
-            <CalAIButton emoji={saved ? "✅" : "💾"} onClick={handleSave}>
-              {saved ? "Saved!" : "Save Priorities"}
-            </CalAIButton>
-            <button
-              onClick={handleReset}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "0.5rem",
-                padding: "0.75rem 1.5rem",
-                borderRadius: "0.5rem",
-                border: "1px solid hsl(40 20% 85%)",
-                backgroundColor: "hsl(40 30% 98%)",
-                color: "hsl(150 10% 45%)",
-                cursor: "pointer",
-                fontSize: "0.9rem",
-                fontWeight: "500",
-              }}
-            >
-              <RotateCcw size={16} /> Reset to Default
-            </button>
+            {/* Actions */}
+            <div className="flex gap-3 justify-center pt-2 pb-2">
+              <button
+                onClick={handleSave}
+                className="flex-1 max-w-[12rem] inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-primary text-primary-foreground font-bold text-sm shadow-soft hover:bg-primary/90 hover:shadow-card transition-all duration-200 active:scale-[0.97]"
+              >
+                {saved ? (
+                  <>
+                    <Check className="w-4 h-4" />
+                    Saved!
+                  </>
+                ) : (
+                  "Save Priorities"
+                )}
+              </button>
+              <button
+                onClick={handleReset}
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-3 rounded-xl border border-border bg-card text-muted-foreground font-medium text-sm hover:text-foreground hover:border-border/80 transition-all duration-200"
+              >
+                <RotateCcw className="w-4 h-4" />
+                Reset
+              </button>
+            </div>
           </div>
         </div>
       </main>
 
       <Footer />
+      <BottomNav />
     </div>
   );
 }

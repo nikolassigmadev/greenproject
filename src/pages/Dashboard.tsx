@@ -1,9 +1,23 @@
 import { useState, useEffect } from "react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { BottomNav } from "@/components/BottomNav";
 import { Link } from "react-router-dom";
 import { loadScanHistory, clearScanHistory, getHistoryStats, type ScanHistoryEntry } from "@/utils/userPreferences";
-import { Trash2, BarChart3, TrendingUp, Clock, ShoppingBag, ExternalLink } from "lucide-react";
+import { Trash2, TrendingUp, Clock, ShoppingBag, ExternalLink, BarChart3, AlertTriangle } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+const formatDate = (ts: number) => {
+  const diff = Date.now() - ts;
+  const minutes = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  if (days < 7) return `${days}d ago`;
+  return new Date(ts).toLocaleDateString();
+};
 
 export default function Dashboard() {
   const [history, setHistory] = useState<ScanHistoryEntry[]>([]);
@@ -12,8 +26,8 @@ export default function Dashboard() {
   useEffect(() => {
     setHistory(loadScanHistory());
     const handler = () => setHistory(loadScanHistory());
-    window.addEventListener('scanHistoryUpdated', handler);
-    return () => window.removeEventListener('scanHistoryUpdated', handler);
+    window.addEventListener("scanHistoryUpdated", handler);
+    return () => window.removeEventListener("scanHistoryUpdated", handler);
   }, []);
 
   const stats = getHistoryStats(history);
@@ -24,272 +38,247 @@ export default function Dashboard() {
     setShowClearConfirm(false);
   };
 
-  const formatDate = (ts: number) => {
-    const d = new Date(ts);
-    const now = new Date();
-    const diff = now.getTime() - d.getTime();
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
-
-    if (minutes < 1) return "Just now";
-    if (minutes < 60) return `${minutes}m ago`;
-    if (hours < 24) return `${hours}h ago`;
-    if (days < 7) return `${days}d ago`;
-    return d.toLocaleDateString();
-  };
+  const statCards = [
+    { label: "Total Scans", value: stats.total, color: "hsl(152 48% 30%)", bg: "hsl(152 42% 96%)" },
+    { label: "Good Choices", value: stats.good, color: "hsl(142 55% 38%)", bg: "hsl(142 45% 96%)" },
+    { label: "Moderate", value: stats.moderate, color: "hsl(38 88% 44%)", bg: "hsl(38 70% 96%)" },
+    { label: "Avoid", value: stats.avoid, color: "hsl(0 68% 48%)", bg: "hsl(0 50% 97%)" },
+  ];
 
   return (
-    <div style={{ backgroundColor: "hsl(40 33% 95%)", minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+    <div className="min-h-screen flex flex-col bg-background">
       <Header />
 
-      <main style={{ flex: 1, paddingTop: "2rem", paddingBottom: "2rem" }}>
-        <div style={{ maxWidth: "56rem", margin: "0 auto", padding: "0 1rem" }}>
-          {/* Page Title */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "2rem", flexWrap: "wrap", gap: "1rem" }}>
-            <div>
-              <h1 style={{ fontSize: "2rem", fontWeight: "bold", color: "hsl(150 20% 15%)", marginBottom: "0.5rem" }}>
-                📊 My Dashboard
-              </h1>
-              <p style={{ color: "hsl(150 10% 45%)" }}>
-                Track your scanning history and see how your choices trend over time.
-              </p>
-            </div>
-            {history.length > 0 && (
-              <button
-                onClick={() => setShowClearConfirm(true)}
-                style={{
-                  display: "flex", alignItems: "center", gap: "0.4rem",
-                  padding: "0.5rem 1rem", borderRadius: "0.5rem",
-                  border: "1px solid hsl(0 60% 80%)", backgroundColor: "hsl(0 50% 97%)",
-                  color: "hsl(0 70% 50%)", cursor: "pointer", fontSize: "0.85rem",
-                }}
-              >
-                <Trash2 size={14} /> Clear History
-              </button>
-            )}
+      <main className="flex-1 pb-nav">
+        {/* Hero header */}
+        <div
+          className="px-5 pt-10 pb-12 text-center relative"
+          style={{ background: "var(--gradient-hero)" }}
+        >
+          <div className="max-w-2xl mx-auto">
+            <h1 className="text-2xl font-display font-extrabold tracking-tight mb-1.5" style={{ color: "#ffffff" }}>
+              My Dashboard
+            </h1>
+            <p className="text-sm" style={{ color: "rgba(255,255,255,0.72)" }}>
+              Track your scans and see how your choices evolve
+            </p>
           </div>
-
-          {/* Clear confirmation */}
-          {showClearConfirm && (
-            <div style={{
-              backgroundColor: "hsl(0 50% 97%)", border: "1px solid hsl(0 60% 80%)",
-              borderRadius: "0.75rem", padding: "1.25rem", marginBottom: "1.5rem",
-              display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem",
-            }}>
-              <p style={{ color: "hsl(0 70% 40%)", fontWeight: "500" }}>Delete all scan history? This can't be undone.</p>
-              <div style={{ display: "flex", gap: "0.5rem" }}>
-                <button onClick={handleClear} style={{
-                  padding: "0.5rem 1rem", borderRadius: "0.5rem", border: "none",
-                  backgroundColor: "hsl(0 70% 50%)", color: "white", cursor: "pointer", fontWeight: "600",
-                }}>Yes, Clear</button>
-                <button onClick={() => setShowClearConfirm(false)} style={{
-                  padding: "0.5rem 1rem", borderRadius: "0.5rem",
-                  border: "1px solid hsl(40 20% 85%)", backgroundColor: "hsl(40 30% 98%)",
-                  color: "hsl(150 10% 45%)", cursor: "pointer",
-                }}>Cancel</button>
-              </div>
-            </div>
+          {history.length > 0 && (
+            <button
+              onClick={() => setShowClearConfirm(true)}
+              className="absolute top-4 right-4 flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium hover:opacity-90 transition-all"
+              style={{ backgroundColor: "rgba(255,255,255,0.15)", borderColor: "rgba(255,255,255,0.25)", color: "rgba(255,255,255,0.85)" }}
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              Clear
+            </button>
           )}
+        </div>
 
-          {history.length === 0 ? (
-            /* Empty State */
-            <div style={{
-              backgroundColor: "hsl(40 30% 98%)", borderRadius: "0.75rem", padding: "3rem",
-              textAlign: "center", border: "1px solid hsl(40 20% 85%)",
-            }}>
-              <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>🔍</div>
-              <h2 style={{ fontSize: "1.5rem", fontWeight: "bold", color: "hsl(150 20% 15%)", marginBottom: "0.5rem" }}>
-                No Scans Yet
-              </h2>
-              <p style={{ color: "hsl(150 10% 45%)", marginBottom: "1.5rem" }}>
-                Start scanning products to build your history and track trends.
-              </p>
-              <Link to="/scan" style={{
-                display: "inline-flex", alignItems: "center", gap: "0.5rem",
-                padding: "0.75rem 1.5rem", borderRadius: "0.5rem",
-                backgroundColor: "hsl(152 45% 30%)", color: "white",
-                textDecoration: "none", fontWeight: "600",
-              }}>
-                <ShoppingBag size={18} /> Start Scanning
-              </Link>
-            </div>
-          ) : (
-            <>
-              {/* Stats Cards */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "1rem", marginBottom: "2rem" }}>
-                {[
-                  { label: "Total Scans", value: stats.total, emoji: "📦", color: "hsl(152 45% 30%)" },
-                  { label: "Good Choices", value: stats.good, emoji: "✅", color: "hsl(142 71% 45%)" },
-                  { label: "Moderate", value: stats.moderate, emoji: "🤔", color: "hsl(45 93% 47%)" },
-                  { label: "Caution", value: stats.caution, emoji: "⚠️", color: "hsl(25 80% 50%)" },
-                  { label: "Avoid", value: stats.avoid, emoji: "🚫", color: "hsl(0 70% 50%)" },
-                  { label: "Labor Concerns", value: stats.withLaborConcerns, emoji: "👷", color: "hsl(0 60% 45%)" },
-                ].map((stat) => (
-                  <div key={stat.label} style={{
-                    backgroundColor: "hsl(40 30% 98%)", borderRadius: "0.75rem",
-                    padding: "1.25rem", textAlign: "center",
-                    border: "1px solid hsl(40 20% 85%)",
-                  }}>
-                    <div style={{ fontSize: "1.5rem", marginBottom: "0.25rem" }}>{stat.emoji}</div>
-                    <div style={{ fontSize: "1.75rem", fontWeight: "bold", color: stat.color }}>{stat.value}</div>
-                    <div style={{ fontSize: "0.75rem", color: "hsl(150 10% 45%)" }}>{stat.label}</div>
-                  </div>
-                ))}
+        <div className="px-5 -mt-5 relative z-10">
+          <div className="max-w-2xl mx-auto space-y-4">
+            {/* Clear confirmation */}
+            {showClearConfirm && (
+              <div className="bg-destructive/8 border border-destructive/25 rounded-2xl p-4 flex items-center justify-between gap-4 flex-wrap animate-fade-in">
+                <div className="flex items-center gap-2 text-sm font-medium text-destructive">
+                  <AlertTriangle className="w-4 h-4" />
+                  Delete all scan history? This can't be undone.
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleClear}
+                    className="px-4 py-1.5 rounded-lg bg-destructive text-destructive-foreground text-xs font-bold hover:bg-destructive/90 transition-colors"
+                  >
+                    Yes, Clear
+                  </button>
+                  <button
+                    onClick={() => setShowClearConfirm(false)}
+                    className="px-4 py-1.5 rounded-lg border border-border bg-card text-muted-foreground text-xs font-medium hover:text-foreground transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
+            )}
 
-              {/* Weekly Trend */}
-              <div style={{
-                backgroundColor: "hsl(40 30% 98%)", borderRadius: "0.75rem",
-                padding: "1.5rem", marginBottom: "2rem", border: "1px solid hsl(40 20% 85%)",
-              }}>
-                <h2 style={{ fontSize: "1.25rem", fontWeight: "bold", color: "hsl(150 20% 15%)", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <TrendingUp size={20} style={{ color: "hsl(152 45% 30%)" }} />
-                  Weekly Trend
-                </h2>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "0.75rem" }}>
-                  {stats.weeks.map((week) => (
-                    <div key={week.week} style={{ textAlign: "center" }}>
-                      <div style={{
-                        height: "80px", display: "flex", flexDirection: "column",
-                        justifyContent: "flex-end", alignItems: "center", marginBottom: "0.5rem",
-                      }}>
-                        {week.total > 0 ? (
-                          <div style={{
-                            width: "100%", maxWidth: "60px",
-                            height: `${Math.max(20, week.percentage)}%`,
-                            backgroundColor: week.percentage >= 60 ? "hsl(152 45% 30%)" : week.percentage >= 30 ? "hsl(45 93% 47%)" : "hsl(0 70% 55%)",
-                            borderRadius: "0.375rem 0.375rem 0 0",
-                            display: "flex", alignItems: "center", justifyContent: "center",
-                            color: "white", fontWeight: "bold", fontSize: "0.75rem",
-                            minHeight: "20px",
-                            transition: "height 0.3s ease",
-                          }}>
-                            {week.percentage}%
-                          </div>
-                        ) : (
-                          <div style={{
-                            width: "100%", maxWidth: "60px", height: "20px",
-                            backgroundColor: "hsl(40 20% 90%)", borderRadius: "0.375rem 0.375rem 0 0",
-                            display: "flex", alignItems: "center", justifyContent: "center",
-                            color: "hsl(150 10% 55%)", fontSize: "0.7rem",
-                          }}>—</div>
-                        )}
+            {history.length === 0 ? (
+              /* Empty state */
+              <div className="bg-card rounded-2xl border border-border/60 shadow-soft p-10 text-center">
+                <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                  <BarChart3 className="w-7 h-7 text-primary" />
+                </div>
+                <h2 className="text-lg font-display font-bold text-foreground mb-2">No Scans Yet</h2>
+                <p className="text-sm text-muted-foreground mb-6 max-w-xs mx-auto">
+                  Start scanning products to build your history and track ethical trends.
+                </p>
+                <Link
+                  to="/scan"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-bold shadow-soft hover:shadow-card hover:bg-primary/90 transition-all"
+                >
+                  <ShoppingBag className="w-4 h-4" />
+                  Start Scanning
+                </Link>
+              </div>
+            ) : (
+              <>
+                {/* Stats grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                  {statCards.map((stat) => (
+                    <div
+                      key={stat.label}
+                      className="bg-card rounded-2xl border border-border/60 shadow-soft p-4 text-center"
+                    >
+                      <div
+                        className="text-2xl font-display font-extrabold mb-0.5 tabular-nums"
+                        style={{ color: stat.color }}
+                      >
+                        {stat.value}
                       </div>
-                      <div style={{ fontSize: "0.7rem", color: "hsl(150 10% 45%)", fontWeight: "500" }}>{week.week}</div>
-                      <div style={{ fontSize: "0.65rem", color: "hsl(150 10% 55%)" }}>{week.total} scans</div>
+                      <div className="text-xs text-muted-foreground font-medium">{stat.label}</div>
                     </div>
                   ))}
                 </div>
-                <p style={{ fontSize: "0.75rem", color: "hsl(150 10% 55%)", marginTop: "0.75rem", textAlign: "center", fontStyle: "italic" }}>
-                  % of scans rated Good or Moderate
-                </p>
-              </div>
 
-              {/* Average Eco Score */}
-              {stats.avgEcoScore > 0 && (
-                <div style={{
-                  backgroundColor: "hsl(40 30% 98%)", borderRadius: "0.75rem",
-                  padding: "1.5rem", marginBottom: "2rem", border: "1px solid hsl(40 20% 85%)",
-                  display: "flex", alignItems: "center", gap: "1.5rem",
-                }}>
-                  <div style={{
-                    width: "4.5rem", height: "4.5rem", borderRadius: "50%",
-                    backgroundColor: stats.avgEcoScore >= 50 ? "hsl(152 45% 30%)" : stats.avgEcoScore >= 30 ? "hsl(45 93% 47%)" : "hsl(0 70% 55%)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    color: "white", fontWeight: "bold", fontSize: "1.5rem", flexShrink: 0,
-                  }}>
-                    {Math.round(stats.avgEcoScore)}
-                  </div>
-                  <div>
-                    <h3 style={{ fontWeight: "bold", color: "hsl(150 20% 15%)", marginBottom: "0.25rem" }}>
-                      Average Eco-Score
-                    </h3>
-                    <p style={{ fontSize: "0.85rem", color: "hsl(150 10% 45%)" }}>
-                      {stats.avgEcoScore >= 60 ? "Great job! Your choices are environmentally conscious." :
-                       stats.avgEcoScore >= 40 ? "Decent choices overall, room for improvement." :
-                       "Consider looking for more eco-friendly alternatives."}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* Recent Scans */}
-              <div>
-                <h2 style={{ fontSize: "1.25rem", fontWeight: "bold", color: "hsl(150 20% 15%)", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <Clock size={20} style={{ color: "hsl(152 45% 30%)" }} />
-                  Recent Scans
-                </h2>
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                  {history.slice(0, 20).map((entry) => (
-                    <Link
-                      key={entry.id}
-                      to={`/product-off/${entry.barcode}`}
+                {/* Average Eco Score */}
+                {stats.avgEcoScore > 0 && (
+                  <div className="bg-card rounded-2xl border border-border/60 shadow-soft p-4 flex items-center gap-4">
+                    <div
+                      className="w-16 h-16 rounded-full flex items-center justify-center text-xl font-display font-extrabold text-white flex-shrink-0"
                       style={{
-                        backgroundColor: "hsl(40 30% 98%)", borderRadius: "0.75rem",
-                        padding: "1rem", border: "1px solid hsl(40 20% 85%)",
-                        display: "flex", alignItems: "center", gap: "1rem",
-                        textDecoration: "none", transition: "box-shadow 0.2s ease",
+                        backgroundColor:
+                          stats.avgEcoScore >= 50
+                            ? "hsl(152 48% 30%)"
+                            : stats.avgEcoScore >= 30
+                            ? "hsl(38 88% 44%)"
+                            : "hsl(0 68% 50%)",
                       }}
-                      onMouseEnter={(e) => (e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.08)")}
-                      onMouseLeave={(e) => (e.currentTarget.style.boxShadow = "none")}
                     >
-                      {entry.imageUrl ? (
-                        <img src={entry.imageUrl} alt="" style={{
-                          width: "50px", height: "50px", borderRadius: "0.5rem",
-                          objectFit: "cover", flexShrink: 0,
-                        }} />
-                      ) : (
-                        <div style={{
-                          width: "50px", height: "50px", borderRadius: "0.5rem",
-                          backgroundColor: "hsl(40 25% 93%)", display: "flex",
-                          alignItems: "center", justifyContent: "center", fontSize: "1.5rem",
-                          flexShrink: 0,
-                        }}>📦</div>
-                      )}
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                          <span style={{ fontSize: "1.25rem" }}>{entry.verdict.emoji}</span>
-                          <span style={{
-                            fontWeight: "600", color: "hsl(150 20% 15%)",
-                            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                          }}>
-                            {entry.productName || "Unknown Product"}
-                          </span>
-                        </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginTop: "0.25rem" }}>
-                          {entry.brand && (
-                            <span style={{ fontSize: "0.8rem", color: "hsl(150 10% 45%)" }}>{entry.brand}</span>
-                          )}
-                          <span style={{ fontSize: "0.75rem", color: "hsl(150 10% 55%)" }}>
-                            {formatDate(entry.timestamp)}
-                          </span>
-                        </div>
-                      </div>
-                      <div style={{
-                        padding: "0.3rem 0.6rem", borderRadius: "0.375rem",
-                        fontSize: "0.7rem", fontWeight: "600",
-                        backgroundColor: `${entry.verdict.color}15`,
-                        color: entry.verdict.color, whiteSpace: "nowrap",
-                      }}>
-                        {entry.verdict.label.split(" - ")[0]}
-                      </div>
-                      <ExternalLink size={14} style={{ color: "hsl(150 10% 55%)", flexShrink: 0 }} />
-                    </Link>
-                  ))}
-                </div>
-                {history.length > 20 && (
-                  <p style={{ textAlign: "center", color: "hsl(150 10% 55%)", fontSize: "0.85rem", marginTop: "1rem" }}>
-                    Showing 20 of {history.length} scans
-                  </p>
+                      {Math.round(stats.avgEcoScore)}
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-foreground mb-0.5">Average Eco-Score</h3>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        {stats.avgEcoScore >= 60
+                          ? "Great job! Your choices are environmentally conscious."
+                          : stats.avgEcoScore >= 40
+                          ? "Decent choices overall, room for improvement."
+                          : "Consider looking for more eco-friendly alternatives."}
+                      </p>
+                    </div>
+                  </div>
                 )}
-              </div>
-            </>
-          )}
+
+                {/* Weekly trend */}
+                <div className="bg-card rounded-2xl border border-border/60 shadow-soft p-4">
+                  <div className="flex items-center gap-2 mb-4">
+                    <TrendingUp className="w-4 h-4 text-primary" />
+                    <h2 className="text-sm font-bold text-foreground">Weekly Trend</h2>
+                  </div>
+                  <div className="grid grid-cols-4 gap-3">
+                    {stats.weeks.map((week) => (
+                      <div key={week.week} className="text-center">
+                        <div className="h-16 flex flex-col justify-end items-center mb-1.5">
+                          {week.total > 0 ? (
+                            <div
+                              className="w-full max-w-[44px] rounded-t-md flex items-center justify-center text-white font-bold text-[10px] min-h-[18px]"
+                              style={{
+                                height: `${Math.max(22, week.percentage)}%`,
+                                backgroundColor:
+                                  week.percentage >= 60
+                                    ? "hsl(152 48% 32%)"
+                                    : week.percentage >= 30
+                                    ? "hsl(38 88% 44%)"
+                                    : "hsl(0 68% 52%)",
+                              }}
+                            >
+                              {week.percentage}%
+                            </div>
+                          ) : (
+                            <div className="w-full max-w-[44px] h-[18px] rounded-t-md bg-muted flex items-center justify-center">
+                              <span className="text-[9px] text-muted-foreground">—</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="text-[10px] font-semibold text-muted-foreground">{week.week}</div>
+                        <div className="text-[9px] text-muted-foreground/60">{week.total} scans</div>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground/60 mt-3 text-center">
+                    % of scans rated Good or Moderate
+                  </p>
+                </div>
+
+                {/* Recent scans */}
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Clock className="w-4 h-4 text-primary" />
+                    <h2 className="text-sm font-bold text-foreground">Recent Scans</h2>
+                  </div>
+                  <div className="space-y-2">
+                    {history.slice(0, 20).map((entry) => (
+                      <Link
+                        key={entry.id}
+                        to={`/product-off/${entry.barcode}`}
+                        className={cn(
+                          "flex items-center gap-3 p-3 rounded-xl border border-border/60 bg-card",
+                          "hover:shadow-soft hover:border-border transition-all duration-200"
+                        )}
+                      >
+                        {entry.imageUrl ? (
+                          <img
+                            src={entry.imageUrl}
+                            alt=""
+                            className="w-11 h-11 rounded-lg object-cover flex-shrink-0"
+                          />
+                        ) : (
+                          <div className="w-11 h-11 rounded-lg bg-muted flex items-center justify-center flex-shrink-0 text-xl">
+                            📦
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-base leading-none">{entry.verdict.emoji}</span>
+                            <span className="text-sm font-semibold text-foreground truncate">
+                              {entry.productName || "Unknown Product"}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            {entry.brand && (
+                              <span className="text-xs text-muted-foreground truncate">{entry.brand}</span>
+                            )}
+                            <span className="text-xs text-muted-foreground/60 flex-shrink-0">
+                              {formatDate(entry.timestamp)}
+                            </span>
+                          </div>
+                        </div>
+                        <div
+                          className="px-2.5 py-1 rounded-lg text-[10px] font-bold flex-shrink-0"
+                          style={{
+                            backgroundColor: `${entry.verdict.color}14`,
+                            color: entry.verdict.color,
+                          }}
+                        >
+                          {entry.verdict.label.split(" - ")[0]}
+                        </div>
+                        <ExternalLink className="w-3.5 h-3.5 text-muted-foreground/50 flex-shrink-0" />
+                      </Link>
+                    ))}
+                  </div>
+                  {history.length > 20 && (
+                    <p className="text-center text-xs text-muted-foreground mt-3">
+                      Showing 20 of {history.length} scans
+                    </p>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </main>
 
       <Footer />
+      <BottomNav />
     </div>
   );
 }
