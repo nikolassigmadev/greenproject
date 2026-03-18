@@ -5,18 +5,73 @@ import { Link } from "react-router-dom";
 import {
   Camera, Leaf, Users, Heart, Apple,
   Settings, Globe, Shield, Search,
-  ChevronRight, BarChart3, TrendingUp,
+  ChevronRight, BarChart3, TrendingUp, Sparkles,
 } from "lucide-react";
 
 const CONTAINER = "w-full max-w-xl mx-auto px-5";
 
 const analysisCategories = [
-  { icon: Globe, title: "Origin", desc: "Supply chain tracing", color: "hsl(220 70% 50%)", bg: "hsl(220 60% 96%)" },
-  { icon: Shield, title: "Labor", desc: "Forced & child labor", color: "hsl(0 70% 50%)", bg: "hsl(0 50% 97%)" },
-  { icon: Leaf, title: "Carbon", desc: "CO₂ lifecycle data", color: "hsl(152 48% 30%)", bg: "hsl(152 40% 96%)" },
-  { icon: TrendingUp, title: "Alternatives", desc: "Greener options", color: "hsl(280 55% 50%)", bg: "hsl(280 40% 96%)" },
-  { icon: Search, title: "AI Scan", desc: "Label recognition", color: "hsl(38 88% 40%)", bg: "hsl(38 70% 96%)" },
-  { icon: Heart, title: "Animal", desc: "Cruelty-free check", color: "hsl(340 65% 50%)", bg: "hsl(340 50% 97%)" },
+  {
+    icon: Search,
+    title: "AI Scan",
+    desc: "Point your camera at any product label — GPT-4o reads it instantly",
+    stat: "GPT-4o powered",
+    statColor: "hsl(38 88% 40%)",
+    statBg: "hsl(38 70% 96%)",
+    gradientFrom: "hsl(38 88% 42%)",
+    gradientTo: "hsl(40 88% 54%)",
+    featured: true,
+  },
+  {
+    icon: Globe,
+    title: "Origin",
+    desc: "Traces where ingredients and materials actually come from",
+    stat: "Global coverage",
+    statColor: "hsl(220 70% 46%)",
+    statBg: "hsl(220 60% 96%)",
+    gradientFrom: "hsl(220 68% 46%)",
+    gradientTo: "hsl(215 72% 58%)",
+  },
+  {
+    icon: Shield,
+    title: "Labor",
+    desc: "Flags forced & child labor linked to parent companies",
+    stat: "10+ databases",
+    statColor: "hsl(0 68% 46%)",
+    statBg: "hsl(0 50% 97%)",
+    gradientFrom: "hsl(0 68% 48%)",
+    gradientTo: "hsl(8 72% 58%)",
+  },
+  {
+    icon: Leaf,
+    title: "Carbon",
+    desc: "Full CO₂ lifecycle breakdown — agriculture to distribution",
+    stat: "Per 100g precision",
+    statColor: "hsl(152 48% 28%)",
+    statBg: "hsl(152 42% 96%)",
+    gradientFrom: "hsl(152 50% 28%)",
+    gradientTo: "hsl(148 52% 40%)",
+  },
+  {
+    icon: TrendingUp,
+    title: "Alternatives",
+    desc: "Surfaces greener swaps ranked by your priorities",
+    stat: "Eco-score ranked",
+    statColor: "hsl(280 52% 46%)",
+    statBg: "hsl(280 40% 96%)",
+    gradientFrom: "hsl(280 58% 48%)",
+    gradientTo: "hsl(275 55% 60%)",
+  },
+  {
+    icon: Heart,
+    title: "Animal",
+    desc: "BBFAW-rated welfare scores for brands and companies",
+    stat: "BBFAW rated",
+    statColor: "hsl(340 62% 46%)",
+    statBg: "hsl(340 50% 97%)",
+    gradientFrom: "hsl(340 62% 48%)",
+    gradientTo: "hsl(350 65% 60%)",
+  },
 ];
 
 const steps = [
@@ -231,32 +286,85 @@ const Index = () => {
         {/* ── What We Analyze ── */}
         <section className="pt-8">
           <div className={CONTAINER}>
-            <h2 className="text-lg font-display font-extrabold text-foreground mb-4">What We Analyze</h2>
-          </div>
-          {/* Scroll container starts at the same left edge as the container */}
-          <div className="overflow-x-auto pb-3" style={{ scrollSnapType: "x mandatory", WebkitOverflowScrolling: "touch" }}>
-            <div className="flex gap-2.5 px-5 w-max max-w-none">
-              {analysisCategories.map((cat) => {
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-display font-extrabold text-foreground">What We Analyze</h2>
+              <span className="text-[10px] font-bold px-2.5 py-1 rounded-full" style={{ backgroundColor: "hsl(152 42% 96%)", color: "hsl(152 48% 28%)" }}>
+                6 dimensions
+              </span>
+            </div>
+
+            {/* Featured AI Scan tile */}
+            {(() => {
+              const featured = analysisCategories.find(c => c.featured)!;
+              const FeaturedIcon = featured.icon;
+              return (
+                <div
+                  className="rounded-2xl p-4 mb-2.5 overflow-hidden relative"
+                  style={{
+                    background: `linear-gradient(135deg, ${featured.gradientFrom} 0%, ${featured.gradientTo} 100%)`,
+                  }}
+                >
+                  {/* Decorative glow blob */}
+                  <div className="absolute -top-6 -right-6 w-28 h-28 rounded-full" style={{ backgroundColor: "rgba(255,255,255,0.08)" }} />
+                  <div className="absolute -bottom-4 -left-2 w-16 h-16 rounded-full" style={{ backgroundColor: "rgba(255,255,255,0.06)" }} />
+
+                  <div className="relative flex items-center gap-4">
+                    {/* Icon */}
+                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.25)" }}>
+                      <FeaturedIcon className="w-6 h-6 text-white" strokeWidth={2} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="text-sm font-display font-extrabold" style={{ color: "#ffffff" }}>
+                          {featured.title}
+                        </span>
+                        <span className="inline-flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: "rgba(255,255,255,0.22)", color: "#ffffff" }}>
+                          <Sparkles className="w-2.5 h-2.5" />
+                          {featured.stat}
+                        </span>
+                      </div>
+                      <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.80)" }}>
+                        {featured.desc}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* 2-column grid for remaining 5 items */}
+            <div className="grid grid-cols-2 gap-2.5">
+              {analysisCategories.filter(c => !c.featured).map((cat) => {
                 const Icon = cat.icon;
                 return (
                   <div
                     key={cat.title}
-                    className="bg-card rounded-2xl p-3.5 border border-border/60 shadow-soft hover:shadow-card transition-all duration-200"
-                    style={{ minWidth: "8rem", scrollSnapAlign: "start" }}
+                    className="bg-card rounded-2xl p-4 border border-border/60 shadow-soft hover:shadow-card hover:-translate-y-0.5 transition-all duration-200"
                   >
+                    {/* Gradient icon */}
                     <div
-                      className="w-9 h-9 rounded-xl flex items-center justify-center mb-2.5"
-                      style={{ backgroundColor: cat.bg }}
+                      className="w-10 h-10 rounded-xl flex items-center justify-center mb-3"
+                      style={{
+                        background: `linear-gradient(135deg, ${cat.gradientFrom} 0%, ${cat.gradientTo} 100%)`,
+                        boxShadow: `0 4px 12px ${cat.gradientFrom}40`,
+                      }}
                     >
-                      <Icon style={{ color: cat.color, width: "1.125rem", height: "1.125rem" }} />
+                      <Icon className="w-5 h-5 text-white" strokeWidth={2} />
                     </div>
-                    <div className="text-xs font-bold text-foreground mb-0.5">{cat.title}</div>
-                    <div className="text-[10px] text-muted-foreground leading-snug">{cat.desc}</div>
+
+                    <p className="text-xs font-display font-extrabold text-foreground mb-1">{cat.title}</p>
+                    <p className="text-[10px] text-muted-foreground leading-snug mb-2.5">{cat.desc}</p>
+
+                    {/* Stat pill */}
+                    <span
+                      className="inline-block text-[9px] font-bold px-2 py-0.5 rounded-full"
+                      style={{ backgroundColor: cat.statBg, color: cat.statColor }}
+                    >
+                      {cat.stat}
+                    </span>
                   </div>
                 );
               })}
-              {/* Right padding sentinel */}
-              <div className="w-5 flex-shrink-0" />
             </div>
           </div>
         </section>
