@@ -4,24 +4,13 @@ import { BottomNav } from "@/components/BottomNav";
 import { Link } from "react-router-dom";
 import {
   Camera, Leaf, Users, Heart, Apple,
-  Settings, Globe, Shield, Search,
-  ChevronRight, BarChart3, TrendingUp, Sparkles,
+  Settings, Globe, Shield,
+  ChevronRight, BarChart3, TrendingUp,
 } from "lucide-react";
 
 const CONTAINER = "w-full max-w-xl mx-auto px-5";
 
 const analysisCategories = [
-  {
-    icon: Search,
-    title: "AI Scan",
-    desc: "Point your camera at any product label — GPT-4o reads it instantly",
-    stat: "GPT-4o powered",
-    statColor: "hsl(38 88% 40%)",
-    statBg: "hsl(38 70% 96%)",
-    gradientFrom: "hsl(38 88% 42%)",
-    gradientTo: "hsl(40 88% 54%)",
-    featured: true,
-  },
   {
     icon: Globe,
     title: "Origin",
@@ -289,52 +278,12 @@ const Index = () => {
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-display font-extrabold text-foreground">What We Analyze</h2>
               <span className="text-[10px] font-bold px-2.5 py-1 rounded-full" style={{ backgroundColor: "hsl(152 42% 96%)", color: "hsl(152 48% 28%)" }}>
-                6 dimensions
+                5 dimensions
               </span>
             </div>
 
-            {/* Featured AI Scan tile */}
-            {(() => {
-              const featured = analysisCategories.find(c => c.featured)!;
-              const FeaturedIcon = featured.icon;
-              return (
-                <div
-                  className="rounded-2xl p-4 mb-2.5 overflow-hidden relative"
-                  style={{
-                    background: `linear-gradient(135deg, ${featured.gradientFrom} 0%, ${featured.gradientTo} 100%)`,
-                  }}
-                >
-                  {/* Decorative glow blob */}
-                  <div className="absolute -top-6 -right-6 w-28 h-28 rounded-full" style={{ backgroundColor: "rgba(255,255,255,0.08)" }} />
-                  <div className="absolute -bottom-4 -left-2 w-16 h-16 rounded-full" style={{ backgroundColor: "rgba(255,255,255,0.06)" }} />
-
-                  <div className="relative flex items-center gap-4">
-                    {/* Icon */}
-                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.25)" }}>
-                      <FeaturedIcon className="w-6 h-6 text-white" strokeWidth={2} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <span className="text-sm font-display font-extrabold" style={{ color: "#ffffff" }}>
-                          {featured.title}
-                        </span>
-                        <span className="inline-flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: "rgba(255,255,255,0.22)", color: "#ffffff" }}>
-                          <Sparkles className="w-2.5 h-2.5" />
-                          {featured.stat}
-                        </span>
-                      </div>
-                      <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.80)" }}>
-                        {featured.desc}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
-
-            {/* 2-column grid for remaining 5 items */}
             <div className="grid grid-cols-2 gap-2.5">
-              {analysisCategories.filter(c => !c.featured).map((cat) => {
+              {analysisCategories.map((cat) => {
                 const Icon = cat.icon;
                 return (
                   <div
