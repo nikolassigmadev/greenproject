@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 import {
   Camera, Leaf, Users, Heart, Apple,
   Settings, Globe, Shield,
-  ChevronRight, BarChart3, TrendingUp,
+  ChevronRight, BarChart3, TrendingUp, Activity,
 } from "lucide-react";
 
 const CONTAINER = "w-full max-w-xl mx-auto px-5";
@@ -60,6 +60,16 @@ const analysisCategories = [
     statBg: "hsl(340 50% 97%)",
     gradientFrom: "hsl(340 62% 48%)",
     gradientTo: "hsl(350 65% 60%)",
+  },
+  {
+    icon: Activity,
+    title: "Nutrition",
+    desc: "Nutri-Score grades and processing level for every product",
+    stat: "Nutri-Score A–E",
+    statColor: "hsl(195 68% 36%)",
+    statBg: "hsl(195 60% 96%)",
+    gradientFrom: "hsl(195 68% 36%)",
+    gradientTo: "hsl(190 65% 48%)",
   },
 ];
 
@@ -278,7 +288,7 @@ const Index = () => {
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-display font-extrabold text-foreground">What We Analyze</h2>
               <span className="text-[10px] font-bold px-2.5 py-1 rounded-full" style={{ backgroundColor: "hsl(152 42% 96%)", color: "hsl(152 48% 28%)" }}>
-                5 dimensions
+                6 dimensions
               </span>
             </div>
 
