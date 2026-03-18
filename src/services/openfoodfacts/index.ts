@@ -318,8 +318,14 @@ export const searchProducts = async (
     const data: OpenFoodFactsSearchResponse = await response.json();
 
     if (!data.products || data.products.length === 0) {
-      ocrSearchLogger.logTextSearch(trimmed, 0, { regionFiltered: true });
-      return [];
+      // Backend returned nothing — fall back to direct OFF API call from the browser
+      console.warn(`⚠️ Backend returned 0 results for "${trimmed}", falling back to direct OFF API...`);
+      const directResults = await searchProductsGlobal(trimmed, limit);
+      ocrSearchLogger.logTextSearch(trimmed, directResults.length, { regionFiltered: false });
+      if (directResults.length > 0) {
+        cacheSet(cacheKey, directResults);
+      }
+      return directResults;
     }
 
     // Try to get results from allowed regions first
@@ -338,24 +344,22 @@ export const searchProducts = async (
     if (results.length < Math.ceil(limit * 0.5)) {
       console.warn(`⚠️ Only ${results.length} results in allowed regions, including global results...`);
       const allResults = allNormalized.slice(0, limit * 2);
-
-      // Prefer regional results but fill with global ones if needed
       results = [
         ...results,
         ...allResults.filter(r => !results.some(ur => ur.barcode === r.barcode))
       ].slice(0, limit);
     }
 
-    // Log text search results
     ocrSearchLogger.logTextSearch(trimmed, results.length, { regionFiltered: true });
-
     cacheSet(cacheKey, results);
     return results;
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : 'Unknown error';
     console.error('OpenFoodFacts search error:', error);
     ocrSearchLogger.logAPIError('/cgi/search.pl', errorMsg);
-    return [];
+    // On any backend error, try direct OFF API as last resort
+    console.warn(`⚠️ Backend error, trying direct OFF API for "${trimmed}"...`);
+    return searchProductsGlobal(trimmed, limit);
   }
 };
 

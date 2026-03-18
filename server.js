@@ -281,23 +281,37 @@ app.post('/api/openfoodfacts/search', async (req, res) => {
 
     const pageSize = String(Math.min(limit, 50));
 
-    // Search strategy: use v2 brand tag search (fast), then sort results
-    // to prioritize products whose NAME matches the query, not just the brand
+    // Search strategy waterfall: brand tag → first-word brand → v2 text → legacy text search
     let data = null;
-    const searchTimeout = 25000; // OFF search is slow during degraded periods
+    const searchTimeout = 25000;
     const headers = { 'User-Agent': 'Scan2Source/1.0 (ethical-shopper)' };
-    const searchQuery = query.trim().toLowerCase().replace(/\s+/g, '-');
+    // Slugify for tag lookups: "Coca-Cola" → "coca-cola", "Lipton Ice Tea" → "lipton-ice-tea"
+    const searchQuery = query.trim().toLowerCase().replace(/[\s]+/g, '-');
     const queryLower = query.trim().toLowerCase();
     const queryWords = queryLower.split(/[\s-]+/).filter(w => w.length > 1);
 
-    // Search by brand tag (fast and reliable via v2 API)
+    const sortByRelevance = (products, words, fullQuery) => {
+      return products.sort((a, b) => {
+        const nameA = (a.product_name || a.product_name_en || '').toLowerCase();
+        const nameB = (b.product_name || b.product_name_en || '').toLowerCase();
+        const aExact = nameA.includes(fullQuery);
+        const bExact = nameB.includes(fullQuery);
+        if (aExact && !bExact) return -1;
+        if (!aExact && bExact) return 1;
+        const aScore = words.filter(w => nameA.includes(w)).length;
+        const bScore = words.filter(w => nameB.includes(w)).length;
+        return bScore - aScore;
+      });
+    };
+
+    // Strategy 1: v2 brand tag search — correct field is `brands_tags`, not `brands_tags_en`
     try {
       const brandParams = new URLSearchParams({
-        brands_tags_en: searchQuery,
+        brands_tags: searchQuery,
         fields,
-        page_size: String(Math.min(limit * 3, 100)), // Fetch extra to filter/sort
+        page_size: String(Math.min(limit * 3, 100)),
       });
-      console.log(`   Trying v2 brand tag search: "${searchQuery}"`);
+      console.log(`   [1] v2 brand tag search: brands_tags="${searchQuery}"`);
       const brandResponse = await fetch(`https://world.openfoodfacts.org/api/v2/search?${brandParams}`, {
         signal: AbortSignal.timeout(searchTimeout),
         headers,
@@ -305,41 +319,26 @@ app.post('/api/openfoodfacts/search', async (req, res) => {
       if (brandResponse.ok) {
         const brandData = await brandResponse.json();
         if (brandData.products?.length > 0) {
-          // Sort: products whose name contains the query come first
-          brandData.products.sort((a, b) => {
-            const nameA = (a.product_name || a.product_name_en || '').toLowerCase();
-            const nameB = (b.product_name || b.product_name_en || '').toLowerCase();
-            const aMatchesName = queryWords.some(w => nameA.includes(w));
-            const bMatchesName = queryWords.some(w => nameB.includes(w));
-            // Exact product name match first
-            const aExact = nameA.includes(queryLower);
-            const bExact = nameB.includes(queryLower);
-            if (aExact && !bExact) return -1;
-            if (!aExact && bExact) return 1;
-            if (aMatchesName && !bMatchesName) return -1;
-            if (!aMatchesName && bMatchesName) return 1;
-            return 0;
-          });
+          sortByRelevance(brandData.products, queryWords, queryLower);
           data = brandData;
-          console.log(`   ✅ Brand search returned ${data.products.length} products (sorted by name relevance)`);
+          console.log(`   ✅ [1] Brand tag search returned ${data.products.length} products`);
         }
       }
     } catch (e) {
-      console.warn(`   ⚠️ Brand search failed: ${e.message}`);
+      console.warn(`   ⚠️ [1] Brand tag search failed: ${e.message}`);
     }
 
-    // If brand search returned nothing and query has multiple words,
-    // try searching by just the first word as brand (e.g. "Lipton" from "Lipton Lemon Ice Tea")
-    if (!data || !data.products?.length) {
+    // Strategy 2: first-word brand tag (e.g. "Lipton" from "Lipton Lemon Ice Tea")
+    if (!data?.products?.length) {
       const firstWord = queryWords[0];
       if (firstWord && firstWord !== searchQuery) {
         try {
           const firstWordParams = new URLSearchParams({
-            brands_tags_en: firstWord,
+            brands_tags: firstWord,
             fields,
             page_size: String(Math.min(limit * 3, 100)),
           });
-          console.log(`   Trying v2 brand search with first word: "${firstWord}"`);
+          console.log(`   [2] First-word brand tag search: brands_tags="${firstWord}"`);
           const fwResponse = await fetch(`https://world.openfoodfacts.org/api/v2/search?${firstWordParams}`, {
             signal: AbortSignal.timeout(searchTimeout),
             headers,
@@ -347,60 +346,56 @@ app.post('/api/openfoodfacts/search', async (req, res) => {
           if (fwResponse.ok) {
             const fwData = await fwResponse.json();
             if (fwData.products?.length > 0) {
-              // Filter & sort: prioritize products whose name matches the remaining query words
-              const otherWords = queryWords.slice(1);
-              fwData.products.sort((a, b) => {
-                const nameA = (a.product_name || a.product_name_en || '').toLowerCase();
-                const nameB = (b.product_name || b.product_name_en || '').toLowerCase();
-                const aScore = otherWords.filter(w => nameA.includes(w)).length;
-                const bScore = otherWords.filter(w => nameB.includes(w)).length;
-                return bScore - aScore;
-              });
+              sortByRelevance(fwData.products, queryWords.slice(1), queryLower);
               data = fwData;
-              console.log(`   ✅ First-word brand search returned ${data.products.length} products`);
+              console.log(`   ✅ [2] First-word brand search returned ${data.products.length} products`);
             }
           }
         } catch (e) {
-          console.warn(`   ⚠️ First-word brand search failed: ${e.message}`);
+          console.warn(`   ⚠️ [2] First-word brand search failed: ${e.message}`);
         }
       }
     }
 
-    // If brand search returned nothing, try categories
-    if (!data || !data.products?.length) {
+    // Strategy 3: v2 API full-text search via `q` param (supports product name + brand)
+    if (!data?.products?.length) {
       try {
-        const catParams = new URLSearchParams({
-          categories_tags_en: searchQuery,
+        const v2TextParams = new URLSearchParams({
+          q: query.trim(),
           fields,
-          page_size: pageSize,
+          page_size: String(Math.min(limit * 2, 50)),
+          sort_by: 'unique_scans_n',
         });
-        console.log(`   Trying v2 categories search: "${searchQuery}"`);
-        const catResponse = await fetch(`https://world.openfoodfacts.org/api/v2/search?${catParams}`, {
+        console.log(`   [3] v2 full-text search: q="${query.trim()}"`);
+        const v2TextResponse = await fetch(`https://world.openfoodfacts.org/api/v2/search?${v2TextParams}`, {
           signal: AbortSignal.timeout(searchTimeout),
           headers,
         });
-        if (catResponse.ok) {
-          const catData = await catResponse.json();
-          if (catData.products?.length > 0) {
-            data = catData;
-            console.log(`   ✅ Categories search returned ${data.products.length} products`);
+        if (v2TextResponse.ok) {
+          const v2TextData = await v2TextResponse.json();
+          if (v2TextData.products?.length > 0) {
+            sortByRelevance(v2TextData.products, queryWords, queryLower);
+            data = v2TextData;
+            console.log(`   ✅ [3] v2 text search returned ${data.products.length} products`);
           }
         }
       } catch (e) {
-        console.warn(`   ⚠️ Categories search failed: ${e.message}`);
+        console.warn(`   ⚠️ [3] v2 text search failed: ${e.message}`);
       }
     }
 
-    // Final fallback: full-text search using search_terms (slower but matches product names)
-    if (!data || !data.products?.length) {
+    // Strategy 4: legacy cgi/search.pl — requires action=process for JSON response
+    if (!data?.products?.length) {
       try {
         const textParams = new URLSearchParams({
           search_terms: query.trim(),
+          action: 'process',   // ← required — without this, returns HTML not JSON
+          json: '1',
           fields,
           page_size: pageSize,
-          json: '1',
+          sort_by: 'unique_scans_n',
         });
-        console.log(`   Trying full-text search: "${query.trim()}"`);
+        console.log(`   [4] Legacy full-text search: search_terms="${query.trim()}"`);
         const textResponse = await fetch(`https://world.openfoodfacts.org/cgi/search.pl?${textParams}`, {
           signal: AbortSignal.timeout(searchTimeout),
           headers,
@@ -409,11 +404,11 @@ app.post('/api/openfoodfacts/search', async (req, res) => {
           const textData = await textResponse.json();
           if (textData.products?.length > 0) {
             data = textData;
-            console.log(`   ✅ Full-text search returned ${data.products.length} products`);
+            console.log(`   ✅ [4] Legacy text search returned ${data.products.length} products`);
           }
         }
       } catch (e) {
-        console.warn(`   ⚠️ Full-text search failed: ${e.message}`);
+        console.warn(`   ⚠️ [4] Legacy text search failed: ${e.message}`);
       }
     }
 
