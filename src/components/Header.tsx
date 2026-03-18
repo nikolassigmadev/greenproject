@@ -1,8 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
-import { Leaf, Menu, X, Camera, Settings, BarChart3, ShoppingBag, Home } from "lucide-react";
+import { Leaf, Camera, Home, ShoppingBag, BarChart3, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
 
 const navItems = [
   { path: "/", label: "Home", icon: Home },
@@ -15,29 +14,68 @@ const navItems = [
 export function Header() {
   const location = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 8);
+    const handleScroll = () => setIsScrolled(window.scrollY > 4);
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  useEffect(() => {
-    setIsMobileMenuOpen(false);
-  }, [location.pathname]);
-
   return (
     <header
       className={cn(
-        "sticky top-0 z-50 w-full border-b border-transparent bg-background/80 backdrop-blur-xl transition-all duration-300",
-        isScrolled && "border-border/50 shadow-soft bg-background/96"
+        "sticky top-0 z-50 w-full transition-all duration-200",
+        isScrolled
+          ? "bg-background/94 backdrop-blur-2xl border-b border-border/40 shadow-[0_1px_12px_-2px_hsl(150_20%_20%/0.08)]"
+          : "bg-background/60 backdrop-blur-xl border-b border-transparent"
       )}
+      style={{ WebkitBackdropFilter: "blur(20px)" }}
     >
-      <div className="container flex h-14 items-center justify-between">
+      {/* ── Mobile header ── */}
+      <div className="md:hidden flex items-center justify-between px-4 h-12">
+        {/* Logo mark */}
+        <Link to="/" className="flex items-center gap-2 group">
+          <div
+            className="w-7 h-7 rounded-lg flex items-center justify-center transition-transform duration-150 group-active:scale-90"
+            style={{
+              background: "linear-gradient(145deg, hsl(152 52% 28%) 0%, hsl(148 55% 38%) 100%)",
+              boxShadow: "0 2px 8px hsl(152 52% 28% / 0.35)",
+            }}
+          >
+            <Leaf className="w-3.5 h-3.5 text-white" strokeWidth={2.5} />
+          </div>
+          <span className="font-display font-bold text-base text-foreground">
+            Ethical<span className="text-primary">Shopper</span>
+          </span>
+        </Link>
+
+        {/* Scan shortcut — top right */}
+        <Link
+          to="/scan"
+          aria-label="Scan a product"
+          className={cn(
+            "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-150 active:scale-95",
+            location.pathname === "/scan"
+              ? "bg-primary/15 text-primary"
+              : "bg-primary text-primary-foreground shadow-[0_2px_10px_hsl(152_52%_28%/0.35)]"
+          )}
+        >
+          <Camera className="w-3.5 h-3.5" strokeWidth={2.2} />
+          Scan
+        </Link>
+      </div>
+
+      {/* ── Desktop header ── */}
+      <div className="hidden md:flex container items-center justify-between h-14">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2.5 group">
-          <div className="w-8 h-8 rounded-xl bg-gradient-hero flex items-center justify-center transition-transform duration-200 group-hover:scale-105">
+          <div
+            className="w-8 h-8 rounded-xl flex items-center justify-center transition-transform duration-150 group-hover:scale-105"
+            style={{
+              background: "linear-gradient(145deg, hsl(152 52% 28%) 0%, hsl(148 55% 38%) 100%)",
+              boxShadow: "0 2px 12px hsl(152 52% 28% / 0.35)",
+            }}
+          >
             <Leaf className="w-4 h-4 text-white" strokeWidth={2.5} />
           </div>
           <span className="font-display font-bold text-lg text-foreground group-hover:text-primary transition-colors">
@@ -45,9 +83,9 @@ export function Header() {
           </span>
         </Link>
 
-        {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center gap-0.5" aria-label="Main navigation">
-          {navItems.map((item) => {
+        {/* Desktop nav */}
+        <nav className="flex items-center gap-0.5" aria-label="Main navigation">
+          {navItems.filter(i => i.path !== "/scan").map((item) => {
             const isActive = location.pathname === item.path;
             return (
               <Link
@@ -55,10 +93,10 @@ export function Header() {
                 to={item.path}
                 aria-current={isActive ? "page" : undefined}
                 className={cn(
-                  "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200",
+                  "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-150",
                   isActive
                     ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/70"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
                 )}
               >
                 <item.icon className="w-3.5 h-3.5" />
@@ -66,61 +104,22 @@ export function Header() {
               </Link>
             );
           })}
+
+          {/* Scan CTA */}
           <Link
             to="/scan"
-            className="ml-2 flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-all duration-200 shadow-soft hover:shadow-card"
+            className="ml-2 flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-sm font-semibold transition-all duration-150 hover:opacity-90 active:scale-[0.97]"
+            style={{
+              background: "linear-gradient(135deg, hsl(152 52% 28%) 0%, hsl(148 55% 38%) 100%)",
+              color: "#ffffff",
+              boxShadow: "0 2px 12px hsl(152 52% 28% / 0.35)",
+            }}
           >
             <Camera className="w-3.5 h-3.5" />
             Scan Now
           </Link>
         </nav>
-
-        {/* Mobile: hamburger (visible only when needed for extra nav) */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="md:hidden w-9 h-9"
-          aria-label="Toggle navigation menu"
-          aria-expanded={isMobileMenuOpen}
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        >
-          {isMobileMenuOpen ? (
-            <X className="w-5 h-5" />
-          ) : (
-            <Menu className="w-5 h-5" />
-          )}
-        </Button>
       </div>
-
-      {/* Mobile dropdown (preferences + database — not in bottom nav) */}
-      {isMobileMenuOpen && (
-        <div className="md:hidden border-t border-border/50 bg-background/97 backdrop-blur-xl animate-fade-in">
-          <nav className="container py-3 space-y-0.5" aria-label="Extended navigation">
-            {[
-              { path: "/preferences", label: "My Priorities", icon: Settings },
-              { path: "/database", label: "Food Database", icon: ShoppingBag },
-            ].map((item) => {
-              const isActive = location.pathname === item.path;
-              return (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  aria-current={isActive ? "page" : undefined}
-                  className={cn(
-                    "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 w-full",
-                    isActive
-                      ? "bg-primary/10 text-primary"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/70"
-                  )}
-                >
-                  <item.icon className="w-4 h-4" />
-                  <span>{item.label}</span>
-                </Link>
-              );
-            })}
-          </nav>
-        </div>
-      )}
     </header>
   );
 }
