@@ -74,11 +74,25 @@ const calculateEcoScore = (result: OpenFoodFactsResult): number => {
 };
 
 // Function to filter and select best products
-const filterBestProducts = (results: OpenFoodFactsResult[]): OpenFoodFactsResult[] => {
-  if (results.length <= 5) return results;
+const filterBestProducts = (results: OpenFoodFactsResult[], query?: string): OpenFoodFactsResult[] => {
+  // If we have a query, pre-filter to only products whose name or brand contains
+  // at least one word from the query — this prevents unrelated high-eco-score
+  // products (e.g. "Prince Goût Chocolat") from beating the actual match.
+  let pool = results;
+  if (query && query.trim()) {
+    const words = query.trim().toLowerCase().split(/[\s-]+/).filter(w => w.length > 1);
+    const relevant = results.filter(r => {
+      const name = (r.productName || '').toLowerCase();
+      const brand = (r.brand || '').toLowerCase();
+      return words.some(w => name.includes(w) || brand.includes(w));
+    });
+    if (relevant.length > 0) pool = relevant;
+  }
+
+  if (pool.length <= 5) return pool;
 
   // Calculate eco scores for all products
-  const productsWithScores = results.map(result => ({
+  const productsWithScores = pool.map(result => ({
     result,
     ecoScore: calculateEcoScore(result)
   }));
@@ -1225,7 +1239,7 @@ const Scan = () => {
       const results = await searchOffProducts(productName.trim(), 20);
 
       // Filter to show only the best 3 results (ranked by eco data completeness)
-      const topResults = filterBestProducts(results);
+      const topResults = filterBestProducts(results, productName.trim());
 
       if (topResults.length > 0) {
         sessionStorage.setItem('scan_candidates', JSON.stringify(topResults));
@@ -1313,12 +1327,12 @@ const Scan = () => {
 
       // Prefer products with eco-score, but fallback to all products if none have eco-score
       const withEcoScore = results.filter(hasEcoScore);
-      let filteredResults = filterBestProducts(withEcoScore);
-      
+      let filteredResults = filterBestProducts(withEcoScore, searchQuery);
+
       // Fallback: if no products with eco-score, show all products found
       if (filteredResults.length === 0 && results.length > 0) {
         console.warn(`⚠️ No products with Eco-Score found, showing all results...`);
-        filteredResults = filterBestProducts(results);
+        filteredResults = filterBestProducts(results, searchQuery);
       }
 
       if (filteredResults.length === 0) {
