@@ -181,19 +181,18 @@ const Index = () => {
           <div className={CONTAINER}>
             <div className="grid grid-cols-3 gap-2.5">
               {[
-                { emoji: "🔍", label: "Scan", sub: "Any product", to: "/scan" },
-                { emoji: "💡", label: "Insights", sub: "Get verdicts", to: "/scan" },
-                { emoji: "🌱", label: "Better", sub: "Alternatives", to: "/products" },
+                { emoji: "🔍", label: "Scan", sub: "Any product" },
+                { emoji: "💡", label: "Insights", sub: "Get verdicts" },
+                { emoji: "🌱", label: "Better", sub: "Alternatives" },
               ].map((item) => (
-                <Link
+                <div
                   key={item.label}
-                  to={item.to}
-                  className="bg-card rounded-2xl py-4 px-2 text-center border border-border/60 shadow-card hover:shadow-elevated hover:-translate-y-0.5 transition-all duration-200 active:scale-[0.97]"
+                  className="bg-card rounded-2xl py-4 px-2 text-center border border-border/60 shadow-card"
                 >
                   <div className="text-2xl mb-1.5">{item.emoji}</div>
                   <div className="text-xs font-bold text-foreground leading-tight">{item.label}</div>
                   <div className="text-[10px] text-muted-foreground mt-0.5">{item.sub}</div>
-                </Link>
+                </div>
               ))}
             </div>
           </div>
