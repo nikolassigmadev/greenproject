@@ -110,9 +110,9 @@ const steps = [
 ];
 
 const trustStats = [
-  { value: "6", label: "Impact dimensions" },
-  { value: "10+", label: "Ethics databases" },
-  { value: "100g", label: "CO₂ precision" },
+  { value: "3M+", label: "Products covered" },
+  { value: "6", label: "Checks every scan" },
+  { value: "Free", label: "No account needed" },
 ];
 
 const Index = () => {
