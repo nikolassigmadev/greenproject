@@ -128,19 +128,19 @@ const Index = () => {
           className="relative overflow-hidden px-5 pt-12 pb-20 text-center"
           style={{ background: "var(--gradient-hero)" }}
         >
-          {/* Floating product icons */}
+          {/* Floating product icons — pinned to edges, float vertically only */}
           {[
-            { icon: ShoppingBag, cls: "animate-bubble-1", pos: "top-6 right-6",    size: "w-11 h-11", bg: "rgba(255,255,255,0.20)", delay: "0s",    rot: "rotate-12" },
-            { icon: Droplets,    cls: "animate-bubble-2", pos: "top-16 left-4",   size: "w-10 h-10", bg: "rgba(255,255,255,0.18)", delay: "-2s",   rot: "-rotate-6" },
-            { icon: Coffee,      cls: "animate-bubble-3", pos: "bottom-8 right-10",size: "w-10 h-10", bg: "rgba(255,255,255,0.20)", delay: "-1.5s", rot: "rotate-6" },
-            { icon: Package,     cls: "animate-bubble-4", pos: "bottom-12 left-6", size: "w-12 h-12", bg: "rgba(255,255,255,0.16)", delay: "-3s",   rot: "-rotate-12" },
-            { icon: Apple,       cls: "animate-bubble-5", pos: "top-1/2 right-4",  size: "w-9 h-9",   bg: "rgba(255,255,255,0.18)", delay: "-1s",   rot: "rotate-3" },
-            { icon: Fish,        cls: "animate-bubble-1", pos: "top-1/3 left-10",  size: "w-9 h-9",   bg: "rgba(255,255,255,0.15)", delay: "-4s",   rot: "-rotate-8" },
-          ].map(({ icon: Icon, cls, pos, size, bg, delay, rot }) => (
+            { icon: ShoppingBag, cls: "animate-bubble-1", style: { top: "12px",  right: "10px"  }, bg: "rgba(255,255,255,0.20)", delay: "0s",    rot: "rotate-12" },
+            { icon: Droplets,    cls: "animate-bubble-2", style: { top: "52px",  left: "8px"    }, bg: "rgba(255,255,255,0.18)", delay: "-2s",   rot: "-rotate-6" },
+            { icon: Coffee,      cls: "animate-bubble-3", style: { bottom: "20px", right: "8px" }, bg: "rgba(255,255,255,0.20)", delay: "-1.5s", rot: "rotate-6" },
+            { icon: Package,     cls: "animate-bubble-4", style: { bottom: "48px", left: "6px"  }, bg: "rgba(255,255,255,0.16)", delay: "-3s",   rot: "-rotate-12" },
+            { icon: Apple,       cls: "animate-bubble-5", style: { top: "40%",  right: "6px"   }, bg: "rgba(255,255,255,0.18)", delay: "-1s",   rot: "rotate-3" },
+            { icon: Fish,        cls: "animate-bubble-1", style: { top: "28%",  left: "6px"    }, bg: "rgba(255,255,255,0.15)", delay: "-4s",   rot: "-rotate-8" },
+          ].map(({ icon: Icon, cls, style, bg, delay, rot }) => (
             <div
-              key={pos}
-              className={`${cls} absolute ${pos} ${size} rounded-2xl flex items-center justify-center pointer-events-none ${rot}`}
-              style={{ backgroundColor: bg, border: "1px solid rgba(255,255,255,0.30)", backdropFilter: "blur(4px)", animationDelay: delay }}
+              key={delay}
+              className={`${cls} absolute w-10 h-10 rounded-2xl flex items-center justify-center pointer-events-none ${rot}`}
+              style={{ ...style, backgroundColor: bg, border: "1px solid rgba(255,255,255,0.30)", backdropFilter: "blur(4px)", animationDelay: delay }}
             >
               <Icon className="w-5 h-5 text-white" strokeWidth={1.8} />
             </div>

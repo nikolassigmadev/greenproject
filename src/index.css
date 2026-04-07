@@ -240,38 +240,37 @@
 
   @keyframes bubble-drift-1 {
     0%   { transform: translate(0px, 0px) rotate(0deg) scale(1); }
-    20%  { transform: translate(28px, -22px) rotate(8deg) scale(1.06); }
-    45%  { transform: translate(50px, 12px) rotate(-4deg) scale(0.94); }
-    70%  { transform: translate(18px, 38px) rotate(6deg) scale(1.04); }
+    25%  { transform: translate(0px, -12px) rotate(6deg) scale(1.04); }
+    50%  { transform: translate(4px, -20px) rotate(-3deg) scale(0.96); }
+    75%  { transform: translate(0px, -10px) rotate(5deg) scale(1.02); }
     100% { transform: translate(0px, 0px) rotate(0deg) scale(1); }
   }
 
   @keyframes bubble-drift-2 {
     0%   { transform: translate(0px, 0px) rotate(0deg) scale(1); }
-    25%  { transform: translate(-32px, 18px) rotate(-10deg) scale(1.08); }
-    55%  { transform: translate(14px, -30px) rotate(5deg) scale(0.90); }
-    80%  { transform: translate(-20px, 10px) rotate(-3deg) scale(1.03); }
+    30%  { transform: translate(0px, 14px) rotate(-7deg) scale(1.05); }
+    60%  { transform: translate(-4px, 8px) rotate(4deg) scale(0.95); }
     100% { transform: translate(0px, 0px) rotate(0deg) scale(1); }
   }
 
   @keyframes bubble-drift-3 {
     0%   { transform: translate(0px, 0px) rotate(0deg) scale(1); }
-    33%  { transform: translate(22px, 28px) rotate(12deg) scale(1.10); }
-    66%  { transform: translate(-18px, -16px) rotate(-8deg) scale(0.92); }
+    33%  { transform: translate(0px, -16px) rotate(10deg) scale(1.06); }
+    66%  { transform: translate(4px, -8px) rotate(-5deg) scale(0.94); }
     100% { transform: translate(0px, 0px) rotate(0deg) scale(1); }
   }
 
   @keyframes bubble-drift-4 {
     0%   { transform: translate(0px, 0px) rotate(0deg) scale(1); }
-    30%  { transform: translate(-40px, -24px) rotate(-12deg) scale(1.05); }
-    60%  { transform: translate(24px, 36px) rotate(7deg) scale(0.95); }
+    40%  { transform: translate(0px, 18px) rotate(-8deg) scale(1.05); }
+    70%  { transform: translate(-3px, 10px) rotate(4deg) scale(0.96); }
     100% { transform: translate(0px, 0px) rotate(0deg) scale(1); }
   }
 
   @keyframes bubble-drift-5 {
     0%   { transform: translate(0px, 0px) rotate(0deg) scale(1); }
-    40%  { transform: translate(36px, -18px) rotate(-6deg) scale(0.93); }
-    75%  { transform: translate(-12px, 26px) rotate(10deg) scale(1.07); }
+    35%  { transform: translate(0px, -14px) rotate(-5deg) scale(0.95); }
+    70%  { transform: translate(3px, -6px) rotate(8deg) scale(1.05); }
     100% { transform: translate(0px, 0px) rotate(0deg) scale(1); }
   }
 
