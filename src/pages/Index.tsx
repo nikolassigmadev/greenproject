@@ -7,7 +7,6 @@ import {
   Settings, Globe, Shield,
   ChevronRight, BarChart3, TrendingUp, Activity,
   Scan, Zap, ArrowRight, Sparkles,
-  ShoppingBag, Coffee, Droplets, Package, Sandwich, Wine, Milk, Cookie, Fish,
 } from "lucide-react";
 
 const CONTAINER = "w-full max-w-xl mx-auto px-5";
@@ -128,29 +127,25 @@ const Index = () => {
           className="relative overflow-hidden px-5 pt-12 pb-20 text-center"
           style={{ background: "var(--gradient-hero)" }}
         >
-          {/* Floating product icons — pinned to edges, float vertically only */}
-          {[
-            { icon: ShoppingBag, cls: "animate-bubble-1", style: { top: "12px",  right: "10px"  }, bg: "rgba(255,255,255,0.20)", delay: "0s",    rot: "rotate-12" },
-            { icon: Droplets,    cls: "animate-bubble-2", style: { top: "52px",  left: "8px"    }, bg: "rgba(255,255,255,0.18)", delay: "-2s",   rot: "-rotate-6" },
-            { icon: Coffee,      cls: "animate-bubble-3", style: { bottom: "20px", right: "8px" }, bg: "rgba(255,255,255,0.20)", delay: "-1.5s", rot: "rotate-6" },
-            { icon: Package,     cls: "animate-bubble-4", style: { bottom: "48px", left: "6px"  }, bg: "rgba(255,255,255,0.16)", delay: "-3s",   rot: "-rotate-12" },
-            { icon: Apple,       cls: "animate-bubble-5", style: { top: "40%",  right: "6px"   }, bg: "rgba(255,255,255,0.18)", delay: "-1s",   rot: "rotate-3" },
-            { icon: Fish,        cls: "animate-bubble-1", style: { top: "28%",  left: "6px"    }, bg: "rgba(255,255,255,0.15)", delay: "-4s",   rot: "-rotate-8" },
-          ].map(({ icon: Icon, cls, style, bg, delay, rot }) => (
-            <div
-              key={delay}
-              className={`${cls} absolute w-10 h-10 rounded-2xl flex items-center justify-center pointer-events-none ${rot}`}
-              style={{ ...style, backgroundColor: bg, border: "1px solid rgba(255,255,255,0.30)", backdropFilter: "blur(4px)", animationDelay: delay }}
-            >
-              <Icon className="w-5 h-5 text-white" strokeWidth={1.8} />
-            </div>
-          ))}
+          {/* Aurora orbs — large blurred colour blobs in corners, never near text */}
+          <div className="animate-orb-1 absolute -top-20 -left-20 w-72 h-72 rounded-full pointer-events-none" style={{ background: "radial-gradient(circle, hsl(180 90% 55%) 0%, transparent 70%)", filter: "blur(48px)" }} />
+          <div className="animate-orb-2 absolute -bottom-24 -right-16 w-80 h-80 rounded-full pointer-events-none" style={{ background: "radial-gradient(circle, hsl(155 85% 50%) 0%, transparent 70%)", filter: "blur(56px)", animationDelay: "-3s" }} />
+          <div className="animate-orb-3 absolute top-1/2 -right-24 w-56 h-56 rounded-full pointer-events-none" style={{ background: "radial-gradient(circle, hsl(200 90% 60%) 0%, transparent 70%)", filter: "blur(40px)", animationDelay: "-6s" }} />
 
           <div className="max-w-sm mx-auto relative z-10">
-            {/* Badge */}
+            {/* Pulsing icon */}
+            <div className="flex justify-center mb-5">
+              <div
+                className="animate-icon-ring w-16 h-16 rounded-2xl flex items-center justify-center"
+                style={{ backgroundColor: "rgba(255,255,255,0.18)", border: "1px solid rgba(255,255,255,0.30)" }}
+              >
+                <Leaf className="w-8 h-8 text-white" strokeWidth={2} />
+              </div>
+            </div>
+
             <div
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold mb-5 tracking-wide"
-              style={{ backgroundColor: "rgba(255,255,255,0.18)", color: "rgba(255,255,255,0.95)", border: "1px solid rgba(255,255,255,0.25)" }}
+              style={{ backgroundColor: "rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.95)", border: "1px solid rgba(255,255,255,0.22)" }}
             >
               <Sparkles className="w-3 h-3" />
               AI-Powered Ethical Shopping
@@ -321,9 +316,8 @@ const Index = () => {
             className="max-w-xl mx-auto rounded-3xl px-6 py-9 text-center overflow-hidden relative"
             style={{ background: "var(--gradient-hero)" }}
           >
-            <div className="animate-bubble-2 absolute -top-4 right-6 w-10 h-10 rounded-2xl flex items-center justify-center pointer-events-none rotate-12" style={{ backgroundColor: "rgba(255,255,255,0.20)", border: "1px solid rgba(255,255,255,0.30)", animationDelay: "-3s" }}><Milk className="w-5 h-5 text-white" strokeWidth={1.8} /></div>
-            <div className="animate-bubble-3 absolute bottom-4 left-6 w-10 h-10 rounded-2xl flex items-center justify-center pointer-events-none -rotate-6" style={{ backgroundColor: "rgba(255,255,255,0.18)", border: "1px solid rgba(255,255,255,0.30)", animationDelay: "-1.5s" }}><Sandwich className="w-5 h-5 text-white" strokeWidth={1.8} /></div>
-            <div className="animate-bubble-5 absolute top-6 left-8 w-9 h-9 rounded-2xl flex items-center justify-center pointer-events-none rotate-6" style={{ backgroundColor: "rgba(255,255,255,0.16)", border: "1px solid rgba(255,255,255,0.30)", animationDelay: "-2s" }}><Wine className="w-4 h-4 text-white" strokeWidth={1.8} /></div>
+            <div className="animate-orb-1 absolute -top-16 -left-16 w-48 h-48 rounded-full pointer-events-none" style={{ background: "radial-gradient(circle, hsl(180 90% 55%) 0%, transparent 70%)", filter: "blur(36px)", animationDelay: "-2s" }} />
+            <div className="animate-orb-2 absolute -bottom-16 -right-16 w-48 h-48 rounded-full pointer-events-none" style={{ background: "radial-gradient(circle, hsl(155 85% 50%) 0%, transparent 70%)", filter: "blur(36px)", animationDelay: "-5s" }} />
 
             <div className="relative z-10">
               <div

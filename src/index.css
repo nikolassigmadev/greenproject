@@ -221,65 +221,48 @@
     to { stroke-dashoffset: var(--target-offset); }
   }
 
-  /* Organic bubble drift animations */
-  .animate-bubble-1 {
-    animation: bubble-drift-1 5s ease-in-out infinite;
+  /* Aurora orb animations */
+  .animate-orb-1 {
+    animation: orb-breathe-1 7s ease-in-out infinite;
   }
-  .animate-bubble-2 {
-    animation: bubble-drift-2 7s ease-in-out infinite;
+  .animate-orb-2 {
+    animation: orb-breathe-2 9s ease-in-out infinite;
   }
-  .animate-bubble-3 {
-    animation: bubble-drift-3 4s ease-in-out infinite;
-  }
-  .animate-bubble-4 {
-    animation: bubble-drift-4 8s ease-in-out infinite;
-  }
-  .animate-bubble-5 {
-    animation: bubble-drift-5 6s ease-in-out infinite;
+  .animate-orb-3 {
+    animation: orb-breathe-3 11s ease-in-out infinite;
   }
 
-  @keyframes bubble-drift-1 {
-    0%   { transform: translate(0px, 0px) rotate(0deg) scale(1); }
-    25%  { transform: translate(0px, -12px) rotate(6deg) scale(1.04); }
-    50%  { transform: translate(4px, -20px) rotate(-3deg) scale(0.96); }
-    75%  { transform: translate(0px, -10px) rotate(5deg) scale(1.02); }
-    100% { transform: translate(0px, 0px) rotate(0deg) scale(1); }
+  @keyframes orb-breathe-1 {
+    0%, 100% { transform: scale(1);    opacity: 0.45; }
+    50%       { transform: scale(1.25); opacity: 0.65; }
   }
 
-  @keyframes bubble-drift-2 {
-    0%   { transform: translate(0px, 0px) rotate(0deg) scale(1); }
-    30%  { transform: translate(0px, 14px) rotate(-7deg) scale(1.05); }
-    60%  { transform: translate(-4px, 8px) rotate(4deg) scale(0.95); }
-    100% { transform: translate(0px, 0px) rotate(0deg) scale(1); }
+  @keyframes orb-breathe-2 {
+    0%, 100% { transform: scale(1.1);  opacity: 0.35; }
+    50%       { transform: scale(0.85); opacity: 0.55; }
   }
 
-  @keyframes bubble-drift-3 {
-    0%   { transform: translate(0px, 0px) rotate(0deg) scale(1); }
-    33%  { transform: translate(0px, -16px) rotate(10deg) scale(1.06); }
-    66%  { transform: translate(4px, -8px) rotate(-5deg) scale(0.94); }
-    100% { transform: translate(0px, 0px) rotate(0deg) scale(1); }
+  @keyframes orb-breathe-3 {
+    0%, 100% { transform: scale(1);    opacity: 0.30; }
+    33%       { transform: scale(1.20); opacity: 0.50; }
+    66%       { transform: scale(0.90); opacity: 0.40; }
   }
 
-  @keyframes bubble-drift-4 {
-    0%   { transform: translate(0px, 0px) rotate(0deg) scale(1); }
-    40%  { transform: translate(0px, 18px) rotate(-8deg) scale(1.05); }
-    70%  { transform: translate(-3px, 10px) rotate(4deg) scale(0.96); }
-    100% { transform: translate(0px, 0px) rotate(0deg) scale(1); }
+  /* Scan-line pulse on hero icon */
+  .animate-icon-ring {
+    animation: icon-ring-pulse 2.5s ease-in-out infinite;
   }
 
-  @keyframes bubble-drift-5 {
-    0%   { transform: translate(0px, 0px) rotate(0deg) scale(1); }
-    35%  { transform: translate(0px, -14px) rotate(-5deg) scale(0.95); }
-    70%  { transform: translate(3px, -6px) rotate(8deg) scale(1.05); }
-    100% { transform: translate(0px, 0px) rotate(0deg) scale(1); }
+  @keyframes icon-ring-pulse {
+    0%, 100% { box-shadow: 0 0 0 0px rgba(255,255,255,0.35); }
+    50%       { box-shadow: 0 0 0 12px rgba(255,255,255,0.00); }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .animate-bubble-1,
-    .animate-bubble-2,
-    .animate-bubble-3,
-    .animate-bubble-4,
-    .animate-bubble-5 {
+    .animate-orb-1,
+    .animate-orb-2,
+    .animate-orb-3,
+    .animate-icon-ring {
       animation: none;
     }
   }
