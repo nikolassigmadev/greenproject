@@ -6,118 +6,118 @@
 
 @layer base {
   :root {
-    /* Vibrant Ethical Shopper Design System */
-    --background: 155 40% 97%;
-    --foreground: 164 50% 11%;
+    /* Fresh Teal-to-Emerald Design System */
+    --background: 180 30% 97%;
+    --foreground: 195 60% 10%;
 
     --card: 0 0% 100%;
-    --card-foreground: 164 50% 11%;
+    --card-foreground: 195 60% 10%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 164 50% 11%;
+    --popover-foreground: 195 60% 10%;
 
-    --primary: 158 68% 30%;
-    --primary-foreground: 155 40% 98%;
+    --primary: 172 80% 32%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 150 38% 90%;
-    --secondary-foreground: 160 40% 18%;
+    --secondary: 172 45% 90%;
+    --secondary-foreground: 172 60% 18%;
 
-    --muted: 152 22% 91%;
-    --muted-foreground: 155 18% 42%;
+    --muted: 172 20% 92%;
+    --muted-foreground: 172 18% 40%;
 
-    --accent: 36 92% 52%;
-    --accent-foreground: 30 50% 12%;
+    --accent: 36 95% 54%;
+    --accent-foreground: 30 50% 10%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 150 28% 84%;
-    --input: 150 28% 90%;
-    --ring: 158 68% 30%;
+    --border: 172 30% 85%;
+    --input: 172 28% 91%;
+    --ring: 172 80% 32%;
 
     --radius: 0.75rem;
 
-    /* Eco color palette — vivid & alive */
-    --eco-forest: 160 68% 26%;
-    --eco-leaf: 142 72% 40%;
-    --eco-sage: 148 44% 60%;
+    /* Eco color palette — vivid ocean-to-emerald */
+    --eco-forest: 172 80% 28%;
+    --eco-leaf: 155 78% 38%;
+    --eco-sage: 162 42% 62%;
     --eco-cream: 50 45% 97%;
     --eco-sand: 38 38% 88%;
-    --eco-amber: 36 92% 52%;
+    --eco-amber: 36 95% 54%;
     --eco-terracotta: 16 68% 54%;
-    --eco-ocean: 192 75% 38%;
+    --eco-ocean: 195 82% 36%;
 
     /* Score colors — semantic */
-    --score-excellent: 158 68% 30%;
-    --score-good: 84 58% 36%;
+    --score-excellent: 172 80% 30%;
+    --score-good: 145 65% 34%;
     --score-fair: 42 90% 44%;
     --score-poor: 24 80% 44%;
     --score-critical: 0 70% 44%;
 
     /* Gradients */
-    --gradient-hero: linear-gradient(160deg, hsl(162 72% 22%) 0%, hsl(155 68% 30%) 55%, hsl(145 62% 40%) 100%);
-    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(155 35% 98%) 100%);
-    --gradient-score: linear-gradient(90deg, hsl(0 70% 48%) 0%, hsl(42 90% 50%) 50%, hsl(158 68% 34%) 100%);
+    --gradient-hero: linear-gradient(160deg, hsl(196 88% 20%) 0%, hsl(180 85% 26%) 50%, hsl(162 82% 34%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(172 30% 98%) 100%);
+    --gradient-score: linear-gradient(90deg, hsl(0 70% 48%) 0%, hsl(42 90% 50%) 50%, hsl(172 80% 34%) 100%);
 
     /* Shadows */
-    --shadow-soft: 0 2px 16px -2px hsl(158 40% 20% / 0.08);
-    --shadow-card: 0 4px 24px -4px hsl(158 40% 20% / 0.12);
-    --shadow-elevated: 0 16px 48px -8px hsl(158 40% 20% / 0.20);
-    --shadow-bottom-nav: 0 -4px 24px -4px hsl(158 40% 20% / 0.10);
+    --shadow-soft: 0 2px 16px -2px hsl(180 50% 20% / 0.08);
+    --shadow-card: 0 4px 24px -4px hsl(180 50% 20% / 0.12);
+    --shadow-elevated: 0 16px 48px -8px hsl(180 50% 20% / 0.20);
+    --shadow-bottom-nav: 0 -4px 24px -4px hsl(180 50% 20% / 0.10);
 
-    --sidebar-background: 155 35% 98%;
-    --sidebar-foreground: 164 45% 18%;
-    --sidebar-primary: 158 68% 28%;
-    --sidebar-primary-foreground: 155 40% 98%;
-    --sidebar-accent: 150 38% 90%;
-    --sidebar-accent-foreground: 164 45% 18%;
-    --sidebar-border: 150 28% 85%;
-    --sidebar-ring: 158 68% 30%;
+    --sidebar-background: 172 30% 98%;
+    --sidebar-foreground: 195 55% 16%;
+    --sidebar-primary: 172 80% 30%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 172 45% 90%;
+    --sidebar-accent-foreground: 195 55% 16%;
+    --sidebar-border: 172 30% 86%;
+    --sidebar-ring: 172 80% 32%;
 
     /* CalAI Macro Colors */
     --color-protein: 0 84% 45%;
-    --color-carbs: 158 68% 30%;
+    --color-carbs: 172 80% 32%;
     --color-fats: 217 91% 50%;
-    --color-calories: 158 68% 30%;
+    --color-calories: 172 80% 32%;
   }
 
   .dark {
-    --background: 165 28% 8%;
-    --foreground: 152 28% 92%;
+    --background: 195 35% 7%;
+    --foreground: 172 25% 92%;
 
-    --card: 162 24% 12%;
-    --card-foreground: 152 28% 92%;
+    --card: 193 30% 11%;
+    --card-foreground: 172 25% 92%;
 
-    --popover: 162 24% 12%;
-    --popover-foreground: 152 28% 92%;
+    --popover: 193 30% 11%;
+    --popover-foreground: 172 25% 92%;
 
-    --primary: 152 62% 50%;
-    --primary-foreground: 165 28% 8%;
+    --primary: 168 75% 48%;
+    --primary-foreground: 195 35% 7%;
 
-    --secondary: 160 18% 18%;
-    --secondary-foreground: 152 28% 92%;
+    --secondary: 190 20% 17%;
+    --secondary-foreground: 172 25% 92%;
 
-    --muted: 160 18% 18%;
-    --muted-foreground: 150 20% 58%;
+    --muted: 190 20% 17%;
+    --muted-foreground: 172 18% 56%;
 
-    --accent: 36 90% 54%;
-    --accent-foreground: 165 28% 8%;
+    --accent: 36 92% 56%;
+    --accent-foreground: 195 35% 7%;
 
     --destructive: 0 62% 48%;
-    --destructive-foreground: 152 28% 92%;
+    --destructive-foreground: 172 25% 92%;
 
-    --border: 158 16% 20%;
-    --input: 158 16% 20%;
-    --ring: 152 62% 50%;
+    --border: 190 18% 19%;
+    --input: 190 18% 19%;
+    --ring: 168 75% 48%;
 
-    --sidebar-background: 165 24% 10%;
-    --sidebar-foreground: 152 28% 92%;
-    --sidebar-primary: 152 62% 50%;
-    --sidebar-primary-foreground: 165 28% 8%;
-    --sidebar-accent: 160 18% 18%;
-    --sidebar-accent-foreground: 152 28% 92%;
-    --sidebar-border: 158 16% 20%;
-    --sidebar-ring: 152 62% 50%;
+    --sidebar-background: 195 30% 9%;
+    --sidebar-foreground: 172 25% 92%;
+    --sidebar-primary: 168 75% 48%;
+    --sidebar-primary-foreground: 195 35% 7%;
+    --sidebar-accent: 190 20% 17%;
+    --sidebar-accent-foreground: 172 25% 92%;
+    --sidebar-border: 190 18% 19%;
+    --sidebar-ring: 168 75% 48%;
   }
 }
 

@@ -26,7 +26,7 @@ export function Header() {
       className={cn(
         "sticky top-0 z-50 w-full transition-all duration-200",
         isScrolled
-          ? "bg-background/94 backdrop-blur-2xl border-b border-border/40 shadow-[0_1px_12px_-2px_hsl(150_20%_20%/0.08)]"
+          ? "bg-background/94 backdrop-blur-2xl border-b border-border/40 shadow-[0_1px_12px_-2px_hsl(180_50%_20%/0.08)]"
           : "bg-background/60 backdrop-blur-xl border-b border-transparent"
       )}
       style={{ WebkitBackdropFilter: "blur(20px)" }}
@@ -38,8 +38,8 @@ export function Header() {
           <div
             className="w-7 h-7 rounded-lg flex items-center justify-center transition-transform duration-150 group-active:scale-90"
             style={{
-              background: "linear-gradient(145deg, hsl(152 52% 28%) 0%, hsl(148 55% 38%) 100%)",
-              boxShadow: "0 2px 8px hsl(152 52% 28% / 0.35)",
+              background: "linear-gradient(145deg, hsl(196 88% 22%) 0%, hsl(172 82% 32%) 100%)",
+              boxShadow: "0 2px 8px hsl(180 80% 28% / 0.40)",
             }}
           >
             <Leaf className="w-3.5 h-3.5 text-white" strokeWidth={2.5} />
@@ -57,7 +57,7 @@ export function Header() {
             "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-150 active:scale-95",
             location.pathname === "/scan"
               ? "bg-primary/15 text-primary"
-              : "bg-primary text-primary-foreground shadow-[0_2px_10px_hsl(152_52%_28%/0.35)]"
+              : "bg-primary text-primary-foreground shadow-[0_2px_10px_hsl(172_80%_32%/0.40)]"
           )}
         >
           <Camera className="w-3.5 h-3.5" strokeWidth={2.2} />
@@ -72,8 +72,8 @@ export function Header() {
           <div
             className="w-8 h-8 rounded-xl flex items-center justify-center transition-transform duration-150 group-hover:scale-105"
             style={{
-              background: "linear-gradient(145deg, hsl(152 52% 28%) 0%, hsl(148 55% 38%) 100%)",
-              boxShadow: "0 2px 12px hsl(152 52% 28% / 0.35)",
+              background: "linear-gradient(145deg, hsl(196 88% 22%) 0%, hsl(172 82% 32%) 100%)",
+              boxShadow: "0 2px 12px hsl(180 80% 28% / 0.40)",
             }}
           >
             <Leaf className="w-4 h-4 text-white" strokeWidth={2.5} />
@@ -110,9 +110,9 @@ export function Header() {
             to="/scan"
             className="ml-2 flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-sm font-semibold transition-all duration-150 hover:opacity-90 active:scale-[0.97]"
             style={{
-              background: "linear-gradient(135deg, hsl(152 52% 28%) 0%, hsl(148 55% 38%) 100%)",
+              background: "linear-gradient(135deg, hsl(196 88% 22%) 0%, hsl(172 82% 32%) 100%)",
               color: "#ffffff",
-              boxShadow: "0 2px 12px hsl(152 52% 28% / 0.35)",
+              boxShadow: "0 2px 12px hsl(180 80% 28% / 0.40)",
             }}
           >
             <Camera className="w-3.5 h-3.5" />

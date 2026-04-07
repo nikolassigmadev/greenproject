@@ -22,10 +22,10 @@ export function BottomNav() {
       <div
         className="absolute inset-0 border-t border-white/10"
         style={{
-          background: "rgba(var(--background-rgb, 247 242 235) / 0.92)",
+          background: "hsl(var(--background) / 0.94)",
           backdropFilter: "blur(20px) saturate(180%)",
           WebkitBackdropFilter: "blur(20px) saturate(180%)",
-          boxShadow: "0 -1px 0 0 hsl(var(--border) / 0.5), 0 -8px 32px -4px hsl(150 20% 20% / 0.08)",
+          boxShadow: "0 -1px 0 0 hsl(var(--border) / 0.5), 0 -8px 32px -4px hsl(180 50% 20% / 0.10)",
         }}
       />
 
@@ -54,7 +54,7 @@ export function BottomNav() {
                   <div
                     className="absolute inset-0 rounded-full blur-md opacity-50"
                     style={{
-                      background: "linear-gradient(135deg, hsl(152 55% 32%) 0%, hsl(148 62% 44%) 100%)",
+                      background: "linear-gradient(135deg, hsl(196 88% 24%) 0%, hsl(172 82% 38%) 100%)",
                       transform: "scale(0.9)",
                     }}
                   />
@@ -62,8 +62,8 @@ export function BottomNav() {
                   <div
                     className="relative w-[3.75rem] h-[3.75rem] rounded-full flex items-center justify-center shadow-elevated"
                     style={{
-                      background: "linear-gradient(145deg, hsl(152 52% 30%) 0%, hsl(148 58% 40%) 60%, hsl(144 50% 46%) 100%)",
-                      boxShadow: "0 6px 24px hsl(152 55% 28% / 0.5), 0 2px 8px hsl(152 55% 28% / 0.3), inset 0 1px 0 rgba(255,255,255,0.18)",
+                      background: "linear-gradient(145deg, hsl(196 88% 22%) 0%, hsl(180 85% 30%) 60%, hsl(162 82% 38%) 100%)",
+                      boxShadow: "0 6px 24px hsl(180 80% 28% / 0.55), 0 2px 8px hsl(180 80% 28% / 0.35), inset 0 1px 0 rgba(255,255,255,0.20)",
                     }}
                   >
                     <Icon className="w-[1.375rem] h-[1.375rem] text-white" strokeWidth={2.2} />
