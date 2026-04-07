@@ -7,6 +7,7 @@ import {
   Settings, Globe, Shield,
   ChevronRight, BarChart3, TrendingUp, Activity,
   Scan, Zap, ArrowRight, Sparkles,
+  ShoppingBag, Coffee, Droplets, Package, Sandwich, Wine, Milk, Cookie, Fish,
 } from "lucide-react";
 
 const CONTAINER = "w-full max-w-xl mx-auto px-5";
@@ -127,13 +128,23 @@ const Index = () => {
           className="relative overflow-hidden px-5 pt-12 pb-20 text-center"
           style={{ background: "var(--gradient-hero)" }}
         >
-          {/* Animated bubbles */}
-          <div className="animate-bubble-1 absolute -top-12 -right-10 w-56 h-56 rounded-full pointer-events-none" style={{ backgroundColor: "rgba(255,255,255,0.07)" }} />
-          <div className="animate-bubble-2 absolute top-8 -left-12 w-36 h-36 rounded-full pointer-events-none" style={{ backgroundColor: "rgba(255,255,255,0.06)", animationDelay: "-4s" }} />
-          <div className="animate-bubble-3 absolute bottom-0 right-8 w-20 h-20 rounded-full pointer-events-none" style={{ backgroundColor: "rgba(255,255,255,0.08)", animationDelay: "-7s" }} />
-          <div className="animate-bubble-4 absolute top-1/2 left-1/3 w-12 h-12 rounded-full pointer-events-none" style={{ backgroundColor: "rgba(255,255,255,0.05)", animationDelay: "-2s" }} />
-          <div className="animate-bubble-5 absolute bottom-8 left-6 w-28 h-28 rounded-full pointer-events-none" style={{ backgroundColor: "rgba(255,255,255,0.04)", animationDelay: "-9s" }} />
-          <div className="animate-bubble-1 absolute -top-4 left-1/2 w-16 h-16 rounded-full pointer-events-none" style={{ backgroundColor: "rgba(255,255,255,0.06)", animationDelay: "-5s" }} />
+          {/* Floating product icons */}
+          {[
+            { icon: ShoppingBag, cls: "animate-bubble-1", pos: "top-6 right-6",    size: "w-11 h-11", bg: "rgba(255,255,255,0.20)", delay: "0s",    rot: "rotate-12" },
+            { icon: Droplets,    cls: "animate-bubble-2", pos: "top-16 left-4",   size: "w-10 h-10", bg: "rgba(255,255,255,0.18)", delay: "-2s",   rot: "-rotate-6" },
+            { icon: Coffee,      cls: "animate-bubble-3", pos: "bottom-8 right-10",size: "w-10 h-10", bg: "rgba(255,255,255,0.20)", delay: "-1.5s", rot: "rotate-6" },
+            { icon: Package,     cls: "animate-bubble-4", pos: "bottom-12 left-6", size: "w-12 h-12", bg: "rgba(255,255,255,0.16)", delay: "-3s",   rot: "-rotate-12" },
+            { icon: Apple,       cls: "animate-bubble-5", pos: "top-1/2 right-4",  size: "w-9 h-9",   bg: "rgba(255,255,255,0.18)", delay: "-1s",   rot: "rotate-3" },
+            { icon: Fish,        cls: "animate-bubble-1", pos: "top-1/3 left-10",  size: "w-9 h-9",   bg: "rgba(255,255,255,0.15)", delay: "-4s",   rot: "-rotate-8" },
+          ].map(({ icon: Icon, cls, pos, size, bg, delay, rot }) => (
+            <div
+              key={pos}
+              className={`${cls} absolute ${pos} ${size} rounded-2xl flex items-center justify-center pointer-events-none ${rot}`}
+              style={{ backgroundColor: bg, border: "1px solid rgba(255,255,255,0.30)", backdropFilter: "blur(4px)", animationDelay: delay }}
+            >
+              <Icon className="w-5 h-5 text-white" strokeWidth={1.8} />
+            </div>
+          ))}
 
           <div className="max-w-sm mx-auto relative z-10">
             {/* Badge */}
@@ -310,9 +321,9 @@ const Index = () => {
             className="max-w-xl mx-auto rounded-3xl px-6 py-9 text-center overflow-hidden relative"
             style={{ background: "var(--gradient-hero)" }}
           >
-            <div className="animate-bubble-2 absolute -top-8 -right-6 w-36 h-36 rounded-full pointer-events-none" style={{ backgroundColor: "rgba(255,255,255,0.06)", animationDelay: "-3s" }} />
-            <div className="animate-bubble-3 absolute -bottom-4 -left-4 w-24 h-24 rounded-full pointer-events-none" style={{ backgroundColor: "rgba(255,255,255,0.05)", animationDelay: "-8s" }} />
-            <div className="animate-bubble-5 absolute top-4 left-1/2 w-10 h-10 rounded-full pointer-events-none" style={{ backgroundColor: "rgba(255,255,255,0.07)", animationDelay: "-1s" }} />
+            <div className="animate-bubble-2 absolute -top-4 right-6 w-10 h-10 rounded-2xl flex items-center justify-center pointer-events-none rotate-12" style={{ backgroundColor: "rgba(255,255,255,0.20)", border: "1px solid rgba(255,255,255,0.30)", animationDelay: "-3s" }}><Milk className="w-5 h-5 text-white" strokeWidth={1.8} /></div>
+            <div className="animate-bubble-3 absolute bottom-4 left-6 w-10 h-10 rounded-2xl flex items-center justify-center pointer-events-none -rotate-6" style={{ backgroundColor: "rgba(255,255,255,0.18)", border: "1px solid rgba(255,255,255,0.30)", animationDelay: "-1.5s" }}><Sandwich className="w-5 h-5 text-white" strokeWidth={1.8} /></div>
+            <div className="animate-bubble-5 absolute top-6 left-8 w-9 h-9 rounded-2xl flex items-center justify-center pointer-events-none rotate-6" style={{ backgroundColor: "rgba(255,255,255,0.16)", border: "1px solid rgba(255,255,255,0.30)", animationDelay: "-2s" }}><Wine className="w-4 h-4 text-white" strokeWidth={1.8} /></div>
 
             <div className="relative z-10">
               <div
