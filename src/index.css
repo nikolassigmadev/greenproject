@@ -220,4 +220,68 @@
     from { stroke-dashoffset: 283; }
     to { stroke-dashoffset: var(--target-offset); }
   }
+
+  /* Organic bubble drift animations */
+  .animate-bubble-1 {
+    animation: bubble-drift-1 14s ease-in-out infinite;
+  }
+  .animate-bubble-2 {
+    animation: bubble-drift-2 18s ease-in-out infinite;
+  }
+  .animate-bubble-3 {
+    animation: bubble-drift-3 11s ease-in-out infinite;
+  }
+  .animate-bubble-4 {
+    animation: bubble-drift-4 22s ease-in-out infinite;
+  }
+  .animate-bubble-5 {
+    animation: bubble-drift-5 16s ease-in-out infinite;
+  }
+
+  @keyframes bubble-drift-1 {
+    0%   { transform: translate(0px, 0px) scale(1); }
+    20%  { transform: translate(28px, -22px) scale(1.06); }
+    45%  { transform: translate(50px, 12px) scale(0.94); }
+    70%  { transform: translate(18px, 38px) scale(1.04); }
+    100% { transform: translate(0px, 0px) scale(1); }
+  }
+
+  @keyframes bubble-drift-2 {
+    0%   { transform: translate(0px, 0px) scale(1); }
+    25%  { transform: translate(-32px, 18px) scale(1.08); }
+    55%  { transform: translate(14px, -30px) scale(0.90); }
+    80%  { transform: translate(-20px, 10px) scale(1.03); }
+    100% { transform: translate(0px, 0px) scale(1); }
+  }
+
+  @keyframes bubble-drift-3 {
+    0%   { transform: translate(0px, 0px) scale(1); }
+    33%  { transform: translate(22px, 28px) scale(1.10); }
+    66%  { transform: translate(-18px, -16px) scale(0.92); }
+    100% { transform: translate(0px, 0px) scale(1); }
+  }
+
+  @keyframes bubble-drift-4 {
+    0%   { transform: translate(0px, 0px) scale(1); }
+    30%  { transform: translate(-40px, -24px) scale(1.05); }
+    60%  { transform: translate(24px, 36px) scale(0.95); }
+    100% { transform: translate(0px, 0px) scale(1); }
+  }
+
+  @keyframes bubble-drift-5 {
+    0%   { transform: translate(0px, 0px) scale(1); }
+    40%  { transform: translate(36px, -18px) scale(0.93); }
+    75%  { transform: translate(-12px, 26px) scale(1.07); }
+    100% { transform: translate(0px, 0px) scale(1); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-bubble-1,
+    .animate-bubble-2,
+    .animate-bubble-3,
+    .animate-bubble-4,
+    .animate-bubble-5 {
+      animation: none;
+    }
+  }
 }

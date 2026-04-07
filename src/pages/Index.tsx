@@ -127,10 +127,13 @@ const Index = () => {
           className="relative overflow-hidden px-5 pt-12 pb-20 text-center"
           style={{ background: "var(--gradient-hero)" }}
         >
-          {/* Decorative circles */}
-          <div className="absolute -top-12 -right-10 w-56 h-56 rounded-full" style={{ backgroundColor: "rgba(255,255,255,0.06)" }} />
-          <div className="absolute top-8 -left-12 w-36 h-36 rounded-full" style={{ backgroundColor: "rgba(255,255,255,0.04)" }} />
-          <div className="absolute bottom-0 right-8 w-20 h-20 rounded-full" style={{ backgroundColor: "rgba(255,255,255,0.05)" }} />
+          {/* Animated bubbles */}
+          <div className="animate-bubble-1 absolute -top-12 -right-10 w-56 h-56 rounded-full pointer-events-none" style={{ backgroundColor: "rgba(255,255,255,0.07)" }} />
+          <div className="animate-bubble-2 absolute top-8 -left-12 w-36 h-36 rounded-full pointer-events-none" style={{ backgroundColor: "rgba(255,255,255,0.06)", animationDelay: "-4s" }} />
+          <div className="animate-bubble-3 absolute bottom-0 right-8 w-20 h-20 rounded-full pointer-events-none" style={{ backgroundColor: "rgba(255,255,255,0.08)", animationDelay: "-7s" }} />
+          <div className="animate-bubble-4 absolute top-1/2 left-1/3 w-12 h-12 rounded-full pointer-events-none" style={{ backgroundColor: "rgba(255,255,255,0.05)", animationDelay: "-2s" }} />
+          <div className="animate-bubble-5 absolute bottom-8 left-6 w-28 h-28 rounded-full pointer-events-none" style={{ backgroundColor: "rgba(255,255,255,0.04)", animationDelay: "-9s" }} />
+          <div className="animate-bubble-1 absolute -top-4 left-1/2 w-16 h-16 rounded-full pointer-events-none" style={{ backgroundColor: "rgba(255,255,255,0.06)", animationDelay: "-5s" }} />
 
           <div className="max-w-sm mx-auto relative z-10">
             {/* Badge */}
@@ -307,8 +310,9 @@ const Index = () => {
             className="max-w-xl mx-auto rounded-3xl px-6 py-9 text-center overflow-hidden relative"
             style={{ background: "var(--gradient-hero)" }}
           >
-            <div className="absolute -top-8 -right-6 w-36 h-36 rounded-full" style={{ backgroundColor: "rgba(255,255,255,0.05)" }} />
-            <div className="absolute -bottom-4 -left-4 w-24 h-24 rounded-full" style={{ backgroundColor: "rgba(255,255,255,0.04)" }} />
+            <div className="animate-bubble-2 absolute -top-8 -right-6 w-36 h-36 rounded-full pointer-events-none" style={{ backgroundColor: "rgba(255,255,255,0.06)", animationDelay: "-3s" }} />
+            <div className="animate-bubble-3 absolute -bottom-4 -left-4 w-24 h-24 rounded-full pointer-events-none" style={{ backgroundColor: "rgba(255,255,255,0.05)", animationDelay: "-8s" }} />
+            <div className="animate-bubble-5 absolute top-4 left-1/2 w-10 h-10 rounded-full pointer-events-none" style={{ backgroundColor: "rgba(255,255,255,0.07)", animationDelay: "-1s" }} />
 
             <div className="relative z-10">
               <div
