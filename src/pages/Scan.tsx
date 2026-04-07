@@ -86,7 +86,7 @@ const filterBestProducts = (results: OpenFoodFactsResult[], query?: string): Ope
       const brand = (r.brand || '').toLowerCase();
       return words.some(w => name.includes(w) || brand.includes(w));
     });
-    if (relevant.length > 0) pool = relevant;
+    pool = relevant;  // Return empty if no products match the query words
   }
 
   if (pool.length <= 5) return pool;
@@ -1322,17 +1322,30 @@ const Scan = () => {
 
       setOffSearchText(searchQuery);
 
-      // Search OpenFoodFacts by product name - fetch more to filter
-      const results = await searchOffProducts(searchQuery, 10);
+      // Helper: search OFF and return word-relevant results (with eco-score preferred)
+      const searchAndFilter = async (query: string, wordFilter: string): Promise<OpenFoodFactsResult[]> => {
+        const results = await searchOffProducts(query, 15);
+        const withEcoScore = results.filter(hasEcoScore);
+        let filtered = filterBestProducts(withEcoScore, wordFilter);
+        if (filtered.length === 0 && results.length > 0) {
+          filtered = filterBestProducts(results, wordFilter);
+        }
+        return filtered;
+      };
 
-      // Prefer products with eco-score, but fallback to all products if none have eco-score
-      const withEcoScore = results.filter(hasEcoScore);
-      let filteredResults = filterBestProducts(withEcoScore, searchQuery);
+      // 1. Try full query first (e.g. "Cadbury Creme Egg")
+      let filteredResults = await searchAndFilter(searchQuery, searchQuery);
 
-      // Fallback: if no products with eco-score, show all products found
-      if (filteredResults.length === 0 && results.length > 0) {
-        console.warn(`⚠️ No products with Eco-Score found, showing all results...`);
-        filteredResults = filterBestProducts(results, searchQuery);
+      // 2. If no relevant results, try product name alone
+      if (filteredResults.length === 0 && advancedResult.productName && advancedResult.brandName) {
+        console.warn(`⚠️ No results for "${searchQuery}", trying product name "${advancedResult.productName}"...`);
+        filteredResults = await searchAndFilter(advancedResult.productName, advancedResult.productName);
+      }
+
+      // 3. If still nothing, try brand name alone
+      if (filteredResults.length === 0 && advancedResult.brandName) {
+        console.warn(`⚠️ No results for product name, trying brand "${advancedResult.brandName}"...`);
+        filteredResults = await searchAndFilter(advancedResult.brandName, advancedResult.brandName);
       }
 
       if (filteredResults.length === 0) {
