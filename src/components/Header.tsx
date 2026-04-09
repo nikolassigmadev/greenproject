@@ -1,11 +1,12 @@
 import { Link, useLocation } from "react-router-dom";
-import { Leaf, Camera, Home, ShoppingBag, BarChart3, Settings } from "lucide-react";
+import { Leaf, Camera, Home, ShoppingCart, BarChart3, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
+import { loadBasket } from "@/utils/basketStorage";
 
 const navItems = [
   { path: "/", label: "Home", icon: Home },
-  { path: "/products", label: "Browse", icon: ShoppingBag },
+  { path: "/basket", label: "Basket", icon: ShoppingCart },
   { path: "/scan", label: "Scan", icon: Camera },
   { path: "/dashboard", label: "History", icon: BarChart3 },
   { path: "/preferences", label: "Priorities", icon: Settings },
@@ -14,11 +15,18 @@ const navItems = [
 export function Header() {
   const location = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
+  const [basketCount, setBasketCount] = useState(() => loadBasket().length);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 4);
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useEffect(() => {
+    const handler = () => setBasketCount(loadBasket().length);
+    window.addEventListener("basketUpdated", handler);
+    return () => window.removeEventListener("basketUpdated", handler);
   }, []);
 
   return (
@@ -49,20 +57,39 @@ export function Header() {
           </span>
         </Link>
 
-        {/* Scan shortcut — top right */}
-        <Link
-          to="/scan"
-          aria-label="Scan a product"
-          className={cn(
-            "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-150 active:scale-95",
-            location.pathname === "/scan"
-              ? "bg-primary/15 text-primary"
-              : "bg-primary text-primary-foreground shadow-[0_2px_10px_hsl(172_80%_32%/0.40)]"
-          )}
-        >
-          <Camera className="w-3.5 h-3.5" strokeWidth={2.2} />
-          Scan
-        </Link>
+        {/* Right side: basket + scan */}
+        <div className="flex items-center gap-2">
+          <Link
+            to="/basket"
+            aria-label="Shopping basket"
+            className={cn(
+              "relative flex items-center justify-center w-8 h-8 rounded-xl transition-all duration-150 active:scale-95",
+              location.pathname === "/basket"
+                ? "bg-primary/15 text-primary"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+            )}
+          >
+            <ShoppingCart className="w-4.5 h-4.5" strokeWidth={2} />
+            {basketCount > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-primary text-primary-foreground text-[9px] font-bold flex items-center justify-center leading-none">
+                {basketCount}
+              </span>
+            )}
+          </Link>
+          <Link
+            to="/scan"
+            aria-label="Scan a product"
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-150 active:scale-95",
+              location.pathname === "/scan"
+                ? "bg-primary/15 text-primary"
+                : "bg-primary text-primary-foreground shadow-[0_2px_10px_hsl(172_80%_32%/0.40)]"
+            )}
+          >
+            <Camera className="w-3.5 h-3.5" strokeWidth={2.2} />
+            Scan
+          </Link>
+        </div>
       </div>
 
       {/* ── Desktop header ── */}
@@ -87,13 +114,14 @@ export function Header() {
         <nav className="flex items-center gap-0.5" aria-label="Main navigation">
           {navItems.filter(i => i.path !== "/scan").map((item) => {
             const isActive = location.pathname === item.path;
+            const isBasket = item.path === "/basket";
             return (
               <Link
                 key={item.path}
                 to={item.path}
                 aria-current={isActive ? "page" : undefined}
                 className={cn(
-                  "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-150",
+                  "relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-150",
                   isActive
                     ? "bg-primary/10 text-primary"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
@@ -101,6 +129,11 @@ export function Header() {
               >
                 <item.icon className="w-3.5 h-3.5" />
                 <span>{item.label}</span>
+                {isBasket && basketCount > 0 && (
+                  <span className="ml-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[9px] font-bold flex items-center justify-center leading-none">
+                    {basketCount}
+                  </span>
+                )}
               </Link>
             );
           })}

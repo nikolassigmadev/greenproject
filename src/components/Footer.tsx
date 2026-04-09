@@ -22,7 +22,7 @@ export function Footer() {
           <nav className="flex items-center gap-6" aria-label="Footer navigation">
             {[
               { to: "/", label: "Home" },
-              { to: "/products", label: "Browse" },
+              { to: "/basket", label: "Basket" },
               { to: "/scan", label: "Scan" },
               { to: "/dashboard", label: "History" },
               { to: "/preferences", label: "Priorities" },
