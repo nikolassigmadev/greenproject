@@ -18,7 +18,7 @@ import { useProducts } from "@/hooks/useProducts";
 import type { Product } from "@/data/products";
 import { calculateScore, findLowCO2Alternative } from "@/data/products";
 import { recognizeImageWithOpenAI } from "@/services/ocr/openai-service";
-import { advancedProductOCR, extractBrandName, extractProductName, extractCertifications, checkOpenAIHealth } from "@/services/ocr/advanced-openai-ocr";
+import { advancedProductOCR } from "@/services/ocr/advanced-openai-ocr";
 import { copySingleProductCode } from "@/utils/productExporter";
 import { loadPriorities, DEFAULT_PRIORITIES, type UserPriorities } from "@/utils/userPreferences";
 import { lookupBarcode, isValidBarcode, searchProducts as searchOffProducts, searchBetterAlternatives } from "@/services/openfoodfacts";
@@ -74,35 +74,72 @@ const calculateEcoScore = (result: OpenFoodFactsResult): number => {
   return score;
 };
 
+// Compute how relevant a product is to the query (0–1).
+// Weighted by word length so short noise words don't dominate.
+const computeRelevance = (result: OpenFoodFactsResult, words: string[]): number => {
+  if (words.length === 0) return 0;
+  const haystack = `${(result.productName || '').toLowerCase()} ${(result.brand || '').toLowerCase()}`;
+  let matchedWeight = 0;
+  let totalWeight = 0;
+  for (const w of words) {
+    const weight = w.length; // longer words carry more signal
+    totalWeight += weight;
+    if (haystack.includes(w)) matchedWeight += weight;
+  }
+  return totalWeight > 0 ? matchedWeight / totalWeight : 0;
+};
+
 // Function to filter and select best products
 const filterBestProducts = (results: OpenFoodFactsResult[], query?: string): OpenFoodFactsResult[] => {
-  // If we have a query, pre-filter to only products whose name or brand contains
-  // at least one word from the query — this prevents unrelated high-eco-score
-  // products (e.g. "Prince Goût Chocolat") from beating the actual match.
   let pool = results;
+
   if (query && query.trim()) {
-    const words = query.trim().toLowerCase().split(/[\s-]+/).filter(w => w.length > 1);
-    const relevant = results.filter(r => {
-      const name = (r.productName || '').toLowerCase();
-      const brand = (r.brand || '').toLowerCase();
-      return words.some(w => name.includes(w) || brand.includes(w));
-    });
-    pool = relevant;  // Return empty if no products match the query words
+    // Only keep words ≥3 chars to avoid single-letter noise matching
+    const words = query.trim().toLowerCase().split(/[\s\-_]+/).filter(w => w.length >= 3);
+
+    if (words.length > 0) {
+      const scored = results.map(r => ({
+        result: r,
+        relevance: computeRelevance(r, words),
+        ecoScore: calculateEcoScore(r),
+      }));
+
+      // Require at least 40% of the query's weighted characters to match.
+      // For a 1-word query the threshold is effectively "must contain that word".
+      // For multi-word queries at least the longest or two mid-size words must hit.
+      const MIN_RELEVANCE = words.length === 1 ? 1.0 : 0.4;
+
+      const relevant = scored.filter(s => s.relevance >= MIN_RELEVANCE);
+
+      // If nothing clears the strict bar, fall back to any product that matches
+      // at least one of the longer words (≥4 chars), ranked by how many match.
+      const fallback = relevant.length === 0
+        ? scored.filter(s => s.relevance > 0 && words.some(w => w.length >= 4 &&
+            `${(s.result.productName || '').toLowerCase()} ${(s.result.brand || '').toLowerCase()}`.includes(w)))
+        : [];
+
+      const candidates = relevant.length > 0 ? relevant : fallback;
+
+      if (candidates.length > 0) {
+        // Sort: relevance first (descending), then eco data completeness as tiebreaker
+        candidates.sort((a, b) =>
+          b.relevance !== a.relevance
+            ? b.relevance - a.relevance
+            : b.ecoScore - a.ecoScore
+        );
+        return candidates.slice(0, 5).map(s => s.result);
+      }
+
+      // Nothing matched at all — return empty so the caller can widen the search
+      return [];
+    }
   }
 
+  // No query: sort purely by eco data completeness
   if (pool.length <= 5) return pool;
-
-  // Calculate eco scores for all products
-  const productsWithScores = pool.map(result => ({
-    result,
-    ecoScore: calculateEcoScore(result)
-  }));
-
-  // Sort by eco score (descending) - highest score first
-  productsWithScores.sort((a, b) => b.ecoScore - a.ecoScore);
-
-  // Take top 5 to give user enough alternatives
-  return productsWithScores.slice(0, 5).map(item => item.result);
+  return [...pool]
+    .sort((a, b) => calculateEcoScore(b) - calculateEcoScore(a))
+    .slice(0, 5);
 };
 
 type OcrWord = {
@@ -128,21 +165,6 @@ const normalizeOcrText = (text: string) => {
     .replace(/[\x00-\x1F\x7F]/g, " ")  // Control characters only
     .replace(/[ \t]+/g, " ")
     .replace(/\n{3,}/g, "\n\n")
-    .trim();
-};
-
-/**
- * Removes duplicate words from search query
- * Example: "Coca-Cola Coca-Cola" → "Coca-Cola"
- */
-const deduplicateSearchQuery = (query: string): string => {
-  return query
-    .split(/\s+/)  // Split by whitespace
-    .filter((word, index, arr) => {
-      // Keep word if it's the first occurrence or different from previous word (case-insensitive)
-      return index === 0 || word.toLowerCase() !== arr[index - 1].toLowerCase();
-    })
-    .join(" ")
     .trim();
 };
 
@@ -1264,7 +1286,8 @@ const Scan = () => {
     }
   }, [toast, requirePriorities]);
 
-  // Process image for OpenFoodFacts search (separate from internal DB scan)
+  // Process image for OpenFoodFacts search
+  // Flow: OpenAI identifies product → search OFF → navigate to first result
   const processImageForOFF = useCallback(async (imageData: string) => {
     if (!requirePriorities()) return;
     setOffSearchLoading(true);
@@ -1273,94 +1296,51 @@ const Scan = () => {
     setOffSearchImage(imageData);
 
     try {
-      // Use the same GPT-4o OCR to extract product name
-      const advancedResult = await advancedProductOCR(imageData);
+      // Step 1: OpenAI identifies the product
+      const identified = await advancedProductOCR(imageData);
 
-      let searchQuery = "";
-      if (advancedResult.success) {
-        if (advancedResult.productName && advancedResult.brandName) {
-          searchQuery = `${advancedResult.brandName} ${advancedResult.productName}`;
-        } else if (advancedResult.productName) {
-          searchQuery = advancedResult.productName;
-        } else if (advancedResult.brandName) {
-          searchQuery = advancedResult.brandName;
-        } else {
-          searchQuery = advancedResult.fullText;
-        }
-
-        // Remove duplicate words from search query (e.g., "Coca-Cola Coca-Cola" → "Coca-Cola")
-        searchQuery = deduplicateSearchQuery(searchQuery);
-
-        // If barcode was found, also do a direct barcode lookup
-        if (advancedResult.barcode && isValidBarcode(advancedResult.barcode)) {
-          const barcodeResult = await lookupBarcode(advancedResult.barcode);
-          if (barcodeResult.found && hasEcoScore(barcodeResult)) {
-            sessionStorage.setItem('scan_candidates', JSON.stringify([barcodeResult]));
-            setOffSearchLoading(false);
-            navigate(`/product-off/${barcodeResult.barcode}?from=scan`);
-            return;
-          } else if (barcodeResult.found) {
-            toast({
-              title: "No Environmental Data",
-              description: `"${barcodeResult.productName || "This product"}" has no Eco-Score or environmental breakdown.`,
-              variant: "destructive",
-            });
-            setOffSearchLoading(false);
-            return;
-          }
-        }
-      }
-
-      if (!searchQuery) {
+      if (!identified.success || (!identified.productName && !identified.brandName)) {
         toast({
           title: "Could not identify product",
-          description: "Try a clearer image or use manual barcode entry.",
+          description: "Try a clearer image or use barcode entry.",
           variant: "destructive",
         });
-        setOffSearchLoading(false);
         return;
       }
 
-      setOffSearchText(searchQuery);
-
-      // Helper: search OFF and return word-relevant results (with eco-score preferred)
-      const searchAndFilter = async (query: string, wordFilter: string): Promise<OpenFoodFactsResult[]> => {
-        const results = await searchOffProducts(query, 15);
-        const withEcoScore = results.filter(hasEcoScore);
-        let filtered = filterBestProducts(withEcoScore, wordFilter);
-        if (filtered.length === 0 && results.length > 0) {
-          filtered = filterBestProducts(results, wordFilter);
+      // Step 2: If a barcode was spotted, look it up directly — most precise
+      if (identified.barcode && isValidBarcode(identified.barcode)) {
+        const barcodeResult = await lookupBarcode(identified.barcode);
+        if (barcodeResult.found) {
+          sessionStorage.setItem('scan_candidates', JSON.stringify([barcodeResult]));
+          navigate(`/product-off/${barcodeResult.barcode}?from=scan`);
+          return;
         }
-        return filtered;
-      };
-
-      // 1. Try full query first (e.g. "Cadbury Creme Egg")
-      let filteredResults = await searchAndFilter(searchQuery, searchQuery);
-
-      // 2. If no relevant results, try product name alone
-      if (filteredResults.length === 0 && advancedResult.productName && advancedResult.brandName) {
-        console.warn(`⚠️ No results for "${searchQuery}", trying product name "${advancedResult.productName}"...`);
-        filteredResults = await searchAndFilter(advancedResult.productName, advancedResult.productName);
       }
 
-      // 3. If still nothing, try brand name alone
-      if (filteredResults.length === 0 && advancedResult.brandName) {
-        console.warn(`⚠️ No results for product name, trying brand "${advancedResult.brandName}"...`);
-        filteredResults = await searchAndFilter(advancedResult.brandName, advancedResult.brandName);
-      }
+      // Step 3: Search OFF with brand + product name, trust OFF's own ranking
+      const query = [identified.brandName, identified.productName]
+        .filter(Boolean)
+        .join(' ')
+        .trim();
 
-      if (filteredResults.length === 0) {
+      setOffSearchText(query);
+      const results = await searchOffProducts(query, 5);
+
+      if (results.length === 0) {
         toast({
           title: "No Results",
-          description: `No products found for "${searchQuery}" on OpenFoodFacts.`,
+          description: `"${query}" wasn't found in OpenFoodFacts.`,
           variant: "destructive",
         });
-      } else {
-        sessionStorage.setItem('scan_candidates', JSON.stringify(filteredResults));
-        navigate(`/product-off/${filteredResults[0].barcode}?from=scan`);
+        return;
       }
+
+      // Step 4: Navigate to the top result
+      sessionStorage.setItem('scan_candidates', JSON.stringify(results));
+      navigate(`/product-off/${results[0].barcode}?from=scan`);
     } catch (error) {
-      console.error("OFF image search error:", error);
+      console.error("Image scan error:", error);
       toast({
         title: "Processing Error",
         description: "Failed to process the image. Please try again.",
@@ -1369,7 +1349,7 @@ const Scan = () => {
     } finally {
       setOffSearchLoading(false);
     }
-  }, [toast, requirePriorities]);
+  }, [toast, requirePriorities, navigate]);
 
   // Handle file upload for OFF search
   const handleOffFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
