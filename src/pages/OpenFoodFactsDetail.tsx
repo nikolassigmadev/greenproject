@@ -601,6 +601,7 @@ export default function OpenFoodFactsDetail() {
                           ecoscoreScore: product.ecoscoreScore,
                           nutriscoreGrade: product.nutriscoreGrade,
                           laborAllegations: flag ? 1 : 0,
+                          co2Per100g: product.carbonFootprint100g,
                         });
                         setInBasket(true);
                       }}
