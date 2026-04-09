@@ -194,6 +194,8 @@ export default function OpenFoodFactsDetail() {
           laborAllegations: laborCount,
           novaGroup: product.novaGroup,
         },
+        carbonFootprint100g: product.carbonFootprint100g,
+        labels: product.labels,
       });
     }
   }, [product?.barcode]);

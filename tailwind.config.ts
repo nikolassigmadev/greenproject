@@ -14,8 +14,8 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ["Plus Jakarta Sans", "system-ui", "sans-serif"],
-        display: ["Space Grotesk", "system-ui", "sans-serif"],
+        sans: ["Nunito Sans", "system-ui", "sans-serif"],
+        display: ["Rubik", "system-ui", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",

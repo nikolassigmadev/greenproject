@@ -6,7 +6,7 @@ import {
   Camera, Leaf, Users, Heart, Apple,
   Settings, Globe, Shield,
   ChevronRight, BarChart3, TrendingUp, Activity,
-  Scan, Zap, ArrowRight, Sparkles,
+  Scan, Zap, ArrowRight,
 } from "lucide-react";
 
 const CONTAINER = "w-full max-w-xl mx-auto px-5";
@@ -79,7 +79,7 @@ const steps = [
     num: "1",
     icon: Camera,
     title: "Scan a Product",
-    desc: "Photo, barcode, or name — AI reads labels instantly",
+    desc: "Photo, barcode, or name — instantly decoded",
     gradientFrom: "hsl(196 88% 22%)",
     gradientTo: "hsl(172 82% 34%)",
   },
@@ -141,14 +141,6 @@ const Index = () => {
               >
                 <Leaf className="w-8 h-8 text-white" strokeWidth={2} />
               </div>
-            </div>
-
-            <div
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold mb-5 tracking-wide"
-              style={{ backgroundColor: "rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.95)", border: "1px solid rgba(255,255,255,0.22)" }}
-            >
-              <Sparkles className="w-3 h-3" />
-              AI-Powered Ethical Shopping
             </div>
 
             <h1 className="text-[2.1rem] font-display font-extrabold leading-[1.15] tracking-tight mb-4" style={{ color: "#ffffff" }}>

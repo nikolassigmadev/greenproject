@@ -57,6 +57,9 @@ export interface ScanHistoryEntry {
     laborAllegations: number;
     novaGroup: number | null;
   };
+  // Extended impact tracking fields (optional for backward compatibility)
+  carbonFootprint100g?: number | null;
+  labels?: string[];
 }
 
 const HISTORY_KEY = 'ethical-shopper-scan-history';
@@ -127,4 +130,41 @@ export const getHistoryStats = (history: ScanHistoryEntry[]) => {
   }).reverse();
 
   return { total, good, moderate, caution, avoid, unknown, withLaborConcerns, avgEcoScore, weeks };
+};
+
+// CO2 estimates by eco grade (kg CO2e per kg of product)
+const GRADE_CO2_ESTIMATE: Record<string, number> = {
+  a: 0.5, b: 1.2, c: 2.5, d: 4.0, e: 6.0,
+};
+const BASELINE_CO2 = 2.5; // grade C = "average" product
+
+export const getImpactStats = (history: ScanHistoryEntry[]) => {
+  const now = Date.now();
+  const monthMs = 30 * 24 * 60 * 60 * 1000;
+  const thisMonth = history.filter(h => h.timestamp > now - monthMs);
+
+  let co2AvoidedKg = 0;
+  for (const scan of thisMonth) {
+    const grade = scan.scores.ecoGrade?.toLowerCase();
+    if (!grade) continue;
+    // Use real CO2 data (per 100g → per kg) if available, else estimate from grade
+    const productCO2 = (scan.carbonFootprint100g != null)
+      ? scan.carbonFootprint100g / 100
+      : GRADE_CO2_ESTIMATE[grade] ?? BASELINE_CO2;
+    const avoided = BASELINE_CO2 - productCO2;
+    if (avoided > 0) co2AvoidedKg += avoided;
+  }
+
+  const fairTradeCount = thisMonth.filter(h =>
+    h.labels?.some(l => /fair.?trade/i.test(l))
+  ).length;
+
+  const laborFlaggedCount = thisMonth.filter(h => h.scores.laborAllegations > 0).length;
+
+  return {
+    co2AvoidedKg: Math.round(co2AvoidedKg * 10) / 10,
+    fairTradeCount,
+    laborFlaggedCount,
+    totalThisMonth: thisMonth.length,
+  };
 };

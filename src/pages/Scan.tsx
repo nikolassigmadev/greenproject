@@ -10,6 +10,7 @@ import { AlertBox, AlertList } from "@/components/AlertBox";
 import { StatsDisplay } from "@/components/StatsDisplay";
 import { ProductCard } from "@/components/ProductCard";
 import { OpenFoodFactsCard } from "@/components/OpenFoodFactsCard";
+import { GreenerSwapCard } from "@/components/GreenerSwapCard";
 import { EnvironmentalImpactCard } from "@/components/EnvironmentalImpactCard";
 import { ScoreBreakdownSlider } from "@/components/ScoreBreakdownSlider";
 import { useToast } from "@/hooks/use-toast";
@@ -1896,6 +1897,14 @@ const Scan = () => {
               >
                 <OpenFoodFactsCard result={offResult} />
               </button>
+              {/* Inline greener swap card */}
+              {(offAlternativeLoading || offAlternatives.length > 0) && (
+                <GreenerSwapCard
+                  original={offResult}
+                  alternatives={offAlternatives}
+                  loading={offAlternativeLoading}
+                />
+              )}
             </div>
           )}
 
@@ -1908,33 +1917,42 @@ const Scan = () => {
             <div className="mb-5">
               <div className="flex items-center justify-between mb-3">
                 <h2 className="text-sm font-bold text-foreground">{offSearchResults.length} Products Found</h2>
-                {offAlternatives.length > 0 && (
-                  <span className="text-xs text-muted-foreground">{offAlternatives.length} greener alternatives</span>
-                )}
               </div>
               <div className="flex flex-col gap-2.5">
-                {offSearchResults.map((result) => (
-                  <button
-                    key={result.barcode}
-                    onClick={() => navigate(`/product-off/${result.barcode}`)}
-                    className="w-full cursor-pointer text-left transition-opacity hover:opacity-80"
-                    style={{ background: 'none', border: 'none', padding: 0 }}
-                  >
-                    <OpenFoodFactsCard result={result} />
-                  </button>
+                {offSearchResults.map((result, idx) => (
+                  <div key={result.barcode}>
+                    <button
+                      onClick={() => navigate(`/product-off/${result.barcode}`)}
+                      className="w-full cursor-pointer text-left transition-opacity hover:opacity-80"
+                      style={{ background: 'none', border: 'none', padding: 0 }}
+                    >
+                      <OpenFoodFactsCard result={result} />
+                    </button>
+                    {/* Inline swap card after the primary (first) result */}
+                    {idx === 0 && (offAlternativeLoading || offAlternatives.length > 0) && (
+                      <div className="mt-2">
+                        <GreenerSwapCard
+                          original={result}
+                          alternatives={offAlternatives}
+                          loading={offAlternativeLoading}
+                        />
+                      </div>
+                    )}
+                  </div>
                 ))}
               </div>
             </div>
           )}
 
-          {/* Greener alternatives */}
+          {/* Greener alternatives detail list */}
           {offAlternatives.length > 0 && (
-            <div className="mb-5">
+            <div id="greener-alternatives-section" className="mb-5">
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'hsl(152 42% 96%)' }}>
                   <Leaf className="w-3.5 h-3.5" style={{ color: 'hsl(152 48% 30%)' }} />
                 </div>
                 <h2 className="text-sm font-bold text-foreground">Greener Alternatives</h2>
+                <span className="text-xs text-muted-foreground">({offAlternatives.length})</span>
               </div>
               <div className="flex flex-col gap-2.5">
                 {offAlternatives.map((alt) => (
