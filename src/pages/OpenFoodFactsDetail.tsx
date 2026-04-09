@@ -1,6 +1,6 @@
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { ArrowLeft, Loader2, Leaf, AlertTriangle, Flag, ExternalLink, CheckCircle2, ChevronRight, Package } from "lucide-react";
+import { ArrowLeft, Loader2, Leaf, AlertTriangle, Flag, ExternalLink, CheckCircle2, ChevronRight, Package, ShoppingCart } from "lucide-react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { BottomNav } from "@/components/BottomNav";
@@ -11,6 +11,8 @@ import { loadPriorities, saveScanToHistory, loadScanHistory, type UserPriorities
 import { checkBoycott } from "@/data/boycottBrands";
 import { checkAnimalWelfareFlag } from "@/utils/animalWelfareFlags";
 import { AnimalWelfareFlagBadge } from "@/components/AnimalWelfareFlagBadge";
+import { addToBasket, loadBasket } from "@/utils/basketStorage";
+import { getBrandFlag } from "@/data/brandFlags";
 
 // Known forced/child labor allegations database with sources
 interface LaborAllegation {
@@ -131,6 +133,7 @@ export default function OpenFoodFactsDetail() {
   const [confirmDismissed, setConfirmDismissed] = useState(false);
   const [showCandidates, setShowCandidates] = useState(false);
   const [candidates, setCandidates] = useState<OpenFoodFactsResult[]>([]);
+  const [inBasket, setInBasket] = useState(false);
 
   useEffect(() => {
     if (barcode) {
@@ -160,6 +163,16 @@ export default function OpenFoodFactsDetail() {
     window.addEventListener('prioritiesUpdated', handler);
     return () => window.removeEventListener('prioritiesUpdated', handler);
   }, []);
+
+  // Sync basket state when product loads
+  useEffect(() => {
+    if (product) {
+      setInBasket(loadBasket().some(b => b.barcode === product.barcode));
+      const handler = () => setInBasket(loadBasket().some(b => b.barcode === product.barcode));
+      window.addEventListener('basketUpdated', handler);
+      return () => window.removeEventListener('basketUpdated', handler);
+    }
+  }, [product?.barcode]);
 
   // Save to scan history when product loads
   useEffect(() => {
@@ -567,13 +580,41 @@ export default function OpenFoodFactsDetail() {
                       )}
                     </div>
                   </div>
-                  <button
-                    onClick={() => document.getElementById("details")?.scrollIntoView({ behavior: "smooth" })}
-                    className="mt-4 w-full py-2.5 rounded-xl text-sm font-bold transition-all hover:opacity-90 active:scale-[0.98]"
-                    style={{ backgroundColor: verdict.color, color: "#ffffff" }}
-                  >
-                    {verdict.action} — See Full Breakdown
-                  </button>
+                  <div className="mt-4 flex gap-2">
+                    <button
+                      onClick={() => document.getElementById("details")?.scrollIntoView({ behavior: "smooth" })}
+                      className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all hover:opacity-90 active:scale-[0.98]"
+                      style={{ backgroundColor: verdict.color, color: "#ffffff" }}
+                    >
+                      {verdict.action} — See Full Breakdown
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (inBasket) return;
+                        const flag = getBrandFlag(product.brand);
+                        addToBasket({
+                          barcode: product.barcode,
+                          productName: product.productName || "Unknown Product",
+                          brand: product.brand,
+                          imageUrl: product.imageUrl,
+                          ecoscoreGrade: product.ecoscoreGrade,
+                          ecoscoreScore: product.ecoscoreScore,
+                          nutriscoreGrade: product.nutriscoreGrade,
+                          laborAllegations: flag ? 1 : 0,
+                        });
+                        setInBasket(true);
+                      }}
+                      className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl text-sm font-bold transition-all active:scale-[0.98] flex-shrink-0"
+                      style={{
+                        backgroundColor: inBasket ? "hsl(152 42% 92%)" : "hsl(152 48% 30%)",
+                        color: inBasket ? "hsl(152 48% 30%)" : "#ffffff",
+                      }}
+                      title={inBasket ? "In basket" : "Add to basket"}
+                    >
+                      <ShoppingCart className="w-4 h-4" />
+                      {inBasket ? "Added" : ""}
+                    </button>
+                  </div>
                 </div>
               </div>
             )}

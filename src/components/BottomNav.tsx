@@ -1,10 +1,10 @@
 import { Link, useLocation } from "react-router-dom";
-import { Home, Camera, ShoppingBag, BarChart3, Settings } from "lucide-react";
+import { Home, Camera, ShoppingCart, BarChart3, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const tabs = [
   { path: "/", label: "Home", icon: Home },
-  { path: "/products", label: "Browse", icon: ShoppingBag },
+  { path: "/basket", label: "Basket", icon: ShoppingCart },
   { path: "/scan", label: "Scan", icon: Camera, primary: true },
   { path: "/dashboard", label: "History", icon: BarChart3 },
   { path: "/preferences", label: "More", icon: Settings },

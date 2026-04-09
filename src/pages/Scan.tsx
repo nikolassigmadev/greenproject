@@ -1318,25 +1318,54 @@ const Scan = () => {
         }
       }
 
-      // Step 3: Search OFF with brand + product name, trust OFF's own ranking
-      const query = [identified.brandName, identified.productName]
+      // Step 3: Search OFF, progressively simplifying the query until we get a hit
+      const fullQuery = [identified.brandName, identified.productName]
         .filter(Boolean)
         .join(' ')
         .trim();
 
-      setOffSearchText(query);
-      const results = await searchOffProducts(query, 5);
+      // Build a list of queries to try, from most specific to least:
+      // e.g. "Coca-Cola Classic Zero Sugar" → "Coca-Cola Classic Zero" → "Coca-Cola Classic"
+      //      → "Coca-Cola" → brand alone (if different from product name)
+      const buildQueries = (q: string, brand: string | null | undefined): string[] => {
+        const queries: string[] = [];
+        const words = q.split(/\s+/).filter(Boolean);
+        // All lengths from full down to 2 words
+        for (let len = words.length; len >= 2; len--) {
+          queries.push(words.slice(0, len).join(' '));
+        }
+        // Brand name alone as final fallback (if not already covered)
+        if (brand && !queries.some(q2 => q2.toLowerCase() === brand.toLowerCase())) {
+          queries.push(brand);
+        }
+        // Deduplicate while preserving order
+        return [...new Set(queries)];
+      };
+
+      const queries = buildQueries(fullQuery, identified.brandName);
+      let results: OpenFoodFactsResult[] = [];
+      let usedQuery = fullQuery;
+
+      for (const q of queries) {
+        setOffSearchText(q);
+        results = await searchOffProducts(q, 5);
+        if (results.length > 0) {
+          usedQuery = q;
+          break;
+        }
+      }
 
       if (results.length === 0) {
         toast({
           title: "No Results",
-          description: `"${query}" wasn't found in OpenFoodFacts.`,
+          description: `Couldn't find "${fullQuery}" or any simplified version in OpenFoodFacts.`,
           variant: "destructive",
         });
         return;
       }
 
       // Step 4: Navigate to the top result
+      console.log(`Found results for query: "${usedQuery}"`);
       sessionStorage.setItem('scan_candidates', JSON.stringify(results));
       navigate(`/product-off/${results[0].barcode}?from=scan`);
     } catch (error) {

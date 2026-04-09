@@ -9,6 +9,7 @@ import Database from "./pages/Database";
 import NotFound from "./pages/NotFound";
 import Preferences from "./pages/Preferences";
 import Dashboard from "./pages/Dashboard";
+import ShoppingList from "./pages/ShoppingList";
 import { CalAIShowcase } from "./components/CalAIShowcase";
 
 // Import admin components - uncomment to enable
@@ -59,6 +60,10 @@ export const router = createBrowserRouter([
       {
         path: "/dashboard",
         element: <Dashboard />,
+      },
+      {
+        path: "/basket",
+        element: <ShoppingList />,
       },
       {
         path: "/design-system",
