@@ -41,7 +41,7 @@ export const CalAIButton = React.forwardRef<HTMLButtonElement, CalAIButtonProps>
       <button
         ref={ref}
         disabled={disabled || loading}
-        className={`${baseClass} ${sizeClass} ${className || ''} ${
+        className={`btn-aurora ${baseClass} ${sizeClass} ${className || ''} ${
           (disabled || loading) ? 'opacity-50 cursor-not-allowed' : ''
         }`}
         {...props}

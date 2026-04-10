@@ -113,7 +113,7 @@ const Products = () => {
                   key={category}
                   onClick={() => setSelectedCategory(category)}
                   className={cn(
-                    "px-3 py-1 rounded-full text-xs font-semibold border transition-all duration-150 cursor-pointer",
+                    "btn-aurora px-3 py-1 rounded-full text-xs font-semibold border transition-all duration-150 cursor-pointer",
                     selectedCategory === category
                       ? "bg-primary text-primary-foreground border-primary shadow-soft"
                       : "bg-card text-muted-foreground border-border/70 hover:border-primary/40 hover:text-foreground"

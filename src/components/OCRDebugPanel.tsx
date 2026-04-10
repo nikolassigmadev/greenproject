@@ -128,7 +128,7 @@ const DebugStage: React.FC<DebugStageProps> = ({
     <div className="bg-slate-800 rounded border border-slate-600 overflow-hidden">
       <button
         onClick={onToggle}
-        className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-700 transition-colors"
+        className="btn-aurora w-full px-4 py-3 flex items-center justify-between hover:bg-slate-700 transition-colors"
       >
         <div className="flex items-center gap-2">
           <span>{getStageBadge(data.stage)}</span>

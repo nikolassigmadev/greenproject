@@ -92,7 +92,7 @@ export function GreenerSwapCard({ original, alternatives, loading }: GreenerSwap
         {/* Best alternative chip */}
         <button
           onClick={() => navigate(`/product-off/${best.barcode}`)}
-          className="flex-1 flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 active:scale-[0.98] transition-all rounded-xl p-2.5 min-w-0 text-left"
+          className="btn-aurora flex-1 flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 active:scale-[0.98] transition-all rounded-xl p-2.5 min-w-0 text-left"
         >
           {best.imageUrl ? (
             <img
@@ -137,7 +137,7 @@ export function GreenerSwapCard({ original, alternatives, loading }: GreenerSwap
             onClick={() => {
               document.getElementById("greener-alternatives-section")?.scrollIntoView({ behavior: "smooth" });
             }}
-            className="text-xs text-emerald-600 dark:text-emerald-400 font-medium hover:underline ml-2 flex-shrink-0"
+            className="btn-aurora text-xs text-emerald-600 dark:text-emerald-400 font-medium hover:underline ml-2 flex-shrink-0"
           >
             +{alternatives.length - 1} more ↓
           </button>

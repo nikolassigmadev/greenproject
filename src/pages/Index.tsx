@@ -153,7 +153,7 @@ const Index = () => {
             <div className="flex gap-3 justify-center">
               <Link
                 to="/scan"
-                className="inline-flex items-center gap-2 px-6 py-3.5 rounded-2xl font-bold text-sm shadow-elevated hover:scale-[1.02] transition-all duration-200 active:scale-[0.98]"
+                className="btn-aurora inline-flex items-center gap-2 px-6 py-3.5 rounded-2xl font-bold text-sm shadow-elevated hover:scale-[1.02] transition-all duration-200 active:scale-[0.98]"
                 style={{ backgroundColor: "#ffffff", color: "hsl(196 88% 22%)" }}
               >
                 <Camera className="w-4 h-4" />

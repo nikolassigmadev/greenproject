@@ -204,7 +204,7 @@ export default function Preferences() {
             <div className="flex gap-3 justify-center pt-2 pb-2">
               <button
                 onClick={handleSave}
-                className="flex-1 max-w-[12rem] inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-primary text-primary-foreground font-bold text-sm shadow-soft hover:bg-primary/90 hover:shadow-card transition-all duration-200 active:scale-[0.97]"
+                className="btn-aurora flex-1 max-w-[12rem] inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-primary text-primary-foreground font-bold text-sm shadow-soft hover:bg-primary/90 hover:shadow-card transition-all duration-200 active:scale-[0.97]"
               >
                 {saved ? (
                   <>

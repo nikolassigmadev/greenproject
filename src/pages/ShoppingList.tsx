@@ -151,7 +151,7 @@ export default function ShoppingList() {
           </div>
           {basket.length > 0 && (
             <button onClick={() => setShowClearConfirm(true)}
-              className="absolute top-4 right-4 flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium hover:opacity-90 transition-all"
+              className="btn-aurora absolute top-4 right-4 flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium hover:opacity-90 transition-all"
               style={{ backgroundColor: "rgba(255,255,255,0.15)", borderColor: "rgba(255,255,255,0.25)", color: "rgba(255,255,255,0.85)" }}>
               <Trash2 className="w-3.5 h-3.5" /> Clear
             </button>
@@ -168,8 +168,8 @@ export default function ShoppingList() {
                   <AlertTriangle className="w-4 h-4" /> Clear the entire basket?
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={handleClear} className="px-4 py-1.5 rounded-lg bg-destructive text-destructive-foreground text-xs font-bold">Yes, Clear</button>
-                  <button onClick={() => setShowClearConfirm(false)} className="px-4 py-1.5 rounded-lg border border-border bg-card text-muted-foreground text-xs font-medium">Cancel</button>
+                  <button onClick={handleClear} className="btn-aurora px-4 py-1.5 rounded-lg bg-destructive text-destructive-foreground text-xs font-bold">Yes, Clear</button>
+                  <button onClick={() => setShowClearConfirm(false)} className="btn-aurora px-4 py-1.5 rounded-lg border border-border bg-card text-muted-foreground text-xs font-medium">Cancel</button>
                 </div>
               </div>
             )}
@@ -359,7 +359,7 @@ export default function ShoppingList() {
                   />
                   {query && (
                     <button onClick={() => { setQuery(""); setSearchResults([]); }}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                      className="btn-aurora absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                       <X className="w-4 h-4" />
                     </button>
                   )}
@@ -404,7 +404,7 @@ export default function ShoppingList() {
                           onClick={() => !already && handleAdd(result)}
                           disabled={already}
                           className={cn(
-                            "flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all",
+                            "btn-aurora flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all",
                             already
                               ? "bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 cursor-default"
                               : "bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95"
@@ -500,7 +500,7 @@ export default function ShoppingList() {
                         </Link>
                         <button
                           onClick={() => handleRemove(item.barcode)}
-                          className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors">
+                          className="btn-aurora flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors">
                           <X className="w-4 h-4" />
                         </button>
                       </div>

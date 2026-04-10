@@ -153,7 +153,7 @@ export default function Dashboard() {
           {history.length > 0 && (
             <button
               onClick={() => setShowClearConfirm(true)}
-              className="absolute top-4 right-4 flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium hover:opacity-90 transition-all"
+              className="btn-aurora absolute top-4 right-4 flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium hover:opacity-90 transition-all"
               style={{ backgroundColor: "rgba(255,255,255,0.15)", borderColor: "rgba(255,255,255,0.25)", color: "rgba(255,255,255,0.85)" }}
             >
               <Trash2 className="w-3.5 h-3.5" />
@@ -174,13 +174,13 @@ export default function Dashboard() {
                 <div className="flex gap-2">
                   <button
                     onClick={handleClear}
-                    className="px-4 py-1.5 rounded-lg bg-destructive text-destructive-foreground text-xs font-bold hover:bg-destructive/90 transition-colors"
+                    className="btn-aurora px-4 py-1.5 rounded-lg bg-destructive text-destructive-foreground text-xs font-bold hover:bg-destructive/90 transition-colors"
                   >
                     Yes, Clear
                   </button>
                   <button
                     onClick={() => setShowClearConfirm(false)}
-                    className="px-4 py-1.5 rounded-lg border border-border bg-card text-muted-foreground text-xs font-medium hover:text-foreground transition-colors"
+                    className="btn-aurora px-4 py-1.5 rounded-lg border border-border bg-card text-muted-foreground text-xs font-medium hover:text-foreground transition-colors"
                   >
                     Cancel
                   </button>

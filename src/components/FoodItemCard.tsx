@@ -88,7 +88,7 @@ export const FoodItemCard: React.FC<FoodItemCardProps> = ({
               e.stopPropagation();
               onRemove();
             }}
-            className="p-1 hover:bg-red-500/20 rounded transition-colors"
+            className="btn-aurora p-1 hover:bg-red-500/20 rounded transition-colors"
             aria-label="Remove item"
           >
             <X size={16} className="text-red-400" />

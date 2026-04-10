@@ -4,6 +4,135 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer components {
+  /* Aurora gradient glow — apply to any button to get the purple→cyan→emerald glow */
+  .btn-aurora {
+    position: relative;
+    z-index: 0;
+  }
+  .btn-aurora::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: inherit;
+    z-index: -10;
+    background: linear-gradient(to right, #34d399, #2dd4bf, #38bdf8);
+    opacity: 0.75;
+    filter: blur(12px);
+    transition: opacity 0.2s, filter 0.2s;
+    pointer-events: none;
+  }
+  .btn-aurora:hover::before {
+    opacity: 1;
+    filter: blur(16px);
+  }
+  .btn-aurora:disabled::before {
+    opacity: 0.3;
+  }
+}
+
+/* ── Interactive Menu (BottomNav) ─────────────────────────────────────── */
+:root {
+  --component-inactive-color:      hsl(var(--muted-foreground));
+  --component-bg:                  hsl(var(--background) / 0.94);
+  --component-shadow:              hsl(var(--border) / 0.5);
+  --component-active-bg:           hsl(var(--secondary));
+  --component-line-inactive-color: hsl(var(--border));
+  --component-active-color-default:hsl(var(--primary));
+}
+
+@keyframes iconBounce {
+  0%, 100% { transform: translateY(0);     }
+  20%       { transform: translateY(-0.3em); }
+  40%       { transform: translateY(0);     }
+  60%       { transform: translateY(-0.1em);}
+  80%       { transform: translateY(0);     }
+}
+
+.menu {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-around;
+  width: 100%;
+  padding: 0 0.5rem;
+}
+
+.menu__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.15rem;
+  padding: 0.6rem 0.75rem 0.5rem;
+  border: none;
+  background: none;
+  cursor: pointer;
+  position: relative;
+  color: var(--component-inactive-color);
+  transition: color 0.2s ease;
+  min-width: 3rem;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* animated underline */
+.menu__item::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: var(--lineWidth, 0px);
+  height: 2px;
+  background: var(--component-active-color, var(--component-active-color-default));
+  border-radius: 2px;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.menu__item.active {
+  color: var(--component-active-color, var(--component-active-color-default));
+}
+
+.menu__item.active .icon {
+  animation: iconBounce 0.45s ease forwards;
+}
+
+.menu__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon {
+  width: 1.35rem;
+  height: 1.35rem;
+  stroke-width: 1.75;
+  transition: stroke-width 0.2s;
+}
+
+.menu__item.active .icon {
+  stroke-width: 2.4;
+}
+
+.menu__text {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: capitalize;
+  white-space: nowrap;
+  /* always rendered for measurement but visually hidden when inactive */
+  visibility: hidden;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.2s ease, visibility 0.2s;
+}
+
+.menu__text.active {
+  visibility: visible;
+  max-height: 1rem;
+}
+/* ──────────────────────────────────────────────────────────────────────── */
+
 @layer base {
   :root {
     /* Fresh Teal-to-Emerald Design System */

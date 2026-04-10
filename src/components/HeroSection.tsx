@@ -71,14 +71,14 @@ export function HeroSection() {
           <div className={`flex flex-col sm:flex-row items-center justify-center gap-4 transition-all duration-1000 delay-300 ${
             isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
           }`}>
-            <Button asChild size="lg" className="bg-gradient-hero hover:opacity-90 text-lg px-8 shadow-card hover:shadow-elevated transform hover:scale-105 transition-all duration-300 group">
+            <Button asChild size="lg" className="btn-aurora bg-gradient-hero hover:opacity-90 text-lg px-8 shadow-card hover:shadow-elevated transform hover:scale-105 transition-all duration-300 group">
               <Link to="/scan">
                 <Camera className="w-5 h-5 mr-2 group-hover:rotate-12 transition-transform" />
                 Start Scanning
                 <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
               </Link>
             </Button>
-            <Button asChild variant="outline" size="lg" className="text-lg px-8 border-2 hover:bg-primary hover:text-primary-foreground transition-all duration-300 group">
+            <Button asChild variant="outline" size="lg" className="btn-aurora text-lg px-8 border-2 hover:bg-primary hover:text-primary-foreground transition-all duration-300 group">
               <Link to="/products">
                 <Database className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
                 Browse Products

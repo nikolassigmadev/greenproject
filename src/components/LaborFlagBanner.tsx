@@ -66,7 +66,7 @@ export function LaborFlagBanner({ flag, brandName, compact = false }: LaborFlagB
             {!expanded && flag.sources.length > 0 && (
               <button
                 onClick={() => setExpanded(true)}
-                className={`flex items-center gap-1 text-xs mt-2 underline underline-offset-2 ${style.text} opacity-80 hover:opacity-100`}
+                className={`btn-aurora flex items-center gap-1 text-xs mt-2 underline underline-offset-2 ${style.text} opacity-80 hover:opacity-100`}
               >
                 <Info className="w-3 h-3" />
                 View sources ({flag.sources.length})
@@ -85,7 +85,7 @@ export function LaborFlagBanner({ flag, brandName, compact = false }: LaborFlagB
                 </ul>
                 <button
                   onClick={() => setExpanded(false)}
-                  className={`text-xs underline underline-offset-2 ${style.text} opacity-80 hover:opacity-100 mt-1`}
+                  className={`btn-aurora text-xs underline underline-offset-2 ${style.text} opacity-80 hover:opacity-100 mt-1`}
                 >
                   Hide sources
                 </button>

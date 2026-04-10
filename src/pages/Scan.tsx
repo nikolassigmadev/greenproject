@@ -1733,6 +1733,7 @@ const Scan = () => {
                       toast({ title: 'No Results', description: 'Scan a product first to see results' });
                     }
                   }}
+                  className="btn-aurora"
                   style={{
                     width: '48px',
                     height: '48px',
@@ -1764,6 +1765,7 @@ const Scan = () => {
                     offFileInputRef.current?.click();
                   }}
                   disabled={offSearchLoading}
+                  className="btn-aurora"
                   style={{
                     width: '72px',
                     height: '72px',
@@ -1791,6 +1793,7 @@ const Scan = () => {
                     searchInputRef.current?.focus();
                     searchInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                   }}
+                  className="btn-aurora"
                   style={{
                     width: '48px',
                     height: '48px',
@@ -1877,7 +1880,7 @@ const Scan = () => {
               <button
                 type="submit"
                 disabled={offLoading || !barcodeInput.trim()}
-                className="flex items-center gap-1.5 px-4 h-11 rounded-xl font-semibold text-sm transition-all duration-200 flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="btn-aurora flex items-center gap-1.5 px-4 h-11 rounded-xl font-semibold text-sm transition-all duration-200 flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ backgroundColor: 'hsl(152 48% 28%)', color: 'white' }}
               >
                 {offLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}

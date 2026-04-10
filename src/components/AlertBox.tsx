@@ -43,7 +43,7 @@ export const AlertBox: React.FC<AlertBoxProps> = ({
       {closeable && onClose && (
         <button
           onClick={onClose}
-          className="flex-shrink-0 ml-4 p-1 hover:opacity-75 transition-opacity"
+          className="btn-aurora flex-shrink-0 ml-4 p-1 hover:opacity-75 transition-opacity"
           aria-label="Close alert"
         >
           <X size={16} />

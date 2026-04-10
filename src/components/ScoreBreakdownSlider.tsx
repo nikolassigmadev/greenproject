@@ -43,7 +43,7 @@ const FactorBar = ({
           type="button"
           onClick={() => onSelect(factor.key)}
           className={cn(
-            "w-full text-left rounded-lg p-2 transition-colors",
+            "btn-aurora w-full text-left rounded-lg p-2 transition-colors",
             selected && "bg-muted/60",
             !selected && "hover:bg-muted/40",
             dimmed && "opacity-60",
