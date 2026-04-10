@@ -8,6 +8,7 @@ import type {
 
 import { validateAndCleanBarcode, getAlternativeFormats } from '../../utils/barcodeValidator';
 import { ocrSearchLogger } from '../../utils/ocrSearchLogger';
+import { getProductOverride } from '../../data/productOverrides';
 
 const OFF_API_BASE = 'https://world.openfoodfacts.org';
 
@@ -161,6 +162,13 @@ export const lookupBarcode = async (barcode: string): Promise<OpenFoodFactsResul
   }
 
   console.log(`✅ Barcode validated: "${barcode}" → "${cleaned}" (${validation.format})`);
+
+  // Check local override map before hitting the network
+  const override = getProductOverride(cleaned);
+  if (override) {
+    console.log(`📋 Using local override for barcode: ${cleaned}`);
+    return override;
+  }
 
   // Try primary barcode first
   const result = await lookupBarcodeInternal(cleaned);
