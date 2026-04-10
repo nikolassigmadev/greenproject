@@ -23,7 +23,7 @@ import {
 import { cn } from "@/lib/utils";
 import { searchProducts as searchOffProducts } from "@/services/openfoodfacts";
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
-import { getBrandFlag } from "@/data/brandFlags";
+import { getLaborAllegationCount } from "@/utils/laborCheck";
 import {
   loadBasket,
   addToBasket,
@@ -74,7 +74,6 @@ function ScoreRing({ score, grade }: { score: number; grade: string }) {
 }
 
 function addResultToBasket(result: OpenFoodFactsResult) {
-  const flag = getBrandFlag(result.brand);
   addToBasket({
     barcode: result.barcode,
     productName: result.productName || "Unknown Product",
@@ -83,7 +82,7 @@ function addResultToBasket(result: OpenFoodFactsResult) {
     ecoscoreGrade: result.ecoscoreGrade,
     ecoscoreScore: result.ecoscoreScore,
     nutriscoreGrade: result.nutriscoreGrade,
-    laborAllegations: flag ? 1 : 0,
+    laborAllegations: getLaborAllegationCount(result.brand, result.productName),
     co2Per100g: result.carbonFootprint100g,
   });
 }
