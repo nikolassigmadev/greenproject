@@ -1723,38 +1723,6 @@ const Scan = () => {
                 gap: '2rem',
                 zIndex: 10,
               }}>
-                {/* Left: Analytics/Results */}
-                <button
-                  onClick={() => {
-                    const resultsEl = document.getElementById('scan-results');
-                    if (resultsEl) {
-                      resultsEl.scrollIntoView({ behavior: 'smooth' });
-                    } else {
-                      toast({ title: 'No Results', description: 'Scan a product first to see results' });
-                    }
-                  }}
-                  className="btn-aurora"
-                  style={{
-                    width: '48px',
-                    height: '48px',
-                    borderRadius: '50%',
-                    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                    backdropFilter: 'blur(4px)',
-                    border: '2px solid rgba(255, 255, 255, 0.3)',
-                    color: 'white',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.25)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.15)'; }}
-                  title="View Results"
-                >
-                  <BarChart3 size={20} />
-                </button>
-
                 {/* Center: Camera/Upload */}
                 <button
                   onClick={() => {
@@ -1787,33 +1755,6 @@ const Scan = () => {
                   {offSearchLoading ? <Loader2 size={28} style={{ animation: 'spin 1s linear infinite' }} /> : <Camera size={28} />}
                 </button>
 
-                {/* Right: Search/QR */}
-                <button
-                  onClick={() => {
-                    searchInputRef.current?.focus();
-                    searchInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                  }}
-                  className="btn-aurora"
-                  style={{
-                    width: '48px',
-                    height: '48px',
-                    borderRadius: '50%',
-                    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                    backdropFilter: 'blur(4px)',
-                    border: '2px solid rgba(255, 255, 255, 0.3)',
-                    color: 'white',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.25)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.15)'; }}
-                  title="Search by Name"
-                >
-                  <QrCode size={20} />
-                </button>
               </div>
 
               {/* Drag & drop hint text */}
