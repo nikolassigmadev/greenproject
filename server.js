@@ -25,31 +25,36 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.VITE_OPENAI_API_KEY;
 
-// Middleware
-// Middleware
-app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests from:
-    // - No origin (server-to-server, Capacitor native)
-    // - localhost / local network IPs
-    // - Capacitor WebView origins
-    // - Our Hostinger domain
-    if (
-      !origin ||
-      /^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+)(:\d+)?$/.test(origin) ||
-      origin === 'capacitor://localhost' ||
-      origin === 'http://localhost' ||
-      /darkviolet-whale-491214\.hostingersite\.com/.test(origin) ||
-      /lightgray-sheep-324503\.hostingersite\.com/.test(origin) ||
-      /\.hostingersite\.com$/.test(origin)
-    ) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-}));
+// ── CORS — explicit preflight handler must come first so nginx doesn't swallow OPTIONS ──
+const ALLOWED_ORIGINS = [
+  /^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+)(:\d+)?$/,
+  /capacitor:\/\/localhost/,
+  /darkviolet-whale-491214\.hostingersite\.com/,
+  /lightgray-sheep-324503\.hostingersite\.com/,
+  /\.hostingersite\.com$/,
+];
+
+function isAllowedOrigin(origin) {
+  if (!origin) return true;
+  return ALLOWED_ORIGINS.some((re) => re.test(origin));
+}
+
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (isAllowedOrigin(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin || '*');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With');
+    res.setHeader('Access-Control-Max-Age', '86400');
+  }
+  // Respond to preflight immediately — don't let it fall through to route handlers
+  if (req.method === 'OPTIONS') {
+    return res.status(204).end();
+  }
+  next();
+});
+
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb' }));
 
