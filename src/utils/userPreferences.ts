@@ -138,6 +138,48 @@ const GRADE_CO2_ESTIMATE: Record<string, number> = {
 };
 const BASELINE_CO2 = 2.5; // grade C = "average" product
 
+// All-time carbon stats vs. average consumer
+export const getCarbonStats = (history: ScanHistoryEntry[]) => {
+  const GRADE_CO2: Record<string, number> = { a: 0.5, b: 1.2, c: 2.5, d: 4.0, e: 6.0 };
+  const BASELINE = 2.5; // kg CO₂e/kg — grade C "average" product
+  const SERVING_KG = 0.25; // assume 250g per scanned product
+
+  let totalUserCO2 = 0;
+  let totalBaselineCO2 = 0;
+  let scoredCount = 0;
+
+  for (const scan of history) {
+    const grade = scan.scores.ecoGrade?.toLowerCase();
+    if (!grade && scan.carbonFootprint100g == null) continue;
+    scoredCount++;
+    const co2PerKg = scan.carbonFootprint100g != null
+      ? scan.carbonFootprint100g * 10
+      : (GRADE_CO2[grade!] ?? BASELINE);
+    totalUserCO2 += co2PerKg * SERVING_KG;
+    totalBaselineCO2 += BASELINE * SERVING_KG;
+  }
+
+  const co2SavedKg = Math.max(0, totalBaselineCO2 - totalUserCO2);
+  const pctReduced = totalBaselineCO2 > 0 ? Math.round((co2SavedKg / totalBaselineCO2) * 100) : 0;
+
+  // Project yearly saving based on scan frequency
+  const oldest = history.length > 0 ? history[history.length - 1].timestamp : Date.now();
+  const daysSinceFirst = Math.max(1, (Date.now() - oldest) / 86_400_000);
+  const scansPerYear = (history.length / daysSinceFirst) * 365;
+  const projectedSavedKgPerYear = scoredCount > 0
+    ? Math.round(((co2SavedKg / scoredCount) * scansPerYear) * 10) / 10
+    : 0;
+
+  return {
+    totalUserCO2: Math.round(totalUserCO2 * 10) / 10,
+    totalBaselineCO2: Math.round(totalBaselineCO2 * 10) / 10,
+    co2SavedKg: Math.round(co2SavedKg * 10) / 10,
+    pctReduced,
+    projectedSavedKgPerYear,
+    scoredCount,
+  };
+};
+
 export const getImpactStats = (history: ScanHistoryEntry[]) => {
   const now = Date.now();
   const monthMs = 30 * 24 * 60 * 60 * 1000;

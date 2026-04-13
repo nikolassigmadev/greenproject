@@ -8,6 +8,7 @@ import {
   clearScanHistory,
   getHistoryStats,
   getImpactStats,
+  getCarbonStats,
   type ScanHistoryEntry,
 } from "@/utils/userPreferences";
 import {
@@ -21,6 +22,7 @@ import {
   Leaf,
   Users,
   Zap,
+  Award,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -118,6 +120,7 @@ export default function Dashboard() {
 
   const stats = getHistoryStats(history);
   const impact = getImpactStats(history);
+  const carbon = getCarbonStats(history);
 
   const handleClear = () => {
     clearScanHistory();
@@ -288,6 +291,119 @@ export default function Dashboard() {
                           ? `You've avoided ${impact.co2AvoidedKg} kg CO₂ this month — keep it up!`
                           : `Every scan helps. You're making greener choices!`}
                       </p>
+                    )}
+                  </div>
+                )}
+
+                {/* ── Carbon Impact Calculator ── */}
+                {carbon.scoredCount > 0 && (
+                  <div className="bg-card rounded-2xl border border-border/60 shadow-soft p-4">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-7 h-7 rounded-xl flex items-center justify-center flex-shrink-0"
+                        style={{ background: "linear-gradient(135deg, hsl(196 88% 22%) 0%, hsl(172 82% 34%) 100%)" }}>
+                        <Leaf className="w-3.5 h-3.5 text-white" />
+                      </div>
+                      <h2 className="text-sm font-bold text-foreground">Carbon Impact</h2>
+                      <span className="ml-auto text-xs text-muted-foreground">{carbon.scoredCount} scored scans</span>
+                    </div>
+
+                    {/* Progress bar */}
+                    <div className="mb-4">
+                      <div className="flex justify-between text-xs mb-1.5">
+                        <span className="text-muted-foreground">Your CO₂</span>
+                        <span className="font-semibold text-foreground">
+                          {carbon.pctReduced > 0
+                            ? `${carbon.pctReduced}% below average`
+                            : `${Math.abs(carbon.pctReduced)}% above average`}
+                        </span>
+                      </div>
+                      <div className="h-2.5 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all duration-700"
+                          style={{
+                            width: `${Math.min(100, Math.max(4, 100 - carbon.pctReduced))}%`,
+                            background: carbon.pctReduced >= 20
+                              ? "linear-gradient(90deg, hsl(196 88% 22%), hsl(172 82% 34%))"
+                              : carbon.pctReduced >= 0
+                              ? "hsl(38 88% 44%)"
+                              : "hsl(0 68% 48%)",
+                          }}
+                        />
+                      </div>
+                      <div className="flex justify-between text-[9px] text-muted-foreground/60 mt-1">
+                        <span>0 kg</span>
+                        <span>Avg consumer</span>
+                      </div>
+                    </div>
+
+                    {/* Stats row */}
+                    <div className="grid grid-cols-3 gap-2 mb-4">
+                      <div className="bg-muted/40 rounded-xl p-3 text-center">
+                        <div className="text-lg font-display font-extrabold tabular-nums"
+                          style={{ color: "hsl(172 80% 28%)" }}>
+                          {carbon.co2SavedKg}
+                          <span className="text-[10px] font-normal ml-0.5">kg</span>
+                        </div>
+                        <div className="text-[10px] text-muted-foreground font-medium mt-0.5 leading-tight">
+                          CO₂ saved
+                        </div>
+                      </div>
+                      <div className="bg-muted/40 rounded-xl p-3 text-center">
+                        <div className="text-lg font-display font-extrabold tabular-nums text-foreground">
+                          {carbon.totalUserCO2}
+                          <span className="text-[10px] font-normal ml-0.5">kg</span>
+                        </div>
+                        <div className="text-[10px] text-muted-foreground font-medium mt-0.5 leading-tight">
+                          your total
+                        </div>
+                      </div>
+                      <div className="bg-muted/40 rounded-xl p-3 text-center">
+                        <div className="text-lg font-display font-extrabold tabular-nums"
+                          style={{ color: "hsl(196 88% 28%)" }}>
+                          {carbon.projectedSavedKgPerYear}
+                          <span className="text-[10px] font-normal ml-0.5">kg/yr</span>
+                        </div>
+                        <div className="text-[10px] text-muted-foreground font-medium mt-0.5 leading-tight">
+                          projected saving
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Badges */}
+                    {carbon.co2SavedKg > 0 && (
+                      <div>
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">
+                          Badges earned
+                        </p>
+                        <div className="flex gap-2 flex-wrap">
+                          {carbon.co2SavedKg >= 0.1 && (
+                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold"
+                              style={{ backgroundColor: "hsl(172 50% 95%)", color: "hsl(172 80% 28%)" }}>
+                              <Award className="w-3 h-3" />
+                              CO₂ Saver
+                            </div>
+                          )}
+                          {carbon.co2SavedKg >= 5 && (
+                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold"
+                              style={{ backgroundColor: "hsl(196 50% 94%)", color: "hsl(196 88% 22%)" }}>
+                              <Award className="w-3 h-3" />
+                              Carbon Reducer
+                            </div>
+                          )}
+                          {carbon.co2SavedKg >= 20 && (
+                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold"
+                              style={{ backgroundColor: "hsl(280 40% 96%)", color: "hsl(280 52% 46%)" }}>
+                              <Award className="w-3 h-3" />
+                              Green Champion
+                            </div>
+                          )}
+                          {carbon.co2SavedKg < 0.1 && (
+                            <p className="text-[10px] text-muted-foreground">
+                              Scan more eco-friendly products to unlock badges
+                            </p>
+                          )}
+                        </div>
+                      </div>
                     )}
                   </div>
                 )}

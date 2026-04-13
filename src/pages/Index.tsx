@@ -3,10 +3,10 @@ import { Footer } from "@/components/Footer";
 import { BottomNav } from "@/components/BottomNav";
 import { Link } from "react-router-dom";
 import {
-  Camera, Leaf, Users, Heart, Apple,
+  Camera, Leaf, Heart,
   Settings, Globe, Shield,
   ChevronRight, BarChart3, TrendingUp, Activity,
-  Scan, Zap, ArrowRight,
+  Scan, Zap, ArrowRight, ScanLine, Star, Receipt,
 } from "lucide-react";
 
 const CONTAINER = "w-full max-w-xl mx-auto px-5";
@@ -110,9 +110,9 @@ const steps = [
 ];
 
 const trustStats = [
-  { value: "3M+", label: "Products covered" },
-  { value: "6", label: "Checks every scan" },
-  { value: "Free", label: "No account needed" },
+  { value: "3M+", label: "Products rated" },
+  { value: "6", label: "Ethics checks" },
+  { value: "★ 4.8", label: "Free forever" },
 ];
 
 const Index = () => {
@@ -139,24 +139,35 @@ const Index = () => {
                 className="animate-icon-ring w-16 h-16 rounded-2xl flex items-center justify-center"
                 style={{ backgroundColor: "rgba(255,255,255,0.18)", border: "1px solid rgba(255,255,255,0.30)" }}
               >
-                <Leaf className="w-8 h-8 text-white" strokeWidth={2} />
+                <ScanLine className="w-8 h-8 text-white" strokeWidth={1.8} />
+              </div>
+            </div>
+
+            {/* Social proof badge */}
+            <div className="flex justify-center mb-4">
+              <div
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold"
+                style={{ backgroundColor: "rgba(255,255,255,0.18)", color: "rgba(255,255,255,0.92)", border: "1px solid rgba(255,255,255,0.28)" }}
+              >
+                <Star className="w-3 h-3 fill-white text-white" />
+                Database of more than 3 million products
               </div>
             </div>
 
             <h1 className="text-[2.1rem] font-display font-extrabold leading-[1.15] tracking-tight mb-4" style={{ color: "#ffffff" }}>
               Know the True Cost of What You Buy
             </h1>
-            <p className="text-sm leading-relaxed mb-8" style={{ color: "rgba(255,255,255,0.75)" }}>
+            <p className="text-sm leading-relaxed mb-8" style={{ color: "rgba(255,255,255,0.90)" }}>
               Scan any product to instantly reveal its environmental impact, labor practices, and ethical alternatives.
             </p>
 
             <div className="flex gap-3 justify-center">
               <Link
                 to="/scan"
-                className="btn-aurora inline-flex items-center gap-2 px-6 py-3.5 rounded-2xl font-bold text-sm shadow-elevated hover:scale-[1.02] transition-all duration-200 active:scale-[0.98]"
-                style={{ backgroundColor: "#ffffff", color: "hsl(196 88% 22%)" }}
+                className="btn-aurora inline-flex items-center gap-2 px-7 py-4 rounded-2xl font-extrabold text-base shadow-elevated hover:scale-[1.03] hover:shadow-2xl transition-all duration-200 active:scale-[0.97]"
+                style={{ backgroundColor: "#ffffff", color: "hsl(196 88% 22%)", boxShadow: "0 8px 32px rgba(0,0,0,0.22), 0 2px 8px rgba(0,0,0,0.12)" }}
               >
-                <Camera className="w-4 h-4" />
+                <Camera className="w-5 h-5" />
                 Scan a Product
               </Link>
               <Link
@@ -165,7 +176,7 @@ const Index = () => {
                 style={{ backgroundColor: "rgba(255,255,255,0.14)", border: "1px solid rgba(255,255,255,0.28)", color: "#ffffff" }}
               >
                 <Settings className="w-4 h-4" />
-                Priorities
+                Set My Priorities
               </Link>
             </div>
           </div>
@@ -191,7 +202,7 @@ const Index = () => {
             <div className="grid grid-cols-3 gap-2.5">
               {[
                 { icon: Scan, label: "Scan", sub: "Any product", to: "/scan", gradient: "linear-gradient(135deg, hsl(196 88% 22%) 0%, hsl(172 82% 34%) 100%)" },
-                { icon: Zap, label: "Insights", sub: "Get verdicts", to: "/scan", gradient: "linear-gradient(135deg, hsl(36 92% 46%) 0%, hsl(28 90% 56%) 100%)" },
+                { icon: Receipt, label: "Receipt", sub: "Whole shop", to: "/receipt", gradient: "linear-gradient(135deg, hsl(36 92% 46%) 0%, hsl(28 90% 56%) 100%)" },
                 { icon: TrendingUp, label: "Better", sub: "Alternatives", to: "/products", gradient: "linear-gradient(135deg, hsl(280 58% 46%) 0%, hsl(275 55% 60%) 100%)" },
               ].map((item) => {
                 const Icon = item.icon;

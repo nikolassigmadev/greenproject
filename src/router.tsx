@@ -10,6 +10,7 @@ import NotFound from "./pages/NotFound";
 import Preferences from "./pages/Preferences";
 import Dashboard from "./pages/Dashboard";
 import ShoppingList from "./pages/ShoppingList";
+import ReceiptScanner from "./pages/ReceiptScanner";
 import { CalAIShowcase } from "./components/CalAIShowcase";
 
 // Import admin components - uncomment to enable
@@ -64,6 +65,10 @@ export const router = createBrowserRouter([
       {
         path: "/basket",
         element: <ShoppingList />,
+      },
+      {
+        path: "/receipt",
+        element: <ReceiptScanner />,
       },
       {
         path: "/design-system",
