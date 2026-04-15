@@ -101,7 +101,7 @@ const Index = () => {
         {/* ── Top header ── */}
         <div className="px-5 pt-14 pb-2">
           <div className="max-w-xl mx-auto">
-            <p className="text-sm font-medium text-muted-foreground mb-0.5">Ethical Shopper</p>
+            <p className="text-sm font-medium text-muted-foreground mb-0.5">GoodScan</p>
             <h1 className="text-[1.75rem] font-display font-extrabold text-foreground leading-tight">
               Shop with your values.
             </h1>

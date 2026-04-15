@@ -14,7 +14,7 @@ export function Footer() {
               <Leaf className="w-3.5 h-3.5 text-white" />
             </div>
             <span className="font-display font-bold text-foreground">
-              Ethical<span className="text-primary">Shopper</span>
+              Good<span className="text-primary">Scan</span>
             </span>
           </div>
 
@@ -39,7 +39,7 @@ export function Footer() {
 
           {/* Copyright */}
           <p className="text-xs text-muted-foreground/70">
-            © {currentYear} EthicalShopper
+            © {currentYear} GoodScan
           </p>
         </div>
       </div>

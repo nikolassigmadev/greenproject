@@ -5,7 +5,7 @@
  * Development: uses localhost:3001
  */
 
-const PRODUCTION_BACKEND = 'https://lightgray-sheep-324503.hostingersite.com';
+const PRODUCTION_BACKEND = 'https://goodscan.shop';
 
 export const getBackendUrl = (): string => {
   // If explicitly set via env var, use that
