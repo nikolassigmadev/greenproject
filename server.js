@@ -17,12 +17,16 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { existsSync } from 'fs';
 
+console.log('🟡 server.js: imports loaded');
+
 // Fix Node.js IPv6 timeout issue — OpenFoodFacts IPv6 is unreliable
-dns.setDefaultResultOrder('ipv4first');
+try { dns.setDefaultResultOrder('ipv4first'); } catch(e) { console.warn('dns.setDefaultResultOrder not supported:', e.message); }
 
 // Load environment variables (check .env.local first, then .env)
 dotenv.config({ path: '.env.local' });
 dotenv.config();
+
+console.log('🟡 server.js: dotenv loaded, PORT=', process.env.PORT);
 
 const app = express();
 const PORT = process.env.PORT || 3001;
