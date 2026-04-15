@@ -871,15 +871,29 @@ const Scan = () => {
             lookupBarcode(advancedResult.barcode)
               .then((result) => {
                 console.log("OpenFoodFacts result:", result);
-                if (result.found && hasEcoScore(result)) {
-                  sessionStorage.setItem('scan_candidates', JSON.stringify([result]));
-                  navigate(`/product-off/${result.barcode}?from=scan`);
-                } else if (result.found) {
-                  toast({
-                    title: "No Environmental Data",
-                    description: `"${result.productName || "Product"}" has no Eco-Score breakdown.`,
-                    variant: "destructive",
-                  });
+                if (result.found) {
+                  // Cross-validate: make sure the found product name roughly matches
+                  // what OCR identified (prevents hallucinated barcodes returning wrong products)
+                  const ocrName = `${advancedResult.brandName || ''} ${advancedResult.productName || ''}`.toLowerCase().trim();
+                  const foundName = `${result.productName || ''} ${result.brand || ''}`.toLowerCase().trim();
+                  const ocrWords = ocrName.split(/\s+/).filter(w => w.length >= 3);
+                  const nameMatches = ocrWords.length === 0 || ocrWords.some(w => foundName.includes(w));
+
+                  if (!nameMatches) {
+                    console.warn(`⚠️ Barcode product "${foundName}" doesn't match OCR name "${ocrName}" — ignoring barcode result`);
+                    return;
+                  }
+
+                  if (hasEcoScore(result)) {
+                    sessionStorage.setItem('scan_candidates', JSON.stringify([result]));
+                    navigate(`/product-off/${result.barcode}?from=scan`);
+                  } else {
+                    toast({
+                      title: "No Environmental Data",
+                      description: `"${result.productName || "Product"}" has no Eco-Score breakdown.`,
+                      variant: "destructive",
+                    });
+                  }
                 }
               })
               .catch((err) => {
