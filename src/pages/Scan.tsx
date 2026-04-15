@@ -1074,8 +1074,9 @@ const Scan = () => {
       // Step 4: Rank by eco data completeness and navigate to best result
       console.log(`Found results for query: "${usedQuery}"`);
       const topResults = filterBestProducts(results, usedQuery);
-      sessionStorage.setItem('scan_candidates', JSON.stringify(topResults));
-      navigate(`/product-off/${topResults[0].barcode}?from=scan`);
+      const candidates = topResults.length > 0 ? topResults : results;
+      sessionStorage.setItem('scan_candidates', JSON.stringify(candidates));
+      navigate(`/product-off/${candidates[0].barcode}?from=scan`);
     } catch (error) {
       console.error("Image scan error:", error);
       toast({
