@@ -336,7 +336,7 @@ export default function OpenFoodFactsDetail() {
           <div className="px-5 pt-8 max-w-xl mx-auto">
             <button
               onClick={() => navigate(-1)}
-              className="btn-aurora flex items-center gap-1.5 text-sm font-semibold text-primary mb-6 hover:opacity-80 transition-opacity"
+              className="flex items-center gap-1.5 text-sm font-semibold text-primary mb-6 hover:opacity-80 transition-opacity"
             >
               <ArrowLeft className="w-4 h-4" /> Back
             </button>
@@ -399,7 +399,7 @@ export default function OpenFoodFactsDetail() {
         >
           <button
             onClick={() => navigate(-1)}
-            className="btn-aurora flex items-center gap-1.5 text-sm font-semibold mb-6 hover:opacity-80 transition-opacity"
+            className="flex items-center gap-1.5 text-sm font-semibold mb-6 hover:opacity-80 transition-opacity"
             style={{ color: "rgba(255,255,255,0.85)" }}
           >
             <ArrowLeft className="w-4 h-4" /> Back
@@ -479,13 +479,12 @@ export default function OpenFoodFactsDetail() {
                   <div className="mt-4 flex gap-2">
                     <button
                       onClick={() => document.getElementById("details")?.scrollIntoView({ behavior: "smooth" })}
-                      className="btn-aurora flex-1 py-2.5 rounded-xl text-sm font-bold transition-all hover:opacity-90 active:scale-[0.98]"
+                      className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all hover:opacity-90 active:scale-[0.98]"
                       style={{ backgroundColor: verdict.color, color: "#ffffff" }}
                     >
                       {verdict.action} — See Full Breakdown
                     </button>
                     <button
-                      className="btn-aurora"
                       onClick={() => {
                         if (inBasket) return;
                         addToBasket({
@@ -501,7 +500,7 @@ export default function OpenFoodFactsDetail() {
                         });
                         setInBasket(true);
                       }}
-                      className="btn-aurora flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl text-sm font-bold transition-all active:scale-[0.98] flex-shrink-0"
+                      className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl text-sm font-bold transition-all active:scale-[0.98] flex-shrink-0"
                       style={{
                         backgroundColor: inBasket ? "hsl(152 42% 92%)" : "hsl(152 48% 30%)",
                         color: inBasket ? "hsl(152 48% 30%)" : "#ffffff",
@@ -526,7 +525,7 @@ export default function OpenFoodFactsDetail() {
                 <div className="flex gap-2">
                   <button
                     onClick={() => setConfirmDismissed(true)}
-                    className="btn-aurora flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-bold transition-all hover:opacity-90 active:scale-[0.98]"
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-bold transition-all hover:opacity-90 active:scale-[0.98]"
                     style={{ backgroundColor: "hsl(152 48% 30%)", color: "#ffffff" }}
                   >
                     <CheckCircle2 className="w-4 h-4" />
@@ -535,7 +534,7 @@ export default function OpenFoodFactsDetail() {
                   {candidates.length > 0 && (
                     <button
                       onClick={() => setShowCandidates(true)}
-                      className="btn-aurora flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-bold border border-border/70 bg-muted/60 text-foreground transition-all hover:bg-muted active:scale-[0.98]"
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-bold border border-border/70 bg-muted/60 text-foreground transition-all hover:bg-muted active:scale-[0.98]"
                     >
                       No, show others
                       <ChevronRight className="w-3.5 h-3.5" />
@@ -556,7 +555,7 @@ export default function OpenFoodFactsDetail() {
                     </div>
                     <button
                       onClick={() => setShowCandidates(false)}
-                      className="btn-aurora text-xs font-semibold text-primary hover:opacity-70 transition-opacity"
+                      className="text-xs font-semibold text-primary hover:opacity-70 transition-opacity"
                     >
                       Cancel
                     </button>
@@ -579,7 +578,7 @@ export default function OpenFoodFactsDetail() {
                           sessionStorage.removeItem('scan_candidates');
                           navigate(`/product-off/${c.barcode}`);
                         }}
-                        className="btn-aurora w-full flex items-center gap-3 p-3.5 text-left hover:bg-muted/50 transition-colors active:bg-muted"
+                        className="w-full flex items-center gap-3 p-3.5 text-left hover:bg-muted/50 transition-colors active:bg-muted"
                       >
                         {c.imageUrl ? (
                           <img

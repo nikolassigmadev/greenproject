@@ -23,7 +23,6 @@ import { copySingleProductCode } from "@/utils/productExporter";
 import { loadPriorities, DEFAULT_PRIORITIES, type UserPriorities } from "@/utils/userPreferences";
 import { lookupBarcode, isValidBarcode, searchProducts as searchOffProducts, searchBetterAlternatives } from "@/services/openfoodfacts";
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
-import Tesseract from "tesseract.js";
 
 // Check if a product has an eco-score grade
 const hasEcoScore = (product: OpenFoodFactsResult): boolean => {
@@ -142,22 +141,6 @@ const filterBestProducts = (results: OpenFoodFactsResult[], query?: string): Ope
     .slice(0, 5);
 };
 
-type OcrWord = {
-  text?: string;
-  confidence?: number;
-};
-
-type OcrResult = {
-  data?: {
-    text?: string;
-    confidence?: number;
-    words?: OcrWord[];
-  };
-};
-
-type TesseractProgress = {
-  status?: string;
-};
 
 const normalizeOcrText = (text: string) => {
   return text
@@ -243,68 +226,6 @@ const cleanupOcrTextForSearch = (text: string) => {
   return normalizeOcrText(uniqPreserveOrder([...filtered, ...numericCodes]).join(" "));
 };
 
-const shouldTreatAsNoText = (text: string, result: OcrResult) => {
-  const visible = text.replace(/\s/g, "");
-  // More lenient - accept shorter text
-  if (visible.length < 3) return true;
-
-  const letters = (visible.match(/[a-z]/gi) || []).length;
-  const digits = (visible.match(/[0-9]/g) || []).length;
-  const alnum = (visible.match(/[a-z0-9]/gi) || []).length;
-  const nonAlnum = Math.max(0, visible.length - alnum);
-  const alnumRatio = visible.length ? alnum / visible.length : 0;
-  const nonAlnumRatio = visible.length ? nonAlnum / visible.length : 1;
-
-  const overallConfidence = Number(result?.data?.confidence);
-  const confidenceScore = Number.isFinite(overallConfidence) ? overallConfidence : 0;
-
-  const words = Array.isArray(result?.data?.words) ? result.data.words : [];
-  const wordConfs = words
-    .map((w) => Number(w?.confidence))
-    .filter((c) => Number.isFinite(c) && c >= 0 && c <= 100) as number[];
-  const avgWordConfidence = wordConfs.length
-    ? wordConfs.reduce((sum, c) => sum + c, 0) / wordConfs.length
-    : 0;
-
-  const lengthScore = Math.min(visible.length, 20);
-  const letterScore = Math.min(letters * 2, 40);
-  const digitScore = Math.min(digits, 15);
-
-  const reliableBonus = Math.min(30, 30);
-  const goodWordBonus = Math.min(60, 60);
-  const noisyPenalty = nonAlnumRatio > 0.25 ? (nonAlnumRatio - 0.25) * 120 : 0;
-  const lowAlnumPenalty = alnumRatio < 0.7 ? (0.7 - alnumRatio) * 120 : 0;
-  const gibberishPenalty = isLikelyGibberish(text) ? 45 : 0;
-
-  return (
-    confidenceScore +
-    avgWordConfidence * 0.6 +
-    lengthScore +
-    letterScore +
-    digitScore +
-    reliableBonus +
-    goodWordBonus -
-    noisyPenalty -
-    lowAlnumPenalty -
-    gibberishPenalty
-  );
-};
-
-const getReliableOcrText = (result: OcrResult) => {
-  const words = Array.isArray(result?.data?.words) ? result.data.words : [];
-  const goodWords = words.filter((w) => {
-    const t = String(w?.text || "").trim();
-    const c = Number(w?.confidence);
-    if (!Number.isFinite(c)) return false;
-    const lettersInWord = (t.match(/[a-z]/gi) || []).length;
-    return t.length >= 3 && lettersInWord >= 1 && c >= 50;
-  });
-
-  const reliableText = cleanupOcrTextForSearch(
-    normalizeOcrText(goodWords.map((w) => String(w?.text || "").trim()).join(" "))
-  );
-  return { reliableText, goodWordsCount: goodWords.length, wordsCount: words.length };
-};
 
 const isLikelyGibberish = (text: string) => {
   const visible = text.replace(/\s/g, "");
@@ -337,46 +258,6 @@ const isLikelyGibberish = (text: string) => {
   return false;
 };
 
-const preprocessImageDataUrl = async (imageDataUrl: string) => {
-  const img = new Image();
-  img.decoding = "async";
-  img.src = imageDataUrl;
-  await new Promise<void>((resolve, reject) => {
-    img.onload = () => resolve();
-    img.onerror = () => reject(new Error("Failed to load image"));
-  });
-
-  const maxWidth = 1600;
-  const scale = img.width > maxWidth ? maxWidth / img.width : 1;
-  const width = Math.max(1, Math.round(img.width * scale));
-  const height = Math.max(1, Math.round(img.height * scale));
-
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext("2d", { willReadFrequently: true });
-  if (!ctx) return imageDataUrl;
-
-  ctx.drawImage(img, 0, 0, width, height);
-  const imageData = ctx.getImageData(0, 0, width, height);
-  const data = imageData.data;
-
-  const contrast = 1.2;
-  const intercept = 128 * (1 - contrast);
-  for (let i = 0; i < data.length; i += 4) {
-    const r = data[i];
-    const g = data[i + 1];
-    const b = data[i + 2];
-    const gray = 0.299 * r + 0.587 * g + 0.114 * b;
-    const adjusted = Math.max(0, Math.min(255, gray * contrast + intercept));
-    data[i] = adjusted;
-    data[i + 1] = adjusted;
-    data[i + 2] = adjusted;
-  }
-
-  ctx.putImageData(imageData, 0, 0);
-  return canvas.toDataURL("image/png");
-};
 
 const normalizeForTokens = (value: string) =>
   value
@@ -390,125 +271,6 @@ const toTokens = (value: string) => {
   return normalized ? normalized.split(" ").filter(Boolean) : [];
 };
 
-const preprocessImageThresholdDataUrl = async (imageDataUrl: string) => {
-  const img = new Image();
-  img.decoding = "async";
-  img.src = imageDataUrl;
-  await new Promise<void>((resolve, reject) => {
-    img.onload = () => resolve();
-    img.onerror = () => reject(new Error("Failed to load image"));
-  });
-
-  const maxWidth = 1600;
-  const scale = img.width > maxWidth ? maxWidth / img.width : 1;
-  const width = Math.max(1, Math.round(img.width * scale));
-  const height = Math.max(1, Math.round(img.height * scale));
-
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext("2d", { willReadFrequently: true });
-  if (!ctx) return imageDataUrl;
-
-  ctx.drawImage(img, 0, 0, width, height);
-  const imageData = ctx.getImageData(0, 0, width, height);
-  const data = imageData.data;
-
-  const contrast = 1.25;
-  const intercept = 128 * (1 - contrast);
-  const threshold = 160;
-
-  for (let i = 0; i < data.length; i += 4) {
-    const r = data[i];
-    const g = data[i + 1];
-    const b = data[i + 2];
-    const gray = 0.299 * r + 0.587 * g + 0.114 * b;
-    const adjusted = Math.max(0, Math.min(255, gray * contrast + intercept));
-    const bw = adjusted > threshold ? 255 : 0;
-    data[i] = bw;
-    data[i + 1] = bw;
-    data[i + 2] = bw;
-  }
-
-  ctx.putImageData(imageData, 0, 0);
-  return canvas.toDataURL("image/png");
-};
-
-const cropImageDataUrl = async (
-  imageDataUrl: string,
-  crop: { x: number; y: number; w: number; h: number }
-) => {
-  const img = new Image();
-  img.decoding = "async";
-  img.src = imageDataUrl;
-  await new Promise<void>((resolve, reject) => {
-    img.onload = () => resolve();
-    img.onerror = () => reject(new Error("Failed to load image"));
-  });
-
-  const sx = Math.max(0, Math.min(img.width, Math.round(img.width * crop.x)));
-  const sy = Math.max(0, Math.min(img.height, Math.round(img.height * crop.y)));
-  const sw = Math.max(1, Math.min(img.width - sx, Math.round(img.width * crop.w)));
-  const sh = Math.max(1, Math.min(img.height - sy, Math.round(img.height * crop.h)));
-
-  const canvas = document.createElement("canvas");
-  canvas.width = sw;
-  canvas.height = sh;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return imageDataUrl;
-
-  ctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
-  return canvas.toDataURL("image/png");
-};
-
-const scoreOcrCandidate = (
-  candidateText: string,
-  reliableText: string,
-  reliableStats: { goodWordsCount: number; wordsCount: number },
-  result: OcrResult
-) => {
-  const visible = candidateText.replace(/\s/g, "");
-  const letters = (visible.match(/[a-z]/gi) || []).length;
-  const digits = (visible.match(/[0-9]/g) || []).length;
-  const alnum = (visible.match(/[a-z0-9]/gi) || []).length;
-  const nonAlnum = Math.max(0, visible.length - alnum);
-  const alnumRatio = visible.length ? alnum / visible.length : 0;
-  const nonAlnumRatio = visible.length ? nonAlnum / visible.length : 1;
-
-  const overallConfidence = Number(result?.data?.confidence);
-  const confidenceScore = Number.isFinite(overallConfidence) ? overallConfidence : 0;
-
-  const words = Array.isArray(result?.data?.words) ? result.data.words : [];
-  const wordConfs = words
-    .map((w) => Number(w?.confidence))
-    .filter((c) => Number.isFinite(c) && c >= 0 && c <= 100) as number[];
-  const avgWordConfidence = wordConfs.length
-    ? wordConfs.reduce((sum, c) => sum + c, 0) / wordConfs.length
-    : 0;
-
-  const lengthScore = Math.min(visible.length, 20);
-  const letterScore = Math.min(letters * 2, 40);
-  const digitScore = Math.min(digits, 15);
-
-  const reliableBonus = Math.min(reliableText.replace(/\s/g, "").length, 30);
-  const goodWordBonus = Math.min(reliableStats.goodWordsCount * 12, 60);
-  const noisyPenalty = nonAlnumRatio > 0.25 ? (nonAlnumRatio - 0.25) * 120 : 0;
-  const lowAlnumPenalty = alnumRatio < 0.7 ? (0.7 - alnumRatio) * 120 : 0;
-  const gibberishPenalty = isLikelyGibberish(candidateText) ? 45 : 0;
-
-  return (
-    confidenceScore +
-    avgWordConfidence * 0.6 +
-    lengthScore +
-    letterScore +
-    digitScore +
-    reliableBonus +
-    goodWordBonus -
-    noisyPenalty -
-    lowAlnumPenalty -
-    gibberishPenalty
-  );
-};
 
 const Scan = () => {
   const navigate = useNavigate();
@@ -1055,7 +817,7 @@ const Scan = () => {
     setSelectedEnvironmentalResult(null);
   }, []);
 
-  // Process image with OCR - Try OpenAI first, fallback to Tesseract
+  // Process image with OCR using OpenAI Vision API
   const processImage = useCallback(async (imageData: string) => {
     setIsProcessing(true);
     setExtractedText("");
@@ -1067,7 +829,6 @@ const Scan = () => {
     try {
       setIsScanning(true);
       let extractedText = "";
-      let useOpenAI = true;
 
       // Try Advanced OpenAI Vision API first (GPT-4 Vision with optimized prompts)
       try {
@@ -1076,13 +837,6 @@ const Scan = () => {
 
         if (advancedResult.success) {
           console.log("✅ Advanced OCR extraction successful");
-          console.log("📊 Extracted:", {
-            product: advancedResult.productName,
-            brand: advancedResult.brandName,
-            certifications: advancedResult.certifications,
-            confidence: advancedResult.confidence,
-            time: advancedResult.processingTime,
-          });
 
           // Prefer product name + brand for search
           if (advancedResult.productName && advancedResult.brandName) {
@@ -1129,16 +883,14 @@ const Scan = () => {
               });
           }
         } else {
-          console.warn("❌ Advanced OCR failed, falling back to standard OpenAI:", advancedResult.error);
-          useOpenAI = false;
+          console.warn("❌ Advanced OCR failed, trying standard OpenAI:", advancedResult.error);
         }
       } catch (error) {
         console.warn("⚠️ Advanced OCR error, trying standard OpenAI:", error);
-        useOpenAI = false;
       }
 
-      // Fallback to standard OpenAI if advanced failed
-      if (!useOpenAI || !extractedText) {
+      // Fallback to standard OpenAI if advanced didn't extract text
+      if (!extractedText) {
         try {
           console.log("📡 Attempting standard OpenAI Vision API...");
           const openaiResult = await recognizeImageWithOpenAI(imageData);
@@ -1146,64 +898,12 @@ const Scan = () => {
           if (openaiResult.success && openaiResult.text) {
             console.log("✅ Standard OpenAI extraction successful");
             extractedText = openaiResult.text;
-            useOpenAI = true;
           } else {
             console.warn("Standard OpenAI failed:", openaiResult.error);
-            useOpenAI = false;
           }
         } catch (error) {
           console.warn("Standard OpenAI error:", error);
-          useOpenAI = false;
         }
-      }
-
-      // Fallback to Tesseract if OpenAI didn't work
-      if (!useOpenAI || !extractedText) {
-        console.log("Using Tesseract.js for OCR...");
-        const preprocessedGray = await preprocessImageDataUrl(imageData);
-        const preprocessedThreshold = await preprocessImageThresholdDataUrl(imageData);
-
-        const cropCenter = await cropImageDataUrl(imageData, { x: 0.15, y: 0.18, w: 0.7, h: 0.64 });
-        const cropTop = await cropImageDataUrl(imageData, { x: 0.05, y: 0.0, w: 0.9, h: 0.55 });
-        const cropCenterThreshold = await preprocessImageThresholdDataUrl(cropCenter);
-        const cropTopThreshold = await preprocessImageThresholdDataUrl(cropTop);
-
-        const inputs: Array<{ label: string; dataUrl: string }> = [
-          { label: "original", dataUrl: imageData },
-          { label: "gray", dataUrl: preprocessedGray },
-          { label: "threshold", dataUrl: preprocessedThreshold },
-          { label: "crop_center_threshold", dataUrl: cropCenterThreshold },
-          { label: "crop_top_threshold", dataUrl: cropTopThreshold },
-        ];
-
-        let best: { candidateText: string; score: number } | null = null;
-
-        for (let i = 0; i < inputs.length; i++) {
-          const input = inputs[i];
-          const result = (await Tesseract.recognize(input.dataUrl, "eng", {
-            logger: (m: unknown) => {
-              if (i !== 0) return;
-              const status =
-                typeof m === "object" && m !== null && "status" in m
-                  ? String((m as TesseractProgress).status)
-                  : "";
-              if (status === "recognizing text") {
-                setIsScanning(true);
-              }
-            },
-          })) as OcrResult;
-
-          const text = normalizeOcrText(String(result?.data?.text || ""));
-          const reliable = getReliableOcrText(result);
-          const candidateText = reliable.reliableText.length >= 4 ? reliable.reliableText : text;
-
-          const score = scoreOcrCandidate(candidateText, reliable.reliableText, reliable, result);
-          if (!best || score > best.score) {
-            best = { candidateText, score };
-          }
-        }
-
-        extractedText = normalizeOcrText(best?.candidateText || "");
       }
 
       const cleanedForDisplay = cleanupOcrTextForDisplay(extractedText);
