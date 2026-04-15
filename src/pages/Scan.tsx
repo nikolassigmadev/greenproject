@@ -517,10 +517,6 @@ const Scan = () => {
         // Clean up event listener
         video.removeEventListener('canplay', onCanPlay);
 
-        toast({
-          title: "Camera Active",
-          description: "Ready to scan. Position product in frame.",
-        });
       };
 
       const onError = () => {
