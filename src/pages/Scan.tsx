@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
-import { Camera, Upload, Search, Loader2, AlertCircle, X, ScanLine, Image as ImageIcon, Plus, Leaf, BarChart3, QrCode, Settings, Users, Heart, Apple, ChevronRight, Check } from "lucide-react";
+import { Camera, Upload, Search, Loader2, AlertCircle, X, ScanLine, Image as ImageIcon, Plus, Leaf, BarChart3, QrCode, Settings, Users, Heart, Apple, ChevronRight, Check, Zap } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { Input } from "@/components/ui/input";
 import { CalAIButton, ButtonGroup } from "@/components/CalAIButton";
@@ -309,7 +309,7 @@ const Scan = () => {
   const [priorities, setPriorities] = useState<UserPriorities>(loadPriorities());
   const [prioritiesDismissed, setPrioritiesDismissed] = useState(false);
   const [prioritiesJustSaved, setPrioritiesJustSaved] = useState(false);
-  const [scanMode, setScanMode] = useState<'Scan Food' | 'Barcode' | 'Food label'>('Scan Food');
+  const [inlineSearch, setInlineSearch] = useState("");
   const [showSearch, setShowSearch] = useState(false);
   const [flashOn, setFlashOn] = useState(false);
 
@@ -1183,13 +1183,7 @@ const Scan = () => {
     }
   };
 
-  const SCAN_MODES = ['Scan Food', 'Barcode', 'Food label'] as const;
-
   const handleShutter = () => {
-    if (scanMode === 'Barcode') {
-      setShowSearch(true);
-      return;
-    }
     if (cameraActive) {
       capturePhoto();
     } else {
@@ -1323,29 +1317,41 @@ const Scan = () => {
         paddingBottom: 'max(28px, env(safe-area-inset-bottom))',
         zIndex: 20,
       }}>
-        {/* Mode tabs */}
-        <div style={{ display: 'flex', gap: 8, padding: '16px 20px 14px', justifyContent: 'center' }}>
-          {SCAN_MODES.map(mode => (
-            <button
-              key={mode}
-              onClick={() => setScanMode(mode)}
+        {/* Inline search */}
+        <form
+          onSubmit={e => { e.preventDefault(); if (inlineSearch.trim()) { handleProductSearch(inlineSearch); setInlineSearch(""); } }}
+          style={{ display: 'flex', gap: 8, padding: '14px 16px 10px' }}
+        >
+          <div style={{ flex: 1, position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <Search size={15} style={{ position: 'absolute', left: 12, color: 'rgba(255,255,255,0.4)', pointerEvents: 'none' }} />
+            <input
+              type="text"
+              value={inlineSearch}
+              onChange={e => setInlineSearch(e.target.value)}
+              placeholder="Type product name…"
               style={{
-                padding: '9px 18px',
-                borderRadius: 14,
-                backgroundColor: scanMode === mode ? 'white' : 'rgba(255,255,255,0.10)',
-                color: scanMode === mode ? '#0a0a14' : 'rgba(255,255,255,0.70)',
-                fontWeight: 700, fontSize: '0.875rem',
-                border: 'none', cursor: 'pointer',
-                transition: 'background-color 0.15s ease',
+                width: '100%', height: 42, borderRadius: 12,
+                backgroundColor: 'rgba(255,255,255,0.12)',
+                border: '1px solid rgba(255,255,255,0.15)',
+                color: 'white', fontSize: '0.875rem',
+                paddingLeft: 36, paddingRight: 12, outline: 'none',
               }}
-            >
-              {mode === 'Scan Food' && <span style={{ marginRight: 6 }}>🍎</span>}
-              {mode === 'Barcode' && <span style={{ marginRight: 6 }}>▌▌▌</span>}
-              {mode === 'Food label' && <span style={{ marginRight: 6 }}>≡</span>}
-              {mode}
-            </button>
-          ))}
-        </div>
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={!inlineSearch.trim() || offLoading}
+            style={{
+              height: 42, borderRadius: 12, border: 'none',
+              backgroundColor: inlineSearch.trim() ? 'hsl(172 72% 28%)' : 'rgba(255,255,255,0.10)',
+              color: 'white', fontWeight: 700, fontSize: '0.875rem',
+              padding: '0 16px', cursor: inlineSearch.trim() ? 'pointer' : 'default',
+              whiteSpace: 'nowrap', flexShrink: 0,
+            }}
+          >
+            {offLoading ? '…' : 'Search'}
+          </button>
+        </form>
 
         {/* Camera controls */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 52px 4px' }}>
