@@ -578,7 +578,7 @@ export default function OpenFoodFactsDetail() {
                           sessionStorage.removeItem('scan_candidates');
                           navigate(`/product-off/${c.barcode}`);
                         }}
-                        className="w-full flex items-center gap-3 p-3.5 text-left hover:bg-muted/50 transition-colors active:bg-muted"
+                        className="w-full flex items-center gap-3 p-3.5 text-left hover:bg-muted/50 transition-all duration-100 active:bg-muted active:scale-[0.98] active:opacity-70"
                       >
                         {c.imageUrl ? (
                           <img
@@ -616,6 +616,18 @@ export default function OpenFoodFactsDetail() {
             )}
 
             {/* Labor Allegations */}
+            {!laborRecord && (
+              <div className="bg-card rounded-2xl border border-border/60 shadow-soft overflow-hidden">
+                <div className="h-1 w-full" style={{ backgroundColor: "hsl(152 48% 40%)" }} />
+                <div className="p-4 flex items-center gap-3">
+                  <CheckCircle2 className="w-4 h-4 flex-shrink-0" style={{ color: "hsl(152 48% 36%)" }} />
+                  <div>
+                    <h3 className="text-sm font-bold" style={{ color: "hsl(152 48% 28%)" }}>No Labor Concerns Found</h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">No labor or human rights allegations found for this brand in our database.</p>
+                  </div>
+                </div>
+              </div>
+            )}
             {laborRecord && (
               <div className="bg-card rounded-2xl border border-border/60 shadow-soft overflow-hidden">
                 <div className="h-1 w-full" style={{ backgroundColor: "hsl(0 68% 50%)" }} />

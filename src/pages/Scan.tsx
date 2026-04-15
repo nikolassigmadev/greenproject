@@ -298,6 +298,7 @@ const Scan = () => {
   const [offSearchLoading, setOffSearchLoading] = useState(false);
   const [offSearchImage, setOffSearchImage] = useState<string | null>(null);
   const [offSearchText, setOffSearchText] = useState("");
+  const [manualScanInput, setManualScanInput] = useState("");
   const [showDetailedEnvironmental, setShowDetailedEnvironmental] = useState(false);
   const [selectedEnvironmentalResult, setSelectedEnvironmentalResult] = useState<OpenFoodFactsResult | null>(null);
   const [offAlternatives, setOffAlternatives] = useState<OpenFoodFactsResult[]>([]);
@@ -1048,7 +1049,7 @@ const Scan = () => {
 
       for (const q of queries) {
         setOffSearchText(q);
-        results = await searchOffProducts(q, 5);
+        results = await searchOffProducts(q, 20);
         if (results.length > 0) {
           usedQuery = q;
           break;
@@ -1064,10 +1065,11 @@ const Scan = () => {
         return;
       }
 
-      // Step 4: Navigate to the top result
+      // Step 4: Rank by eco data completeness and navigate to best result
       console.log(`Found results for query: "${usedQuery}"`);
-      sessionStorage.setItem('scan_candidates', JSON.stringify(results));
-      navigate(`/product-off/${results[0].barcode}?from=scan`);
+      const topResults = filterBestProducts(results, usedQuery);
+      sessionStorage.setItem('scan_candidates', JSON.stringify(topResults));
+      navigate(`/product-off/${topResults[0].barcode}?from=scan`);
     } catch (error) {
       console.error("Image scan error:", error);
       toast({
@@ -1140,7 +1142,7 @@ const Scan = () => {
       }
 
       console.log('Photo captured:', imageData.length, 'bytes');
-      processImage(imageData);
+      processImageForOFF(imageData);
       stopCamera();
 
     } catch (error) {
@@ -1151,7 +1153,7 @@ const Scan = () => {
         variant: "destructive",
       });
     }
-  }, [processImage, stopCamera, toast]);
+  }, [processImageForOFF, stopCamera, toast]);
 
   // Handle file upload
   const handleFileUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
@@ -1161,11 +1163,11 @@ const Scan = () => {
       reader.onload = (e) => {
         const imageData = e.target?.result as string;
         setUploadedImage(imageData);
-        processImage(imageData);
+        processImageForOFF(imageData);
       };
       reader.readAsDataURL(file);
     }
-  }, [processImage]);
+  }, [processImageForOFF]);
 
   // Manual search
   const handleManualSearch = (e: React.FormEvent) => {
@@ -1475,6 +1477,62 @@ const Scan = () => {
               )}
             </div>
 
+            {/* Manual input overlay — below camera button */}
+            <form
+              onSubmit={(e) => { e.preventDefault(); if (manualScanInput.trim()) { handleProductSearch(manualScanInput); setManualScanInput(""); } }}
+              style={{
+                position: 'absolute',
+                bottom: '0',
+                left: 0,
+                right: 0,
+                padding: '0 16px 14px',
+                zIndex: 10,
+                display: 'flex',
+                gap: '8px',
+              }}
+            >
+              <input
+                type="text"
+                value={manualScanInput}
+                onChange={(e) => setManualScanInput(e.target.value)}
+                placeholder="Type product name..."
+                disabled={offLoading}
+                style={{
+                  flex: 1,
+                  height: '38px',
+                  borderRadius: '999px',
+                  border: '1.5px solid rgba(255,255,255,0.35)',
+                  backgroundColor: 'rgba(0,0,0,0.45)',
+                  backdropFilter: 'blur(10px)',
+                  color: 'white',
+                  fontSize: '0.8rem',
+                  padding: '0 14px',
+                  outline: 'none',
+                }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.7)'; }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.35)'; }}
+              />
+              <button
+                type="submit"
+                disabled={offLoading || !manualScanInput.trim()}
+                style={{
+                  height: '38px',
+                  borderRadius: '999px',
+                  border: 'none',
+                  backgroundColor: manualScanInput.trim() ? 'hsl(152 48% 36%)' : 'rgba(255,255,255,0.15)',
+                  color: 'white',
+                  fontSize: '0.8rem',
+                  fontWeight: '600',
+                  padding: '0 16px',
+                  cursor: manualScanInput.trim() ? 'pointer' : 'default',
+                  transition: 'background-color 0.2s ease',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {offLoading ? '...' : 'Search'}
+              </button>
+            </form>
+
             {/* Animations */}
             <style>{`
               @keyframes scanLine {
@@ -1545,7 +1603,7 @@ const Scan = () => {
               </div>
               <button
                 onClick={() => navigate(`/product-off/${offResult.barcode}`)}
-                className="w-full cursor-pointer text-left transition-opacity hover:opacity-80"
+                className="w-full cursor-pointer text-left transition-all duration-100 hover:opacity-80 active:scale-[0.97] active:opacity-70"
                 style={{ background: 'none', border: 'none', padding: 0 }}
               >
                 <OpenFoodFactsCard result={offResult} />
@@ -1576,7 +1634,7 @@ const Scan = () => {
                   <div key={result.barcode}>
                     <button
                       onClick={() => navigate(`/product-off/${result.barcode}`)}
-                      className="w-full cursor-pointer text-left transition-opacity hover:opacity-80"
+                      className="w-full cursor-pointer text-left transition-all duration-100 hover:opacity-80 active:scale-[0.97] active:opacity-70"
                       style={{ background: 'none', border: 'none', padding: 0 }}
                     >
                       <OpenFoodFactsCard result={result} />
@@ -1612,7 +1670,7 @@ const Scan = () => {
                   <button
                     key={alt.barcode}
                     onClick={() => navigate(`/product-off/${alt.barcode}`)}
-                    className="w-full cursor-pointer text-left transition-opacity hover:opacity-80"
+                    className="w-full cursor-pointer text-left transition-all duration-100 hover:opacity-80 active:scale-[0.97] active:opacity-70"
                     style={{ background: 'none', border: 'none', padding: 0 }}
                   >
                     <OpenFoodFactsCard result={alt} />

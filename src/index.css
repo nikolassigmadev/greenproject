@@ -31,70 +31,46 @@
   }
 }
 
-/* ── Interactive Menu (BottomNav) ─────────────────────────────────────── */
-:root {
-  --component-inactive-color:      hsl(var(--muted-foreground));
-  --component-bg:                  hsl(var(--background) / 0.94);
-  --component-shadow:              hsl(var(--border) / 0.5);
-  --component-active-bg:           hsl(var(--secondary));
-  --component-line-inactive-color: hsl(var(--border));
-  --component-active-color-default:hsl(var(--primary));
-}
-
-@keyframes iconBounce {
-  0%, 100% { transform: translateY(0);     }
-  20%       { transform: translateY(-0.3em); }
-  40%       { transform: translateY(0);     }
-  60%       { transform: translateY(-0.1em);}
-  80%       { transform: translateY(0);     }
-}
-
+/* ── BottomNav (Cal AI–style pill active state) ───────────────────────── */
 .menu {
   display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: space-around;
   width: 100%;
-  padding: 0 0.5rem;
+  padding: 0 0.25rem;
 }
 
 .menu__item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-end;
-  gap: 0.15rem;
-  padding: 0.6rem 0.75rem 0.5rem;
+  justify-content: center;
+  gap: 0.2rem;
+  padding: 0.5rem 0.75rem;
   border: none;
   background: none;
   cursor: pointer;
   position: relative;
-  color: var(--component-inactive-color);
-  transition: color 0.2s ease;
+  color: hsl(220 10% 56%);
+  transition: color 0.18s ease;
   min-width: 3rem;
+  border-radius: 0.75rem;
   -webkit-tap-highlight-color: transparent;
 }
 
-/* animated underline */
-.menu__item::after {
+.menu__item.active {
+  color: hsl(220 14% 10%);
+}
+
+/* Active pill background */
+.menu__item.active::before {
   content: '';
   position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: var(--lineWidth, 0px);
-  height: 2px;
-  background: var(--component-active-color, var(--component-active-color-default));
-  border-radius: 2px;
-  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.menu__item.active {
-  color: var(--component-active-color, var(--component-active-color-default));
-}
-
-.menu__item.active .icon {
-  animation: iconBounce 0.45s ease forwards;
+  inset: 0;
+  border-radius: 0.75rem;
+  background: hsl(220 14% 90%);
+  z-index: -1;
 }
 
 .menu__icon {
@@ -104,55 +80,52 @@
 }
 
 .icon {
-  width: 1.35rem;
-  height: 1.35rem;
+  width: 1.3rem;
+  height: 1.3rem;
   stroke-width: 1.75;
-  transition: stroke-width 0.2s;
 }
 
 .menu__item.active .icon {
-  stroke-width: 2.4;
+  stroke-width: 2.25;
 }
 
 .menu__text {
   font-size: 0.6rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: capitalize;
+  font-weight: 600;
+  letter-spacing: 0.02em;
   white-space: nowrap;
-  /* always rendered for measurement but visually hidden when inactive */
-  visibility: hidden;
+  opacity: 0;
   max-height: 0;
   overflow: hidden;
-  transition: max-height 0.2s ease, visibility 0.2s;
+  transition: opacity 0.18s ease, max-height 0.18s ease;
 }
 
 .menu__text.active {
-  visibility: visible;
+  opacity: 1;
   max-height: 1rem;
 }
 /* ──────────────────────────────────────────────────────────────────────── */
 
 @layer base {
   :root {
-    /* Fresh Teal-to-Emerald Design System */
-    --background: 180 30% 97%;
-    --foreground: 195 60% 10%;
+    /* Cal AI–inspired Mobile Design System */
+    --background: 220 14% 96%;
+    --foreground: 220 14% 10%;
 
     --card: 0 0% 100%;
-    --card-foreground: 195 60% 10%;
+    --card-foreground: 220 14% 10%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 195 60% 10%;
+    --popover-foreground: 220 14% 10%;
 
     --primary: 172 80% 32%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 172 45% 90%;
-    --secondary-foreground: 172 60% 18%;
+    --secondary: 220 14% 90%;
+    --secondary-foreground: 220 14% 20%;
 
-    --muted: 172 20% 92%;
-    --muted-foreground: 172 18% 40%;
+    --muted: 220 14% 92%;
+    --muted-foreground: 220 10% 50%;
 
     --accent: 36 95% 54%;
     --accent-foreground: 30 50% 10%;
@@ -160,11 +133,11 @@
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 172 30% 85%;
-    --input: 172 28% 91%;
+    --border: 220 13% 88%;
+    --input: 220 13% 90%;
     --ring: 172 80% 32%;
 
-    --radius: 0.75rem;
+    --radius: 1rem;
 
     /* Eco color palette — vivid ocean-to-emerald */
     --eco-forest: 172 80% 28%;
@@ -185,14 +158,14 @@
 
     /* Gradients */
     --gradient-hero: linear-gradient(160deg, hsl(196 88% 20%) 0%, hsl(180 85% 26%) 50%, hsl(162 82% 34%) 100%);
-    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(172 30% 98%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(220 14% 98%) 100%);
     --gradient-score: linear-gradient(90deg, hsl(0 70% 48%) 0%, hsl(42 90% 50%) 50%, hsl(172 80% 34%) 100%);
 
-    /* Shadows */
-    --shadow-soft: 0 2px 16px -2px hsl(180 50% 20% / 0.08);
-    --shadow-card: 0 4px 24px -4px hsl(180 50% 20% / 0.12);
-    --shadow-elevated: 0 16px 48px -8px hsl(180 50% 20% / 0.20);
-    --shadow-bottom-nav: 0 -4px 24px -4px hsl(180 50% 20% / 0.10);
+    /* Shadows — pure black, Cal AI–style */
+    --shadow-soft: 0 1px 8px rgba(0,0,0,0.05), 0 2px 16px rgba(0,0,0,0.04);
+    --shadow-card: 0 2px 12px rgba(0,0,0,0.07), 0 1px 4px rgba(0,0,0,0.04);
+    --shadow-elevated: 0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
+    --shadow-bottom-nav: 0 -1px 0 rgba(0,0,0,0.06), 0 -4px 16px rgba(0,0,0,0.05);
 
     --sidebar-background: 172 30% 98%;
     --sidebar-foreground: 195 55% 16%;

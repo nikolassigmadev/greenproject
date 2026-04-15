@@ -38,7 +38,7 @@ function cacheSet<T>(key: string, data: T): void {
   cache.set(key, { data, expiry: Date.now() + CACHE_TTL_MS });
 }
 
-// Countries we care about — Europe, North America, and Indonesia.
+// Countries we care about — Europe, North America, Oceania, and Indonesia.
 // Matched against OpenFoodFacts `countries_tags` which use "en:" prefix.
 const ALLOWED_COUNTRY_TAGS = new Set([
   // North America
@@ -51,6 +51,8 @@ const ALLOWED_COUNTRY_TAGS = new Set([
   "en:croatia", "en:slovakia", "en:slovenia", "en:bulgaria", "en:luxembourg",
   "en:estonia", "en:latvia", "en:lithuania", "en:cyprus", "en:malta",
   "en:iceland", "en:liechtenstein",
+  // Oceania
+  "en:australia", "en:new-zealand",
   // Indonesia
   "en:indonesia",
 ]);
