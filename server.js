@@ -13,6 +13,9 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import fetch from 'node-fetch';
 import dns from 'dns';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import { existsSync } from 'fs';
 
 // Fix Node.js IPv6 timeout issue — OpenFoodFacts IPv6 is unreliable
 dns.setDefaultResultOrder('ipv4first');
@@ -446,6 +449,22 @@ app.get('/api/health', (req, res) => {
     openaiConfigured: !!OPENAI_API_KEY,
   });
 });
+
+// =====================================================
+// SERVE FRONTEND (React SPA)
+// =====================================================
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const distPath = join(__dirname, 'dist');
+
+if (existsSync(distPath)) {
+  app.use(express.static(distPath));
+  // All non-API routes → serve index.html (client-side routing)
+  app.get('*', (req, res) => {
+    res.sendFile(join(distPath, 'index.html'));
+  });
+}
 
 // =====================================================
 // ERROR HANDLING
