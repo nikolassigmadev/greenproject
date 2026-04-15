@@ -309,6 +309,9 @@ const Scan = () => {
   const [priorities, setPriorities] = useState<UserPriorities>(loadPriorities());
   const [prioritiesDismissed, setPrioritiesDismissed] = useState(false);
   const [prioritiesJustSaved, setPrioritiesJustSaved] = useState(false);
+  const [scanMode, setScanMode] = useState<'Scan Food' | 'Barcode' | 'Food label'>('Scan Food');
+  const [showSearch, setShowSearch] = useState(false);
+  const [flashOn, setFlashOn] = useState(false);
 
   // When arriving from Preferences save, scroll to viewfinder and show message
   useEffect(() => {
@@ -341,6 +344,12 @@ const Scan = () => {
     priorities.laborRights === DEFAULT_PRIORITIES.laborRights &&
     priorities.animalWelfare === DEFAULT_PRIORITIES.animalWelfare &&
     priorities.nutrition === DEFAULT_PRIORITIES.nutrition;
+
+  // Auto-start camera when page mounts
+  useEffect(() => {
+    startCamera();
+    return () => { stopCamera(); };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Debug: Check if video element is mounted
   useEffect(() => {
@@ -1174,454 +1183,338 @@ const Scan = () => {
     }
   };
 
+  const SCAN_MODES = ['Scan Food', 'Barcode', 'Food label'] as const;
+
+  const handleShutter = () => {
+    if (scanMode === 'Barcode') {
+      setShowSearch(true);
+      return;
+    }
+    if (cameraActive) {
+      capturePhoto();
+    } else {
+      offFileInputRef.current?.click();
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-background">
+    <div style={{ position: 'fixed', inset: 0, zIndex: 60, backgroundColor: '#000', overflow: 'hidden' }}>
 
-      <main style={{ paddingBottom: '6rem' }}>
+      {/* Hidden canvas for photo capture */}
+      <canvas ref={canvasRef} style={{ display: 'none' }} />
 
-        {/* Header */}
-        <div className="px-5 pt-14 pb-4">
-          <div className="max-w-xl mx-auto">
-            <p className="text-xs font-semibold text-muted-foreground mb-0.5 uppercase tracking-wider">Scan</p>
-            <h1 className="text-[1.75rem] font-display font-extrabold text-foreground leading-tight">
-              Scan a Product
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              {isDefaultPriorities ? 'Set your priorities to unlock personalised results' : 'Personalised to your values'}
-            </p>
-          </div>
+      {/* Full-screen camera video */}
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        muted
+        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+      />
+
+      {/* Dark background when camera not yet active */}
+      {!cameraActive && !cameraInitializing && (
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, #0a0a14 0%, #1a1a2e 100%)' }} />
+      )}
+
+      {/* Scan line when loading */}
+      {offSearchLoading && (
+        <div style={{
+          position: 'absolute', top: '22%', left: '14%', right: '14%',
+          height: '2px',
+          background: 'hsl(152 60% 55%)',
+          boxShadow: '0 0 12px hsl(152 60% 50%), 0 0 28px hsl(152 60% 40%)',
+          animation: 'scanLine 1.8s ease-in-out infinite',
+          zIndex: 8,
+        }} />
+      )}
+
+      {/* Scanning bracket corners */}
+      {(['tl','tr','bl','br'] as const).map(corner => {
+        const top = corner.startsWith('t');
+        const left = corner.endsWith('l');
+        return (
+          <div key={corner} style={{
+            position: 'absolute',
+            top: top ? '20%' : undefined,
+            bottom: !top ? '34%' : undefined,
+            left: left ? '12%' : undefined,
+            right: !left ? '12%' : undefined,
+            width: 56, height: 56,
+            borderTop: top ? '3px solid rgba(255,255,255,0.92)' : undefined,
+            borderBottom: !top ? '3px solid rgba(255,255,255,0.92)' : undefined,
+            borderLeft: left ? '3px solid rgba(255,255,255,0.92)' : undefined,
+            borderRight: !left ? '3px solid rgba(255,255,255,0.92)' : undefined,
+            borderRadius: top && left ? '6px 0 0 0' : top && !left ? '0 6px 0 0' : !top && left ? '0 0 0 6px' : '0 0 6px 0',
+            zIndex: 8,
+          }} />
+        );
+      })}
+
+      {/* Top bar */}
+      <div style={{
+        position: 'absolute', top: 0, left: 0, right: 0,
+        paddingTop: 'max(52px, env(safe-area-inset-top))',
+        paddingLeft: 20, paddingRight: 20, paddingBottom: 12,
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        zIndex: 20,
+      }}>
+        <Link to="/" onClick={() => stopCamera()}>
+          <button style={{
+            width: 38, height: 38, borderRadius: '50%',
+            backgroundColor: 'rgba(0,0,0,0.45)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            border: '1px solid rgba(255,255,255,0.18)',
+            color: 'white', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <X size={18} />
+          </button>
+        </Link>
+        <button
+          onClick={() => setShowSearch(s => !s)}
+          style={{
+            width: 38, height: 38, borderRadius: '50%',
+            backgroundColor: 'rgba(0,0,0,0.45)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            border: '1px solid rgba(255,255,255,0.18)',
+            color: 'white', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+        >
+          <Search size={18} />
+        </button>
+      </div>
+
+      {/* Status pill */}
+      {(cameraInitializing || offSearchLoading || isDefaultPriorities || prioritiesJustSaved) && (
+        <div style={{
+          position: 'absolute',
+          top: 'calc(max(52px, env(safe-area-inset-top)) + 52px)',
+          left: '50%', transform: 'translateX(-50%)',
+          display: 'flex', alignItems: 'center', gap: 6,
+          backgroundColor: isDefaultPriorities ? 'rgba(160,100,0,0.82)' : 'rgba(0,0,0,0.55)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          color: 'white', padding: '6px 16px', borderRadius: 999,
+          fontSize: '0.75rem', fontWeight: 600, whiteSpace: 'nowrap', zIndex: 15,
+        }}>
+          {isDefaultPriorities ? (
+            <><AlertCircle size={12} /><span>Set priorities to unlock scanning</span></>
+          ) : offSearchLoading ? (
+            <><Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /><span>Scanning… {Math.round(scanProgress)}%</span></>
+          ) : prioritiesJustSaved ? (
+            <><Check size={12} /><span>Priorities set — ready to scan</span></>
+          ) : cameraInitializing ? (
+            <><Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /><span>Starting camera…</span></>
+          ) : null}
+        </div>
+      )}
+
+      {/* Bottom panel */}
+      <div style={{
+        position: 'absolute', bottom: 0, left: 0, right: 0,
+        background: 'rgba(10,10,16,0.78)',
+        backdropFilter: 'blur(24px)',
+        WebkitBackdropFilter: 'blur(24px)',
+        borderTop: '1px solid rgba(255,255,255,0.08)',
+        paddingBottom: 'max(28px, env(safe-area-inset-bottom))',
+        zIndex: 20,
+      }}>
+        {/* Mode tabs */}
+        <div style={{ display: 'flex', gap: 8, padding: '16px 20px 14px', justifyContent: 'center' }}>
+          {SCAN_MODES.map(mode => (
+            <button
+              key={mode}
+              onClick={() => setScanMode(mode)}
+              style={{
+                padding: '9px 18px',
+                borderRadius: 14,
+                backgroundColor: scanMode === mode ? 'white' : 'rgba(255,255,255,0.10)',
+                color: scanMode === mode ? '#0a0a14' : 'rgba(255,255,255,0.70)',
+                fontWeight: 700, fontSize: '0.875rem',
+                border: 'none', cursor: 'pointer',
+                transition: 'background-color 0.15s ease',
+              }}
+            >
+              {mode === 'Scan Food' && <span style={{ marginRight: 6 }}>🍎</span>}
+              {mode === 'Barcode' && <span style={{ marginRight: 6 }}>▌▌▌</span>}
+              {mode === 'Food label' && <span style={{ marginRight: 6 }}>≡</span>}
+              {mode}
+            </button>
+          ))}
         </div>
 
-        <div className="max-w-xl mx-auto px-5">
-
-          {/* Priority status */}
-          {isDefaultPriorities ? (
-            <Link
-              to="/preferences"
-              className="flex items-center gap-3 p-4 mb-5 rounded-2xl border-2 shadow-card transition-all hover:shadow-elevated"
-              style={{ backgroundColor: 'hsl(38 70% 97%)', borderColor: 'hsl(38 70% 80%)', textDecoration: 'none' }}
-            >
-              <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                style={{ background: 'linear-gradient(135deg, hsl(38 88% 46%), hsl(35 85% 42%))' }}
-              >
-                <AlertCircle className="w-5 h-5 text-white" />
-              </div>
-              <div className="flex-1">
-                <div className="text-sm font-bold" style={{ color: 'hsl(35 50% 25%)' }}>Set Your Priorities First</div>
-                <div className="text-xs mt-0.5" style={{ color: 'hsl(35 30% 42%)' }}>Tell us what matters most to personalise every result</div>
-              </div>
-              <ChevronRight className="w-4 h-4 flex-shrink-0" style={{ color: 'hsl(38 60% 45%)' }} />
-            </Link>
-          ) : !prioritiesDismissed ? (
-            <div
-              className="flex items-center gap-2.5 px-3.5 py-2.5 mb-5 rounded-2xl border"
-              style={{ backgroundColor: 'hsl(142 40% 96%)', borderColor: 'hsl(152 30% 80%)' }}
-            >
-              <Check className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'hsl(152 48% 36%)' }} />
-              <div className="flex flex-wrap gap-1.5 flex-1">
-                {[
-                  { key: 'laborRights' as keyof UserPriorities, label: 'Labor', icon: Users, color: 'hsl(0 70% 50%)' },
-                  { key: 'environment' as keyof UserPriorities, label: 'Env', icon: Leaf, color: 'hsl(152 48% 30%)' },
-                  { key: 'animalWelfare' as keyof UserPriorities, label: 'Animal', icon: Heart, color: 'hsl(280 60% 50%)' },
-                  { key: 'nutrition' as keyof UserPriorities, label: 'Nutr', icon: Apple, color: 'hsl(38 88% 40%)' },
-                ].map((item) => {
-                  const val = priorities[item.key];
-                  const Icon = item.icon;
-                  return (
-                    <span key={item.key} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold" style={{ color: item.color, backgroundColor: `${item.color}12` }}>
-                      <Icon size={10} /> {val}%
-                    </span>
-                  );
-                })}
-              </div>
-              <Link to="/preferences" className="flex items-center" style={{ color: 'hsl(152 48% 32%)' }}>
-                <ChevronRight className="w-4 h-4" />
-              </Link>
-              <button
-                onClick={() => setPrioritiesDismissed(true)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'hsl(150 10% 65%)', padding: 0, display: 'flex' }}
-              >
-                <X size={12} />
-              </button>
-            </div>
-          ) : null}
-
-          {/* Scanner Viewfinder */}
-          <div
-            ref={viewfinderRef}
-            onDragOver={(e) => {
-              e.preventDefault();
-              e.currentTarget.style.boxShadow = '0 0 0 3px hsl(152 48% 40%), 0 8px 32px rgba(0,0,0,0.2)';
-            }}
-            onDragLeave={(e) => {
-              e.currentTarget.style.boxShadow = '';
-            }}
-            onDrop={(e) => {
-              e.preventDefault();
-              e.currentTarget.style.boxShadow = '';
-              const files = e.dataTransfer.files;
-              if (files.length > 0) {
-                const file = files[0];
-                if (file.type.startsWith('image/')) {
-                  const reader = new FileReader();
-                  reader.onload = (event) => {
-                    setOffSearchImage(event.target?.result as string);
-                    handleOffFileUpload({ target: { files: [file] } } as any);
-                  };
-                  reader.readAsDataURL(file);
-                }
-              }
-            }}
-            className="rounded-3xl overflow-hidden shadow-elevated mb-5"
+        {/* Camera controls */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 52px 4px' }}>
+          {/* Flash toggle */}
+          <button
+            onClick={() => setFlashOn(f => !f)}
             style={{
-              border: '3px solid hsl(152 48% 28%)',
-              transition: 'box-shadow 0.25s ease',
+              width: 48, height: 48, borderRadius: '50%',
+              backgroundColor: 'rgba(255,255,255,0.12)',
+              border: 'none', color: flashOn ? 'hsl(48 95% 65%)' : 'rgba(255,255,255,0.65)',
+              cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}
           >
-            {/* Viewfinder Area */}
-            <div style={{
-              position: 'relative',
-              width: '100%',
-              aspectRatio: '3 / 4',
-              backgroundColor: '#1a1a2e',
+            <Zap size={22} strokeWidth={2} />
+          </button>
+
+          {/* Shutter */}
+          <button
+            onClick={handleShutter}
+            disabled={offSearchLoading}
+            style={{
+              width: 76, height: 76, borderRadius: '50%',
+              backgroundColor: offSearchLoading ? 'rgba(255,255,255,0.4)' : 'white',
+              border: '4px solid rgba(255,255,255,0.3)',
+              cursor: offSearchLoading ? 'not-allowed' : 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 2px 16px rgba(0,0,0,0.4)',
+              transition: 'transform 0.1s ease',
+            }}
+            onMouseDown={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(0.93)'; }}
+            onMouseUp={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)'; }}
+            onTouchStart={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(0.93)'; }}
+            onTouchEnd={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)'; }}
+          >
+            {offSearchLoading && <Loader2 size={28} style={{ color: '#0a0a14', animation: 'spin 1s linear infinite' }} />}
+          </button>
+
+          {/* Gallery */}
+          <button
+            onClick={() => offFileInputRef.current?.click()}
+            style={{
+              width: 48, height: 48, borderRadius: 12,
+              backgroundColor: 'rgba(255,255,255,0.12)',
+              border: '1px solid rgba(255,255,255,0.18)',
+              color: 'rgba(255,255,255,0.75)',
+              cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
               overflow: 'hidden',
-            }}>
-              {/* Background: uploaded image or dark gradient */}
-              {offSearchImage ? (
-                <img
-                  src={offSearchImage}
-                  alt="Scanned product"
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
-                  }}
-                />
-              ) : (
-                <div style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: '100%',
-                  height: '100%',
-                  background: 'radial-gradient(ellipse at center, #2a2a4a 0%, #1a1a2e 60%, #0f0f1a 100%)',
-                }} />
-              )}
-
-              {/* Scan line animation overlay */}
-              {offSearchLoading && (
-                <div style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: '10%',
-                  right: '10%',
-                  height: '2px',
-                  backgroundColor: 'hsl(152 45% 50%)',
-                  boxShadow: '0 0 15px hsl(152 45% 50%), 0 0 30px hsl(152 45% 40%)',
-                  animation: 'scanLine 2s ease-in-out infinite',
-                  zIndex: 5,
-                }} />
-              )}
-
-              {/* Corner Brackets */}
-              {/* Top Left */}
-              <div style={{
-                position: 'absolute', top: '15%', left: '10%',
-                width: '50px', height: '50px',
-                borderTop: '3px solid rgba(255,255,255,0.9)',
-                borderLeft: '3px solid rgba(255,255,255,0.9)',
-                borderRadius: '4px 0 0 0',
-                zIndex: 4,
-              }} />
-              {/* Top Right */}
-              <div style={{
-                position: 'absolute', top: '15%', right: '10%',
-                width: '50px', height: '50px',
-                borderTop: '3px solid rgba(255,255,255,0.9)',
-                borderRight: '3px solid rgba(255,255,255,0.9)',
-                borderRadius: '0 4px 0 0',
-                zIndex: 4,
-              }} />
-              {/* Bottom Left */}
-              <div style={{
-                position: 'absolute', bottom: '28%', left: '10%',
-                width: '50px', height: '50px',
-                borderBottom: '3px solid rgba(255,255,255,0.9)',
-                borderLeft: '3px solid rgba(255,255,255,0.9)',
-                borderRadius: '0 0 0 4px',
-                zIndex: 4,
-              }} />
-              {/* Bottom Right */}
-              <div style={{
-                position: 'absolute', bottom: '28%', right: '10%',
-                width: '50px', height: '50px',
-                borderBottom: '3px solid rgba(255,255,255,0.9)',
-                borderRight: '3px solid rgba(255,255,255,0.9)',
-                borderRadius: '0 0 4px 0',
-                zIndex: 4,
-              }} />
-
-              {/* Status Pill */}
-              <div style={{
-                position: 'absolute',
-                top: '6%',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                backgroundColor: isDefaultPriorities ? 'rgba(180, 120, 0, 0.75)' : offSearchLoading ? 'rgba(34, 120, 70, 0.7)' : prioritiesJustSaved ? 'rgba(34, 120, 70, 0.8)' : 'rgba(0, 0, 0, 0.5)',
-                backdropFilter: 'blur(8px)',
-                color: 'white',
-                padding: '6px 16px',
-                borderRadius: '999px',
-                fontSize: '0.75rem',
-                fontWeight: '600',
-                zIndex: 10,
-                letterSpacing: '0.02em',
-              }}>
-                {isDefaultPriorities ? (
-                  <>
-                    <AlertCircle size={12} />
-                    <span>Set priorities to unlock scanning</span>
-                  </>
-                ) : offSearchLoading ? (
-                  <>
-                    <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} />
-                    <span>Scanning... {Math.round(scanProgress)}%</span>
-                  </>
-                ) : prioritiesJustSaved ? (
-                  <>
-                    <Check size={12} />
-                    <span>Priorities set, ready to scan</span>
-                  </>
-                ) : (
-                  <>
-                    <Camera size={12} />
-                    <span>Ready to Scan</span>
-                  </>
-                )}
-              </div>
-
-              {/* Action Buttons Row */}
-              <div style={{
-                position: 'absolute',
-                bottom: '6%',
-                left: 0,
-                right: 0,
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                gap: '2rem',
-                zIndex: 10,
-              }}>
-                {/* Center: Camera/Upload */}
-                <button
-                  onClick={() => {
-                    if (isDefaultPriorities) {
-                      requirePriorities();
-                      return;
-                    }
-                    offFileInputRef.current?.click();
-                  }}
-                  disabled={offSearchLoading}
-                  style={{
-                    width: '72px',
-                    height: '72px',
-                    borderRadius: '50%',
-                    backgroundColor: offSearchLoading ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.2)',
-                    border: '4px solid white',
-                    color: 'white',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: offSearchLoading ? 'not-allowed' : 'pointer',
-                    transition: 'all 0.2s ease',
-                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
-                  }}
-                  onMouseEnter={(e) => { if (!offSearchLoading) e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.35)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = offSearchLoading ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.2)'; }}
-                  title="Capture / Upload Photo"
-                >
-                  {offSearchLoading ? <Loader2 size={28} style={{ animation: 'spin 1s linear infinite' }} /> : <Camera size={28} />}
-                </button>
-
-              </div>
-
-              {/* Drag & drop hint text */}
-              {!offSearchImage && !offSearchLoading && (
-                <div style={{
-                  position: 'absolute',
-                  bottom: '22%',
-                  left: 0,
-                  right: 0,
-                  textAlign: 'center',
-                  color: 'rgba(255, 255, 255, 0.4)',
-                  fontSize: '0.75rem',
-                  fontStyle: 'italic',
-                  zIndex: 4,
-                }}>
-                  Tap capture or drag & drop an image
-                </div>
-              )}
-            </div>
-
-
-            {/* Animations */}
-            <style>{`
-              @keyframes scanLine {
-                0% { top: 15%; opacity: 1; }
-                50% { top: 65%; opacity: 0.8; }
-                100% { top: 15%; opacity: 1; }
-              }
-              @keyframes spin {
-                from { transform: rotate(0deg); }
-                to { transform: rotate(360deg); }
-              }
-            `}</style>
-          </div>
-
-          <input
-            ref={offFileInputRef}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            onChange={handleOffFileUpload}
-            style={{ display: 'none' }}
-          />
-
-          {/* Divider */}
-          <div className="flex items-center gap-3 mb-4">
-            <div className="flex-1 h-px bg-border" />
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">or search by name</span>
-            <div className="flex-1 h-px bg-border" />
-          </div>
-
-          {/* Search */}
-          <div className="bg-card rounded-2xl border border-border/60 shadow-soft p-4 mb-5">
-            <form onSubmit={(e) => { e.preventDefault(); handleProductSearch(barcodeInput); }} className="flex gap-2.5">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-                <Input
-                  ref={searchInputRef}
-                  placeholder="e.g. Coca-Cola, Häagen-Dazs..."
-                  value={barcodeInput}
-                  onChange={(e) => setBarcodeInput(e.target.value)}
-                  className="pl-9 h-11 bg-muted/50 border-0 focus-visible:ring-1 text-sm"
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={offLoading || !barcodeInput.trim()}
-                className="flex items-center gap-1.5 px-4 h-11 rounded-xl font-semibold text-sm transition-all duration-200 flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.97]"
-                style={{ backgroundColor: 'hsl(152 48% 28%)', color: 'white' }}
-              >
-                {offLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-                Search
-              </button>
-            </form>
-          </div>
-
-          {/* Status Messages */}
-          <div id="scan-results" ref={resultsRef} />
-          {ocrMessage && (
-            <AlertBox type="warning" title="OCR Status" message={ocrMessage} onClose={() => setOcrMessage(null)} />
-          )}
-
-          {/* Single result found */}
-          {offResult && offResult.found && (
-            <div className="mb-5">
-              <div className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl mb-3" style={{ backgroundColor: 'hsl(142 40% 96%)', border: '1px solid hsl(152 30% 80%)' }}>
-                <Check className="w-4 h-4 flex-shrink-0" style={{ color: 'hsl(152 48% 36%)' }} />
-                <span className="text-sm font-semibold" style={{ color: 'hsl(152 30% 25%)' }}>Found: {offResult.productName}</span>
-              </div>
-              <button
-                onClick={() => navigate(`/product-off/${offResult.barcode}`)}
-                className="w-full cursor-pointer text-left transition-all duration-100 hover:opacity-80 active:scale-[0.97] active:opacity-70"
-                style={{ background: 'none', border: 'none', padding: 0 }}
-              >
-                <OpenFoodFactsCard result={offResult} />
-              </button>
-              {/* Inline greener swap card */}
-              {(offAlternativeLoading || offAlternatives.length > 0) && (
-                <GreenerSwapCard
-                  original={offResult}
-                  alternatives={offAlternatives}
-                  loading={offAlternativeLoading}
-                />
-              )}
-            </div>
-          )}
-
-          {offResult && !offResult.found && (
-            <AlertBox type="warning" message="Product not found in the Open Food Facts database." />
-          )}
-
-          {/* Multiple search results */}
-          {offSearchResults.length > 0 && (
-            <div className="mb-5">
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-sm font-bold text-foreground">{offSearchResults.length} Products Found</h2>
-              </div>
-              <div className="flex flex-col gap-2.5">
-                {offSearchResults.map((result, idx) => (
-                  <div key={result.barcode}>
-                    <button
-                      onClick={() => navigate(`/product-off/${result.barcode}`)}
-                      className="w-full cursor-pointer text-left transition-all duration-100 hover:opacity-80 active:scale-[0.97] active:opacity-70"
-                      style={{ background: 'none', border: 'none', padding: 0 }}
-                    >
-                      <OpenFoodFactsCard result={result} />
-                    </button>
-                    {/* Inline swap card after the primary (first) result */}
-                    {idx === 0 && (offAlternativeLoading || offAlternatives.length > 0) && (
-                      <div className="mt-2">
-                        <GreenerSwapCard
-                          original={result}
-                          alternatives={offAlternatives}
-                          loading={offAlternativeLoading}
-                        />
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Greener alternatives detail list */}
-          {offAlternatives.length > 0 && (
-            <div id="greener-alternatives-section" className="mb-5">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'hsl(152 42% 96%)' }}>
-                  <Leaf className="w-3.5 h-3.5" style={{ color: 'hsl(152 48% 30%)' }} />
-                </div>
-                <h2 className="text-sm font-bold text-foreground">Greener Alternatives</h2>
-                <span className="text-xs text-muted-foreground">({offAlternatives.length})</span>
-              </div>
-              <div className="flex flex-col gap-2.5">
-                {offAlternatives.map((alt) => (
-                  <button
-                    key={alt.barcode}
-                    onClick={() => navigate(`/product-off/${alt.barcode}`)}
-                    className="w-full cursor-pointer text-left transition-all duration-100 hover:opacity-80 active:scale-[0.97] active:opacity-70"
-                    style={{ background: 'none', border: 'none', padding: 0 }}
-                  >
-                    <OpenFoodFactsCard result={alt} />
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
+            }}
+          >
+            {offSearchImage ? (
+              <img src={offSearchImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              <ImageIcon size={22} strokeWidth={1.8} />
+            )}
+          </button>
         </div>
-      </main>
+      </div>
 
-      <BottomNav />
+      {/* Search / manual input overlay */}
+      {showSearch && (
+        <div
+          style={{
+            position: 'absolute', bottom: 0, left: 0, right: 0,
+            background: 'white', borderRadius: '20px 20px 0 0',
+            padding: '20px 20px max(24px, env(safe-area-inset-bottom))',
+            zIndex: 40,
+            boxShadow: '0 -8px 32px rgba(0,0,0,0.25)',
+          }}
+        >
+          <div style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: '#e0e0e0', margin: '0 auto 16px' }} />
+          <p style={{ fontSize: '0.7rem', fontWeight: 700, color: '#888', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>
+            Search by name or barcode
+          </p>
+          <form onSubmit={(e) => { e.preventDefault(); if (barcodeInput.trim()) { handleProductSearch(barcodeInput); setShowSearch(false); } }} style={{ display: 'flex', gap: 10 }}>
+            <input
+              autoFocus
+              type="text"
+              value={barcodeInput}
+              onChange={e => setBarcodeInput(e.target.value)}
+              placeholder={scanMode === 'Barcode' ? 'Enter barcode number…' : 'e.g. Coca-Cola, Weetbix…'}
+              style={{
+                flex: 1, height: 48, borderRadius: 14,
+                border: '1.5px solid #e8e8e8',
+                backgroundColor: '#f6f6f8',
+                fontSize: '0.9rem', padding: '0 14px', outline: 'none',
+                color: '#111',
+              }}
+            />
+            <button
+              type="submit"
+              disabled={!barcodeInput.trim() || offLoading}
+              style={{
+                height: 48, borderRadius: 14, border: 'none',
+                backgroundColor: barcodeInput.trim() ? 'hsl(172 72% 28%)' : '#e8e8e8',
+                color: barcodeInput.trim() ? 'white' : '#aaa',
+                fontWeight: 700, fontSize: '0.875rem', padding: '0 20px', cursor: 'pointer',
+              }}
+            >
+              {offLoading ? '…' : 'Search'}
+            </button>
+          </form>
+
+          {/* Priorities prompt if not set */}
+          {isDefaultPriorities && (
+            <Link
+              to="/preferences"
+              onClick={() => { setShowSearch(false); stopCamera(); }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 10, marginTop: 14,
+                padding: '12px 14px', borderRadius: 14,
+                backgroundColor: 'hsl(38 70% 97%)', border: '1.5px solid hsl(38 70% 82%)',
+                textDecoration: 'none',
+              }}
+            >
+              <AlertCircle size={16} style={{ color: 'hsl(38 70% 44%)', flexShrink: 0 }} />
+              <div>
+                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'hsl(35 50% 22%)' }}>Set your priorities first</div>
+                <div style={{ fontSize: '0.7rem', color: 'hsl(35 30% 44%)', marginTop: 1 }}>Personalise every scan result</div>
+              </div>
+              <ChevronRight size={14} style={{ color: 'hsl(38 60% 45%)', marginLeft: 'auto', flexShrink: 0 }} />
+            </Link>
+          )}
+
+          <button
+            onClick={() => setShowSearch(false)}
+            style={{
+              marginTop: 12, width: '100%', padding: '10px', borderRadius: 14,
+              border: '1.5px solid #e8e8e8', backgroundColor: 'white',
+              color: '#888', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer',
+            }}
+          >
+            Cancel
+          </button>
+        </div>
+      )}
+
+      {/* Tap-outside to close search */}
+      {showSearch && (
+        <div
+          onClick={() => setShowSearch(false)}
+          style={{ position: 'absolute', inset: 0, zIndex: 35 }}
+        />
+      )}
+
+      {/* Hidden file input */}
+      <input
+        ref={offFileInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onChange={handleOffFileUpload}
+        style={{ display: 'none' }}
+      />
+
+      {/* CSS animations */}
+      <style>{`
+        @keyframes scanLine {
+          0% { top: 20%; opacity: 1; }
+          50% { top: 60%; opacity: 0.7; }
+          100% { top: 20%; opacity: 1; }
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
+
     </div>
   );
 };
