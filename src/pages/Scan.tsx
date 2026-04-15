@@ -312,6 +312,7 @@ const Scan = () => {
   const [inlineSearch, setInlineSearch] = useState("");
   const [showSearch, setShowSearch] = useState(false);
   const [flashOn, setFlashOn] = useState(false);
+  const [scanMode, setScanMode] = useState<'Scan Food' | 'Barcode' | 'Food label'>('Scan Food');
 
   // When arriving from Preferences save, scroll to viewfinder and show message
   useEffect(() => {
@@ -1424,6 +1425,24 @@ const Scan = () => {
               <ImageIcon size={22} strokeWidth={1.8} />
             )}
           </button>
+        </div>
+
+        {/* Mode selector */}
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 8, paddingBottom: 14, paddingTop: 4 }}>
+          {(['Scan Food', 'Barcode', 'Food label'] as const).map(mode => (
+            <button
+              key={mode}
+              onClick={() => setScanMode(mode)}
+              style={{
+                padding: '7px 16px', borderRadius: 999, border: 'none', cursor: 'pointer',
+                backgroundColor: scanMode === mode ? 'white' : 'rgba(255,255,255,0.14)',
+                color: scanMode === mode ? '#0a0a14' : 'rgba(255,255,255,0.75)',
+                fontSize: '0.78rem', fontWeight: 700, transition: 'all 0.15s ease',
+              }}
+            >
+              {mode}
+            </button>
+          ))}
         </div>
       </div>
 

@@ -1,11 +1,13 @@
 import { BottomNav } from "@/components/BottomNav";
 import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
 import {
   Camera, Leaf, Heart,
   Settings, Globe, Shield,
   BarChart3, TrendingUp, Activity,
-  Scan, Receipt, ScanLine, ChevronRight,
+  Scan, Receipt, ScanLine, ChevronRight, AlertCircle,
 } from "lucide-react";
+import { loadPriorities, DEFAULT_PRIORITIES } from "@/utils/userPreferences";
 
 const analysisCategories = [
   {
@@ -94,6 +96,34 @@ const stats = [
 ];
 
 const Index = () => {
+  const [isDefaultPriorities, setIsDefaultPriorities] = useState(() => {
+    const p = loadPriorities();
+    return (
+      p.environment === DEFAULT_PRIORITIES.environment &&
+      p.laborRights === DEFAULT_PRIORITIES.laborRights &&
+      p.animalWelfare === DEFAULT_PRIORITIES.animalWelfare &&
+      p.nutrition === DEFAULT_PRIORITIES.nutrition
+    );
+  });
+
+  useEffect(() => {
+    const check = () => {
+      const p = loadPriorities();
+      setIsDefaultPriorities(
+        p.environment === DEFAULT_PRIORITIES.environment &&
+        p.laborRights === DEFAULT_PRIORITIES.laborRights &&
+        p.animalWelfare === DEFAULT_PRIORITIES.animalWelfare &&
+        p.nutrition === DEFAULT_PRIORITIES.nutrition
+      );
+    };
+    window.addEventListener("prioritiesUpdated", check);
+    window.addEventListener("focus", check);
+    return () => {
+      window.removeEventListener("prioritiesUpdated", check);
+      window.removeEventListener("focus", check);
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-background">
       <main className="pb-nav">
@@ -161,6 +191,36 @@ const Index = () => {
             ))}
           </div>
         </div>
+
+        {/* ── Priorities CTA ── */}
+        {isDefaultPriorities && (
+          <div className="px-5 pt-3">
+            <div className="max-w-xl mx-auto">
+              <Link
+                to="/preferences"
+                className="flex items-center gap-3 rounded-[1.1rem] px-4 py-3.5 active:scale-[0.98] transition-transform duration-150"
+                style={{
+                  backgroundColor: "hsl(38 70% 97%)",
+                  border: "1.5px solid hsl(38 70% 82%)",
+                  boxShadow: "0 2px 10px rgba(0,0,0,0.05)",
+                  textDecoration: "none",
+                }}
+              >
+                <div
+                  className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                  style={{ backgroundColor: "hsl(38 80% 90%)" }}
+                >
+                  <AlertCircle className="w-[1rem] h-[1rem]" style={{ color: "hsl(38 70% 44%)" }} strokeWidth={2.2} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold leading-tight" style={{ color: "hsl(35 50% 22%)" }}>Set your priorities</p>
+                  <p className="text-xs mt-0.5 leading-tight" style={{ color: "hsl(35 30% 44%)" }}>Personalise every scan result to your values</p>
+                </div>
+                <ChevronRight className="w-4 h-4 flex-shrink-0" style={{ color: "hsl(38 60% 45%)" }} />
+              </Link>
+            </div>
+          </div>
+        )}
 
         {/* ── Quick actions ── */}
         <div className="px-5 pt-5">
