@@ -1338,6 +1338,7 @@ const Scan = () => {
             fontSize: '0.75rem', fontWeight: 700, whiteSpace: 'nowrap',
             zIndex: 15, textDecoration: 'none', border: '1px solid rgba(255,200,80,0.3)',
             boxShadow: '0 2px 12px rgba(0,0,0,0.3)',
+            animation: 'priorityPulse 2s ease-in-out infinite',
           }}
         >
           <AlertCircle size={13} />
@@ -1575,6 +1576,11 @@ const Scan = () => {
         @keyframes spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
+        }
+        @keyframes priorityPulse {
+          0%   { transform: translateX(-50%) scale(1);    box-shadow: 0 2px 12px rgba(0,0,0,0.3), 0 0 0 0 rgba(200,130,0,0.55); }
+          60%  { transform: translateX(-50%) scale(1.07); box-shadow: 0 4px 20px rgba(0,0,0,0.35), 0 0 0 10px rgba(200,130,0,0); }
+          100% { transform: translateX(-50%) scale(1);    box-shadow: 0 2px 12px rgba(0,0,0,0.3), 0 0 0 0 rgba(200,130,0,0); }
         }
       `}</style>
 
