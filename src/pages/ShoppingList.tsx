@@ -1,7 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { Header } from "@/components/Header";
-import { Footer } from "@/components/Footer";
 import { BottomNav } from "@/components/BottomNav";
 import {
   ShoppingCart,
@@ -135,30 +133,28 @@ export default function ShoppingList() {
   const inBasket = (barcode: string) => basket.some(b => b.barcode === barcode);
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <Header />
-
+    <div className="min-h-screen bg-background">
       <main className="flex-1 pb-nav">
-        {/* Hero */}
-        <div className="px-5 pt-10 pb-12 text-center relative" style={{ background: "var(--gradient-hero)" }}>
-          <div className="max-w-2xl mx-auto">
-            <h1 className="text-2xl font-display font-extrabold tracking-tight mb-1.5 text-white">
-              Basket Ethics Check
-            </h1>
-            <p className="text-sm" style={{ color: "rgba(255,255,255,0.72)" }}>
-              Build your shopping list · get an ethics score before you shop
-            </p>
+        {/* Cal AI-style header */}
+        <div className="px-5 pt-14 pb-4">
+          <div className="max-w-xl mx-auto flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground mb-0.5 uppercase tracking-wider">Shopping</p>
+              <h1 className="text-[1.75rem] font-display font-extrabold text-foreground leading-tight">My Basket</h1>
+            </div>
+            {basket.length > 0 && (
+              <button
+                onClick={() => setShowClearConfirm(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium hover:opacity-90 active:scale-[0.97] transition-transform"
+                style={{ borderColor: "hsl(var(--border))", color: "hsl(var(--muted-foreground))" }}
+              >
+                <Trash2 className="w-3.5 h-3.5" /> Clear
+              </button>
+            )}
           </div>
-          {basket.length > 0 && (
-            <button onClick={() => setShowClearConfirm(true)}
-              className="btn-aurora absolute top-4 right-4 flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium hover:opacity-90 transition-all"
-              style={{ backgroundColor: "rgba(255,255,255,0.15)", borderColor: "rgba(255,255,255,0.25)", color: "rgba(255,255,255,0.85)" }}>
-              <Trash2 className="w-3.5 h-3.5" /> Clear
-            </button>
-          )}
         </div>
 
-        <div className="px-5 -mt-5 relative z-10">
+        <div className="px-5 relative z-10">
           <div className="max-w-2xl mx-auto space-y-4">
 
             {/* Clear confirm */}
@@ -168,8 +164,19 @@ export default function ShoppingList() {
                   <AlertTriangle className="w-4 h-4" /> Clear the entire basket?
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={handleClear} className="btn-aurora px-4 py-1.5 rounded-lg bg-destructive text-destructive-foreground text-xs font-bold">Yes, Clear</button>
-                  <button onClick={() => setShowClearConfirm(false)} className="btn-aurora px-4 py-1.5 rounded-lg border border-border bg-card text-muted-foreground text-xs font-medium">Cancel</button>
+                  <button
+                    onClick={handleClear}
+                    className="px-4 py-1.5 rounded-lg text-xs font-bold active:scale-[0.97] transition-transform"
+                    style={{ backgroundColor: "hsl(var(--destructive))", color: "hsl(var(--destructive-foreground))" }}
+                  >
+                    Yes, Clear
+                  </button>
+                  <button
+                    onClick={() => setShowClearConfirm(false)}
+                    className="px-4 py-1.5 rounded-lg border border-border bg-card text-muted-foreground text-xs font-medium active:scale-[0.97] transition-transform"
+                  >
+                    Cancel
+                  </button>
                 </div>
               </div>
             )}
@@ -358,8 +365,10 @@ export default function ShoppingList() {
                     className="w-full pl-9 pr-9 py-2.5 text-sm bg-muted/40 rounded-xl border border-border/40 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40 placeholder:text-muted-foreground/50"
                   />
                   {query && (
-                    <button onClick={() => { setQuery(""); setSearchResults([]); }}
-                      className="btn-aurora absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                    <button
+                      onClick={() => { setQuery(""); setSearchResults([]); }}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground active:scale-[0.97] transition-transform"
+                    >
                       <X className="w-4 h-4" />
                     </button>
                   )}
@@ -404,11 +413,13 @@ export default function ShoppingList() {
                           onClick={() => !already && handleAdd(result)}
                           disabled={already}
                           className={cn(
-                            "btn-aurora flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all",
+                            "flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center active:scale-[0.97] transition-transform",
                             already
                               ? "bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 cursor-default"
-                              : "bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95"
-                          )}>
+                              : "hover:opacity-90"
+                          )}
+                          style={already ? undefined : { backgroundColor: "hsl(172 72% 28%)", color: "white" }}
+                        >
                           {already ? <CheckCircle2 className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
                         </button>
                       </div>
@@ -433,8 +444,11 @@ export default function ShoppingList() {
                   <Link to="/scan" className="text-primary font-semibold hover:underline">scan a product</Link>
                   {" "}and tap "Add to Basket" on the product page.
                 </p>
-                <Link to="/scan"
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-bold shadow-soft hover:bg-primary/90 transition-all">
+                <Link
+                  to="/scan"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold shadow-soft hover:opacity-90 active:scale-[0.97] transition-transform"
+                  style={{ backgroundColor: "hsl(172 72% 28%)", color: "white" }}
+                >
                   <ShoppingBag className="w-4 h-4" /> Start Scanning
                 </Link>
               </div>
@@ -500,7 +514,7 @@ export default function ShoppingList() {
                         </Link>
                         <button
                           onClick={() => handleRemove(item.barcode)}
-                          className="btn-aurora flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors">
+                          className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 active:scale-[0.97] transition-transform">
                           <X className="w-4 h-4" />
                         </button>
                       </div>
@@ -514,7 +528,6 @@ export default function ShoppingList() {
         </div>
       </main>
 
-      <Footer />
       <BottomNav />
     </div>
   );

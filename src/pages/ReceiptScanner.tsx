@@ -1,6 +1,4 @@
 import { useState, useRef, useCallback } from "react";
-import { Header } from "@/components/Header";
-import { Footer } from "@/components/Footer";
 import { BottomNav } from "@/components/BottomNav";
 import { Link } from "react-router-dom";
 import {
@@ -120,38 +118,21 @@ export default function ReceiptScanner() {
   const foundCount = products.filter((p) => p.result).length;
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <Header />
-
-      <main className="flex-1 pb-nav">
-        {/* Hero */}
-        <div
-          className="px-5 pt-10 pb-12 text-center relative overflow-hidden"
-          style={{ background: 'var(--gradient-hero)' }}
-        >
-          <div className="max-w-sm mx-auto relative z-10">
-            <div
-              className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
-              style={{ backgroundColor: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.30)' }}
-            >
-              <Receipt className="w-7 h-7 text-white" strokeWidth={1.8} />
-            </div>
-            <h1
-              className="text-2xl font-display font-extrabold tracking-tight mb-1.5"
-              style={{ color: '#ffffff' }}
-            >
-              Receipt Scanner
-            </h1>
-            <p className="text-sm" style={{ color: 'rgba(255,255,255,0.90)' }}>
-              Ethics-check your whole shop in one go — just upload a photo of your receipt
-            </p>
+    <div className="min-h-screen bg-background">
+      <main className="pb-nav">
+        {/* Page header */}
+        <div className="px-5 pt-14 pb-4">
+          <div className="max-w-xl mx-auto">
+            <p className="text-xs font-semibold text-muted-foreground mb-0.5 uppercase tracking-wider">Scan</p>
+            <h1 className="text-[1.75rem] font-display font-extrabold text-foreground leading-tight">Receipt Scanner</h1>
+            <p className="text-sm text-muted-foreground mt-1.5">Upload a photo of your receipt to check every product at once.</p>
           </div>
         </div>
 
-        <div className="px-5 -mt-5 relative z-10 pb-8">
+        <div className="px-5 pb-8">
           <div className="max-w-xl mx-auto space-y-4">
 
-            {/* ── Upload ── */}
+            {/* Upload */}
             {phase === 'upload' && (
               <div
                 className={`bg-card rounded-2xl border-2 border-dashed shadow-soft p-10 text-center cursor-pointer transition-all duration-200 ${dragOver ? 'border-primary bg-primary/5 scale-[1.01]' : 'border-border/60 hover:border-primary/50'}`}
@@ -173,8 +154,8 @@ export default function ReceiptScanner() {
                 <h2 className="text-base font-bold text-foreground mb-1">Upload Receipt Photo</h2>
                 <p className="text-sm text-muted-foreground mb-3">Drag & drop or tap to choose a photo</p>
                 <div
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
-                  style={{ backgroundColor: 'hsl(196 88% 22%)', color: '#ffffff' }}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold active:scale-[0.97] transition-transform"
+                  style={{ backgroundColor: "hsl(172 72% 28%)", color: "white" }}
                 >
                   <Upload className="w-4 h-4" />
                   Choose Photo
@@ -185,7 +166,7 @@ export default function ReceiptScanner() {
               </div>
             )}
 
-            {/* ── Progress ── */}
+            {/* Progress */}
             {(phase === 'reading' || phase === 'searching') && (
               <div className="bg-card rounded-2xl border border-border/60 shadow-soft p-8 text-center">
                 <Loader2 className="w-8 h-8 text-primary animate-spin mx-auto mb-4" />
@@ -200,7 +181,7 @@ export default function ReceiptScanner() {
               </div>
             )}
 
-            {/* ── Results ── */}
+            {/* Results */}
             {phase === 'results' && (
               <>
                 <div className="flex items-center justify-between">
@@ -214,14 +195,15 @@ export default function ReceiptScanner() {
                     <button
                       onClick={handleAddAll}
                       disabled={foundCount === 0}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary text-primary-foreground text-xs font-bold shadow-soft hover:bg-primary/90 transition-all disabled:opacity-40"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold shadow-soft active:scale-[0.97] transition-transform disabled:opacity-40"
+                      style={{ backgroundColor: "hsl(172 72% 28%)", color: "white" }}
                     >
                       <ShoppingBag className="w-3.5 h-3.5" />
                       Add All
                     </button>
                     <button
                       onClick={reset}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-muted text-muted-foreground text-xs font-medium transition-all hover:bg-muted/70 cursor-pointer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-muted text-muted-foreground text-xs font-medium transition-all hover:bg-muted/70 cursor-pointer active:scale-[0.97]"
                     >
                       <X className="w-3.5 h-3.5" />
                       Reset
@@ -279,7 +261,7 @@ export default function ReceiptScanner() {
                           <button
                             onClick={() => handleAddToBasket(i)}
                             disabled={p.added}
-                            className={`flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer ${p.added ? 'bg-emerald-100 dark:bg-emerald-950/40' : 'bg-primary/10 hover:bg-primary/20'}`}
+                            className={`flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer active:scale-[0.97] ${p.added ? 'bg-emerald-100 dark:bg-emerald-950/40' : 'bg-primary/10 hover:bg-primary/20'}`}
                             aria-label={p.added ? 'Added' : 'Add to basket'}
                           >
                             {p.added
@@ -306,8 +288,8 @@ export default function ReceiptScanner() {
                 {foundCount > 0 && (
                   <Link
                     to="/basket"
-                    className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl font-bold text-sm transition-all hover:opacity-90"
-                    style={{ background: 'var(--gradient-hero)', color: '#ffffff' }}
+                    className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl font-bold text-sm active:scale-[0.97] transition-transform"
+                    style={{ backgroundColor: "hsl(172 72% 28%)", color: "white" }}
                   >
                     <ShoppingBag className="w-4 h-4" />
                     View Basket Ethics Report
@@ -319,7 +301,6 @@ export default function ReceiptScanner() {
         </div>
       </main>
 
-      <Footer />
       <BottomNav />
     </div>
   );

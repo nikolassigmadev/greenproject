@@ -1,8 +1,6 @@
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { ArrowLeft, Loader2, Leaf, AlertTriangle, Flag, ExternalLink, CheckCircle2, ChevronRight, Package, ShoppingCart } from "lucide-react";
-import { Header } from "@/components/Header";
-import { Footer } from "@/components/Footer";
 import { BottomNav } from "@/components/BottomNav";
 import { lookupBarcode } from "@/services/openfoodfacts";
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
@@ -317,12 +315,10 @@ export default function OpenFoodFactsDetail() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col bg-background">
-        <Header />
+      <div className="min-h-screen bg-background">
         <main className="flex-1 flex items-center justify-center">
           <Loader2 className="w-10 h-10 animate-spin text-primary" />
         </main>
-        <Footer />
         <BottomNav />
       </div>
     );
@@ -330,20 +326,18 @@ export default function OpenFoodFactsDetail() {
 
   if (error || !product) {
     return (
-      <div className="min-h-screen flex flex-col bg-background">
-        <Header />
+      <div className="min-h-screen bg-background">
         <main className="flex-1 pb-nav">
           <div className="px-5 pt-8 max-w-xl mx-auto">
             <button
               onClick={() => navigate(-1)}
-              className="flex items-center gap-1.5 text-sm font-semibold text-primary mb-6 hover:opacity-80 transition-opacity"
+              className="flex items-center gap-1.5 text-sm font-semibold text-muted-foreground mb-6 hover:text-foreground transition-colors"
             >
               <ArrowLeft className="w-4 h-4" /> Back
             </button>
             <AlertBox type="error" title="Product Not Found" message={error || "Unable to load product details"} />
           </div>
         </main>
-        <Footer />
         <BottomNav />
       </div>
     );
@@ -388,19 +382,13 @@ export default function OpenFoodFactsDetail() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <Header />
-
+    <div className="min-h-screen bg-background">
       <main className="flex-1 pb-nav">
         {/* Hero */}
-        <div
-          className="relative px-5 pt-10 pb-16"
-          style={{ background: "var(--gradient-hero)" }}
-        >
+        <div className="relative px-5 pt-14 pb-4">
           <button
             onClick={() => navigate(-1)}
-            className="flex items-center gap-1.5 text-sm font-semibold mb-6 hover:opacity-80 transition-opacity"
-            style={{ color: "rgba(255,255,255,0.85)" }}
+            className="flex items-center gap-1.5 text-sm font-semibold text-muted-foreground mb-4 hover:text-foreground transition-colors"
           >
             <ArrowLeft className="w-4 h-4" /> Back
           </button>
@@ -410,31 +398,24 @@ export default function OpenFoodFactsDetail() {
               <img
                 src={product.imageUrl}
                 alt={product.productName || "Product"}
-                className="w-20 h-20 rounded-2xl object-cover mx-auto mb-4 shadow-elevated"
-                style={{ border: "2px solid rgba(255,255,255,0.25)" }}
+                className="w-20 h-20 rounded-2xl object-cover mx-auto mb-4 shadow-elevated border border-border/40"
               />
             )}
-            <h1
-              className="text-xl font-display font-extrabold tracking-tight mb-1 leading-snug"
-              style={{ color: "#ffffff" }}
-            >
+            <h1 className="text-xl font-display font-extrabold tracking-tight mb-1 leading-snug text-foreground">
               {product.productName || "Unknown Product"}
             </h1>
             {product.brand && (
-              <p className="text-sm font-medium mb-3" style={{ color: "rgba(255,255,255,0.72)" }}>
+              <p className="text-sm font-medium mb-3 text-muted-foreground">
                 {product.brand}
               </p>
             )}
-            <span
-              className="inline-block font-mono text-[10px] px-2.5 py-1 rounded-full"
-              style={{ backgroundColor: "rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.7)" }}
-            >
+            <span className="inline-block font-mono text-[10px] px-2.5 py-1 rounded-full bg-muted text-muted-foreground">
               {product.barcode}
             </span>
           </div>
         </div>
 
-        <div className="px-5 -mt-8 relative z-10">
+        <div className="px-5 pt-3 pb-6 max-w-xl mx-auto">
           <div className="max-w-xl mx-auto space-y-3">
 
             {/* Verdict card */}
@@ -855,7 +836,6 @@ export default function OpenFoodFactsDetail() {
         </div>
       </main>
 
-      <Footer />
       <BottomNav />
     </div>
   );

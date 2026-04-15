@@ -1,7 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
 import { Search, SlidersHorizontal, Filter } from "lucide-react";
-import { Header } from "@/components/Header";
-import { Footer } from "@/components/Footer";
 import { BottomNav } from "@/components/BottomNav";
 import { ProductCard } from "@/components/ProductCard";
 import { Input } from "@/components/ui/input";
@@ -52,27 +50,19 @@ const Products = () => {
   }, [products, search, selectedCategory, sortBy, minScore]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <Header />
-
+    <div className="min-h-screen bg-background">
       <main className="flex-1 pb-nav">
         {/* Page header */}
-        <div
-          className="px-5 pt-10 pb-12 text-center"
-          style={{ background: "var(--gradient-hero)" }}
-        >
+        <div className="px-5 pt-14 pb-4">
           <div className="max-w-2xl mx-auto">
-            <h1 className="text-2xl font-display font-extrabold tracking-tight mb-1.5" style={{ color: "#ffffff" }}>
-              Product Database
-            </h1>
-            <p className="text-sm leading-relaxed" style={{ color: "rgba(255,255,255,0.72)" }}>
-              {products.length} products — browse, filter, and discover ethical alternatives
-            </p>
+            <p className="text-xs font-semibold text-muted-foreground mb-0.5 uppercase tracking-wider">Browse</p>
+            <h1 className="text-[1.75rem] font-display font-extrabold text-foreground leading-tight">Product Database</h1>
+            <p className="text-sm text-muted-foreground mt-1">{products.length} products — filter and find ethical alternatives</p>
           </div>
         </div>
 
-        {/* Search + filter bar — sticky, overlapping hero */}
-        <div className="px-5 -mt-5 relative z-10 mb-5">
+        {/* Search + filter bar */}
+        <div className="px-5 mb-5">
           <div className="max-w-2xl mx-auto bg-card rounded-2xl border border-border/60 shadow-card p-3">
             <div className="flex flex-col sm:flex-row gap-2.5">
               {/* Search */}
@@ -113,10 +103,10 @@ const Products = () => {
                   key={category}
                   onClick={() => setSelectedCategory(category)}
                   className={cn(
-                    "btn-aurora px-3 py-1 rounded-full text-xs font-semibold border transition-all duration-150 cursor-pointer",
+                    "px-3 py-1 rounded-full text-xs font-semibold border transition-all duration-150 cursor-pointer",
                     selectedCategory === category
-                      ? "bg-primary text-primary-foreground border-primary shadow-soft"
-                      : "bg-card text-muted-foreground border-border/70 hover:border-primary/40 hover:text-foreground"
+                      ? "bg-foreground text-background border-foreground"
+                      : "bg-card text-muted-foreground border-border/70 hover:border-foreground/30 hover:text-foreground"
                   )}
                 >
                   {category}
@@ -157,7 +147,6 @@ const Products = () => {
         </div>
       </main>
 
-      <Footer />
       <BottomNav />
     </div>
   );

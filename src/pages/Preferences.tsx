@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Header } from "@/components/Header";
-import { Footer } from "@/components/Footer";
 import { BottomNav } from "@/components/BottomNav";
 import { loadPriorities, savePriorities, DEFAULT_PRIORITIES, type UserPriorities } from "@/utils/userPreferences";
 import { Leaf, Users, Heart, Apple, RotateCcw, Check, Info } from "lucide-react";
@@ -86,26 +84,18 @@ export default function Preferences() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <Header />
-
+    <div className="min-h-screen bg-background">
       <main className="flex-1 pb-nav">
-        {/* Hero header */}
-        <div
-          className="px-5 pt-10 pb-12 text-center"
-          style={{ background: "var(--gradient-hero)" }}
-        >
+        {/* Clean Cal AI-style header */}
+        <div className="px-5 pt-14 pb-2">
           <div className="max-w-lg mx-auto">
-            <h1 className="text-2xl font-display font-extrabold tracking-tight mb-1.5" style={{ color: "#ffffff" }}>
-              My Priorities
-            </h1>
-            <p className="text-sm leading-relaxed" style={{ color: "rgba(255,255,255,0.72)" }}>
-              Adjust the sliders to weight what matters most. Every product verdict adapts to your values.
-            </p>
+            <p className="text-xs font-semibold text-muted-foreground mb-0.5 uppercase tracking-wider">Settings</p>
+            <h1 className="text-[1.75rem] font-display font-extrabold text-foreground leading-tight">My Priorities</h1>
+            <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">Adjust what matters most. Every verdict adapts to your values.</p>
           </div>
         </div>
 
-        <div className="px-5 -mt-5 relative z-10">
+        <div className="px-5 pt-3">
           <div className="max-w-lg mx-auto space-y-3">
             {/* Priority cards */}
             {priorityConfig.map((config) => {
@@ -204,7 +194,11 @@ export default function Preferences() {
             <div className="flex gap-3 justify-center pt-2 pb-2">
               <button
                 onClick={handleSave}
-                className="btn-aurora flex-1 max-w-[12rem] inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-primary text-primary-foreground font-bold text-sm shadow-soft hover:bg-primary/90 hover:shadow-card transition-all duration-200 active:scale-[0.97]"
+                className="flex-1 max-w-[12rem] inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold text-sm active:scale-[0.97] transition-transform"
+                style={saved
+                  ? { backgroundColor: "hsl(152 48% 30%)", color: "white" }
+                  : { backgroundColor: "hsl(220 14% 12%)", color: "white" }
+                }
               >
                 {saved ? (
                   <>
@@ -227,7 +221,6 @@ export default function Preferences() {
         </div>
       </main>
 
-      <Footer />
       <BottomNav />
     </div>
   );

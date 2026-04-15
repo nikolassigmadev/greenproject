@@ -1,6 +1,4 @@
 import { useState, useEffect } from "react";
-import { Header } from "@/components/Header";
-import { Footer } from "@/components/Footer";
 import { BottomNav } from "@/components/BottomNav";
 import { Link } from "react-router-dom";
 import {
@@ -136,36 +134,28 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <Header />
-
-      <main className="flex-1 pb-nav">
-        {/* Hero header */}
-        <div
-          className="px-5 pt-10 pb-12 text-center relative"
-          style={{ background: "var(--gradient-hero)" }}
-        >
-          <div className="max-w-2xl mx-auto">
-            <h1 className="text-2xl font-display font-extrabold tracking-tight mb-1.5" style={{ color: "#ffffff" }}>
-              My Dashboard
-            </h1>
-            <p className="text-sm" style={{ color: "rgba(255,255,255,0.72)" }}>
-              Track your scans and see how your choices evolve
-            </p>
+    <div className="min-h-screen bg-background">
+      {/* Clean header */}
+      <div className="px-5 pt-14 pb-4">
+        <div className="max-w-2xl mx-auto flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground mb-0.5 uppercase tracking-wider">Overview</p>
+            <h1 className="text-[1.75rem] font-display font-extrabold text-foreground leading-tight">My History</h1>
           </div>
           {history.length > 0 && (
             <button
               onClick={() => setShowClearConfirm(true)}
-              className="btn-aurora absolute top-4 right-4 flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium hover:opacity-90 transition-all"
-              style={{ backgroundColor: "rgba(255,255,255,0.15)", borderColor: "rgba(255,255,255,0.25)", color: "rgba(255,255,255,0.85)" }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-muted-foreground bg-card border border-border/60 active:scale-[0.97] transition-transform"
             >
               <Trash2 className="w-3.5 h-3.5" />
               Clear
             </button>
           )}
         </div>
+      </div>
 
-        <div className="px-5 -mt-5 relative z-10">
+      <main className="pb-nav">
+        <div className="px-5">
           <div className="max-w-2xl mx-auto space-y-4">
             {/* Clear confirmation */}
             {showClearConfirm && (
@@ -177,13 +167,13 @@ export default function Dashboard() {
                 <div className="flex gap-2">
                   <button
                     onClick={handleClear}
-                    className="btn-aurora px-4 py-1.5 rounded-lg bg-destructive text-destructive-foreground text-xs font-bold hover:bg-destructive/90 transition-colors"
+                    className="px-4 py-1.5 rounded-lg bg-destructive text-destructive-foreground text-xs font-bold active:scale-[0.97] transition-transform"
                   >
                     Yes, Clear
                   </button>
                   <button
                     onClick={() => setShowClearConfirm(false)}
-                    className="btn-aurora px-4 py-1.5 rounded-lg border border-border bg-card text-muted-foreground text-xs font-medium hover:text-foreground transition-colors"
+                    className="px-4 py-1.5 rounded-lg border border-border bg-card text-muted-foreground text-xs font-medium active:scale-[0.97] transition-transform"
                   >
                     Cancel
                   </button>
@@ -203,7 +193,8 @@ export default function Dashboard() {
                 </p>
                 <Link
                   to="/scan"
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-bold shadow-soft hover:shadow-card hover:bg-primary/90 transition-all"
+                  className="inline-flex items-center gap-2 px-5 py-3 rounded-xl font-bold text-sm active:scale-[0.97] transition-transform"
+                  style={{ backgroundColor: "hsl(220 14% 12%)", color: "white" }}
                 >
                   <ShoppingBag className="w-4 h-4" />
                   Start Scanning
@@ -229,7 +220,7 @@ export default function Dashboard() {
                   ))}
                 </div>
 
-                {/* ── Personal Impact Stats ── */}
+                {/* Personal Impact Stats */}
                 {impact.totalThisMonth > 0 && (
                   <div className="bg-gradient-to-br from-emerald-50 via-teal-50 to-emerald-50 dark:from-emerald-950/30 dark:via-teal-950/20 dark:to-emerald-950/30 rounded-2xl border-2 border-emerald-200 dark:border-emerald-800 p-4">
                     <div className="flex items-center gap-2 mb-3">
@@ -295,7 +286,7 @@ export default function Dashboard() {
                   </div>
                 )}
 
-                {/* ── Carbon Impact Calculator ── */}
+                {/* Carbon Impact Calculator */}
                 {carbon.scoredCount > 0 && (
                   <div className="bg-card rounded-2xl border border-border/60 shadow-soft p-4">
                     <div className="flex items-center gap-2 mb-4">
@@ -485,7 +476,7 @@ export default function Dashboard() {
                   </p>
                 </div>
 
-                {/* Recent scans — richer list */}
+                {/* Recent scans */}
                 <div>
                   <div className="flex items-center gap-2 mb-3">
                     <Clock className="w-4 h-4 text-primary" />
@@ -579,7 +570,6 @@ export default function Dashboard() {
         </div>
       </main>
 
-      <Footer />
       <BottomNav />
     </div>
   );

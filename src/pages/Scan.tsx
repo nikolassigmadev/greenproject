@@ -1,8 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { Camera, Upload, Search, Loader2, AlertCircle, X, ScanLine, Image as ImageIcon, Plus, Leaf, BarChart3, QrCode, Settings, Users, Heart, Apple, ChevronRight, Check } from "lucide-react";
-import { Header } from "@/components/Header";
-import { Footer } from "@/components/Footer";
 import { BottomNav } from "@/components/BottomNav";
 import { Input } from "@/components/ui/input";
 import { CalAIButton, ButtonGroup } from "@/components/CalAIButton";
@@ -298,7 +296,6 @@ const Scan = () => {
   const [offSearchLoading, setOffSearchLoading] = useState(false);
   const [offSearchImage, setOffSearchImage] = useState<string | null>(null);
   const [offSearchText, setOffSearchText] = useState("");
-  const [manualScanInput, setManualScanInput] = useState("");
   const [showDetailedEnvironmental, setShowDetailedEnvironmental] = useState(false);
   const [selectedEnvironmentalResult, setSelectedEnvironmentalResult] = useState<OpenFoodFactsResult | null>(null);
   const [offAlternatives, setOffAlternatives] = useState<OpenFoodFactsResult[]>([]);
@@ -1178,27 +1175,24 @@ const Scan = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <Header />
+    <div className="min-h-screen bg-background">
 
-      <main style={{ flex: 1, paddingBottom: '6rem' }}>
+      <main style={{ paddingBottom: '6rem' }}>
 
-        {/* Hero */}
-        <div
-          className="px-5 pt-8 pb-14 text-center"
-          style={{ background: 'var(--gradient-hero)' }}
-        >
+        {/* Header */}
+        <div className="px-5 pt-14 pb-4">
           <div className="max-w-xl mx-auto">
-            <h1 className="text-2xl font-display font-extrabold tracking-tight mb-1.5" style={{ color: '#ffffff' }}>
+            <p className="text-xs font-semibold text-muted-foreground mb-0.5 uppercase tracking-wider">Scan</p>
+            <h1 className="text-[1.75rem] font-display font-extrabold text-foreground leading-tight">
               Scan a Product
             </h1>
-            <p className="text-sm" style={{ color: 'rgba(255,255,255,0.72)' }}>
+            <p className="text-sm text-muted-foreground mt-1">
               {isDefaultPriorities ? 'Set your priorities to unlock personalised results' : 'Personalised to your values'}
             </p>
           </div>
         </div>
 
-        <div className="max-w-xl mx-auto px-5 -mt-8 relative z-10">
+        <div className="max-w-xl mx-auto px-5">
 
           {/* Priority status */}
           {isDefaultPriorities ? (
@@ -1435,7 +1429,6 @@ const Scan = () => {
                     offFileInputRef.current?.click();
                   }}
                   disabled={offSearchLoading}
-                  className="btn-aurora"
                   style={{
                     width: '72px',
                     height: '72px',
@@ -1477,61 +1470,6 @@ const Scan = () => {
               )}
             </div>
 
-            {/* Manual input overlay — below camera button */}
-            <form
-              onSubmit={(e) => { e.preventDefault(); if (manualScanInput.trim()) { handleProductSearch(manualScanInput); setManualScanInput(""); } }}
-              style={{
-                position: 'absolute',
-                bottom: '0',
-                left: 0,
-                right: 0,
-                padding: '0 16px 14px',
-                zIndex: 10,
-                display: 'flex',
-                gap: '8px',
-              }}
-            >
-              <input
-                type="text"
-                value={manualScanInput}
-                onChange={(e) => setManualScanInput(e.target.value)}
-                placeholder="Type product name..."
-                disabled={offLoading}
-                style={{
-                  flex: 1,
-                  height: '38px',
-                  borderRadius: '999px',
-                  border: '1.5px solid rgba(255,255,255,0.35)',
-                  backgroundColor: 'rgba(0,0,0,0.45)',
-                  backdropFilter: 'blur(10px)',
-                  color: 'white',
-                  fontSize: '0.8rem',
-                  padding: '0 14px',
-                  outline: 'none',
-                }}
-                onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.7)'; }}
-                onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.35)'; }}
-              />
-              <button
-                type="submit"
-                disabled={offLoading || !manualScanInput.trim()}
-                style={{
-                  height: '38px',
-                  borderRadius: '999px',
-                  border: 'none',
-                  backgroundColor: manualScanInput.trim() ? 'hsl(152 48% 36%)' : 'rgba(255,255,255,0.15)',
-                  color: 'white',
-                  fontSize: '0.8rem',
-                  fontWeight: '600',
-                  padding: '0 16px',
-                  cursor: manualScanInput.trim() ? 'pointer' : 'default',
-                  transition: 'background-color 0.2s ease',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {offLoading ? '...' : 'Search'}
-              </button>
-            </form>
 
             {/* Animations */}
             <style>{`
@@ -1579,7 +1517,7 @@ const Scan = () => {
               <button
                 type="submit"
                 disabled={offLoading || !barcodeInput.trim()}
-                className="btn-aurora flex items-center gap-1.5 px-4 h-11 rounded-xl font-semibold text-sm transition-all duration-200 flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-1.5 px-4 h-11 rounded-xl font-semibold text-sm transition-all duration-200 flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.97]"
                 style={{ backgroundColor: 'hsl(152 48% 28%)', color: 'white' }}
               >
                 {offLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
@@ -1683,7 +1621,6 @@ const Scan = () => {
         </div>
       </main>
 
-      <Footer />
       <BottomNav />
     </div>
   );
