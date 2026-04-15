@@ -162,6 +162,18 @@ const Index = () => {
                     <Camera className="w-3.5 h-3.5" />
                     Take a photo or search
                   </div>
+                  {isDefaultPriorities && (
+                    <Link
+                      to="/preferences"
+                      onClick={e => e.stopPropagation()}
+                      className="mt-3 flex items-center gap-1.5 text-xs font-semibold"
+                      style={{ color: "hsl(38 95% 75%)", textDecoration: "none" }}
+                    >
+                      <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                      Set your priorities first
+                      <ChevronRight className="w-3 h-3" />
+                    </Link>
+                  )}
                 </div>
                 <div
                   className="w-16 h-16 rounded-2xl flex items-center justify-center flex-shrink-0"

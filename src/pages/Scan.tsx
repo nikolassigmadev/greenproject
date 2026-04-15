@@ -1299,21 +1299,19 @@ const Scan = () => {
       </div>
 
       {/* Status pill */}
-      {(cameraInitializing || offSearchLoading || isDefaultPriorities || prioritiesJustSaved) && (
+      {(cameraInitializing || offSearchLoading || !isDefaultPriorities || prioritiesJustSaved) && (
         <div style={{
           position: 'absolute',
           top: 'calc(max(52px, env(safe-area-inset-top)) + 52px)',
           left: '50%', transform: 'translateX(-50%)',
           display: 'flex', alignItems: 'center', gap: 6,
-          backgroundColor: isDefaultPriorities ? 'rgba(160,100,0,0.82)' : 'rgba(0,0,0,0.55)',
+          backgroundColor: 'rgba(0,0,0,0.55)',
           backdropFilter: 'blur(12px)',
           WebkitBackdropFilter: 'blur(12px)',
           color: 'white', padding: '6px 16px', borderRadius: 999,
           fontSize: '0.75rem', fontWeight: 600, whiteSpace: 'nowrap', zIndex: 15,
         }}>
-          {isDefaultPriorities ? (
-            <><AlertCircle size={12} /><span>Set priorities to unlock scanning</span></>
-          ) : offSearchLoading ? (
+          {offSearchLoading ? (
             <><Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /><span>Scanning… {Math.round(scanProgress)}%</span></>
           ) : prioritiesJustSaved ? (
             <><Check size={12} /><span>Priorities set — ready to scan</span></>
@@ -1321,6 +1319,31 @@ const Scan = () => {
             <><Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /><span>Starting camera…</span></>
           ) : null}
         </div>
+      )}
+
+      {/* Priorities CTA button */}
+      {isDefaultPriorities && (
+        <Link
+          to="/preferences"
+          onClick={() => stopCamera()}
+          style={{
+            position: 'absolute',
+            top: 'calc(max(52px, env(safe-area-inset-top)) + 52px)',
+            left: '50%', transform: 'translateX(-50%)',
+            display: 'flex', alignItems: 'center', gap: 8,
+            backgroundColor: 'rgba(160,100,0,0.88)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            color: 'white', padding: '8px 18px', borderRadius: 999,
+            fontSize: '0.75rem', fontWeight: 700, whiteSpace: 'nowrap',
+            zIndex: 15, textDecoration: 'none', border: '1px solid rgba(255,200,80,0.3)',
+            boxShadow: '0 2px 12px rgba(0,0,0,0.3)',
+          }}
+        >
+          <AlertCircle size={13} />
+          <span>Set priorities to unlock scanning</span>
+          <ChevronRight size={13} style={{ opacity: 0.8 }} />
+        </Link>
       )}
 
       {/* Bottom panel */}
