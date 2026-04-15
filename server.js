@@ -483,6 +483,7 @@ app.use((err, req, res, next) => {
 // =====================================================
 
 app.listen(PORT, '0.0.0.0', () => {
+  console.log(`✅ Server listening on port ${PORT}`);
   console.log('');
   console.log('╔════════════════════════════════════════════════════════╗');
   console.log('║                                                        ║');
@@ -498,6 +499,14 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log('║                                                        ║');
   console.log('╚════════════════════════════════════════════════════════╝');
   console.log('');
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('💥 Uncaught Exception:', err);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('💥 Unhandled Rejection:', reason);
 });
 
 export default app;
