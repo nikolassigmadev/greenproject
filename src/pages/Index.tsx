@@ -65,7 +65,7 @@ const quickActions = [
   },
   {
     icon: Receipt,
-    label: "Receipt",
+    label: "View Cart",
     sub: "Whole shop",
     to: "/receipt",
     color: "hsl(36 80% 38%)",

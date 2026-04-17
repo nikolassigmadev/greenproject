@@ -11,3 +11,45 @@ git push origin main
 a119230.
 
 npm run dev:all
+
+Step 1 — Build the web assets                                                                     
+                                                                                                    
+  cd "/Users/nikolasdzhovanis/Downloads/ethical-shopper-main copy 2"                             
+  npm run build                                                                                     
+                                                                                                 
+  Step 2 — Sync with Capacitor                                                                   
+
+  npx cap sync android
+                                                                                                    
+  Step 3 — Open in Android Studio
+                                                                                                    
+  npx cap open android                                                                           
+                                                                                                 
+  Step 4 — Create a signing keystore (one-time, keep it safe)                                       
+  
+  In Android Studio terminal or your terminal:                                                      
+  keytool -genkey -v -keystore goodscan-release.keystore \                                       
+    -alias goodscan -keyalg RSA -keysize 2048 -validity 10000                                       
+  Store this keystore file and passwords safely — you can never change it.                       
+                                                                                                    
+  Step 5 — Build a signed AAB in Android Studio                                                     
+                                                                                                    
+  Build → Generate Signed Bundle/APK → Android App Bundle → select your keystore → Release          
+                                                                                                 
+  Step 6 — Google Play Console                                                                      
+                                                                                                 
+  1. Go to play.google.com/console — pay $25 one-time fee                                           
+  2. Create new app: Scan2Source
+  3. Upload the .aab file under Releases → Internal Testing first                                   
+  4. Fill in: description, screenshots (need 2+ phone screenshots), category                        
+  5. Complete the content rating questionnaire                                                      
+  6. Promote from Internal → Production when ready                                                  
+                                                                                                    
+  ---                                                                                            
+  Before you build — do you have Android Studio installed?                                          
+                                                                                                    
+  Run this to check:                                                                             
+  which adb                                                                                         
+                                                                                                 
+  If not, download from developer.android.com/studio. Let me know where you are and I'll guide the  
+  next step.                       
