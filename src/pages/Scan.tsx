@@ -954,17 +954,10 @@ const Scan = () => {
   // Block scanning if priorities not set
   const requirePriorities = useCallback((): boolean => {
     if (isDefaultPriorities) {
-      toast({
-        title: "Set Your Priorities First",
-        description: "Tell us what matters most to you before scanning.",
-        variant: "destructive",
-      });
-      // Scroll to priorities banner
-      window.scrollTo({ top: 0, behavior: 'smooth' });
       return false;
     }
     return true;
-  }, [isDefaultPriorities, toast]);
+  }, [isDefaultPriorities]);
 
   // Manual barcode lookup on OpenFoodFacts
   const handleProductSearch = useCallback(async (productName: string) => {
@@ -1390,7 +1383,7 @@ const Scan = () => {
         </form>
 
         {/* Camera controls */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 52px 4px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 52px 16px' }}>
           {/* Flash toggle */}
           <button
             onClick={() => setFlashOn(f => !f)}
@@ -1408,35 +1401,38 @@ const Scan = () => {
           {/* Shutter */}
           <button
             onClick={handleShutter}
-            disabled={offSearchLoading}
+            disabled={offSearchLoading || isDefaultPriorities}
             style={{
               width: 76, height: 76, borderRadius: '50%',
-              backgroundColor: offSearchLoading ? 'rgba(255,255,255,0.4)' : 'white',
-              border: '4px solid rgba(255,255,255,0.3)',
-              cursor: offSearchLoading ? 'not-allowed' : 'pointer',
+              backgroundColor: (offSearchLoading || isDefaultPriorities) ? 'rgba(255,255,255,0.25)' : 'white',
+              border: '4px solid rgba(255,255,255,0.15)',
+              cursor: (offSearchLoading || isDefaultPriorities) ? 'not-allowed' : 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               boxShadow: '0 2px 16px rgba(0,0,0,0.4)',
               transition: 'transform 0.1s ease',
+              opacity: isDefaultPriorities ? 0.35 : 1,
             }}
-            onMouseDown={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(0.93)'; }}
-            onMouseUp={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)'; }}
-            onTouchStart={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(0.93)'; }}
-            onTouchEnd={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)'; }}
+            onMouseDown={e => { if (!isDefaultPriorities) (e.currentTarget as HTMLButtonElement).style.transform = 'scale(0.93)'; }}
+            onMouseUp={e => { if (!isDefaultPriorities) (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)'; }}
+            onTouchStart={e => { if (!isDefaultPriorities) (e.currentTarget as HTMLButtonElement).style.transform = 'scale(0.93)'; }}
+            onTouchEnd={e => { if (!isDefaultPriorities) (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)'; }}
           >
             {offSearchLoading && <Loader2 size={28} style={{ color: '#0a0a14', animation: 'spin 1s linear infinite' }} />}
           </button>
 
           {/* Gallery */}
           <button
-            onClick={() => offFileInputRef.current?.click()}
+            onClick={() => { if (!isDefaultPriorities) offFileInputRef.current?.click(); }}
+            disabled={isDefaultPriorities}
             style={{
               width: 48, height: 48, borderRadius: 12,
               backgroundColor: 'rgba(255,255,255,0.12)',
               border: '1px solid rgba(255,255,255,0.18)',
               color: 'rgba(255,255,255,0.75)',
-              cursor: 'pointer',
+              cursor: isDefaultPriorities ? 'not-allowed' : 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               overflow: 'hidden',
+              opacity: isDefaultPriorities ? 0.35 : 1,
             }}
           >
             {offSearchImage ? (
