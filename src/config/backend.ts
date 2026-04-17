@@ -13,8 +13,9 @@ export const getBackendUrl = (): string => {
     return import.meta.env.VITE_BACKEND_URL;
   }
 
-  // Local development
-  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+  // Local development (but not Capacitor, which also uses localhost)
+  const isCapacitor = typeof (window as unknown as { Capacitor?: unknown }).Capacitor !== 'undefined';
+  if (!isCapacitor && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
     return `${window.location.protocol}//${window.location.hostname}:3001`;
   }
 
