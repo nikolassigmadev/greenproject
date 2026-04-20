@@ -84,7 +84,7 @@ export function BottomNav() {
       />
 
       {/* Tab row */}
-      <div className="relative menu items-end px-2 pt-2 pb-safe">
+      <div className="relative menu items-end px-2 pt-2" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 8px)' }}>
         {NAV_ITEMS.map((tab) =>
           tab.fab ? (
             <ScanFab key={tab.path} isActive={pathname === tab.path} />

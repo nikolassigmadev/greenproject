@@ -1,4 +1,4 @@
-import { createBrowserRouter, Outlet } from "react-router-dom";
+import { createBrowserRouter, Outlet, useLocation } from "react-router-dom";
 import { ScrollToTop } from "./components/ScrollToTop";
 import Index from "./pages/Index";
 import Products from "./pages/Products";
@@ -18,10 +18,13 @@ import Admin from "./pages/Admin";
 import AdminLogin from "./pages/AdminLogin";
 
 function RootLayout() {
+  const location = useLocation();
   return (
     <>
       <ScrollToTop />
-      <Outlet />
+      <div key={location.pathname} className="page-transition" style={{ isolation: 'auto' }}>
+        <Outlet />
+      </div>
     </>
   );
 }

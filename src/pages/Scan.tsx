@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import { lookupHardcodedBarcodes } from "@/data/productBarcodeMap";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { Camera, Upload, Search, Loader2, AlertCircle, X, ScanLine, Image as ImageIcon, Plus, Leaf, BarChart3, QrCode, Settings, Users, Heart, Apple, ChevronRight, Check, Zap } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
@@ -283,6 +284,7 @@ const Scan = () => {
   const [isScanning, setIsScanning] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [cameraActive, setCameraActive] = useState(false);
+  const [frozenFrame, setFrozenFrame] = useState<string | null>(null);
   const [cameraInitializing, setCameraInitializing] = useState(false);
   const [extractedText, setExtractedText] = useState("");
   const [ocrMessage, setOcrMessage] = useState<string | null>(null);
@@ -869,6 +871,21 @@ const Scan = () => {
             extractedText = advancedResult.fullText;
           }
 
+          // Check hardcoded barcode map first, try each barcode in order
+          const hardcodedBarcodes = lookupHardcodedBarcodes(extractedText);
+          if (hardcodedBarcodes.length > 0) {
+            console.log(`✅ Hardcoded barcode match: "${extractedText}" → trying ${hardcodedBarcodes.length} barcode(s)`);
+            for (const barcode of hardcodedBarcodes) {
+              const result = await lookupBarcode(barcode);
+              if (result.found) {
+                sessionStorage.setItem('scan_candidates', JSON.stringify([result]));
+                navigate(`/product-off/${result.barcode}?from=scan`);
+                return;
+              }
+              console.log(`⚠️ Barcode ${barcode} not found, trying next...`);
+            }
+          }
+
           // Show additional info in toast
           if (advancedResult.certifications.length > 0) {
             toast({
@@ -1035,6 +1052,22 @@ const Scan = () => {
         return;
       }
 
+      // Step 1b: Check hardcoded barcode map before anything else
+      const identifiedText = [identified.brandName, identified.productName].filter(Boolean).join(' ');
+      const hardcodedBarcodes = lookupHardcodedBarcodes(identifiedText);
+      if (hardcodedBarcodes.length > 0) {
+        console.log(`✅ Hardcoded barcode match: "${identifiedText}" → trying ${hardcodedBarcodes.length} barcode(s)`);
+        for (const barcode of hardcodedBarcodes) {
+          const result = await lookupBarcode(barcode);
+          if (result.found) {
+            sessionStorage.setItem('scan_candidates', JSON.stringify([result]));
+            navigate(`/product-off/${result.barcode}?from=scan`);
+            return;
+          }
+          console.log(`⚠️ Barcode ${barcode} not found, trying next...`);
+        }
+      }
+
       // Step 2: If a barcode was spotted, look it up directly — most precise
       if (identified.barcode && isValidBarcode(identified.barcode)) {
         const barcodeResult = await lookupBarcode(identified.barcode);
@@ -1169,6 +1202,7 @@ const Scan = () => {
       }
 
       console.log('Photo captured:', imageData.length, 'bytes');
+      setFrozenFrame(imageData);
       processImageForOFF(imageData);
       stopCamera();
 
@@ -1228,9 +1262,11 @@ const Scan = () => {
         style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
       />
 
-      {/* Dark background when camera not yet active */}
+      {/* Frozen frame after capture, or dark background when camera not yet active */}
       {!cameraActive && !cameraInitializing && (
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, #0a0a14 0%, #1a1a2e 100%)' }} />
+        frozenFrame
+          ? <img src={frozenFrame} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
+          : <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, #0a0a14 0%, #1a1a2e 100%)' }} />
       )}
 
       {/* Scan line when loading */}

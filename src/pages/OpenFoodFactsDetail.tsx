@@ -11,6 +11,7 @@ import { checkAnimalWelfareFlag } from "@/utils/animalWelfareFlags";
 import { AnimalWelfareFlagBadge } from "@/components/AnimalWelfareFlagBadge";
 import { addToBasket, loadBasket } from "@/utils/basketStorage";
 import { findLaborAllegations as findLaborAllegationsUtil, getLaborAllegationCount } from "@/utils/laborCheck";
+import { EnvironmentalImpactCard } from "@/components/EnvironmentalImpactCard";
 
 const findLaborAllegations = (product: OpenFoodFactsResult) =>
   findLaborAllegationsUtil(product.brand, product.productName);
@@ -806,6 +807,9 @@ export default function OpenFoodFactsDetail() {
                 </div>
               )}
             </div>
+
+            {/* Threatened species & environmental impact adjustments */}
+            <EnvironmentalImpactCard result={product} />
 
             {/* Certifications */}
             {product.labels.length > 0 && (

@@ -87,14 +87,14 @@ export const advancedProductOCR = async (imageDataUrl: string): Promise<Advanced
 
     console.log('🤖 Calling OpenAI API via backend proxy...');
 
-    const prompt = `Look at this image and tell me what product this is. Give me the information in this exact format:
+    const prompt = `Read all the text visible in this image. This is a product package or label. Extract and return in this exact format:
 
-Product: [Product Name]
-Brand: [Brand Name]
-Barcode: [barcode number if visible, otherwise "none"]
+Product: [the product name text you can read]
+Brand: [the brand or company name text you can read]
+Barcode: [any barcode number printed on the package, otherwise "none"]
 
-If you can't identify the product clearly, say "Unknown Product" and "Unknown Brand".
-Look carefully for any barcode numbers (UPC, EAN) printed on the packaging.`;
+If you cannot read a field clearly, write "Unknown" for that field.
+Focus on reading the text exactly as printed — do not guess, just read what is visible.`;
 
     const proxyResponse = await fetch(`${getBackendUrl()}/api/openai/analyze-image`, {
       method: 'POST',
