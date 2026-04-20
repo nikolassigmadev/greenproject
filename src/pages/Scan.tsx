@@ -1205,6 +1205,7 @@ const Scan = () => {
   };
 
   const handleShutter = () => {
+    if (offSearchLoading) return;
     if (cameraActive) {
       capturePhoto();
     } else {

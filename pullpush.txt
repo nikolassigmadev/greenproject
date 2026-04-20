@@ -3,6 +3,9 @@ git commit -m "up"
 git push origin feature/update
 git push origin feature/update:main --force
 
+cd "/Users/nikolasdzhovanis/Downloads/ethical-shopper-main copy 2"
+  npm run build
+  npx cap sync ios    
 
 git add .
 git commit -m "up"
@@ -22,8 +25,8 @@ Step 1 — Build the web assets
   npx cap sync android
                                                                                                     
   Step 3 — Open in Android Studio
-                                                                                                    
-                                                                                                                                                                            
+
+
                                                                                                  
   Step 4 — Create a signing keystore (one-time, keep it safe)                                       
   
