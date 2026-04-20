@@ -15,6 +15,10 @@ export const PRODUCT_BARCODE_MAP: { keywords: string[]; barcodes: string[] }[] =
       '', // fallback 3
     ],
   },
+  {
+    keywords: ['kinder bueno white', 'kinder bueno blanc'],
+    barcodes: ['3017620690464'],
+  },
   // Add more entries here:
   // {
   //   keywords: ['oreo original', 'oreo cookies'],
