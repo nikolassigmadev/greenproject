@@ -23,7 +23,7 @@ Step 1 — Build the web assets
                                                                                                     
   Step 3 — Open in Android Studio
                                                                                                     
-  npx cap open android                                                                           
+                                                                                                                                                                            
                                                                                                  
   Step 4 — Create a signing keystore (one-time, keep it safe)                                       
   
