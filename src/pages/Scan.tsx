@@ -422,6 +422,22 @@ const Scan = () => {
         if (navigator.mediaDevices?.getUserMedia) {
           return navigator.mediaDevices;
         }
+        // Fallback for iOS WKWebView (Capacitor) where mediaDevices may need a polyfill
+        if (!navigator.mediaDevices) {
+          (navigator as any).mediaDevices = {};
+        }
+        if (!navigator.mediaDevices.getUserMedia) {
+          const getUserMedia = (navigator as any).webkitGetUserMedia ||
+            (navigator as any).mozGetUserMedia ||
+            (navigator as any).msGetUserMedia;
+          if (getUserMedia) {
+            navigator.mediaDevices.getUserMedia = (constraints: any) =>
+              new Promise((resolve, reject) => {
+                getUserMedia.call(navigator, constraints, resolve, reject);
+              });
+            return navigator.mediaDevices;
+          }
+        }
         // Fallback for older browsers
         if ((navigator as any).webkitGetUserMedia) {
           return {
@@ -1362,7 +1378,7 @@ const Scan = () => {
                 width: '100%', height: 42, borderRadius: 12,
                 backgroundColor: 'rgba(255,255,255,0.12)',
                 border: '1px solid rgba(255,255,255,0.15)',
-                color: 'white', fontSize: '0.875rem',
+                color: 'white', fontSize: '16px',
                 paddingLeft: 36, paddingRight: 12, outline: 'none',
               }}
             />
