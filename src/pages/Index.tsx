@@ -5,7 +5,7 @@ import {
   Camera, Leaf, Heart,
   Settings, Globe, Shield,
   BarChart3, TrendingUp, Activity,
-  Scan, Receipt, ScanLine, ChevronRight, AlertCircle,
+  Scan, Receipt, ScanLine, ChevronRight, AlertCircle, ShoppingCart,
 } from "lucide-react";
 import { loadPriorities, DEFAULT_PRIORITIES } from "@/utils/userPreferences";
 
@@ -130,11 +130,20 @@ const Index = () => {
 
         {/* ── Top header ── */}
         <div className="px-5 pt-14 pb-2">
-          <div className="max-w-xl mx-auto">
-            <p className="text-sm font-medium text-muted-foreground mb-0.5">GoodScan</p>
-            <h1 className="text-[1.75rem] font-display font-extrabold text-foreground leading-tight">
-              Shop with your values.
-            </h1>
+          <div className="max-w-xl mx-auto flex items-start justify-between">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground mb-0.5">GoodScan</p>
+              <h1 className="text-[1.75rem] font-display font-extrabold text-foreground leading-tight">
+                Shop with your values.
+              </h1>
+            </div>
+            <Link
+              to="/basket"
+              className="mt-1 w-10 h-10 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors cursor-pointer flex-shrink-0"
+              aria-label="View basket"
+            >
+              <ShoppingCart className="w-5 h-5 text-neutral-700 dark:text-neutral-300" />
+            </Link>
           </div>
         </div>
 

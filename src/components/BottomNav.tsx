@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Home, ShoppingCart, Camera, BarChart3, Receipt } from "lucide-react";
+import { Home, ShoppingCart, Camera, BarChart3, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
@@ -7,7 +7,7 @@ const NAV_ITEMS = [
   { path: "/basket",    label: "Basket",  icon: ShoppingCart },
   { path: "/scan",      label: "Scan",    icon: Camera, fab: true },
   { path: "/dashboard", label: "History", icon: BarChart3   },
-  { path: "/receipt",   label: "Receipt", icon: Receipt     },
+  { path: "/about",     label: "About",   icon: Info        },
 ];
 
 function NavTab({ path, label, icon: Icon, isActive }: {
@@ -35,7 +35,7 @@ function ScanFab({ isActive }: { isActive: boolean }) {
     <button
       onClick={() => navigate("/scan")}
       aria-label="Scan a product"
-      className="flex flex-col items-center -mt-5 select-none flex-shrink-0"
+      className="flex flex-col items-center select-none flex-shrink-0" style={{ marginTop: "-2.375rem" }}
     >
       <div
         className={cn(
@@ -55,7 +55,7 @@ function ScanFab({ isActive }: { isActive: boolean }) {
         </div>
       </div>
       <span
-        className="text-[10px] mt-1.5 font-semibold tracking-wide"
+        className="text-[10px] mt-1 font-semibold tracking-wide"
         style={{ color: isActive ? "hsl(220 14% 10%)" : "hsl(220 10% 56%)" }}
       >
         Scan

@@ -1,6 +1,7 @@
-import { ArrowRight, Leaf, TrendingDown } from "lucide-react";
+import { ArrowRight, Leaf, TrendingDown, Package2, Zap } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
+import { cn } from "@/lib/utils";
 
 interface GreenerSwapCardProps {
   original: OpenFoodFactsResult;
@@ -8,20 +9,80 @@ interface GreenerSwapCardProps {
   loading?: boolean;
 }
 
-const gradeColors: Record<string, { bg: string; ring: string }> = {
-  a: { bg: "bg-emerald-500", ring: "ring-emerald-300" },
-  b: { bg: "bg-lime-500", ring: "ring-lime-300" },
-  c: { bg: "bg-amber-500", ring: "ring-amber-300" },
-  d: { bg: "bg-orange-500", ring: "ring-orange-300" },
-  e: { bg: "bg-red-500", ring: "ring-red-300" },
+// Grade color tokens — solid fills for the comparison chips
+const gradeColors: Record<string, { solid: string; text: string; label: string }> = {
+  a: { solid: "bg-emerald-500", text: "text-white", label: "Excellent" },
+  b: { solid: "bg-lime-500",    text: "text-white", label: "Good"      },
+  c: { solid: "bg-amber-400",   text: "text-white", label: "Fair"      },
+  d: { solid: "bg-orange-500",  text: "text-white", label: "Poor"      },
+  e: { solid: "bg-red-500",     text: "text-white", label: "Bad"       },
 };
 
-function GradePill({ grade, label }: { grade: string; label?: string }) {
-  const colors = gradeColors[grade] ?? { bg: "bg-gray-400", ring: "ring-gray-200" };
+function GradeBadge({ grade }: { grade: string }) {
+  const s = gradeColors[grade] ?? { solid: "bg-neutral-600", text: "text-white", label: "Unknown" };
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold text-white ${colors.bg}`}>
-      {label ?? "Eco"} {grade.toUpperCase()}
+    <span className={cn(
+      "inline-flex items-center justify-center w-7 h-7 rounded-lg text-xs font-black flex-shrink-0",
+      s.solid, s.text
+    )}>
+      {grade.toUpperCase()}
     </span>
+  );
+}
+
+function ProductChip({
+  product,
+  isAlternative,
+  onClick,
+}: {
+  product: OpenFoodFactsResult;
+  isAlternative?: boolean;
+  onClick?: () => void;
+}) {
+  const grade = product.ecoscoreGrade?.toLowerCase();
+  const Tag = onClick ? "button" : "div";
+
+  return (
+    <Tag
+      {...(onClick ? { onClick, type: "button" } : {})}
+      className={cn(
+        "flex items-center gap-2.5 rounded-2xl p-3 min-w-0 flex-1 transition-all duration-200",
+        isAlternative
+          ? "bg-emerald-500/20 border border-emerald-500/30 hover:bg-emerald-500/30 active:scale-[0.97] cursor-pointer"
+          : "bg-white/5 border border-white/8"
+      )}
+    >
+      {product.imageUrl ? (
+        <img
+          src={product.imageUrl}
+          alt={product.productName || "Product"}
+          className={cn(
+            "w-10 h-10 rounded-xl object-cover flex-shrink-0",
+            isAlternative ? "border border-emerald-400/30" : "border border-white/10"
+          )}
+        />
+      ) : (
+        <div className={cn(
+          "w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0",
+          isAlternative ? "bg-emerald-500/30" : "bg-neutral-800"
+        )}>
+          <Package2 className={cn("w-5 h-5", isAlternative ? "text-emerald-300" : "text-neutral-500")} />
+        </div>
+      )}
+      <div className="flex-1 min-w-0">
+        <p className={cn(
+          "text-xs font-bold truncate leading-tight",
+          isAlternative ? "text-emerald-200" : "text-neutral-300"
+        )}>
+          {product.productName || (isAlternative ? "Better option" : "Current product")}
+        </p>
+        {grade && (
+          <div className="mt-1.5">
+            <GradeBadge grade={grade} />
+          </div>
+        )}
+      </div>
+    </Tag>
   );
 }
 
@@ -31,115 +92,98 @@ export function GreenerSwapCard({ original, alternatives, loading }: GreenerSwap
 
   if (loading) {
     return (
-      <div className="rounded-2xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/20 p-4 mb-4 animate-pulse">
-        <div className="h-3.5 w-40 bg-emerald-200 dark:bg-emerald-800 rounded-full mb-3" />
-        <div className="h-20 bg-emerald-100 dark:bg-emerald-900/40 rounded-xl" />
+      <div className="rounded-3xl border border-emerald-500/20 bg-emerald-950/30 p-5 mb-4 animate-pulse">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-2xl bg-emerald-500/20" />
+          <div className="space-y-1.5">
+            <div className="h-3.5 w-32 bg-emerald-500/20 rounded-full" />
+            <div className="h-2.5 w-24 bg-emerald-500/10 rounded-full" />
+          </div>
+        </div>
+        <div className="h-20 bg-emerald-500/10 rounded-2xl" />
       </div>
     );
   }
 
   if (!best) return null;
 
-  const originalGrade = original.ecoscoreGrade?.toLowerCase();
-  const bestGrade = best.ecoscoreGrade?.toLowerCase();
-
   const co2Original = original.ecoscoreData?.agribalyse?.co2_total ?? null;
-  const co2Best = best.ecoscoreData?.agribalyse?.co2_total ?? null;
-  const co2Saved = co2Original != null && co2Best != null ? co2Original - co2Best : null;
+  const co2Best     = best.ecoscoreData?.agribalyse?.co2_total ?? null;
+  const co2Saved    = co2Original != null && co2Best != null ? co2Original - co2Best : null;
+  const pctSaved    = co2Saved != null && co2Original != null && co2Original > 0
+    ? Math.round((co2Saved / co2Original) * 100)
+    : null;
 
   return (
-    <div className="rounded-2xl border-2 border-emerald-300 dark:border-emerald-700 bg-gradient-to-br from-emerald-50 via-teal-50 to-emerald-50 dark:from-emerald-950/30 dark:via-teal-950/20 dark:to-emerald-950/30 p-4 mb-4">
-      {/* Header */}
-      <div className="flex items-center gap-2.5 mb-3">
-        <div className="w-8 h-8 rounded-xl bg-emerald-500 flex items-center justify-center flex-shrink-0 shadow-sm">
-          <Leaf className="w-4 h-4 text-white" />
-        </div>
-        <div>
-          <p className="text-sm font-bold text-emerald-900 dark:text-emerald-100 leading-none">
-            Here's a better option
-          </p>
-          <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-0.5">
-            Same category · greener choice
-          </p>
-        </div>
-      </div>
+    <div className="rounded-3xl border border-emerald-500/25 bg-neutral-900 overflow-hidden mb-4 shadow-lg shadow-emerald-950/40">
+      {/* Top accent bar */}
+      <div className="h-1 w-full bg-gradient-to-r from-emerald-400 via-teal-400 to-emerald-500" />
 
-      {/* Comparison row */}
-      <div className="flex items-center gap-2 mb-3">
-        {/* Original product chip */}
-        <div className="flex-1 flex items-center gap-2 bg-white/70 dark:bg-black/20 rounded-xl p-2.5 min-w-0">
-          {original.imageUrl ? (
-            <img
-              src={original.imageUrl}
-              alt=""
-              className="w-10 h-10 rounded-lg object-cover flex-shrink-0 border border-white"
-            />
-          ) : (
-            <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center flex-shrink-0 text-lg">
-              📦
+      <div className="p-5">
+        {/* Header */}
+        <div className="flex items-start justify-between gap-3 mb-5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center flex-shrink-0">
+              <Leaf className="w-5 h-5 text-emerald-400" />
+            </div>
+            <div>
+              <p className="text-sm font-black text-white leading-none">Greener Swap</p>
+              <p className="text-xs text-emerald-400/80 mt-0.5 font-medium">Same category — lower footprint</p>
+            </div>
+          </div>
+          {/* CO2 savings stat badge */}
+          {co2Saved != null && co2Saved > 0 && (
+            <div className="flex-shrink-0 text-right">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-emerald-500/15 border border-emerald-500/25">
+                <TrendingDown className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-black text-emerald-300 leading-none tabular-nums">
+                    -{co2Saved.toFixed(1)} kg
+                  </p>
+                  {pctSaved != null && (
+                    <p className="text-[10px] text-emerald-500 font-bold leading-none mt-0.5">{pctSaved}% less CO₂</p>
+                  )}
+                </div>
+              </div>
             </div>
           )}
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-foreground truncate leading-tight">
-              {original.productName || "Current product"}
-            </p>
-            {originalGrade && <GradePill grade={originalGrade} />}
-          </div>
         </div>
 
-        <ArrowRight className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+        {/* Side-by-side comparison */}
+        <div className="flex items-center gap-2 mb-5">
+          <ProductChip product={original} />
+          <div className="flex-shrink-0 w-8 h-8 rounded-full bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center">
+            <ArrowRight className="w-4 h-4 text-emerald-400" />
+          </div>
+          <ProductChip
+            product={best}
+            isAlternative
+            onClick={() => navigate(`/product-off/${best.barcode}`)}
+          />
+        </div>
 
-        {/* Best alternative chip */}
+        {/* Switch CTA */}
         <button
+          type="button"
           onClick={() => navigate(`/product-off/${best.barcode}`)}
-          className="btn-aurora flex-1 flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 active:scale-[0.98] transition-all rounded-xl p-2.5 min-w-0 text-left"
+          className="w-full h-11 rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-sm font-bold flex items-center justify-center gap-2 cursor-pointer touch-manipulation transition-all hover:from-emerald-400 hover:to-emerald-500 active:scale-[0.97] shadow-lg shadow-emerald-900/50"
         >
-          {best.imageUrl ? (
-            <img
-              src={best.imageUrl}
-              alt=""
-              className="w-10 h-10 rounded-lg object-cover flex-shrink-0 border-2 border-white/30"
-            />
-          ) : (
-            <div className="w-10 h-10 rounded-lg bg-emerald-400 flex items-center justify-center flex-shrink-0 text-lg">
-              🌿
-            </div>
-          )}
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-white truncate leading-tight">
-              {best.productName || "Better option"}
-            </p>
-            {bestGrade && (
-              <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-emerald-100 mt-0.5">
-                Eco {bestGrade.toUpperCase()} ✓
-              </span>
-            )}
-          </div>
-        </button>
-      </div>
-
-      {/* Footer: CO2 savings + extra count */}
-      <div className="flex items-center justify-between">
-        {co2Saved != null && co2Saved > 0 ? (
-          <div className="flex items-center gap-1.5 text-xs text-emerald-700 dark:text-emerald-300">
-            <TrendingDown className="w-3.5 h-3.5" />
-            <span>
-              Saves <strong>{co2Saved.toFixed(1)} kg CO₂</strong>/kg vs this product
+          <Zap className="w-4 h-4" />
+          Switch to This Product
+          {alternatives.length > 1 && (
+            <span className="ml-1 px-1.5 py-0.5 rounded-full bg-white/20 text-[10px] font-black">
+              +{alternatives.length - 1}
             </span>
-          </div>
-        ) : (
-          <span className="text-xs text-emerald-600 dark:text-emerald-400">
-            Lower environmental impact
-          </span>
-        )}
+          )}
+        </button>
+
         {alternatives.length > 1 && (
           <button
-            onClick={() => {
-              document.getElementById("greener-alternatives-section")?.scrollIntoView({ behavior: "smooth" });
-            }}
-            className="btn-aurora text-xs text-emerald-600 dark:text-emerald-400 font-medium hover:underline ml-2 flex-shrink-0"
+            type="button"
+            onClick={() => document.getElementById("greener-alternatives-section")?.scrollIntoView({ behavior: "smooth" })}
+            className="w-full mt-2 text-xs text-neutral-500 hover:text-neutral-300 font-semibold transition-colors cursor-pointer touch-manipulation text-center"
           >
-            +{alternatives.length - 1} more ↓
+            View all {alternatives.length} alternatives
           </button>
         )}
       </div>

@@ -1,24 +1,21 @@
 /**
  * Backend URL configuration
  *
- * Production: uses the dedicated backend on Hostinger
- * Development: uses localhost:3001
+ * Always uses the production backend (https://goodscan.shop) unless
+ * VITE_BACKEND_URL is explicitly set in .env.local.
+ *
+ * To use a local server during development, add to .env.local:
+ *   VITE_BACKEND_URL=http://localhost:3001
  */
 
 const PRODUCTION_BACKEND = 'https://goodscan.shop';
 
 export const getBackendUrl = (): string => {
-  // If explicitly set via env var, use that
+  // Explicit override (e.g. VITE_BACKEND_URL=http://localhost:3001 in .env.local)
   if (import.meta.env.VITE_BACKEND_URL) {
     return import.meta.env.VITE_BACKEND_URL;
   }
 
-  // Local development (but not Capacitor, which also uses localhost)
-  const isCapacitor = typeof (window as unknown as { Capacitor?: unknown }).Capacitor !== 'undefined';
-  if (!isCapacitor && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
-    return `${window.location.protocol}//${window.location.hostname}:3001`;
-  }
-
-  // Production & Capacitor — use dedicated backend
+  // Always fall back to production — browser dev and Capacitor both use it
   return PRODUCTION_BACKEND;
 };

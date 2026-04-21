@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { MapPin, Leaf, AlertTriangle, Package, TrendingUp } from "lucide-react";
+import { MapPin, Leaf, AlertTriangle, Package, Award, TrendingUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ScoreDisplay } from "@/components/ScoreDisplay";
 import { Product, calculateScore } from "@/data/products";
@@ -10,9 +10,29 @@ interface ProductCardProps {
 }
 
 const laborRiskConfig = {
-  low: { label: "Low Risk", className: "bg-score-excellent/10 text-score-excellent border-score-excellent/25" },
-  medium: { label: "Medium Risk", className: "bg-score-fair/10 text-score-fair border-score-fair/25" },
-  high: { label: "High Risk", className: "bg-score-critical/10 text-score-critical border-score-critical/25" },
+  low: {
+    label: "Low Risk",
+    className: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    dot: "bg-emerald-500",
+  },
+  medium: {
+    label: "Medium Risk",
+    className: "bg-amber-50 text-amber-700 border-amber-200",
+    dot: "bg-amber-500",
+  },
+  high: {
+    label: "High Risk",
+    className: "bg-red-50 text-red-700 border-red-200",
+    dot: "bg-red-500",
+  },
+};
+
+const scoreGradient: (score: number) => string = (score) => {
+  if (score >= 80) return "from-emerald-400/20 via-teal-300/10 to-emerald-200/20";
+  if (score >= 60) return "from-lime-400/20 via-lime-300/10 to-emerald-200/20";
+  if (score >= 40) return "from-amber-400/20 via-amber-300/10 to-yellow-200/20";
+  if (score >= 20) return "from-orange-400/20 via-orange-300/10 to-amber-200/20";
+  return "from-red-400/20 via-red-300/10 to-orange-200/20";
 };
 
 export function ProductCard({ product }: ProductCardProps) {
@@ -22,104 +42,90 @@ export function ProductCard({ product }: ProductCardProps) {
   return (
     <Link
       to={`/product/${product.id.replace("#", "")}`}
-      className="group block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-2xl"
+      className="group block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 rounded-2xl cursor-pointer"
     >
-      <article className="bg-card rounded-2xl border border-border/60 overflow-hidden transition-all duration-300 group-hover:shadow-card group-hover:-translate-y-1 group-hover:border-border h-full flex flex-col">
+      <article className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 overflow-hidden transition-all duration-200 group-hover:shadow-lg group-hover:shadow-emerald-500/10 group-hover:-translate-y-0.5 group-hover:border-emerald-200 dark:group-hover:border-emerald-800 h-full flex flex-col">
+
         {/* Image area */}
-        <div className="h-36 bg-gradient-to-br from-eco-sage/15 via-eco-leaf/8 to-eco-sand/20 relative overflow-hidden flex-shrink-0">
+        <div className={cn("relative h-40 bg-gradient-to-br overflow-hidden flex-shrink-0", scoreGradient(score))}>
           {product.imageUrl ? (
             <img
               src={product.imageUrl}
               alt={product.name}
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = "none";
-              }}
+              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
             />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center">
-              <Leaf className="w-12 h-12 text-primary/25 transition-all duration-300 group-hover:text-primary/40" />
+              <Leaf className="w-14 h-14 text-emerald-500/20 transition-all duration-300 group-hover:text-emerald-500/35" />
             </div>
           )}
 
-          {/* Top badge: score */}
-          <div className="absolute top-2.5 right-2.5">
-            <ScoreDisplay score={score} size="sm" showLabel={false} />
-          </div>
-
-          {/* Top-rated indicator */}
+          {/* Top-left: Top badge */}
           {score >= 90 && (
-            <div className="absolute top-2.5 left-2.5">
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-eco-amber/90 text-white shadow-sm">
-                <TrendingUp className="w-2.5 h-2.5" />
-                Top
+            <div className="absolute top-3 left-3">
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500 text-white shadow-sm shadow-emerald-500/30">
+                <TrendingUp className="w-3 h-3" />
+                Top Pick
               </span>
             </div>
           )}
+
+          {/* Top-right: Score badge */}
+          <div className="absolute top-3 right-3">
+            <ScoreDisplay score={score} size="sm" showLabel={false} />
+          </div>
         </div>
 
         {/* Content */}
-        <div className="p-4 flex flex-col gap-2.5 flex-1">
+        <div className="p-4 flex flex-col gap-3 flex-1">
+
           {/* Name + brand */}
-          <div>
-            <h3 className="font-display font-semibold text-foreground text-[15px] leading-snug line-clamp-1 group-hover:text-primary transition-colors">
+          <div className="flex-1">
+            <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 text-[15px] leading-snug line-clamp-2 group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors">
               {product.name}
             </h3>
-            <p className="text-xs text-muted-foreground mt-0.5 font-medium">{product.brand}</p>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5 font-medium">{product.brand}</p>
           </div>
 
-          {/* Origin + score text */}
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <MapPin className="w-3 h-3 text-primary flex-shrink-0" />
+          {/* Origin */}
+          <div className="flex items-center gap-1.5 text-xs text-neutral-500">
+            <MapPin className="w-3 h-3 text-emerald-500 flex-shrink-0" />
             <span className="truncate">{product.origin.country}</span>
-            <span className="text-muted/70">·</span>
-            <span
-              className={cn(
-                "font-semibold",
-                score >= 80 && "text-score-excellent",
-                score >= 60 && score < 80 && "text-score-good",
-                score >= 40 && score < 60 && "text-score-fair",
-                score >= 20 && score < 40 && "text-score-poor",
-                score < 20 && "text-score-critical"
-              )}
-            >
-              {score}/100
+          </div>
+
+          {/* Badges row */}
+          <div className="flex flex-wrap gap-1.5 mt-auto">
+            <span className={cn(
+              "inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border font-medium",
+              labor.className
+            )}>
+              <span className={cn("w-1.5 h-1.5 rounded-full flex-shrink-0", labor.dot)} />
+              {labor.label}
+            </span>
+
+            <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 font-medium">
+              <Package className="w-3 h-3" />
+              {product.carbonFootprint} kg CO₂
             </span>
           </div>
 
-          {/* Badges */}
-          <div className="flex flex-wrap gap-1.5 mt-auto">
-            <Badge
-              variant="outline"
-              className={cn("text-[10px] px-2 py-0 h-5 border font-medium", labor.className)}
-            >
-              <AlertTriangle className="w-2.5 h-2.5 mr-1" />
-              {labor.label}
-            </Badge>
-            <Badge
-              variant="outline"
-              className="text-[10px] px-2 py-0 h-5 border bg-eco-sage/8 text-eco-sage border-eco-sage/25 font-medium"
-            >
-              <Package className="w-2.5 h-2.5 mr-1" />
-              {product.carbonFootprint} kg CO₂
-            </Badge>
-          </div>
-
-          {/* Certs */}
+          {/* Certifications */}
           {product.certifications.length > 0 && (
             <div className="flex flex-wrap gap-1">
               {product.certifications.slice(0, 2).map((cert, i) => (
-                <Badge
+                <span
                   key={i}
-                  className="text-[10px] px-2 py-0 h-5 bg-primary/8 text-primary border-0 font-medium hover:bg-primary/14 transition-colors"
+                  className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-medium"
                 >
+                  <Award className="w-2.5 h-2.5" />
                   {cert}
-                </Badge>
+                </span>
               ))}
               {product.certifications.length > 2 && (
-                <Badge className="text-[10px] px-2 py-0 h-5 bg-muted text-muted-foreground border-0">
+                <span className="text-[11px] px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-500 font-medium">
                   +{product.certifications.length - 2}
-                </Badge>
+                </span>
               )}
             </div>
           )}
