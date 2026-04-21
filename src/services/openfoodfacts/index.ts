@@ -296,29 +296,77 @@ const lookupBarcodeInternal = async (barcode: string): Promise<OpenFoodFactsResu
   return emptyResult(barcode, 'signal timed out');
 };
 
-export const searchProducts = async (
-  query: string,
-  limit: number = 3
-): Promise<OpenFoodFactsResult[]> => {
+/**
+ * Generate an ordered list of search candidates from most specific to least.
+ *
+ * Strategy:
+ *   1. Full query                          "Doritos Cool Ranch"
+ *   2. Prefix shrink (drop rightmost word) "Doritos Cool"
+ *   3. Suffix (drop brand/first word)      "Cool Ranch"
+ *   4. First word alone (brand)            "Doritos"
+ *
+ * Deduplicates so short inputs don't produce redundant attempts.
+ *
+ * Examples:
+ *   "Doritos Cool Ranch"         → ["Doritos Cool Ranch", "Doritos Cool", "Cool Ranch", "Doritos"]
+ *   "Häagen-Dazs Vanilla Cream"  → ["Häagen-Dazs Vanilla Cream", "Häagen-Dazs Vanilla", "Vanilla Cream", "Häagen-Dazs"]
+ *   "Coke"                       → ["Coke"]
+ *   "Doritos Cool"               → ["Doritos Cool", "Doritos"]
+ */
+export function generateSearchVariations(query: string): string[] {
   const trimmed = query.trim();
   if (!trimmed) return [];
 
-  const cacheKey = `search:${trimmed.toLowerCase()}:${limit}`;
+  const words = trimmed.split(/\s+/).filter(Boolean);
+  const seen = new Set<string>();
+  const out: string[] = [];
+
+  const push = (v: string) => {
+    const k = v.toLowerCase();
+    if (!seen.has(k)) { seen.add(k); out.push(v); }
+  };
+
+  // 1. Full query
+  push(trimmed);
+
+  if (words.length <= 1) return out;
+
+  // 2. Prefix shrink: drop one word from right each step
+  for (let len = words.length - 1; len >= 2; len--) {
+    push(words.slice(0, len).join(' '));
+  }
+
+  // 3. Suffix: drop brand (first word), keep product descriptor
+  //    Only meaningful when 3+ words, else it duplicates the first-word entry
+  if (words.length >= 3) {
+    push(words.slice(1).join(' '));
+  }
+
+  // 4. First word alone (brand)
+  push(words[0]);
+
+  return out;
+}
+
+/**
+ * Attempt a single query variant against the backend proxy, with a direct
+ * OFF API fallback. Returns normalized results or [] if nothing found.
+ * Results are cached per variant so repeated calls are free.
+ */
+const searchOneVariant = async (
+  query: string,
+  limit: number,
+): Promise<OpenFoodFactsResult[]> => {
+  const cacheKey = `search:${query.toLowerCase()}:${limit}`;
   const cached = cacheGet<OpenFoodFactsResult[]>(cacheKey);
   if (cached) return cached;
 
   try {
-    // Use backend proxy to avoid CORS issues
     const backendUrl = getBackendUrl();
     const response = await fetch(`${backendUrl}/api/openfoodfacts/search`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        query: trimmed,
-        limit: Math.min(limit * 3, 50),
-      }),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, limit: Math.min(limit * 3, 50) }),
     });
 
     if (!response.ok) {
@@ -328,49 +376,76 @@ export const searchProducts = async (
     const data: OpenFoodFactsSearchResponse = await response.json();
 
     if (!data.products || data.products.length === 0) {
-      // Backend returned nothing — fall back to direct OFF API call from the browser
-      console.warn(`⚠️ Backend returned 0 results for "${trimmed}", falling back to direct OFF API...`);
-      const directResults = await searchProductsGlobal(trimmed, limit);
-      ocrSearchLogger.logTextSearch(trimmed, directResults.length, { regionFiltered: false });
-      if (directResults.length > 0) {
-        cacheSet(cacheKey, directResults);
-      }
+      console.warn(`⚠️ Backend returned 0 results for "${query}", trying direct OFF API...`);
+      const directResults = await searchProductsGlobal(query, limit);
+      if (directResults.length > 0) cacheSet(cacheKey, directResults);
       return directResults;
     }
 
-    // Try to get results from allowed regions first
     const allNormalized = data.products.map(normalizeProduct);
     const regionalResults = allNormalized.filter(isAllowedRegion);
     let results = regionalResults.slice(0, limit);
 
-    // Log regional filtering
-    ocrSearchLogger.logRegionalFiltering(
-      allNormalized.length,
-      regionalResults.length,
-      false
-    );
+    ocrSearchLogger.logRegionalFiltering(allNormalized.length, regionalResults.length, false);
 
-    // If we got very few results after regional filtering, include global results too
+    // If too few results after regional filter, pad with global results
     if (results.length < Math.ceil(limit * 0.5)) {
-      console.warn(`⚠️ Only ${results.length} results in allowed regions, including global results...`);
       const allResults = allNormalized.slice(0, limit * 2);
       results = [
         ...results,
-        ...allResults.filter(r => !results.some(ur => ur.barcode === r.barcode))
+        ...allResults.filter(r => !results.some(ur => ur.barcode === r.barcode)),
       ].slice(0, limit);
     }
 
-    ocrSearchLogger.logTextSearch(trimmed, results.length, { regionFiltered: true });
     cacheSet(cacheKey, results);
     return results;
   } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-    console.error('OpenFoodFacts search error:', error);
-    ocrSearchLogger.logAPIError('/cgi/search.pl', errorMsg);
-    // On any backend error, try direct OFF API as last resort
-    console.warn(`⚠️ Backend error, trying direct OFF API for "${trimmed}"...`);
-    return searchProductsGlobal(trimmed, limit);
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    ocrSearchLogger.logAPIError('/api/openfoodfacts/search', errorMsg);
+    return searchProductsGlobal(query, limit);
   }
+};
+
+/**
+ * Search OpenFoodFacts with automatic multi-variation fallback.
+ *
+ * Internally generates candidate queries via generateSearchVariations() and
+ * tries each in order until one returns results. This means every caller —
+ * manual search, OCR flow, shopping list, receipt scanner — automatically
+ * benefits from progressive query simplification without any extra logic.
+ *
+ * "Doritos Cool Ranch" → tries "Doritos Cool Ranch" → "Doritos Cool"
+ *                      → "Cool Ranch" → "Doritos" (stops at first hit)
+ */
+export const searchProducts = async (
+  query: string,
+  limit: number = 3,
+): Promise<OpenFoodFactsResult[]> => {
+  const trimmed = query.trim();
+  if (!trimmed) return [];
+
+  const variations = generateSearchVariations(trimmed);
+  console.log(`🔍 [SEARCH] "${trimmed}" → trying ${variations.length} variation(s): ${variations.join(' | ')}`);
+
+  for (const variant of variations) {
+    const results = await searchOneVariant(variant, limit);
+
+    if (results.length > 0) {
+      ocrSearchLogger.logTextSearch(variant, results.length, { regionFiltered: true });
+      if (variant !== trimmed) {
+        console.log(`   ✅ Hit on simplified query: "${variant}" (${results.length} results)`);
+      }
+      return results;
+    }
+
+    ocrSearchLogger.logTextSearch(variant, 0, { regionFiltered: false });
+    if (variant !== variations[variations.length - 1]) {
+      console.warn(`   ↪ No results for "${variant}", trying next variation...`);
+    }
+  }
+
+  console.warn(`⚠️ No results found for any variation of "${trimmed}"`);
+  return [];
 };
 
 export interface BrowseOptions {
@@ -436,80 +511,72 @@ const searchProductsGlobal = async (
     return cached;
   }
 
-  try {
-    // Route through backend proxy — direct OFF fetch fails in Capacitor/iOS (ATS/CORS)
-    const backendUrl = getBackendUrl();
-    const response = await fetch(`${backendUrl}/api/openfoodfacts/search`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: trimmed, limit: Math.min(limit * 3, 50) }),
-    });
+  // Build progressively shorter query candidates to try:
+  // "Doritos Cool Ranch" → ["Doritos Cool Ranch", "Doritos Cool", "Doritos"]
+  const words = trimmed.split(/\s+/).filter(Boolean);
+  const candidates: string[] = [trimmed];
+  if (words.length > 2) candidates.push(words.slice(0, 2).join(' '));
+  if (words.length > 1) candidates.push(words[0]);
 
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
+  for (const candidate of candidates) {
+    try {
+      const params = new URLSearchParams({
+        search_terms: candidate,
+        search_simple: '1',
+        action: 'process',
+        json: '1',
+        page_size: String(Math.min(limit * 3, 50)),
+        sort_by: 'unique_scans_n',
+        fields: [
+          'code', 'product_name', 'product_name_en', 'brands',
+          'ecoscore_grade', 'ecoscore_score', 'ecoscore_data',
+          'nutriscore_grade', 'nutriscore_score', 'nova_group',
+          'nutriments', 'labels_tags', 'labels', 'categories_tags', 'categories',
+          'origins', 'ingredients_text', 'ingredients_text_en',
+          'image_front_url', 'image_url', 'countries_tags',
+        ].join(','),
+      });
 
-    const data: OpenFoodFactsSearchResponse = await response.json();
+      const response = await fetch(`${OFF_API_BASE}/cgi/search.pl?${params}`);
 
-    if (!data.products || data.products.length === 0) {
-      console.warn(`   No global results found`);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data: OpenFoodFactsSearchResponse = await response.json();
+
+      if (!data.products || data.products.length === 0) {
+        if (candidate !== candidates[candidates.length - 1]) {
+          console.warn(`   No global results for "${candidate}", trying shorter query...`);
+        }
+        continue;
+      }
+
+      const results = data.products.map(normalizeProduct).slice(0, limit);
+      console.log(`   Got ${results.length} global results for "${candidate}" (region filter disabled)`);
+      cacheSet(cacheKey, results);
+      return results;
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      console.error(`OpenFoodFacts global search error for "${candidate}":`, errorMsg);
+      // Network error — no point retrying shorter queries, bail out
       return [];
     }
-
-    // Return ALL results without region filtering
-    const results = data.products
-      .map(normalizeProduct)
-      .slice(0, limit);
-
-    console.log(`   Got ${results.length} global results (region filter disabled)`);
-
-    cacheSet(cacheKey, results);
-    return results;
-  } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error);
-    console.error('OpenFoodFacts global search error:', errorMsg);
-    return [];
   }
+
+  console.warn(`   No global results found for any variant of "${trimmed}"`);
+  return [];
 };
 
 
 /**
- * Search with fallback to simpler queries
- * If full query returns no results, try searching by just the brand name
+ * @deprecated — searchProducts now handles multi-variation fallback internally.
+ * Kept for API compatibility; delegates directly.
  */
-export const searchWithFallback = async (
+export const searchWithFallback = (
   query: string,
-  limit: number = 3
-): Promise<OpenFoodFactsResult[]> => {
-  const trimmed = query.trim();
-  if (!trimmed) return [];
-
-  // Extract parts (usually brand first, then product)
-  const parts = trimmed.split(/\s+/).filter(p => p.length > 0);
-
-  // Try searches in order of specificity
-  const searchVariations = [
-    trimmed,  // Full query first
-    parts[0],  // Just the brand (usually first)
-    parts.slice(0, 2).join(' '),  // First two words
-  ].filter((v, i, arr) => arr.indexOf(v) === i); // Remove duplicates
-
-  console.log(`🔍 Trying search variations: ${searchVariations.join(' | ')}`);
-
-  for (const searchQuery of searchVariations) {
-    console.log(`   Attempting: "${searchQuery}"`);
-    const results = await searchProducts(searchQuery, limit * 2);
-    
-    if (results.length > 0) {
-      console.log(`   ✅ Found ${results.length} results with "${searchQuery}"`);
-      return results.slice(0, limit);
-    }
-    console.log(`   ❌ No results for "${searchQuery}", trying next variation...`);
-  }
-
-  console.warn(`⚠️ No results found for any search variation of "${query}"`);
-  return [];
-};
+  limit: number = 3,
+): Promise<OpenFoodFactsResult[]> => searchProducts(query, limit);
 
 export const searchBetterAlternatives = async (
   result: OpenFoodFactsResult,

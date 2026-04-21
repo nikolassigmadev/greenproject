@@ -1087,42 +1087,15 @@ const Scan = () => {
         }
       }
 
-      // Step 3: Search OFF, progressively simplifying the query until we get a hit
+      // Step 3: Search OFF — searchOffProducts internally tries multiple query
+      // variations (full → prefix shrink → suffix → brand alone), so one call suffices.
       const fullQuery = [identified.brandName, identified.productName]
         .filter(Boolean)
         .join(' ')
         .trim();
 
-      // Build a list of queries to try, from most specific to least:
-      // e.g. "Coca-Cola Classic Zero Sugar" → "Coca-Cola Classic Zero" → "Coca-Cola Classic"
-      //      → "Coca-Cola" → brand alone (if different from product name)
-      const buildQueries = (q: string, brand: string | null | undefined): string[] => {
-        const queries: string[] = [];
-        const words = q.split(/\s+/).filter(Boolean);
-        // All lengths from full down to 2 words
-        for (let len = words.length; len >= 2; len--) {
-          queries.push(words.slice(0, len).join(' '));
-        }
-        // Brand name alone as final fallback (if not already covered)
-        if (brand && !queries.some(q2 => q2.toLowerCase() === brand.toLowerCase())) {
-          queries.push(brand);
-        }
-        // Deduplicate while preserving order
-        return [...new Set(queries)];
-      };
-
-      const queries = buildQueries(fullQuery, identified.brandName);
-      let results: OpenFoodFactsResult[] = [];
-      let usedQuery = fullQuery;
-
-      for (const q of queries) {
-        setOffSearchText(q);
-        results = await searchOffProducts(q, 20);
-        if (results.length > 0) {
-          usedQuery = q;
-          break;
-        }
-      }
+      setOffSearchText(fullQuery);
+      const results = await searchOffProducts(fullQuery, 20);
 
       if (results.length === 0) {
         toast({
@@ -1134,8 +1107,8 @@ const Scan = () => {
       }
 
       // Step 4: Rank by eco data completeness and navigate to best result
-      console.log(`Found results for query: "${usedQuery}"`);
-      const topResults = filterBestProducts(results, usedQuery);
+      console.log(`Found results for query: "${fullQuery}"`);
+      const topResults = filterBestProducts(results, fullQuery);
       const candidates = topResults.length > 0 ? topResults : results;
       sessionStorage.setItem('scan_candidates', JSON.stringify(candidates));
       navigate(`/product-off/${candidates[0].barcode}?from=scan`);
