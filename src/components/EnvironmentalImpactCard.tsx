@@ -1,607 +1,120 @@
-import {
-  Leaf,
-  AlertTriangle,
-  Info,
-  ExternalLink,
-  Package,
-  Droplets,
-  Factory,
-  Truck,
-  Car,
-  MapPin,
-  TreePine,
-  AlertCircle,
-  ShieldX,
-  ShieldAlert,
-  ShieldCheck,
-  ThumbsDown,
-  ThumbsUp,
-} from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
+import { AlertTriangle, Package, Truck } from "lucide-react";
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
-import { getBrandFlag, type BrandFlag } from "@/data/brandFlags";
-import { LaborFlagBanner } from "@/components/LaborFlagBanner";
-import { checkAnimalWelfareFlag } from "@/utils/animalWelfareFlags";
-import { AnimalWelfareFlagBadge } from "@/components/AnimalWelfareFlagBadge";
 
 interface EnvironmentalImpactCardProps {
   result: OpenFoodFactsResult;
 }
 
-const ecoscoreColors: Record<string, { bg: string; text: string; label: string }> = {
-  a: { bg: "bg-emerald-500", text: "text-white", label: "Excellent" },
-  b: { bg: "bg-lime-500", text: "text-white", label: "Good" },
-  c: { bg: "bg-amber-500", text: "text-white", label: "Fair" },
-  d: { bg: "bg-orange-500", text: "text-white", label: "Poor" },
-  e: { bg: "bg-red-500", text: "text-white", label: "Very Poor" },
-};
-
-const getEcoScoreDescription = (grade: string): string => {
-  switch (grade) {
-    case 'a': return 'Very low environmental impact';
-    case 'b': return 'Low environmental impact';
-    case 'c': return 'Moderate environmental impact';
-    case 'd': return 'High environmental impact';
-    case 'e': return 'Very high environmental impact';
-    default: return 'Environmental impact not assessed';
-  }
-};
-
-const getCarEquivalent = (co2e: number): string => {
-  // Average petrol car emits ~120g CO2 per km
-  const km = co2e / 120;
-  if (km < 1) {
-    return `Equal to driving ${(km * 1000).toFixed(0)}m in a petrol car`;
-  }
-  return `Equal to driving ${km.toFixed(1)} km in a petrol car`;
-};
-
 const getPackagingImpactLevel = (score?: number): { label: string; color: string } => {
   if (score === undefined) return { label: "Unknown", color: "text-gray-500" };
-  if (score >= 10) return { label: "Very low impact", color: "text-emerald-600" };
-  if (score >= 5) return { label: "Low impact", color: "text-lime-600" };
-  if (score >= 0) return { label: "Medium impact", color: "text-amber-600" };
-  if (score >= -10) return { label: "High impact", color: "text-orange-600" };
-  return { label: "Very high impact", color: "text-red-600" };
+  if (score >= 10) return { label: "Very low impact", color: "hsl(152 48% 30%)" };
+  if (score >= 5) return { label: "Low impact", color: "hsl(142 55% 38%)" };
+  if (score >= 0) return { label: "Medium impact", color: "hsl(38 88% 44%)" };
+  if (score >= -10) return { label: "High impact", color: "hsl(25 88% 48%)" };
+  return { label: "Very high impact", color: "hsl(0 68% 50%)" };
 };
-
-// ────────────────────────────────────────────
-// Verdict system
-// ────────────────────────────────────────────
-
-type VerdictLevel = "urgent" | "moderate" | "mild";
-
-interface Verdict {
-  level: VerdictLevel;
-  label: string;
-  subtitle: string;
-  reasons: string[];
-}
-
-const verdictConfig: Record<VerdictLevel, {
-  bg: string;
-  border: string;
-  text: string;
-  subtitleText: string;
-  icon: typeof ShieldX;
-}> = {
-  urgent: {
-    bg: "bg-red-50 dark:bg-red-950/50",
-    border: "border-red-300 dark:border-red-800",
-    text: "text-red-700 dark:text-red-300",
-    subtitleText: "text-red-600 dark:text-red-400",
-    icon: ShieldX,
-  },
-  moderate: {
-    bg: "bg-amber-50 dark:bg-amber-950/50",
-    border: "border-amber-300 dark:border-amber-800",
-    text: "text-amber-700 dark:text-amber-300",
-    subtitleText: "text-amber-600 dark:text-amber-400",
-    icon: ShieldAlert,
-  },
-  mild: {
-    bg: "bg-emerald-50 dark:bg-emerald-950/50",
-    border: "border-emerald-300 dark:border-emerald-800",
-    text: "text-emerald-700 dark:text-emerald-300",
-    subtitleText: "text-emerald-600 dark:text-emerald-400",
-    icon: ShieldCheck,
-  },
-};
-
-function computeVerdict(
-  result: OpenFoodFactsResult,
-  brandFlag: BrandFlag | null,
-): Verdict {
-  const reasons: string[] = [];
-  let score = 0; // higher = worse
-
-  // 1. Labor flag (heaviest weight)
-  if (brandFlag) {
-    if (brandFlag.severity === "critical") {
-      score += 50;
-      reasons.push("Brand linked to forced labor or child labor");
-    } else if (brandFlag.severity === "high") {
-      score += 30;
-      reasons.push("Brand has serious labor abuse allegations");
-    } else {
-      score += 15;
-      reasons.push("Brand has unresolved labor concerns");
-    }
-  }
-
-  // 1b. Animal welfare flag
-  const welfareFlag = checkAnimalWelfareFlag(result.brand);
-  if (welfareFlag.isFlagged) {
-    if (welfareFlag.severity === "critical") {
-      score += 30;
-      reasons.push(`${welfareFlag.company!.companyName} has critical animal welfare concerns (BBFAW Tier ${welfareFlag.company!.bbfawTier})`);
-    } else if (welfareFlag.severity === "high") {
-      score += 20;
-      reasons.push(`${welfareFlag.company!.companyName} has poor animal welfare practices`);
-    } else {
-      score += 10;
-      reasons.push("Company has animal welfare concerns");
-    }
-  }
-
-  // 2. Eco-Score
-  const grade = result.ecoscoreGrade?.toLowerCase();
-  if (grade === "e") {
-    score += 25;
-    reasons.push("Very poor environmental impact (Eco-Score E)");
-  } else if (grade === "d") {
-    score += 15;
-    reasons.push("High environmental impact (Eco-Score D)");
-  } else if (grade === "c") {
-    score += 5;
-  }
-  // a/b = no penalty
-
-  // 3. Threatened species
-  const threatened = result.ecoscoreData?.adjustments?.threatened_species;
-  if (threatened && typeof threatened.value === "number" && threatened.value < 0) {
-    score += 10;
-    reasons.push("Contains ingredients that harm threatened species");
-  }
-
-  // 4. NOVA ultra-processed
-  if (result.novaGroup === 4) {
-    score += 5;
-    reasons.push("Ultra-processed food (NOVA 4)");
-  }
-
-  // 5. High carbon
-  const agri = result.ecoscoreData?.agribalyse;
-  if (agri && typeof agri.co2_total === "number" && agri.co2_total > 5) {
-    score += 10;
-    reasons.push(`High carbon footprint (${agri.co2_total.toFixed(1)} kg CO\u2082/kg)`);
-  }
-
-  // Determine level
-  if (score >= 40) {
-    return {
-      level: "urgent",
-      label: "Avoid This Product",
-      subtitle: "Serious ethical or environmental concerns identified",
-      reasons,
-    };
-  }
-  if (score >= 15) {
-    return {
-      level: "moderate",
-      label: "Consider Alternatives",
-      subtitle: "Some concerns found \u2014 look for better options if possible",
-      reasons,
-    };
-  }
-
-  // Positive reasons for mild
-  const positiveReasons: string[] = [];
-  if (grade === "a") positiveReasons.push("Excellent environmental impact (Eco-Score A)");
-  else if (grade === "b") positiveReasons.push("Good environmental impact (Eco-Score B)");
-  if (!brandFlag) positiveReasons.push("No known labor violations");
-  if (result.novaGroup && result.novaGroup <= 2) positiveReasons.push("Minimally processed");
-  if (positiveReasons.length === 0) positiveReasons.push("No major concerns identified");
-
-  return {
-    level: "mild",
-    label: "Good Choice",
-    subtitle: "This product meets ethical and environmental standards",
-    reasons: positiveReasons,
-  };
-}
 
 export function EnvironmentalImpactCard({ result }: EnvironmentalImpactCardProps) {
   if (!result.found) return null;
 
-  const brandFlag = getBrandFlag(result.brand);
-  const verdict = computeVerdict(result, brandFlag);
-  const vc = verdictConfig[verdict.level];
-  const VerdictIcon = vc.icon;
-  const agri = result.ecoscoreData?.agribalyse;
   const adjustments = result.ecoscoreData?.adjustments;
   const packaging = adjustments?.packaging;
   const origins = adjustments?.origins_of_ingredients;
   const threatened = adjustments?.threatened_species;
 
-  // Check if we have comprehensive data
-  const hasComprehensiveData = agri || packaging || origins || threatened;
+  if (!packaging && !origins && !result.origins && !threatened) return null;
 
   return (
-    <div className="space-y-6">
-      {/* Verdict Banner */}
-      <div className={`rounded-xl border-2 ${vc.border} ${vc.bg} p-5`}>
-        <div className="flex items-start gap-4">
-          <div className="flex-shrink-0 mt-0.5">
-            <VerdictIcon className={`w-8 h-8 ${vc.text}`} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <h3 className={`text-lg font-bold ${vc.text}`}>
-              {verdict.label}
-            </h3>
-            <p className={`text-sm mt-0.5 ${vc.subtitleText}`}>
-              {verdict.subtitle}
-            </p>
-            <ul className="mt-3 space-y-1.5">
-              {verdict.reasons.map((reason, i) => (
-                <li key={i} className="flex items-start gap-2">
-                  {verdict.level === "mild" ? (
-                    <ThumbsUp className={`w-3.5 h-3.5 mt-0.5 flex-shrink-0 ${vc.text}`} />
-                  ) : (
-                    <ThumbsDown className={`w-3.5 h-3.5 mt-0.5 flex-shrink-0 ${vc.text}`} />
-                  )}
-                  <span className={`text-sm ${vc.subtitleText}`}>{reason}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      {/* Header with product info */}
-      <Card className="border-emerald-200 dark:border-emerald-800">
-        <CardHeader>
-          <div className="flex items-start gap-3">
-            {result.imageUrl && (
-              <img
-                src={result.imageUrl}
-                alt={result.productName || "Product"}
-                className="w-20 h-20 rounded-lg object-cover border flex-shrink-0"
-              />
-            )}
-            <div className="flex-1">
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-                {result.productName || "Unknown Product"}
-              </h3>
-              {result.brand && (
-                <p className="text-sm text-gray-600 dark:text-gray-400">{result.brand}</p>
-              )}
-              <a
-                href={`https://world.openfoodfacts.org/product/${result.barcode}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-sm text-emerald-600 hover:text-emerald-700 mt-2"
-              >
-                View on OpenFoodFacts <ExternalLink className="w-3 h-3" />
-              </a>
-            </div>
-          </div>
-        </CardHeader>
-      </Card>
-
-      {/* Labor flag */}
-      {brandFlag && <LaborFlagBanner flag={brandFlag} brandName={result.brand} />}
-
-      {/* Animal Welfare Flag */}
-      <AnimalWelfareFlagBadge brand={result.brand} showDetails={true} />
-
-      {/* Environment Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Leaf className="w-5 h-5 text-emerald-600" />
-            Environment
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Eco-Score */}
-          {result.ecoscoreGrade && (
-            <div className="flex items-center gap-4 p-4 rounded-lg bg-gray-50 dark:bg-gray-800">
-              <div className={`w-16 h-16 rounded-full ${ecoscoreColors[result.ecoscoreGrade]?.bg} ${ecoscoreColors[result.ecoscoreGrade]?.text} flex items-center justify-center text-2xl font-bold`}>
-                {result.ecoscoreGrade.toUpperCase()}
-              </div>
-              <div className="flex-1">
-                <h4 className="font-semibold text-lg">Green-Score {result.ecoscoreGrade.toUpperCase()}</h4>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  {getEcoScoreDescription(result.ecoscoreGrade)}
-                </p>
-                {result.ecoscoreScore !== null && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    Score: {result.ecoscoreScore}/100
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Carbon Footprint */}
-          {(result.carbonFootprint100g !== null || agri?.co2_total) && (
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <Car className="w-4 h-4 text-emerald-600" />
-                <h4 className="font-medium">Carbon footprint</h4>
-              </div>
-              
-              {result.carbonFootprint100g !== null && (
-                <div className="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium">CO₂e per 100g</span>
-                    <span className="text-lg font-bold text-emerald-700 dark:text-emerald-400">
-                      {result.carbonFootprint100g.toFixed(0)} g
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">
-                    {getCarEquivalent(result.carbonFootprint100g)}
-                  </p>
-                </div>
-              )}
-
-              {agri?.co2_total && (
-                <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
-                    Total lifecycle impact: {agri.co2_total.toFixed(2)} kg CO₂eq/kg
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* CO2 Lifecycle Breakdown */}
-          {agri && (
-            <div className="space-y-3">
-              <h4 className="font-medium flex items-center gap-2">
-                <Factory className="w-4 h-4" />
-                Lifecycle Breakdown
-              </h4>
-              <div className="space-y-2">
-                {[
-                  { label: "Agriculture", value: agri.co2_agriculture, icon: "🌾" },
-                  { label: "Processing", value: agri.co2_processing, icon: "🏭" },
-                  { label: "Packaging", value: agri.co2_packaging, icon: "📦" },
-                  { label: "Transportation", value: agri.co2_transportation, icon: "🚚" },
-                  { label: "Distribution", value: agri.co2_distribution, icon: "🏪" },
-                  { label: "Consumption", value: agri.co2_consumption, icon: "🍽️" },
-                ]
-                  .filter((item) => typeof item.value === 'number' && item.value > 0)
-                  .map((item) => {
-                    const pct = agri.co2_total && agri.co2_total > 0
-                      ? ((item.value! / agri.co2_total) * 100)
-                      : 0;
-                    return (
-                      <div key={item.label} className="flex items-center gap-3">
-                        <span className="text-sm w-6">{item.icon}</span>
-                        <span className="text-sm w-24 text-gray-600 dark:text-gray-400">{item.label}</span>
-                        <div className="flex-1">
-                          <Progress value={pct} className="h-2" />
-                        </div>
-                        <span className="text-xs font-mono w-16 text-right">
-                          {pct.toFixed(0)}%
-                        </span>
-                      </div>
-                    );
-                  })}
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Packaging Section */}
+    <div className="space-y-2">
+      {/* Packaging */}
       {packaging && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Package className="w-5 h-5 text-blue-600" />
-              Packaging
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        <div className="bg-card rounded-2xl border border-border/60 shadow-soft p-4">
+          <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <Package className="w-4 h-4 text-gray-500" />
-              <span className="text-sm">
-                Packaging with <span className={`font-medium ${getPackagingImpactLevel(packaging.value).color}`}>
-                  {getPackagingImpactLevel(packaging.value).label}
-                </span>
-              </span>
+              <Package className="w-4 h-4 text-muted-foreground" />
+              <h3 className="text-sm font-bold text-foreground">Packaging</h3>
             </div>
-
-            {/* Packaging parts */}
-            {packaging.packagings && packaging.packagings.length > 0 && (
-              <div className="space-y-2">
-                <h5 className="text-sm font-medium">Packaging parts</h5>
-                <div className="space-y-2">
-                  {packaging.packagings.map((pkg, i) => (
-                    <div key={i} className="flex items-center justify-between p-2 rounded bg-gray-50 dark:bg-gray-800">
-                      <div className="flex items-center gap-2">
-                        <Package className="w-3 h-3 text-gray-400" />
-                        <span className="text-sm">
-                          1 × {(pkg.shape || 'Package').replace(/^en:/, '').replace(/-/g, ' ')}
-                          {pkg.weight_measured && ` (${pkg.weight_measured}g)`}
-                        </span>
-                      </div>
-                      <Badge variant="outline" className="text-xs">
-                        {pkg.material?.replace(/^en:/, '').replace(/-/g, ' ') || 'Unknown material'}
-                      </Badge>
-                    </div>
-                  ))}
+            <span
+              className="text-xs font-semibold"
+              style={{ color: getPackagingImpactLevel(packaging.value).color }}
+            >
+              {getPackagingImpactLevel(packaging.value).label}
+            </span>
+          </div>
+          {packaging.packagings && packaging.packagings.length > 0 && (
+            <div className="space-y-1.5">
+              {packaging.packagings.map((pkg, i) => (
+                <div key={i} className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">
+                    1 × {(pkg.shape || "Package").replace(/^en:/, "").replace(/-/g, " ")}
+                    {pkg.weight_measured && ` (${pkg.weight_measured}g)`}
+                  </span>
+                  <span className="font-semibold text-foreground capitalize">
+                    {pkg.material?.replace(/^en:/, "").replace(/-/g, " ") || "Unknown"}
+                  </span>
                 </div>
-              </div>
-            )}
-
-            {/* Packaging materials breakdown */}
-            {packaging.packagings && packaging.packagings.length > 0 && (
-              <div className="space-y-2">
-                <h5 className="text-sm font-medium">Packaging materials</h5>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b dark:border-gray-700">
-                        <th className="text-left py-2">Material</th>
-                        <th className="text-right py-2">%</th>
-                        <th className="text-right py-2">Weight</th>
-                        <th className="text-right py-2">Weight/100g</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {packaging.packagings.map((pkg, i) => {
-                        const totalWeight = packaging.packagings?.reduce((sum, p) => sum + (p.weight_measured || 0), 0) || 1;
-                        const percentage = pkg.weight_measured ? (pkg.weight_measured / totalWeight * 100) : 0;
-                        const weightPer100g = pkg.weight_measured ? (pkg.weight_measured / 100) : 0;
-                        
-                        return (
-                          <tr key={i} className="border-b dark:border-gray-700">
-                            <td className="py-2 capitalize">
-                              {pkg.material?.replace(/^en:/, '').replace(/-/g, ' ') || 'Unknown'}
-                            </td>
-                            <td className="text-right py-2">{percentage.toFixed(0)}%</td>
-                            <td className="text-right py-2">{pkg.weight_measured || 0}g</td>
-                            <td className="text-right py-2">{weightPer100g.toFixed(1)}g</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {/* Recycling instructions */}
-            {result.labels && result.labels.some(label => label.toLowerCase().includes('recycl')) && (
-              <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
-                <div className="flex items-center gap-2 text-sm text-blue-800 dark:text-blue-200">
-                  <Info className="w-4 h-4" />
-                  <span>Recycling information available on packaging</span>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
-      {/* Transportation Section */}
+      {/* Transportation */}
       {(origins || result.origins) && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Truck className="w-5 h-5 text-orange-600" />
-              Transportation
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Origins of ingredients */}
-            <div className="space-y-2">
-              <h5 className="text-sm font-medium flex items-center gap-2">
-                <MapPin className="w-4 h-4" />
-                Origins of ingredients
-              </h5>
-              {origins?.aggregated_origins && origins.aggregated_origins.length > 0 ? (
-                <div className="space-y-1">
-                  {origins.aggregated_origins.map((origin, i) => (
-                    <div key={i} className="flex items-center justify-between text-sm">
-                      <span className="capitalize">{(origin.origin || '').replace(/^en:/, '').replace(/-/g, ' ')}</span>
-                      <Badge variant="outline">{origin.percent}%</Badge>
-                    </div>
-                  ))}
-                </div>
-              ) : result.origins ? (
-                <p className="text-sm text-gray-600 dark:text-gray-400">{result.origins}</p>
-              ) : (
-                <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
-                  <AlertCircle className="w-4 h-4" />
-                  <span className="text-sm">Missing origins of ingredients information</span>
-                </div>
-              )}
-            </div>
+        <div className="bg-card rounded-2xl border border-border/60 shadow-soft p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Truck className="w-4 h-4 text-muted-foreground" />
+            <h3 className="text-sm font-bold text-foreground">Transportation</h3>
+          </div>
 
-            {/* Transportation score */}
-            {origins?.transportation_score !== undefined && (
-              <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Transportation impact score</span>
-                  <Badge variant="outline">{origins.transportation_score}/100</Badge>
+          {origins?.aggregated_origins && origins.aggregated_origins.length > 0 ? (
+            <div className="space-y-1.5 mb-2">
+              {origins.aggregated_origins.map((origin, i) => (
+                <div key={i} className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground capitalize">
+                    {(origin.origin || "Unknown").replace(/^en:/, "").replace(/-/g, " ")}
+                  </span>
+                  <span className="font-semibold text-foreground">{origin.percent}%</span>
                 </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+              ))}
+            </div>
+          ) : result.origins ? (
+            <p className="text-xs text-muted-foreground mb-2">{result.origins}</p>
+          ) : (
+            <p className="text-xs text-muted-foreground mb-2">Unknown origins</p>
+          )}
+
+          {origins?.transportation_score !== undefined && (
+            <div className="flex items-center justify-between text-xs pt-2 border-t border-border/50">
+              <span className="text-muted-foreground">Transport impact score</span>
+              <span className="font-semibold text-foreground">{origins.transportation_score}/100</span>
+            </div>
+          )}
+        </div>
       )}
 
-      {/* Threatened Species Section */}
+      {/* Threatened Species */}
       {threatened && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-red-600">
-              <AlertTriangle className="w-5 h-5" />
-              Threatened species
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
-                <Droplets className="w-4 h-4" />
-                <span className="font-medium">Contains ingredients that impact threatened species</span>
-              </div>
-              
-              {threatened.ingredient && (
-                <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800">
-                  <p className="text-sm text-red-800 dark:text-red-200">
-                    <strong>Concern:</strong> {threatened.ingredient.replace(/^en:/, '').replace(/-/g, ' ')}
-                  </p>
-                  <p className="text-xs text-red-600 dark:text-red-400 mt-1">
-                    Drives deforestation and threatens species such as the orangutan, if available
-                  </p>
-                </div>
-              )}
-
-              {/* Palm oil warning */}
-              {result.labels && result.labels.some(label => 
-                label.toLowerCase().includes('palm') || 
-                label.toLowerCase().includes('palmoil')
-              ) && (
-                <div className="p-3 rounded-lg bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800">
-                  <div className="flex items-center gap-2 text-orange-800 dark:text-orange-200">
-                    <AlertTriangle className="w-4 h-4" />
-                    <span className="text-sm font-medium">Contains palm oil</span>
-                  </div>
-                  <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
-                    Drives deforestation and threatens species such as the orangutan
-                  </p>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* No environmental data warning */}
-      {!result.ecoscoreGrade && 
-       result.carbonFootprint100g === null && 
-       !hasComprehensiveData && (
-        <Card className="border-amber-200 dark:border-amber-800">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3 text-amber-600 dark:text-amber-400">
-              <AlertTriangle className="w-5 h-5" />
-              <div>
-                <p className="font-medium">No environmental impact data available</p>
-                <p className="text-sm text-amber-600 dark:text-amber-400 mt-1">
-                  This product hasn't been assessed for environmental impact on OpenFoodFacts.
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <div
+          className="rounded-2xl border shadow-soft p-4"
+          style={{ backgroundColor: "hsl(0 50% 98%)", borderColor: "hsl(0 60% 88%)" }}
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <AlertTriangle className="w-4 h-4 flex-shrink-0" style={{ color: "hsl(0 68% 50%)" }} />
+            <h3 className="text-sm font-bold" style={{ color: "hsl(0 68% 38%)" }}>
+              Threatened Species Risk
+            </h3>
+          </div>
+          {threatened.ingredient && (
+            <p className="text-xs text-muted-foreground">
+              Contains{" "}
+              <span className="font-semibold text-foreground capitalize">
+                {threatened.ingredient.replace(/^en:/, "").replace(/-/g, " ")}
+              </span>{" "}
+              — drives deforestation and threatens species such as the orangutan.
+            </p>
+          )}
+        </div>
       )}
     </div>
   );
