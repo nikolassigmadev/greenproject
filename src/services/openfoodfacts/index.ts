@@ -437,24 +437,13 @@ const searchProductsGlobal = async (
   }
 
   try {
-    const params = new URLSearchParams({
-      search_terms: trimmed,
-      search_simple: '1',
-      action: 'process',
-      json: '1',
-      page_size: String(Math.min(limit * 3, 50)),
-      sort_by: 'unique_scans_n',
-      fields: [
-        'code', 'product_name', 'product_name_en', 'brands',
-        'ecoscore_grade', 'ecoscore_score', 'ecoscore_data',
-        'nutriscore_grade', 'nutriscore_score', 'nova_group',
-        'nutriments', 'labels_tags', 'labels', 'categories_tags', 'categories',
-        'origins', 'ingredients_text', 'ingredients_text_en',
-        'image_front_url', 'image_url', 'countries_tags',
-      ].join(','),
+    // Route through backend proxy — direct OFF fetch fails in Capacitor/iOS (ATS/CORS)
+    const backendUrl = getBackendUrl();
+    const response = await fetch(`${backendUrl}/api/openfoodfacts/search`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: trimmed, limit: Math.min(limit * 3, 50) }),
     });
-
-    const response = await fetch(`${OFF_API_BASE}/cgi/search.pl?${params}`);
 
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -471,13 +460,14 @@ const searchProductsGlobal = async (
     const results = data.products
       .map(normalizeProduct)
       .slice(0, limit);
-    
+
     console.log(`   Got ${results.length} global results (region filter disabled)`);
-    
+
     cacheSet(cacheKey, results);
     return results;
   } catch (error) {
-    console.error('OpenFoodFacts global search error:', error);
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error('OpenFoodFacts global search error:', errorMsg);
     return [];
   }
 };

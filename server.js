@@ -295,8 +295,20 @@ app.post('/api/openfoodfacts/search', async (req, res) => {
     let data = null;
     const searchTimeout = 25000;
     const headers = { 'User-Agent': 'Scan2Source/1.0 (ethical-shopper)' };
+
+    // Common brand aliases / nicknames → canonical OFF brand slug
+    const BRAND_ALIASES = {
+      'coke': 'coca-cola',
+      'pepsi': 'pepsi',
+      'sprite': 'coca-cola',  // Sprite is a Coca-Cola brand
+      'fanta': 'coca-cola',
+      'diet-coke': 'coca-cola',
+      'coke-zero': 'coca-cola',
+    };
+
     // Slugify for tag lookups: "Coca-Cola" → "coca-cola", "Lipton Ice Tea" → "lipton-ice-tea"
-    const searchQuery = query.trim().toLowerCase().replace(/[\s]+/g, '-');
+    const rawSlug = query.trim().toLowerCase().replace(/[\s]+/g, '-');
+    const searchQuery = BRAND_ALIASES[rawSlug] || rawSlug;
     const queryLower = query.trim().toLowerCase();
     const queryWords = queryLower.split(/[\s-]+/).filter(w => w.length > 1);
 
@@ -419,6 +431,34 @@ app.post('/api/openfoodfacts/search', async (req, res) => {
         }
       } catch (e) {
         console.warn(`   ⚠️ [4] Legacy text search failed: ${e.message}`);
+      }
+    }
+
+    // Strategy 5: v2 product_name_tags search — catches nicknames missed by brand_tags
+    // e.g. "Coke" appears in product_name_tags as "coke" even if brand is "coca-cola"
+    if (!data?.products?.length) {
+      try {
+        const nameTagParams = new URLSearchParams({
+          product_name_tags: rawSlug,
+          fields,
+          page_size: String(Math.min(limit * 2, 50)),
+          sort_by: 'unique_scans_n',
+        });
+        console.log(`   [5] product_name_tags search: "${rawSlug}"`);
+        const nameTagResponse = await fetch(`https://world.openfoodfacts.org/api/v2/search?${nameTagParams}`, {
+          signal: AbortSignal.timeout(searchTimeout),
+          headers,
+        });
+        if (nameTagResponse.ok) {
+          const nameTagData = await nameTagResponse.json();
+          if (nameTagData.products?.length > 0) {
+            sortByRelevance(nameTagData.products, queryWords, queryLower);
+            data = nameTagData;
+            console.log(`   ✅ [5] product_name_tags search returned ${data.products.length} products`);
+          }
+        }
+      } catch (e) {
+        console.warn(`   ⚠️ [5] product_name_tags search failed: ${e.message}`);
       }
     }
 
