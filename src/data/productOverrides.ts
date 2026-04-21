@@ -53,6 +53,7 @@ const productOverrides: Record<string, OpenFoodFactsResult> = {
   //   ecoscoreData: null,
   //   rawProduct: null,
   // },
+
 };
 
 export const getProductOverride = (barcode: string): OpenFoodFactsResult | undefined =>

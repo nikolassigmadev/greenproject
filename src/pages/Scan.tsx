@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { lookupHardcodedBarcodes } from "@/data/productBarcodeMap";
+import { lookupHardcodedBarcodes, lookupHardcodedImage } from "@/data/productBarcodeMap";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { Camera, Upload, Search, Loader2, AlertCircle, X, ScanLine, Image as ImageIcon, Plus, Leaf, BarChart3, QrCode, Settings, Users, Heart, Apple, ChevronRight, Check, Zap } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
@@ -296,6 +296,7 @@ const Scan = () => {
   const [barcodeInput, setBarcodeInput] = useState("");
   const [offSearchResults, setOffSearchResults] = useState<OpenFoodFactsResult[]>([]);
   const [offSearchLoading, setOffSearchLoading] = useState(false);
+  const [productUnknown, setProductUnknown] = useState(false);
   const [offSearchImage, setOffSearchImage] = useState<string | null>(null);
   const [offSearchText, setOffSearchText] = useState("");
   const [showDetailedEnvironmental, setShowDetailedEnvironmental] = useState(false);
@@ -878,8 +879,10 @@ const Scan = () => {
             for (const barcode of hardcodedBarcodes) {
               const result = await lookupBarcode(barcode);
               if (result.found) {
-                sessionStorage.setItem('scan_candidates', JSON.stringify([result]));
-                navigate(`/product-off/${result.barcode}?from=scan`);
+                const hardcodedImage = lookupHardcodedImage(extractedText) || lookupHardcodedImage(barcode);
+                const finalResult = hardcodedImage ? { ...result, imageUrl: hardcodedImage } : result;
+                sessionStorage.setItem('scan_candidates', JSON.stringify([finalResult]));
+                navigate(`/product-off/${finalResult.barcode}?from=scan`);
                 return;
               }
               console.log(`⚠️ Barcode ${barcode} not found, trying next...`);
@@ -915,8 +918,10 @@ const Scan = () => {
                   }
 
                   if (hasEcoScore(result)) {
-                    sessionStorage.setItem('scan_candidates', JSON.stringify([result]));
-                    navigate(`/product-off/${result.barcode}?from=scan`);
+                    const hardcodedImage = lookupHardcodedImage(advancedResult.barcode!) || lookupHardcodedImage(result.barcode);
+                    const finalResult = hardcodedImage ? { ...result, imageUrl: hardcodedImage } : result;
+                    sessionStorage.setItem('scan_candidates', JSON.stringify([finalResult]));
+                    navigate(`/product-off/${finalResult.barcode}?from=scan`);
                   } else {
                     toast({
                       title: "No Environmental Data",
@@ -1038,17 +1043,17 @@ const Scan = () => {
     setOffSearchResults([]);
     setOffSearchText("");
     setOffSearchImage(imageData);
+    setProductUnknown(false);
 
     try {
       // Step 1: OpenAI identifies the product
       const identified = await advancedProductOCR(imageData);
 
-      if (!identified.success || (!identified.productName && !identified.brandName)) {
-        toast({
-          title: "Could not identify product",
-          description: "Try a clearer image or use barcode entry.",
-          variant: "destructive",
-        });
+      const isUnknownResponse = (s: string | null | undefined) =>
+        !s || s.trim().toLowerCase() === 'unknown' || s.trim().toLowerCase() === 'none';
+
+      if (!identified.success || (isUnknownResponse(identified.productName) && isUnknownResponse(identified.brandName))) {
+        setProductUnknown(true);
         return;
       }
 
@@ -1060,8 +1065,10 @@ const Scan = () => {
         for (const barcode of hardcodedBarcodes) {
           const result = await lookupBarcode(barcode);
           if (result.found) {
-            sessionStorage.setItem('scan_candidates', JSON.stringify([result]));
-            navigate(`/product-off/${result.barcode}?from=scan`);
+            const hardcodedImage = lookupHardcodedImage(identifiedText) || lookupHardcodedImage(barcode);
+            const finalResult = hardcodedImage ? { ...result, imageUrl: hardcodedImage } : result;
+            sessionStorage.setItem('scan_candidates', JSON.stringify([finalResult]));
+            navigate(`/product-off/${finalResult.barcode}?from=scan`);
             return;
           }
           console.log(`⚠️ Barcode ${barcode} not found, trying next...`);
@@ -1072,8 +1079,10 @@ const Scan = () => {
       if (identified.barcode && isValidBarcode(identified.barcode)) {
         const barcodeResult = await lookupBarcode(identified.barcode);
         if (barcodeResult.found) {
-          sessionStorage.setItem('scan_candidates', JSON.stringify([barcodeResult]));
-          navigate(`/product-off/${barcodeResult.barcode}?from=scan`);
+          const hardcodedImage = lookupHardcodedImage(identified.barcode);
+          const finalResult = hardcodedImage ? { ...barcodeResult, imageUrl: hardcodedImage } : barcodeResult;
+          sessionStorage.setItem('scan_candidates', JSON.stringify([finalResult]));
+          navigate(`/product-off/${finalResult.barcode}?from=scan`);
           return;
         }
       }
@@ -1498,6 +1507,61 @@ const Scan = () => {
 
 
       </div>
+
+      {/* Product Unknown overlay */}
+      {productUnknown && (
+        <div
+          style={{
+            position: 'absolute', bottom: 0, left: 0, right: 0,
+            background: 'rgba(18,18,26,0.96)',
+            backdropFilter: 'blur(24px)',
+            WebkitBackdropFilter: 'blur(24px)',
+            borderTop: '1px solid rgba(255,255,255,0.10)',
+            borderRadius: '20px 20px 0 0',
+            padding: '28px 24px max(32px, env(safe-area-inset-bottom))',
+            zIndex: 50,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16,
+          }}
+        >
+          <div style={{
+            width: 52, height: 52, borderRadius: '50%',
+            backgroundColor: 'rgba(255,255,255,0.08)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <AlertCircle size={26} style={{ color: 'rgba(255,255,255,0.55)' }} />
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <p style={{ color: 'white', fontWeight: 700, fontSize: '1rem', marginBottom: 4 }}>
+              Product Unknown
+            </p>
+            <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.8rem', lineHeight: 1.5 }}>
+              Couldn't identify this product from the image.{'\n'}Try again with a clearer photo of the label.
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: 10, width: '100%' }}>
+            <button
+              onClick={() => setProductUnknown(false)}
+              style={{
+                flex: 1, height: 46, borderRadius: 14, border: '1px solid rgba(255,255,255,0.15)',
+                backgroundColor: 'transparent', color: 'rgba(255,255,255,0.7)',
+                fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer',
+              }}
+            >
+              Dismiss
+            </button>
+            <button
+              onClick={() => { setProductUnknown(false); offFileInputRef.current?.click(); }}
+              style={{
+                flex: 2, height: 46, borderRadius: 14, border: 'none',
+                backgroundColor: 'white', color: '#0a0a14',
+                fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer',
+              }}
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Search / manual input overlay */}
       {showSearch && (
