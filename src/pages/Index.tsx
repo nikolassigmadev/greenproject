@@ -10,48 +10,12 @@ import {
 import { loadPriorities, DEFAULT_PRIORITIES } from "@/utils/userPreferences";
 
 const analysisCategories = [
-  {
-    icon: Globe,
-    title: "Origin",
-    desc: "Where ingredients actually come from",
-    color: "hsl(220 68% 46%)",
-    bg: "hsl(220 60% 94%)",
-  },
-  {
-    icon: Shield,
-    title: "Labor",
-    desc: "Forced & child labor flags",
-    color: "hsl(0 68% 46%)",
-    bg: "hsl(0 50% 94%)",
-  },
-  {
-    icon: Leaf,
-    title: "Carbon",
-    desc: "CO₂ lifecycle per 100g",
-    color: "hsl(172 72% 28%)",
-    bg: "hsl(172 50% 92%)",
-  },
-  {
-    icon: TrendingUp,
-    title: "Alternatives",
-    desc: "Greener swaps ranked for you",
-    color: "hsl(280 52% 46%)",
-    bg: "hsl(280 40% 94%)",
-  },
-  {
-    icon: Heart,
-    title: "Animal",
-    desc: "BBFAW welfare scores",
-    color: "hsl(340 62% 46%)",
-    bg: "hsl(340 50% 94%)",
-  },
-  {
-    icon: Activity,
-    title: "Nutrition",
-    desc: "Nutri-Score A–E grades",
-    color: "hsl(172 72% 28%)",
-    bg: "hsl(172 50% 92%)",
-  },
+  { icon: Globe,      title: "Origin",       desc: "Where ingredients actually come from", accent: "#40aaff" },
+  { icon: Shield,     title: "Labor",        desc: "Forced & child labor flags",           accent: "#ff4136" },
+  { icon: Leaf,       title: "Carbon",       desc: "CO₂ lifecycle per 100g",               accent: "#00c853" },
+  { icon: TrendingUp, title: "Alternatives", desc: "Greener swaps ranked for you",         accent: "#ffc700" },
+  { icon: Heart,      title: "Animal",       desc: "BBFAW welfare scores",                 accent: "#ff69b4" },
+  { icon: Activity,   title: "Nutrition",    desc: "Nutri-Score A–E grades",               accent: "#00c853" },
 ];
 
 const quickActions = [
@@ -124,90 +88,152 @@ const Index = () => {
     };
   }, []);
 
-  return (
-    <div className="min-h-screen bg-background">
-      <main className="pb-nav">
+  // Ticker items
+  const tickerItems = [
+    "COCA-COLA", "WHOLE MILK", "DORITOS", "MINERAL WATER", "ORANGE JUICE",
+    "OAT MILK", "PRINGLES", "SPARKLING WATER", "ENERGY DRINK", "SOY MILK",
+    "KETTLE CHIPS", "ALMOND MILK", "PEPSI", "COCONUT WATER", "RICE MILK",
+    "LAYS", "APPLE JUICE", "GREEK YOGURT", "TOMATO SAUCE", "OLIVE OIL",
+  ];
 
-        {/* ── Top header ── */}
-        <div className="px-5 pt-14 pb-2">
-          <div className="max-w-xl mx-auto flex items-start justify-between">
-            <div>
-              <p className="text-sm font-medium text-muted-foreground mb-0.5">GoodScan</p>
-              <h1 className="text-[1.75rem] font-display font-extrabold text-foreground leading-tight">
-                Shop with your values.
-              </h1>
-            </div>
-            <Link
-              to="/basket"
-              className="mt-1 w-10 h-10 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors cursor-pointer flex-shrink-0"
-              aria-label="View basket"
-            >
-              <ShoppingCart className="w-5 h-5 text-neutral-700 dark:text-neutral-300" />
-            </Link>
+
+  return (
+    <div className="min-h-screen bg-black" style={{ position: 'relative', overflow: 'hidden' }}>
+      <div className="scanlines" />
+
+      <main className="pb-nav" style={{ position: 'relative', zIndex: 1 }}>
+
+        {/* ── Ticker row ── */}
+        <div style={{ overflow: 'hidden', borderBottom: '1px solid rgba(255,255,255,0.06)', background: '#000' }}>
+          <div className="ticker-track">
+            {[...tickerItems, ...tickerItems].map((item, i) => (
+              <span key={i} style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.48rem', color: 'rgba(132,137,142,0.5)', letterSpacing: '0.18em', textTransform: 'uppercase', padding: '5px 18px', borderRight: '1px solid rgba(255,255,255,0.05)' }}>
+                {item}
+              </span>
+            ))}
           </div>
         </div>
 
-        {/* ── Scan hero card ── */}
-        <div className="px-5 pt-4">
-          <div className="max-w-xl mx-auto">
-            <Link
-              to="/scan"
-              className="block rounded-[1.25rem] overflow-hidden active:scale-[0.98] transition-transform duration-150"
-              style={{
-                background: "linear-gradient(145deg, hsl(196 88% 20%) 0%, hsl(172 82% 30%) 100%)",
-                boxShadow: "0 4px 24px rgba(0,0,0,0.18), 0 1px 4px rgba(0,0,0,0.08)",
-              }}
-            >
-              <div className="px-6 py-7 flex items-center justify-between">
-                <div>
-                  <p className="text-white/70 text-xs font-semibold mb-1 uppercase tracking-wider">Ready to scan</p>
-                  <p className="text-white text-xl font-display font-extrabold leading-tight mb-3">
-                    Scan a Product
-                  </p>
-                  <div
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold"
-                    style={{ backgroundColor: "rgba(255,255,255,0.18)", color: "white" }}
-                  >
-                    <Camera className="w-3.5 h-3.5" />
-                    Take a photo or search
-                  </div>
-                  {isDefaultPriorities && (
-                    <Link
-                      to="/preferences"
-                      onClick={e => e.stopPropagation()}
-                      className="mt-3 flex items-center gap-1.5 text-xs font-semibold"
-                      style={{ color: "hsl(38 95% 75%)", textDecoration: "none" }}
-                    >
-                      <AlertCircle className="w-3 h-3 flex-shrink-0" />
-                      Set your priorities first
-                      <ChevronRight className="w-3 h-3" />
-                    </Link>
-                  )}
-                </div>
-                <div
-                  className="w-16 h-16 rounded-2xl flex items-center justify-center flex-shrink-0"
-                  style={{ backgroundColor: "rgba(255,255,255,0.15)" }}
-                >
-                  <ScanLine className="w-8 h-8 text-white" strokeWidth={1.6} />
-                </div>
-              </div>
+        {/* ══════════════════════════════════════════
+            MSCHF-STYLE HERO POSTER
+        ══════════════════════════════════════════ */}
+        <div style={{ position: 'relative', minHeight: '72vw', maxHeight: 520, overflow: 'hidden', borderBottom: '2px solid #fff' }}>
+
+          {/* Giant background letterforms */}
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', pointerEvents: 'none', userSelect: 'none', overflow: 'hidden' }}>
+            <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(5rem, 28vw, 14rem)', lineHeight: 0.82, fontWeight: 400, color: 'rgba(255,255,255,0.04)', letterSpacing: '-0.02em', textTransform: 'uppercase', paddingLeft: '2vw', whiteSpace: 'nowrap' }}>
+              GOOD
+            </div>
+            <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(5rem, 28vw, 14rem)', lineHeight: 0.82, fontWeight: 400, color: 'rgba(255,255,255,0.04)', letterSpacing: '-0.02em', textTransform: 'uppercase', paddingLeft: '8vw', whiteSpace: 'nowrap' }}>
+              SCAN
+            </div>
+          </div>
+
+          {/* Top bar: wordmark + basket */}
+          <div style={{ position: 'relative', zIndex: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: 'max(52px, env(safe-area-inset-top)) 20px 0' }}>
+            <div>
+              <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.5rem', color: '#84898E', letterSpacing: '0.22em', textTransform: 'uppercase', marginBottom: 4 }}>
+                MSCHF-STYLE
+              </p>
+              <h1 className="flicker" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(3rem, 14vw, 5rem)', color: '#84898E', letterSpacing: '0.04em', fontWeight: 400, lineHeight: 1, margin: 0 }}>
+                GOOD<span style={{ color: '#fff' }}>SCAN</span><span className="terminal-cursor" style={{ color: '#00c853' }}>_</span>
+              </h1>
+            </div>
+            <Link to="/basket" style={{ marginTop: 4, width: 36, height: 36, border: '1px solid rgba(255,255,255,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#84898E', flexShrink: 0 }} aria-label="View basket">
+              <ShoppingCart className="w-4 h-4" />
             </Link>
+          </div>
+
+          {/* Bold italic statement — like MSCHF's "Part of an extremely unbalanced breakfast" */}
+          <div style={{ position: 'relative', zIndex: 2, padding: '0 20px', marginTop: 'auto', paddingTop: '8vw' }}>
+            <p style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(2rem, 10vw, 3.8rem)', color: '#ffffff', lineHeight: 1.0, fontWeight: 400, maxWidth: '85%' }}>
+              Part of an extremely
+            </p>
+            <p style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(2rem, 10vw, 3.8rem)', color: '#00c853', lineHeight: 1.0, fontWeight: 400 }}>
+              uninformed
+            </p>
+            <p style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(2rem, 10vw, 3.8rem)', color: '#ffffff', lineHeight: 1.0, fontWeight: 400 }}>
+              shopping trip.
+            </p>
+          </div>
+
+          {/* Fine-print circular badge — bottom right */}
+          <div style={{ position: 'absolute', bottom: 16, right: 16, zIndex: 3, width: 80, height: 80, borderRadius: '50%', background: '#00c853', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 8 }}>
+            <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.38rem', color: '#000', textAlign: 'center', lineHeight: 1.4, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              GoodScan is not affiliated with any brand listed or shown.
+            </p>
+          </div>
+
+          {/* Corner registration marks */}
+          {(['tl','tr','bl','br'] as const).map(c => (
+            <div key={c} style={{ position: 'absolute', [c.startsWith('t') ? 'top' : 'bottom']: 10, [c.endsWith('l') ? 'left' : 'right']: 10, zIndex: 3, fontFamily: 'monospace', fontSize: 14, color: 'rgba(255,255,255,0.3)', lineHeight: 1, userSelect: 'none' }}>+</div>
+          ))}
+        </div>
+
+        {/* ── Full-width green scan CTA strip ── */}
+        <Link to="/scan" style={{ display: 'block', textDecoration: 'none', position: 'relative', background: '#00c853', borderBottom: '2px solid #fff' }}>
+          {/* Corner marks */}
+          {(['tl','tr','bl','br'] as const).map(c => (
+            <div key={c} style={{ position: 'absolute', [c.startsWith('t') ? 'top' : 'bottom']: 6, [c.endsWith('l') ? 'left' : 'right']: 10, fontFamily: 'monospace', fontSize: 13, color: 'rgba(0,0,0,0.4)', lineHeight: 1, userSelect: 'none', zIndex: 1 }}>+</div>
+          ))}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 24px' }}>
+            <div>
+              <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.5rem', color: 'rgba(0,0,0,0.55)', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 3 }}>
+                TAP TO BEGIN
+              </p>
+              <p style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.6rem, 8vw, 2.4rem)', color: '#000', letterSpacing: '0.04em', lineHeight: 1, fontWeight: 400 }}>
+                SCAN YOUR PRODUCT
+              </p>
+            </div>
+            <ScanLine className="w-9 h-9" style={{ color: '#000', opacity: 0.7, flexShrink: 0 }} strokeWidth={1.5} />
+          </div>
+          {isDefaultPriorities && (
+            <div style={{ padding: '0 24px 14px', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <AlertCircle size={12} style={{ color: 'rgba(0,0,0,0.6)', flexShrink: 0 }} />
+              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.55rem', color: 'rgba(0,0,0,0.6)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                Set priorities first →
+              </span>
+            </div>
+          )}
+        </Link>
+
+        {/* ── Reverse ticker ── */}
+        <div style={{ overflow: 'hidden', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="ticker-track ticker-track--rev">
+            {[...tickerItems, ...tickerItems].map((item, i) => (
+              <span key={i} style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.48rem', color: 'rgba(0,200,83,0.3)', letterSpacing: '0.18em', textTransform: 'uppercase', padding: '5px 18px', borderRight: '1px solid rgba(255,255,255,0.05)' }}>
+                {item}
+              </span>
+            ))}
           </div>
         </div>
 
         {/* ── Stats row ── */}
         <div className="px-5 pt-4">
-          <div className="max-w-xl mx-auto grid grid-cols-3 gap-3">
-            {stats.map((s) => (
+          <div className="max-w-xl mx-auto grid grid-cols-3">
+            {stats.map((s, i) => (
               <div
                 key={s.label}
-                className="bg-card rounded-[1.25rem] py-4 px-3 text-center"
-                style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04)" }}
+                className="py-4 px-3 text-center"
+                style={{
+                  borderRight: i < stats.length - 1 ? "1px solid rgba(255,255,255,0.06)" : "none",
+                  borderTop: "1px solid rgba(255,255,255,0.06)",
+                  borderBottom: "1px solid rgba(255,255,255,0.06)",
+                  borderLeft: i === 0 ? "1px solid rgba(255,255,255,0.06)" : "none",
+                }}
               >
-                <p className="text-[1.35rem] font-display font-extrabold text-foreground leading-none mb-1">
+                <p
+                  className="font-mono font-black tabular-nums leading-none mb-1"
+                  style={{ fontSize: "1.4rem", color: "#ffffff", letterSpacing: "-0.03em" }}
+                >
                   {s.value}
                 </p>
-                <p className="text-[10px] font-medium text-muted-foreground leading-tight">{s.label}</p>
+                <p
+                  className="font-mono uppercase"
+                  style={{ fontSize: "0.5rem", color: "#84898E", letterSpacing: "0.15em" }}
+                >
+                  {s.label}
+                </p>
               </div>
             ))}
           </div>
@@ -219,55 +245,74 @@ const Index = () => {
             <div className="max-w-xl mx-auto">
               <Link
                 to="/preferences"
-                className="flex items-center gap-3 rounded-[1.1rem] px-4 py-3.5 active:scale-[0.98] transition-transform duration-150"
+                className="flex items-center gap-3 px-4 py-3.5 active:opacity-70 transition-opacity"
                 style={{
-                  backgroundColor: "hsl(38 70% 97%)",
-                  border: "1.5px solid hsl(38 70% 82%)",
-                  boxShadow: "0 2px 10px rgba(0,0,0,0.05)",
+                  border: "1px solid rgba(255, 199, 0, 0.25)",
+                  borderLeft: "3px solid #ffc700",
                   textDecoration: "none",
                 }}
               >
-                <div
-                  className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-                  style={{ backgroundColor: "hsl(38 80% 90%)" }}
-                >
-                  <AlertCircle className="w-[1rem] h-[1rem]" style={{ color: "hsl(38 70% 44%)" }} strokeWidth={2.2} />
-                </div>
+                <AlertCircle className="w-4 h-4 flex-shrink-0" style={{ color: "#ffc700" }} strokeWidth={2} />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold leading-tight" style={{ color: "hsl(35 50% 22%)" }}>Set your priorities</p>
-                  <p className="text-xs mt-0.5 leading-tight" style={{ color: "hsl(35 30% 44%)" }}>Personalise every scan result to your values</p>
+                  <p
+                    className="font-mono font-bold uppercase leading-tight"
+                    style={{ fontSize: "0.7rem", color: "#ffc700", letterSpacing: "0.08em" }}
+                  >
+                    SET YOUR PRIORITIES
+                  </p>
+                  <p
+                    className="font-mono mt-0.5 leading-tight"
+                    style={{ fontSize: "0.6rem", color: "#84898E" }}
+                  >
+                    Personalise every scan result to your values
+                  </p>
                 </div>
-                <ChevronRight className="w-4 h-4 flex-shrink-0" style={{ color: "hsl(38 60% 45%)" }} />
+                <ChevronRight className="w-4 h-4 flex-shrink-0" style={{ color: "#84898E" }} />
               </Link>
             </div>
           </div>
         )}
 
-        {/* ── Quick actions ── */}
+        {/* ── Quick actions 2×2 grid ── */}
         <div className="px-5 pt-5">
           <div className="max-w-xl mx-auto">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-base font-display font-extrabold text-foreground">Quick Actions</h2>
-            </div>
-            <div className="grid grid-cols-4 gap-2.5">
-              {quickActions.map((item) => {
+            <p className="font-mono uppercase mb-3" style={{ fontSize: "0.55rem", color: "#84898E", letterSpacing: "0.22em" }}>
+              // QUICK ACCESS
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', border: '1px solid rgba(255,255,255,0.1)' }}>
+              {quickActions.map((item, i) => {
                 const Icon = item.icon;
+                const num = String(i + 1).padStart(2, "0");
                 return (
                   <Link
                     key={item.label}
                     to={item.to}
-                    className="bg-card rounded-[1.1rem] pt-4 pb-3 px-1 flex flex-col items-center gap-2 active:scale-[0.96] transition-transform duration-150"
-                    style={{ boxShadow: "0 2px 10px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.03)" }}
+                    className="card-interactive"
+                    style={{
+                      textDecoration: 'none',
+                      padding: '18px 16px 16px',
+                      borderRight: i % 2 === 0 ? '1px solid rgba(255,255,255,0.1)' : 'none',
+                      borderBottom: i < 2 ? '1px solid rgba(255,255,255,0.1)' : 'none',
+                      position: 'relative',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 10,
+                    }}
                   >
-                    <div
-                      className="w-10 h-10 rounded-xl flex items-center justify-center"
-                      style={{ backgroundColor: item.bg }}
-                    >
-                      <Icon className="w-[1.1rem] h-[1.1rem]" style={{ color: item.color }} strokeWidth={2.2} />
+                    <div className="diagonal-stripe-overlay" />
+                    {/* Top row: number + icon */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.5rem', color: 'rgba(132,137,142,0.5)', letterSpacing: '0.12em' }}>{num}</span>
+                      <Icon style={{ width: 14, height: 14, color: '#84898E', flexShrink: 0 }} strokeWidth={1.5} />
                     </div>
-                    <div className="text-center">
-                      <div className="text-[11px] font-bold text-foreground leading-tight">{item.label}</div>
-                      <div className="text-[9px] text-muted-foreground mt-0.5 leading-tight">{item.sub}</div>
+                    {/* Action name */}
+                    <div>
+                      <p style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.5rem, 7vw, 2.1rem)', color: '#fff', letterSpacing: '0.04em', lineHeight: 1, marginBottom: 5 }}>
+                        {item.label}
+                      </p>
+                      <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.5rem', color: '#84898E', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                        {item.sub}
+                      </p>
                     </div>
                   </Link>
                 );
@@ -276,32 +321,51 @@ const Index = () => {
           </div>
         </div>
 
-        {/* ── What we check ── */}
-        <div className="px-5 pt-6">
+        {/* ── Analysis dimensions manifest ── */}
+        <div className="px-5 pt-5">
           <div className="max-w-xl mx-auto">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-base font-display font-extrabold text-foreground">What We Check</h2>
-              <span className="text-xs font-semibold text-muted-foreground">6 dimensions</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 12 }}>
+              <p className="font-mono uppercase" style={{ fontSize: "0.55rem", color: "#84898E", letterSpacing: "0.22em" }}>
+                // ANALYSIS DIMENSIONS
+              </p>
+              <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.4rem', color: '#40aaff', lineHeight: 1 }}>6</span>
             </div>
 
-            <div className="bg-card rounded-[1.25rem] overflow-hidden divide-y divide-border/60"
-              style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04)" }}
-            >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               {analysisCategories.map((cat, i) => {
                 const Icon = cat.icon;
+                const num = String(i + 1).padStart(2, "0");
                 return (
-                  <div key={cat.title} className="flex items-center gap-3.5 px-4 py-3.5">
-                    <div
-                      className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-                      style={{ backgroundColor: cat.bg }}
-                    >
-                      <Icon className="w-[1rem] h-[1rem]" style={{ color: cat.color }} strokeWidth={2.2} />
+                  <div
+                    key={cat.title}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 0,
+                      borderLeft: `3px solid ${cat.accent}`,
+                      background: 'rgba(255,255,255,0.02)',
+                      padding: '14px 0',
+                    }}
+                  >
+                    {/* Number */}
+                    <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.5rem', color: 'rgba(132,137,142,0.4)', letterSpacing: '0.1em', minWidth: '2.8rem', paddingLeft: 12 }}>
+                      {num}
+                    </span>
+                    {/* Icon */}
+                    <Icon style={{ width: 13, height: 13, color: cat.accent, flexShrink: 0, marginRight: 10, opacity: 0.8 }} strokeWidth={1.5} />
+                    {/* Title + desc */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1rem, 4.5vw, 1.3rem)', color: '#ffffff', letterSpacing: '0.06em', lineHeight: 1 }}>
+                        {cat.title}
+                      </span>
+                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.52rem', color: '#84898E', marginLeft: 10, letterSpacing: '0.04em' }}>
+                        {cat.desc}
+                      </span>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-foreground leading-tight">{cat.title}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5 leading-tight truncate">{cat.desc}</p>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-muted-foreground/40 flex-shrink-0" />
+                    {/* ON tag */}
+                    <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.48rem', color: '#00c853', letterSpacing: '0.12em', paddingRight: 14, flexShrink: 0 }}>
+                      [ON]
+                    </span>
                   </div>
                 );
               })}
@@ -309,22 +373,30 @@ const Index = () => {
           </div>
         </div>
 
-        {/* ── Start scanning CTA ── */}
-        <div className="px-5 pt-5 pb-4">
-          <div className="max-w-xl mx-auto">
-            <Link
-              to="/scan"
-              className="flex items-center justify-center gap-2 w-full rounded-[1.1rem] py-4 font-bold text-sm active:scale-[0.98] transition-transform duration-150"
-              style={{
-                backgroundColor: "hsl(220 14% 12%)",
-                color: "white",
-                boxShadow: "0 2px 12px rgba(0,0,0,0.14)",
-              }}
-            >
-              <Camera className="w-4 h-4" />
-              Start Scanning
-            </Link>
-          </div>
+        {/* ── Bottom CTA — full bleed MSCHF strip ── */}
+        <div style={{ marginTop: 20, borderTop: '2px solid rgba(255,255,255,0.1)' }}>
+          <Link
+            to="/scan"
+            style={{ display: 'block', textDecoration: 'none', position: 'relative', background: '#000' }}
+          >
+            {/* Corner marks */}
+            {(['tl','tr','bl','br'] as const).map(c => (
+              <div key={c} style={{ position: 'absolute', [c.startsWith('t') ? 'top' : 'bottom']: 8, [c.endsWith('l') ? 'left' : 'right']: 12, fontFamily: 'monospace', fontSize: 12, color: 'rgba(0,200,83,0.4)', lineHeight: 1, userSelect: 'none', zIndex: 1 }}>+</div>
+            ))}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '22px 28px' }}>
+              <div>
+                <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.48rem', color: '#00c853', letterSpacing: '0.22em', textTransform: 'uppercase', marginBottom: 6, opacity: 0.7 }}>
+                  // START_SESSION
+                </p>
+                <p style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(2rem, 9vw, 2.8rem)', color: '#fff', letterSpacing: '0.06em', lineHeight: 1, fontWeight: 400 }}>
+                  [ START SCANNING ]
+                </p>
+              </div>
+              <div style={{ width: 44, height: 44, border: '1px solid #00c853', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <ScanLine style={{ width: 20, height: 20, color: '#00c853' }} strokeWidth={1.5} />
+              </div>
+            </div>
+          </Link>
         </div>
 
       </main>

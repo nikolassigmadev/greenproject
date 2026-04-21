@@ -1230,7 +1230,7 @@ const Scan = () => {
   };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 60, backgroundColor: '#000', overflow: 'hidden' }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 60, backgroundColor: '#000', overflow: 'hidden', fontFamily: "'JetBrains Mono', monospace" }}>
 
       {/* Hidden canvas for photo capture */}
       <canvas ref={canvasRef} style={{ display: 'none' }} />
@@ -1248,22 +1248,28 @@ const Scan = () => {
       {!cameraActive && !cameraInitializing && (
         frozenFrame
           ? <img src={frozenFrame} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
-          : <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, #0a0a14 0%, #1a1a2e 100%)' }} />
+          : <div style={{ position: 'absolute', inset: 0, background: '#000' }} />
       )}
+
+      {/* Diagonal stripe overlay */}
+      <div style={{
+        position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 2,
+        backgroundImage: 'repeating-linear-gradient(45deg, transparent 0px, transparent 4px, rgba(255,255,255,0.012) 4px, rgba(255,255,255,0.012) 8px)',
+      }} />
 
       {/* Scan line when loading */}
       {offSearchLoading && (
         <div style={{
-          position: 'absolute', top: '22%', left: '14%', right: '14%',
-          height: '2px',
-          background: 'hsl(152 60% 55%)',
-          boxShadow: '0 0 12px hsl(152 60% 50%), 0 0 28px hsl(152 60% 40%)',
+          position: 'absolute', top: '22%', left: '10%', right: '10%',
+          height: '1px',
+          background: '#00c853',
+          boxShadow: '0 0 8px #00c853, 0 0 20px rgba(0,200,83,0.5)',
           animation: 'scanLine 1.8s ease-in-out infinite',
           zIndex: 8,
         }} />
       )}
 
-      {/* Scanning bracket corners */}
+      {/* Scanning bracket corners — sharp, green */}
       {(['tl','tr','bl','br'] as const).map(corner => {
         const top = corner.startsWith('t');
         const left = corner.endsWith('l');
@@ -1272,133 +1278,158 @@ const Scan = () => {
             position: 'absolute',
             top: top ? '20%' : undefined,
             bottom: !top ? '34%' : undefined,
-            left: left ? '12%' : undefined,
-            right: !left ? '12%' : undefined,
-            width: 56, height: 56,
-            borderTop: top ? '3px solid rgba(255,255,255,0.92)' : undefined,
-            borderBottom: !top ? '3px solid rgba(255,255,255,0.92)' : undefined,
-            borderLeft: left ? '3px solid rgba(255,255,255,0.92)' : undefined,
-            borderRight: !left ? '3px solid rgba(255,255,255,0.92)' : undefined,
-            borderRadius: top && left ? '6px 0 0 0' : top && !left ? '0 6px 0 0' : !top && left ? '0 0 0 6px' : '0 0 6px 0',
+            left: left ? '10%' : undefined,
+            right: !left ? '10%' : undefined,
+            width: 48, height: 48,
+            borderTop: top ? '2px solid #00c853' : undefined,
+            borderBottom: !top ? '2px solid #00c853' : undefined,
+            borderLeft: left ? '2px solid #00c853' : undefined,
+            borderRight: !left ? '2px solid #00c853' : undefined,
             zIndex: 8,
           }} />
         );
       })}
 
+      {/* Corner labels */}
+      <div style={{ position: 'absolute', top: 'calc(20% - 18px)', left: '10%', fontFamily: "'JetBrains Mono', monospace", fontSize: '0.45rem', color: '#00c853', letterSpacing: '0.12em', zIndex: 9, textTransform: 'uppercase' }}>
+        {offSearchLoading ? `// SCANNING ${Math.round(scanProgress)}%` : '// AIM'}
+      </div>
+
       {/* Top bar */}
       <div style={{
         position: 'absolute', top: 0, left: 0, right: 0,
         paddingTop: 'max(52px, env(safe-area-inset-top))',
-        paddingLeft: 20, paddingRight: 20, paddingBottom: 12,
+        paddingLeft: 16, paddingRight: 16, paddingBottom: 12,
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         zIndex: 20,
+        background: 'linear-gradient(to bottom, rgba(0,0,0,0.75) 0%, transparent 100%)',
       }}>
         <Link to="/" onClick={() => stopCamera()}>
           <button style={{
-            width: 38, height: 38, borderRadius: '50%',
-            backgroundColor: 'rgba(0,0,0,0.45)',
-            backdropFilter: 'blur(12px)',
-            WebkitBackdropFilter: 'blur(12px)',
-            border: '1px solid rgba(255,255,255,0.18)',
-            color: 'white', cursor: 'pointer',
+            width: 38, height: 38,
+            backgroundColor: 'rgba(0,0,0,0.7)',
+            border: '1px solid rgba(255,255,255,0.14)',
+            color: '#84898E', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontFamily: "'JetBrains Mono', monospace",
           }}>
-            <X size={18} />
+            <X size={16} />
           </button>
         </Link>
+
+        {/* Center wordmark with GOOD→FOOD glitch */}
+        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.6rem', letterSpacing: '0.2em', textTransform: 'uppercase' }}>
+          <span style={{ position: 'relative', display: 'inline-block' }}>
+            <span style={{ animation: 'logoGood 10s linear infinite' }}>GOOD</span>
+            <span style={{ position: 'absolute', left: 0, top: 0, animation: 'logoFood 10s linear infinite' }}>FOOD</span>
+          </span>
+          <span style={{ color: '#ffffff' }}>SCAN</span>
+          <span style={{ color: '#00c853' }}>_</span>
+        </span>
+
         <button
           onClick={() => setShowSearch(s => !s)}
           style={{
-            width: 38, height: 38, borderRadius: '50%',
-            backgroundColor: 'rgba(0,0,0,0.45)',
-            backdropFilter: 'blur(12px)',
-            WebkitBackdropFilter: 'blur(12px)',
-            border: '1px solid rgba(255,255,255,0.18)',
-            color: 'white', cursor: 'pointer',
+            width: 38, height: 38,
+            backgroundColor: 'rgba(0,0,0,0.7)',
+            border: '1px solid rgba(255,255,255,0.14)',
+            color: '#84898E', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}
         >
-          <Search size={18} />
+          <Search size={16} />
         </button>
       </div>
 
-      {/* Status pill */}
-      {(cameraInitializing || offSearchLoading || !isDefaultPriorities || prioritiesJustSaved) && (
+      {/* Status bar */}
+      {(cameraInitializing || offSearchLoading || prioritiesJustSaved) && (
         <div style={{
           position: 'absolute',
-          top: 'calc(max(52px, env(safe-area-inset-top)) + 52px)',
+          top: 'calc(max(52px, env(safe-area-inset-top)) + 56px)',
           left: '50%', transform: 'translateX(-50%)',
           display: 'flex', alignItems: 'center', gap: 6,
-          backgroundColor: 'rgba(0,0,0,0.55)',
-          backdropFilter: 'blur(12px)',
-          WebkitBackdropFilter: 'blur(12px)',
-          color: 'white', padding: '6px 16px', borderRadius: 999,
-          fontSize: '0.75rem', fontWeight: 600, whiteSpace: 'nowrap', zIndex: 15,
+          backgroundColor: 'rgba(0,0,0,0.85)',
+          border: '1px solid rgba(255,255,255,0.1)',
+          color: '#84898E', padding: '5px 14px',
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: '0.55rem', fontWeight: 700,
+          letterSpacing: '0.12em', textTransform: 'uppercase',
+          whiteSpace: 'nowrap', zIndex: 15,
         }}>
           {offSearchLoading ? (
-            <><Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /><span>Scanning… {Math.round(scanProgress)}%</span></>
+            <><Loader2 size={10} style={{ animation: 'spin 1s linear infinite', color: '#00c853' }} /><span style={{ color: '#00c853' }}>SCANNING... {Math.round(scanProgress)}%</span></>
           ) : prioritiesJustSaved ? (
-            <><Check size={12} /><span>Priorities set — ready to scan</span></>
+            <><Check size={10} style={{ color: '#00c853' }} /><span style={{ color: '#00c853' }}>PRIORITIES_SET — READY</span></>
           ) : cameraInitializing ? (
-            <><Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /><span>Starting camera…</span></>
+            <><Loader2 size={10} style={{ animation: 'spin 1s linear infinite', color: '#40aaff' }} /><span style={{ color: '#40aaff' }}>INITIALIZING_CAMERA...</span></>
           ) : null}
         </div>
       )}
 
-      {/* Priorities CTA button */}
+      {/* Priorities CTA */}
       {isDefaultPriorities && (
         <Link
           to="/preferences"
           onClick={() => stopCamera()}
           style={{
             position: 'absolute',
-            top: 'calc(max(52px, env(safe-area-inset-top)) + 52px)',
+            top: 'calc(max(52px, env(safe-area-inset-top)) + 56px)',
             left: '50%', transform: 'translateX(-50%)',
             display: 'flex', alignItems: 'center', gap: 8,
-            backgroundColor: 'rgba(160,100,0,0.88)',
-            backdropFilter: 'blur(12px)',
-            WebkitBackdropFilter: 'blur(12px)',
-            color: 'white', padding: '8px 18px', borderRadius: 999,
-            fontSize: '0.75rem', fontWeight: 700, whiteSpace: 'nowrap',
-            zIndex: 15, textDecoration: 'none', border: '1px solid rgba(255,200,80,0.3)',
-            boxShadow: '0 2px 12px rgba(0,0,0,0.3)',
+            backgroundColor: 'rgba(0,0,0,0.88)',
+            border: '1px solid rgba(255,199,0,0.4)',
+            borderLeft: '3px solid #ffc700',
+            color: '#ffc700', padding: '8px 14px',
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: '0.55rem', fontWeight: 700,
+            letterSpacing: '0.1em', textTransform: 'uppercase',
+            whiteSpace: 'nowrap', zIndex: 15, textDecoration: 'none',
             animation: 'priorityPulse 2s ease-in-out infinite',
           }}
         >
-          <AlertCircle size={13} />
-          <span>Set priorities to unlock scanning</span>
-          <ChevronRight size={13} style={{ opacity: 0.8 }} />
+          <AlertCircle size={12} />
+          <span>[!] SET PRIORITIES TO SCAN</span>
+          <ChevronRight size={12} style={{ opacity: 0.7 }} />
         </Link>
       )}
 
       {/* Bottom panel */}
       <div style={{
         position: 'absolute', bottom: 0, left: 0, right: 0,
-        background: 'rgba(10,10,16,0.78)',
-        backdropFilter: 'blur(24px)',
-        WebkitBackdropFilter: 'blur(24px)',
-        borderTop: '1px solid rgba(255,255,255,0.08)',
+        background: '#000',
+        borderTop: '1px solid rgba(255,255,255,0.1)',
         paddingBottom: 'max(28px, env(safe-area-inset-bottom))',
         zIndex: 20,
       }}>
+        {/* Section header */}
+        <div style={{ padding: '10px 16px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.45rem', color: '#84898E', letterSpacing: '0.2em', textTransform: 'uppercase' }}>
+            // SEARCH
+          </span>
+          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.45rem', color: '#84898E', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+            {cameraActive ? <span style={{ color: '#00c853' }}>CAM_ACTIVE</span> : 'CAM_OFF'}
+          </span>
+        </div>
+
         {/* Inline search */}
         <form
           onSubmit={e => { e.preventDefault(); if (inlineSearch.trim()) { handleProductSearch(inlineSearch); setInlineSearch(""); } }}
-          style={{ display: 'flex', gap: 8, padding: '14px 16px 10px' }}
+          style={{ display: 'flex', gap: 6, padding: '8px 16px 10px' }}
         >
           <div style={{ flex: 1, position: 'relative', display: 'flex', alignItems: 'center' }}>
-            <Search size={15} style={{ position: 'absolute', left: 12, color: 'rgba(255,255,255,0.4)', pointerEvents: 'none' }} />
+            <span style={{ position: 'absolute', left: 10, fontFamily: "'JetBrains Mono', monospace", fontSize: '0.65rem', color: '#00c853', pointerEvents: 'none' }}>›</span>
             <input
               type="text"
               value={inlineSearch}
               onChange={e => setInlineSearch(e.target.value)}
-              placeholder="Type product name…"
+              placeholder="type product name..."
               style={{
-                width: '100%', height: 42, borderRadius: 12,
-                backgroundColor: 'rgba(255,255,255,0.12)',
-                border: '1px solid rgba(255,255,255,0.15)',
-                color: 'white', fontSize: '16px',
-                paddingLeft: 36, paddingRight: 12, outline: 'none',
+                width: '100%', height: 40,
+                backgroundColor: 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(255,255,255,0.12)',
+                color: 'white', fontSize: '14px',
+                fontFamily: "'JetBrains Mono', monospace",
+                paddingLeft: 24, paddingRight: 10, outline: 'none',
               }}
             />
           </div>
@@ -1406,53 +1437,60 @@ const Scan = () => {
             type="submit"
             disabled={!inlineSearch.trim() || offLoading}
             style={{
-              height: 42, borderRadius: 12, border: 'none',
-              backgroundColor: inlineSearch.trim() ? 'hsl(172 72% 28%)' : 'rgba(255,255,255,0.10)',
-              color: 'white', fontWeight: 700, fontSize: '0.875rem',
-              padding: '0 16px', cursor: inlineSearch.trim() ? 'pointer' : 'default',
+              height: 40, border: 'none',
+              backgroundColor: inlineSearch.trim() ? '#00c853' : 'rgba(255,255,255,0.07)',
+              color: inlineSearch.trim() ? '#000' : '#84898E',
+              fontFamily: "'JetBrains Mono', monospace",
+              fontWeight: 700, fontSize: '0.6rem',
+              letterSpacing: '0.1em', textTransform: 'uppercase',
+              padding: '0 14px', cursor: inlineSearch.trim() ? 'pointer' : 'default',
               whiteSpace: 'nowrap', flexShrink: 0,
             }}
           >
-            {offLoading ? '…' : 'Search'}
+            {offLoading ? '...' : '[GO]'}
           </button>
         </form>
 
         {/* Camera controls */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 52px 16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 40px 12px' }}>
           {/* Flash toggle */}
           <button
             onClick={() => setFlashOn(f => !f)}
             style={{
-              width: 48, height: 48, borderRadius: '50%',
-              backgroundColor: 'rgba(255,255,255,0.12)',
-              border: 'none', color: flashOn ? 'hsl(48 95% 65%)' : 'rgba(255,255,255,0.65)',
+              width: 48, height: 48,
+              backgroundColor: 'transparent',
+              border: `1px solid ${flashOn ? '#ffc700' : 'rgba(255,255,255,0.12)'}`,
+              color: flashOn ? '#ffc700' : '#84898E',
               cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}
           >
-            <Zap size={22} strokeWidth={2} />
+            <Zap size={20} strokeWidth={1.5} />
           </button>
 
-          {/* Shutter */}
+          {/* Shutter — square terminal style */}
           <button
             onClick={handleShutter}
             disabled={offSearchLoading || isDefaultPriorities}
             style={{
-              width: 76, height: 76, borderRadius: '50%',
-              backgroundColor: (offSearchLoading || isDefaultPriorities) ? 'rgba(255,255,255,0.25)' : 'white',
-              border: '4px solid rgba(255,255,255,0.15)',
+              width: 72, height: 72,
+              backgroundColor: (offSearchLoading || isDefaultPriorities) ? 'transparent' : '#000',
+              border: `3px solid ${isDefaultPriorities ? 'rgba(255,255,255,0.15)' : offSearchLoading ? '#40aaff' : '#00c853'}`,
               cursor: (offSearchLoading || isDefaultPriorities) ? 'not-allowed' : 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 2px 16px rgba(0,0,0,0.4)',
-              transition: 'transform 0.1s ease',
-              opacity: isDefaultPriorities ? 0.35 : 1,
+              boxShadow: (!offSearchLoading && !isDefaultPriorities) ? '0 0 16px rgba(0,200,83,0.3)' : 'none',
+              transition: 'box-shadow 0.15s ease, transform 0.1s ease',
+              opacity: isDefaultPriorities ? 0.3 : 1,
             }}
             onMouseDown={e => { if (!isDefaultPriorities) (e.currentTarget as HTMLButtonElement).style.transform = 'scale(0.93)'; }}
             onMouseUp={e => { if (!isDefaultPriorities) (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)'; }}
             onTouchStart={e => { if (!isDefaultPriorities) (e.currentTarget as HTMLButtonElement).style.transform = 'scale(0.93)'; }}
             onTouchEnd={e => { if (!isDefaultPriorities) (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)'; }}
           >
-            {offSearchLoading && <Loader2 size={28} style={{ color: '#0a0a14', animation: 'spin 1s linear infinite' }} />}
+            {offSearchLoading
+              ? <Loader2 size={24} style={{ color: '#40aaff', animation: 'spin 1s linear infinite' }} />
+              : <div style={{ width: 16, height: 16, border: '2px solid #00c853', opacity: isDefaultPriorities ? 0.3 : 1 }} />
+            }
           </button>
 
           {/* Gallery */}
@@ -1460,25 +1498,30 @@ const Scan = () => {
             onClick={() => { if (!isDefaultPriorities) offFileInputRef.current?.click(); }}
             disabled={isDefaultPriorities}
             style={{
-              width: 48, height: 48, borderRadius: 12,
-              backgroundColor: 'rgba(255,255,255,0.12)',
-              border: '1px solid rgba(255,255,255,0.18)',
-              color: 'rgba(255,255,255,0.75)',
+              width: 48, height: 48,
+              backgroundColor: 'transparent',
+              border: '1px solid rgba(255,255,255,0.12)',
+              color: '#84898E',
               cursor: isDefaultPriorities ? 'not-allowed' : 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               overflow: 'hidden',
-              opacity: isDefaultPriorities ? 0.35 : 1,
+              opacity: isDefaultPriorities ? 0.3 : 1,
             }}
           >
             {offSearchImage ? (
               <img src={offSearchImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             ) : (
-              <ImageIcon size={22} strokeWidth={1.8} />
+              <ImageIcon size={20} strokeWidth={1.5} />
             )}
           </button>
         </div>
 
-
+        {/* Bottom hint */}
+        <div style={{ textAlign: 'center', paddingBottom: 4 }}>
+          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.42rem', color: 'rgba(132,137,142,0.5)', letterSpacing: '0.15em', textTransform: 'uppercase' }}>
+            {cameraActive ? 'POINT CAMERA AT PRODUCT · TAP SHUTTER' : 'TAP SHUTTER TO CAPTURE'}
+          </span>
+        </div>
       </div>
 
       {/* Product Unknown overlay */}
@@ -1486,51 +1529,50 @@ const Scan = () => {
         <div
           style={{
             position: 'absolute', bottom: 0, left: 0, right: 0,
-            background: 'rgba(18,18,26,0.96)',
-            backdropFilter: 'blur(24px)',
-            WebkitBackdropFilter: 'blur(24px)',
-            borderTop: '1px solid rgba(255,255,255,0.10)',
-            borderRadius: '20px 20px 0 0',
-            padding: '28px 24px max(32px, env(safe-area-inset-bottom))',
+            background: '#000',
+            borderTop: '1px solid rgba(255,255,255,0.1)',
+            borderLeft: '3px solid rgba(255,255,255,0.25)',
+            padding: '24px 20px max(32px, env(safe-area-inset-bottom))',
             zIndex: 50,
-            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16,
           }}
         >
-          <div style={{
-            width: 52, height: 52, borderRadius: '50%',
-            backgroundColor: 'rgba(255,255,255,0.08)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <AlertCircle size={26} style={{ color: 'rgba(255,255,255,0.55)' }} />
+          <div style={{ marginBottom: 12 }}>
+            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.48rem', color: '#84898E', letterSpacing: '0.18em', textTransform: 'uppercase' }}>
+              // ERROR
+            </span>
           </div>
-          <div style={{ textAlign: 'center' }}>
-            <p style={{ color: 'white', fontWeight: 700, fontSize: '1rem', marginBottom: 4 }}>
-              Product Unknown
-            </p>
-            <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.8rem', lineHeight: 1.5 }}>
-              Couldn't identify this product from the image.{'\n'}Try again with a clearer photo of the label.
-            </p>
-          </div>
-          <div style={{ display: 'flex', gap: 10, width: '100%' }}>
+          <p style={{ color: 'white', fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8 }}>
+            [!] PRODUCT_UNKNOWN
+          </p>
+          <p style={{ color: '#84898E', fontFamily: "'JetBrains Mono', monospace", fontSize: '0.65rem', lineHeight: 1.6, marginBottom: 20 }}>
+            Could not identify product from image.<br />Try a clearer photo of the barcode or label.
+          </p>
+          <div style={{ display: 'flex', gap: 8, width: '100%' }}>
             <button
               onClick={() => setProductUnknown(false)}
               style={{
-                flex: 1, height: 46, borderRadius: 14, border: '1px solid rgba(255,255,255,0.15)',
-                backgroundColor: 'transparent', color: 'rgba(255,255,255,0.7)',
-                fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer',
+                flex: 1, height: 44, border: '1px solid rgba(255,255,255,0.14)',
+                backgroundColor: 'transparent', color: '#84898E',
+                fontFamily: "'JetBrains Mono', monospace",
+                fontWeight: 700, fontSize: '0.6rem',
+                letterSpacing: '0.1em', textTransform: 'uppercase',
+                cursor: 'pointer',
               }}
             >
-              Dismiss
+              [DISMISS]
             </button>
             <button
               onClick={() => { setProductUnknown(false); offFileInputRef.current?.click(); }}
               style={{
-                flex: 2, height: 46, borderRadius: 14, border: 'none',
-                backgroundColor: 'white', color: '#0a0a14',
-                fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer',
+                flex: 2, height: 44, border: 'none',
+                backgroundColor: '#00c853', color: '#000',
+                fontFamily: "'JetBrains Mono', monospace",
+                fontWeight: 700, fontSize: '0.6rem',
+                letterSpacing: '0.1em', textTransform: 'uppercase',
+                cursor: 'pointer',
               }}
             >
-              Try Again
+              [RETRY]
             </button>
           </div>
         </div>
@@ -1541,42 +1583,55 @@ const Scan = () => {
         <div
           style={{
             position: 'absolute', bottom: 0, left: 0, right: 0,
-            background: 'white', borderRadius: '20px 20px 0 0',
-            padding: '20px 20px max(24px, env(safe-area-inset-bottom))',
+            background: '#000',
+            borderTop: '1px solid rgba(255,255,255,0.1)',
+            borderLeft: '3px solid #40aaff',
+            padding: '20px 18px max(28px, env(safe-area-inset-bottom))',
             zIndex: 40,
-            boxShadow: '0 -8px 32px rgba(0,0,0,0.25)',
           }}
         >
-          <div style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: '#e0e0e0', margin: '0 auto 16px' }} />
-          <p style={{ fontSize: '0.7rem', fontWeight: 700, color: '#888', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>
-            Search by name or barcode
+          <div style={{ marginBottom: 10 }}>
+            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.48rem', color: '#84898E', letterSpacing: '0.18em', textTransform: 'uppercase' }}>
+              // MANUAL_SEARCH
+            </span>
+          </div>
+          <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.6rem', fontWeight: 700, color: '#40aaff', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>
+            ENTER NAME OR BARCODE
           </p>
-          <form onSubmit={(e) => { e.preventDefault(); if (barcodeInput.trim()) { handleProductSearch(barcodeInput); setShowSearch(false); } }} style={{ display: 'flex', gap: 10 }}>
-            <input
-              autoFocus
-              type="text"
-              value={barcodeInput}
-              onChange={e => setBarcodeInput(e.target.value)}
-              placeholder={scanMode === 'Barcode' ? 'Enter barcode number…' : 'e.g. Coca-Cola, Weetbix…'}
-              style={{
-                flex: 1, height: 48, borderRadius: 14,
-                border: '1.5px solid #e8e8e8',
-                backgroundColor: '#f6f6f8',
-                fontSize: '0.9rem', padding: '0 14px', outline: 'none',
-                color: '#111',
-              }}
-            />
+          <form onSubmit={(e) => { e.preventDefault(); if (barcodeInput.trim()) { handleProductSearch(barcodeInput); setShowSearch(false); } }} style={{ display: 'flex', gap: 8 }}>
+            <div style={{ flex: 1, position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <span style={{ position: 'absolute', left: 10, fontFamily: "'JetBrains Mono', monospace", fontSize: '0.7rem', color: '#40aaff', pointerEvents: 'none' }}>›</span>
+              <input
+                autoFocus
+                type="text"
+                value={barcodeInput}
+                onChange={e => setBarcodeInput(e.target.value)}
+                placeholder={scanMode === 'Barcode' ? 'barcode number...' : 'e.g. coca-cola, weetbix...'}
+                style={{
+                  flex: 1, height: 46, width: '100%',
+                  border: '1px solid rgba(255,255,255,0.14)',
+                  borderLeft: '2px solid #40aaff',
+                  backgroundColor: 'rgba(64,170,255,0.04)',
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: '0.8rem', padding: '0 12px 0 26px', outline: 'none',
+                  color: 'white',
+                }}
+              />
+            </div>
             <button
               type="submit"
               disabled={!barcodeInput.trim() || offLoading}
               style={{
-                height: 48, borderRadius: 14, border: 'none',
-                backgroundColor: barcodeInput.trim() ? 'hsl(172 72% 28%)' : '#e8e8e8',
-                color: barcodeInput.trim() ? 'white' : '#aaa',
-                fontWeight: 700, fontSize: '0.875rem', padding: '0 20px', cursor: 'pointer',
+                height: 46, border: 'none',
+                backgroundColor: barcodeInput.trim() ? '#40aaff' : 'rgba(255,255,255,0.07)',
+                color: barcodeInput.trim() ? '#000' : '#84898E',
+                fontFamily: "'JetBrains Mono', monospace",
+                fontWeight: 700, fontSize: '0.6rem',
+                letterSpacing: '0.1em', textTransform: 'uppercase',
+                padding: '0 16px', cursor: 'pointer',
               }}
             >
-              {offLoading ? '…' : 'Search'}
+              {offLoading ? '...' : '[GO]'}
             </button>
           </form>
 
@@ -1586,30 +1641,36 @@ const Scan = () => {
               to="/preferences"
               onClick={() => { setShowSearch(false); stopCamera(); }}
               style={{
-                display: 'flex', alignItems: 'center', gap: 10, marginTop: 14,
-                padding: '12px 14px', borderRadius: 14,
-                backgroundColor: 'hsl(38 70% 97%)', border: '1.5px solid hsl(38 70% 82%)',
+                display: 'flex', alignItems: 'center', gap: 10, marginTop: 12,
+                padding: '10px 12px',
+                backgroundColor: 'transparent',
+                border: '1px solid rgba(255,199,0,0.25)',
+                borderLeft: '3px solid #ffc700',
                 textDecoration: 'none',
               }}
             >
-              <AlertCircle size={16} style={{ color: 'hsl(38 70% 44%)', flexShrink: 0 }} />
+              <AlertCircle size={14} style={{ color: '#ffc700', flexShrink: 0 }} />
               <div>
-                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'hsl(35 50% 22%)' }}>Set your priorities first</div>
-                <div style={{ fontSize: '0.7rem', color: 'hsl(35 30% 44%)', marginTop: 1 }}>Personalise every scan result</div>
+                <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.6rem', fontWeight: 700, color: '#ffc700', textTransform: 'uppercase', letterSpacing: '0.08em' }}>SET PRIORITIES FIRST</div>
+                <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.55rem', color: '#84898E', marginTop: 2 }}>Personalise every scan result</div>
               </div>
-              <ChevronRight size={14} style={{ color: 'hsl(38 60% 45%)', marginLeft: 'auto', flexShrink: 0 }} />
+              <ChevronRight size={12} style={{ color: '#84898E', marginLeft: 'auto', flexShrink: 0 }} />
             </Link>
           )}
 
           <button
             onClick={() => setShowSearch(false)}
             style={{
-              marginTop: 12, width: '100%', padding: '10px', borderRadius: 14,
-              border: '1.5px solid #e8e8e8', backgroundColor: 'white',
-              color: '#888', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer',
+              marginTop: 10, width: '100%', padding: '10px',
+              border: '1px solid rgba(255,255,255,0.1)',
+              backgroundColor: 'transparent',
+              fontFamily: "'JetBrains Mono', monospace",
+              color: '#84898E', fontWeight: 700, fontSize: '0.6rem',
+              letterSpacing: '0.12em', textTransform: 'uppercase',
+              cursor: 'pointer',
             }}
           >
-            Cancel
+            [CANCEL]
           </button>
         </div>
       )}
@@ -1636,7 +1697,7 @@ const Scan = () => {
       <style>{`
         @keyframes scanLine {
           0% { top: 20%; opacity: 1; }
-          50% { top: 60%; opacity: 0.7; }
+          50% { top: 60%; opacity: 0.6; }
           100% { top: 20%; opacity: 1; }
         }
         @keyframes spin {
@@ -1644,9 +1705,9 @@ const Scan = () => {
           to { transform: rotate(360deg); }
         }
         @keyframes priorityPulse {
-          0%   { transform: translateX(-50%) scale(1);    box-shadow: 0 2px 12px rgba(0,0,0,0.3), 0 0 0 0 rgba(200,130,0,0.55); }
-          60%  { transform: translateX(-50%) scale(1.07); box-shadow: 0 4px 20px rgba(0,0,0,0.35), 0 0 0 10px rgba(200,130,0,0); }
-          100% { transform: translateX(-50%) scale(1);    box-shadow: 0 2px 12px rgba(0,0,0,0.3), 0 0 0 0 rgba(200,130,0,0); }
+          0%   { transform: translateX(-50%) scale(1);    box-shadow: 0 0 0 0 rgba(255,199,0,0.4); }
+          60%  { transform: translateX(-50%) scale(1.03); box-shadow: 0 0 0 8px rgba(255,199,0,0); }
+          100% { transform: translateX(-50%) scale(1);    box-shadow: 0 0 0 0 rgba(255,199,0,0); }
         }
       `}</style>
 

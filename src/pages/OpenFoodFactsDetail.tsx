@@ -43,111 +43,107 @@ const findLaborAllegations = (product: OpenFoodFactsResult) =>
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 
-const GRADE_STYLE: Record<string, {
-  bg: string; text: string; border: string; indicator: string; solidBg: string;
-}> = {
-  a: { bg: "bg-emerald-50 dark:bg-emerald-950/40", text: "text-emerald-700 dark:text-emerald-300", border: "border-emerald-200 dark:border-emerald-800", indicator: "bg-emerald-500", solidBg: "bg-emerald-500" },
-  b: { bg: "bg-lime-50 dark:bg-lime-950/40",       text: "text-lime-700 dark:text-lime-300",       border: "border-lime-200 dark:border-lime-800",       indicator: "bg-lime-500",    solidBg: "bg-lime-500"    },
-  c: { bg: "bg-amber-50 dark:bg-amber-950/40",     text: "text-amber-700 dark:text-amber-300",     border: "border-amber-200 dark:border-amber-800",     indicator: "bg-amber-400",   solidBg: "bg-amber-400"   },
-  d: { bg: "bg-orange-50 dark:bg-orange-950/40",   text: "text-orange-700 dark:text-orange-300",   border: "border-orange-200 dark:border-orange-800",   indicator: "bg-orange-500",  solidBg: "bg-orange-500"  },
-  e: { bg: "bg-red-50 dark:bg-red-950/40",         text: "text-red-700 dark:text-red-300",         border: "border-red-200 dark:border-red-800",         indicator: "bg-red-500",     solidBg: "bg-red-500"     },
+const GRADE_BORDER: Record<string, string> = {
+  a: "#10b981",
+  b: "#84cc16",
+  c: "#f59e0b",
+  d: "#f97316",
+  e: "#00c853",
 };
 
-const NOVA_STYLE: Record<number, { bg: string; text: string; border: string; indicator: string; label: string }> = {
-  1: { bg: "bg-emerald-50 dark:bg-emerald-950/40", text: "text-emerald-700 dark:text-emerald-300", border: "border-emerald-200 dark:border-emerald-800", indicator: "bg-emerald-500", label: "Unprocessed"   },
-  2: { bg: "bg-lime-50 dark:bg-lime-950/40",       text: "text-lime-700 dark:text-lime-300",       border: "border-lime-200 dark:border-lime-800",       indicator: "bg-lime-500",    label: "Culinary"      },
-  3: { bg: "bg-amber-50 dark:bg-amber-950/40",     text: "text-amber-700 dark:text-amber-300",     border: "border-amber-200 dark:border-amber-800",     indicator: "bg-amber-400",   label: "Processed"     },
-  4: { bg: "bg-red-50 dark:bg-red-950/40",         text: "text-red-700 dark:text-red-300",         border: "border-red-200 dark:border-red-800",         indicator: "bg-red-500",     label: "Ultra-proc."   },
+const GRADE_TEXT: Record<string, string> = {
+  a: "#10b981",
+  b: "#84cc16",
+  c: "#f59e0b",
+  d: "#f97316",
+  e: "#00c853",
+};
+
+const NOVA_LABEL: Record<number, string> = {
+  1: "UNPROCESSED",
+  2: "CULINARY",
+  3: "PROCESSED",
+  4: "ULTRA-PROC.",
+};
+
+const NOVA_COLOR: Record<number, string> = {
+  1: "#10b981",
+  2: "#84cc16",
+  3: "#f59e0b",
+  4: "#00c853",
 };
 
 const VERDICT_CONFIG = {
   BUY: {
-    bg: "bg-emerald-50 dark:bg-emerald-950/40",
-    text: "text-emerald-700 dark:text-emerald-300",
-    border: "border-emerald-200 dark:border-emerald-800",
-    topBar: "bg-emerald-500",
-    pill: "bg-emerald-500",
-    iconBg: "bg-emerald-100 dark:bg-emerald-900/60",
+    borderColor: "#10b981",
+    textColor: "#10b981",
     Icon: CheckCircle2,
-    btnBg: "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20",
     label: "BUY",
   },
   CONSIDER: {
-    bg: "bg-amber-50 dark:bg-amber-950/40",
-    text: "text-amber-700 dark:text-amber-300",
-    border: "border-amber-200 dark:border-amber-800",
-    topBar: "bg-amber-400",
-    pill: "bg-amber-500",
-    iconBg: "bg-amber-100 dark:bg-amber-900/60",
+    borderColor: "#f59e0b",
+    textColor: "#f59e0b",
     Icon: Clock,
-    btnBg: "bg-amber-500 hover:bg-amber-600 shadow-amber-500/20",
     label: "CONSIDER",
   },
   CAUTION: {
-    bg: "bg-orange-50 dark:bg-orange-950/40",
-    text: "text-orange-700 dark:text-orange-300",
-    border: "border-orange-200 dark:border-orange-800",
-    topBar: "bg-orange-500",
-    pill: "bg-orange-500",
-    iconBg: "bg-orange-100 dark:bg-orange-900/60",
+    borderColor: "#f97316",
+    textColor: "#f97316",
     Icon: AlertTriangle,
-    btnBg: "bg-orange-600 hover:bg-orange-700 shadow-orange-500/20",
     label: "CAUTION",
   },
   AVOID: {
-    bg: "bg-red-50 dark:bg-red-950/40",
-    text: "text-red-700 dark:text-red-300",
-    border: "border-red-200 dark:border-red-800",
-    topBar: "bg-red-500",
-    pill: "bg-red-500",
-    iconBg: "bg-red-100 dark:bg-red-900/60",
+    borderColor: "#00c853",
+    textColor: "#00c853",
     Icon: XCircle,
-    btnBg: "bg-red-600 hover:bg-red-700 shadow-red-500/20",
     label: "AVOID",
   },
   UNKNOWN: {
-    bg: "bg-neutral-50 dark:bg-neutral-900",
-    text: "text-neutral-600 dark:text-neutral-400",
-    border: "border-neutral-200 dark:border-neutral-700",
-    topBar: "bg-neutral-400",
-    pill: "bg-neutral-500",
-    iconBg: "bg-neutral-100 dark:bg-neutral-800",
+    borderColor: "#84898E",
+    textColor: "#84898E",
     Icon: Clock,
-    btnBg: "bg-neutral-500 hover:bg-neutral-600 shadow-neutral-500/20",
     label: "UNKNOWN",
   },
 };
 
 const CO2_BARS = [
-  { key: "co2_agriculture",    label: "Agriculture",  Icon: Wheat,           color: "bg-emerald-500", track: "bg-emerald-100 dark:bg-emerald-900/30" },
-  { key: "co2_processing",     label: "Processing",   Icon: Factory,         color: "bg-blue-500",    track: "bg-blue-100 dark:bg-blue-900/30"       },
-  { key: "co2_packaging",      label: "Packaging",    Icon: Package,         color: "bg-amber-500",   track: "bg-amber-100 dark:bg-amber-900/30"     },
-  { key: "co2_transportation", label: "Transport",    Icon: Truck,           color: "bg-orange-500",  track: "bg-orange-100 dark:bg-orange-900/30"   },
-  { key: "co2_distribution",   label: "Distribution", Icon: Store,           color: "bg-violet-500",  track: "bg-violet-100 dark:bg-violet-900/30"   },
-  { key: "co2_consumption",    label: "Consumption",  Icon: UtensilsCrossed, color: "bg-rose-500",    track: "bg-rose-100 dark:bg-rose-900/30"       },
+  { key: "co2_agriculture",    label: "Agriculture",  Icon: Wheat,           color: "#10b981" },
+  { key: "co2_processing",     label: "Processing",   Icon: Factory,         color: "#40aaff" },
+  { key: "co2_packaging",      label: "Packaging",    Icon: Package,         color: "#f59e0b" },
+  { key: "co2_transportation", label: "Transport",    Icon: Truck,           color: "#f97316" },
+  { key: "co2_distribution",   label: "Distribution", Icon: Store,           color: "#a855f7" },
+  { key: "co2_consumption",    label: "Consumption",  Icon: UtensilsCrossed, color: "#00c853" },
 ] as const;
 
 // ─── Shared components ────────────────────────────────────────────────────────
 
-function Card({ children, className }: { children: React.ReactNode; className?: string }) {
+function TerminalCard({ children, className, accentColor }: {
+  children: React.ReactNode;
+  className?: string;
+  accentColor?: string;
+}) {
   return (
-    <div className={cn(
-      "bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-sm overflow-hidden",
-      className
-    )}>
+    <div
+      className={cn("overflow-hidden", className)}
+      style={{
+        background: "#000000",
+        border: "1px solid rgba(255,255,255,0.08)",
+        borderLeft: accentColor ? `3px solid ${accentColor}` : "1px solid rgba(255,255,255,0.08)",
+      }}
+    >
       {children}
     </div>
   );
 }
 
-function SectionLabel({ Icon, label }: { Icon: React.ElementType; label: string }) {
+function SectionLabel({ label }: { label: string }) {
   return (
-    <div className="flex items-center gap-2 mb-4">
-      <div className="w-7 h-7 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center">
-        <Icon className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-      </div>
-      <span className="text-sm font-bold text-neutral-800 dark:text-neutral-200 uppercase tracking-wide">{label}</span>
-    </div>
+    <p
+      className="font-mono uppercase mb-4"
+      style={{ fontSize: "0.58rem", color: "#84898E", letterSpacing: "0.2em" }}
+    >
+      {label}
+    </p>
   );
 }
 
@@ -273,14 +269,33 @@ export default function OpenFoodFactsDetail() {
 
   if (loading) {
     return (
-      <div className="min-h-dvh bg-neutral-50 dark:bg-neutral-950 flex flex-col">
+      <div className="min-h-dvh bg-black flex flex-col">
         <div className="flex-1 flex flex-col items-center justify-center gap-4">
-          <div className="w-16 h-16 rounded-2xl bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center">
-            <Loader2 className="w-8 h-8 animate-spin text-emerald-600 dark:text-emerald-400" />
+          <div
+            className="flex items-center justify-center"
+            style={{
+              width: "3.5rem",
+              height: "3.5rem",
+              border: "1px solid rgba(240, 0, 7, 0.3)",
+              borderLeft: "2px solid #00c853",
+            }}
+          >
+            <Loader2 className="w-6 h-6 animate-spin" style={{ color: "#00c853" }} />
           </div>
           <div className="text-center">
-            <p className="text-sm font-semibold text-neutral-700 dark:text-neutral-300">Loading product…</p>
-            <p className="text-xs text-neutral-400 mt-1">Fetching environmental data</p>
+            <p
+              className="font-mono uppercase"
+              style={{ fontSize: "0.65rem", color: "#ffffff", letterSpacing: "0.15em" }}
+            >
+              LOADING PRODUCT
+            </p>
+            <p
+              className="font-mono mt-1 uppercase"
+              style={{ fontSize: "0.55rem", color: "#84898E", letterSpacing: "0.1em" }}
+            >
+              FETCHING ENVIRONMENTAL DATA
+              <span className="terminal-cursor" style={{ color: "#00c853" }}>_</span>
+            </p>
           </div>
         </div>
         <BottomNav />
@@ -290,20 +305,37 @@ export default function OpenFoodFactsDetail() {
 
   if (error || !product) {
     return (
-      <div className="min-h-dvh bg-neutral-50 dark:bg-neutral-950 flex flex-col">
+      <div className="min-h-dvh bg-black flex flex-col">
         <div className="flex-1 px-5 pt-14 max-w-xl mx-auto w-full">
           <button
             type="button"
             onClick={() => navigate(-1)}
-            className="flex items-center gap-1.5 text-sm font-semibold text-neutral-500 mb-6 hover:text-neutral-900 dark:hover:text-neutral-100 transition-colors cursor-pointer touch-manipulation"
+            className="flex items-center gap-1.5 font-mono uppercase cursor-pointer touch-manipulation transition-opacity hover:opacity-70 mb-6"
+            style={{ fontSize: "0.6rem", color: "#84898E", letterSpacing: "0.12em", background: "none", border: "none" }}
           >
-            <ChevronLeft className="w-4 h-4" /> Back
+            <ChevronLeft className="w-3.5 h-3.5" /> BACK
           </button>
-          <div className="rounded-2xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/30 p-5 flex items-start gap-3">
-            <XCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+          <div
+            className="flex items-start gap-3 p-4"
+            style={{
+              border: "1px solid rgba(240, 0, 7, 0.3)",
+              borderLeft: "3px solid #00c853",
+            }}
+          >
+            <XCircle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: "#00c853" }} />
             <div>
-              <p className="font-semibold text-red-800 dark:text-red-200 mb-1">Product Not Found</p>
-              <p className="text-sm text-red-600 dark:text-red-400">{error || "Unable to load product details"}</p>
+              <p
+                className="font-mono font-bold uppercase mb-1"
+                style={{ fontSize: "0.7rem", color: "#00c853", letterSpacing: "0.08em" }}
+              >
+                [!] PRODUCT NOT FOUND
+              </p>
+              <p
+                className="font-mono"
+                style={{ fontSize: "0.6rem", color: "#84898E" }}
+              >
+                {error || "Unable to load product details"}
+              </p>
             </div>
           </div>
         </div>
@@ -329,32 +361,53 @@ export default function OpenFoodFactsDetail() {
     : null;
 
   const ecoGrade = product.ecoscoreGrade?.toLowerCase();
-  const ecoStyle = ecoGrade ? (GRADE_STYLE[ecoGrade] ?? GRADE_STYLE.e) : null;
 
   return (
-    <div className="min-h-dvh bg-neutral-50 dark:bg-neutral-950">
+    <div className="min-h-dvh bg-black">
 
       {/* ── Sticky header ─────────────────────────────────────────────────────── */}
       <div className={cn(
-        "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
+        "fixed top-0 left-0 right-0 z-50 transition-all duration-200",
         stickyVisible ? "translate-y-0 opacity-100" : "-translate-y-full opacity-0"
       )}>
-        <div className="max-w-xl mx-auto px-4 py-2.5 bg-white/90 dark:bg-neutral-900/90 backdrop-blur-md border-b border-neutral-200 dark:border-neutral-800 flex items-center gap-3">
+        <div
+          className="max-w-xl mx-auto px-4 py-2.5 flex items-center gap-3"
+          style={{
+            background: "#000000",
+            borderBottom: "1px solid rgba(255,255,255,0.08)",
+          }}
+        >
           <button
             type="button"
             onClick={() => navigate(-1)}
-            className="w-8 h-8 rounded-xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center cursor-pointer touch-manipulation"
+            className="flex items-center justify-center cursor-pointer touch-manipulation"
+            style={{
+              width: "2rem",
+              height: "2rem",
+              border: "1px solid rgba(255,255,255,0.12)",
+              background: "none",
+              color: "#84898E",
+            }}
           >
-            <ChevronLeft className="w-4 h-4 text-neutral-600 dark:text-neutral-300" />
+            <ChevronLeft className="w-4 h-4" />
           </button>
-          <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 truncate flex-1">
-            {cleanName ?? product.productName ?? "Unknown Product"}
+          <p
+            className="font-mono font-bold uppercase truncate flex-1"
+            style={{ fontSize: "0.65rem", color: "#ffffff", letterSpacing: "0.06em" }}
+          >
+            {cleanName ?? product.productName ?? "UNKNOWN PRODUCT"}
           </p>
-          {ecoStyle && ecoGrade && (
-            <span className={cn(
-              "w-8 h-8 rounded-xl flex items-center justify-center text-sm font-black text-white flex-shrink-0",
-              ecoStyle.solidBg
-            )}>
+          {ecoGrade && (
+            <span
+              className="font-mono font-black flex items-center justify-center flex-shrink-0"
+              style={{
+                width: "2rem",
+                height: "2rem",
+                border: `1px solid ${GRADE_BORDER[ecoGrade] ?? "#84898E"}`,
+                color: GRADE_TEXT[ecoGrade] ?? "#84898E",
+                fontSize: "0.85rem",
+              }}
+            >
               {ecoGrade.toUpperCase()}
             </span>
           )}
@@ -364,7 +417,11 @@ export default function OpenFoodFactsDetail() {
       <main className="pb-28 max-w-xl mx-auto">
 
         {/* ── 1. Hero ───────────────────────────────────────────────────────── */}
-        <div ref={heroRef} className="relative h-72 w-full overflow-hidden bg-emerald-100 dark:bg-emerald-900/30">
+        <div
+          ref={heroRef}
+          className="relative w-full overflow-hidden"
+          style={{ height: "17rem", background: "#0a0a0a" }}
+        >
           {product.imageUrl ? (
             <img
               src={product.imageUrl}
@@ -373,52 +430,87 @@ export default function OpenFoodFactsDetail() {
             />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center">
-              <Sprout className="w-20 h-20 text-emerald-300 dark:text-emerald-700" />
+              <Sprout className="w-16 h-16" style={{ color: "rgba(132,137,142,0.2)" }} />
             </div>
           )}
 
-          <div className="absolute inset-0 bg-gradient-to-t from-neutral-950/80 via-neutral-900/30 to-transparent" />
+          {/* Heavy scanlines overlay on hero */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background: "repeating-linear-gradient(to bottom, transparent 0px, transparent 3px, rgba(0,0,0,0.3) 3px, rgba(0,0,0,0.3) 4px)",
+              zIndex: 1,
+            }}
+          />
+
+          {/* Red gradient at bottom */}
+          <div
+            className="absolute bottom-0 left-0 right-0 pointer-events-none"
+            style={{
+              height: "60%",
+              background: "linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.5) 60%, transparent 100%)",
+              zIndex: 2,
+            }}
+          />
 
           {/* Back button */}
           <button
             type="button"
             onClick={() => navigate(-1)}
-            className="absolute top-4 left-4 w-10 h-10 rounded-full bg-white/85 dark:bg-neutral-900/85 backdrop-blur-sm border border-white/40 shadow-md flex items-center justify-center cursor-pointer touch-manipulation transition-opacity hover:opacity-80 active:scale-95"
+            className="absolute top-4 left-4 flex items-center justify-center cursor-pointer touch-manipulation transition-opacity hover:opacity-70 active:scale-95"
+            style={{
+              zIndex: 3,
+              width: "2.25rem",
+              height: "2.25rem",
+              background: "rgba(0,0,0,0.7)",
+              border: "1px solid rgba(255,255,255,0.2)",
+            }}
           >
-            <ChevronLeft className="w-5 h-5 text-neutral-800 dark:text-neutral-200" />
+            <ChevronLeft className="w-4 h-4 text-white" />
           </button>
 
-          {/* Eco-score badge — top right */}
-          {ecoGrade && ecoStyle && (
-            <div className={cn(
-              "absolute top-4 right-4 w-14 h-14 rounded-2xl flex flex-col items-center justify-center text-white shadow-lg border-2 border-white/30",
-              ecoStyle.solidBg
-            )}>
-              <span className="text-2xl font-black leading-none">{ecoGrade.toUpperCase()}</span>
-              <span className="text-[9px] font-semibold opacity-80 mt-0.5 uppercase tracking-wider">Eco</span>
+          {/* Eco-score badge — terminal style, top right */}
+          {ecoGrade && (
+            <div
+              className="absolute top-4 right-4 flex flex-col items-center justify-center"
+              style={{
+                zIndex: 3,
+                width: "3.25rem",
+                height: "3.25rem",
+                border: `2px solid ${GRADE_BORDER[ecoGrade] ?? "#84898E"}`,
+                background: "rgba(0,0,0,0.85)",
+              }}
+            >
+              <span
+                className="font-mono font-black leading-none"
+                style={{ fontSize: "1.6rem", color: GRADE_TEXT[ecoGrade] ?? "#84898E" }}
+              >
+                {ecoGrade.toUpperCase()}
+              </span>
+              <span
+                className="font-mono uppercase mt-0.5"
+                style={{ fontSize: "0.42rem", color: "#84898E", letterSpacing: "0.1em" }}
+              >
+                ECO
+              </span>
             </div>
           )}
 
-          {/* Verdict pill */}
-          <div className="absolute bottom-[72px] left-4">
-            <div className={cn(
-              "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full shadow-lg",
-              vc.pill
-            )}>
-              <vc.Icon className="w-3.5 h-3.5 text-white" />
-              <span className="text-xs font-black text-white tracking-wider">{vc.label}</span>
-            </div>
-          </div>
-
           {/* Product info */}
-          <div className="absolute bottom-0 left-0 right-0 px-5 pb-5">
+          <div className="absolute bottom-0 left-0 right-0 px-4 pb-4" style={{ zIndex: 3 }}>
             {product.brand && (
-              <p className="text-[11px] font-bold text-emerald-300/90 uppercase tracking-widest mb-1">
+              <p
+                className="font-mono uppercase mb-1"
+                style={{ fontSize: "0.55rem", color: "#84898E", letterSpacing: "0.2em" }}
+              >
                 {product.brand}
               </p>
             )}
-            <h1 className="text-2xl font-bold text-white leading-tight line-clamp-2">
-              {cleanName ?? product.productName ?? "Unknown Product"}
+            <h1
+              className="font-mono font-black uppercase leading-tight line-clamp-2"
+              style={{ fontSize: "clamp(1.1rem, 5vw, 1.5rem)", color: "#ffffff", letterSpacing: "-0.02em" }}
+            >
+              {cleanName ?? product.productName ?? "UNKNOWN PRODUCT"}
             </h1>
           </div>
         </div>
@@ -426,32 +518,60 @@ export default function OpenFoodFactsDetail() {
         <div className="px-4 pt-4 space-y-3">
 
           {/* ── 2. Verdict card ─────────────────────────────────────────────── */}
-          <Card className={cn("border", vc.border)}>
-            <div className={cn("h-1.5 w-full", vc.topBar)} />
-            <div className={cn("p-5", vc.bg)}>
-              <div className="flex items-center gap-4 mb-4">
-                <div className={cn(
-                  "w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0",
-                  vc.iconBg
-                )}>
-                  <vc.Icon className={cn("w-6 h-6", vc.text)} />
+          <TerminalCard accentColor={vc.borderColor}>
+            <div className="p-4">
+              <div className="flex items-center gap-3 mb-3">
+                <div
+                  className="flex items-center justify-center flex-shrink-0"
+                  style={{
+                    width: "2.75rem",
+                    height: "2.75rem",
+                    border: `1px solid ${vc.borderColor}`,
+                  }}
+                >
+                  <vc.Icon className="w-5 h-5" style={{ color: vc.textColor }} />
                 </div>
                 <div>
-                  <p className="text-[10px] font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest mb-0.5">Our Verdict</p>
-                  <p className={cn("text-2xl font-black tracking-tight", vc.text)}>{verdict.key}</p>
+                  <p
+                    className="font-mono uppercase"
+                    style={{ fontSize: "0.5rem", color: "#84898E", letterSpacing: "0.18em" }}
+                  >
+                    // OUR VERDICT
+                  </p>
+                  <p
+                    className="font-mono font-black uppercase leading-tight"
+                    style={{ fontSize: "1.5rem", color: vc.textColor, letterSpacing: "-0.02em" }}
+                  >
+                    {verdict.key}
+                  </p>
                 </div>
               </div>
-              <p className="text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed mb-4 pl-3 border-l-2 border-neutral-300 dark:border-neutral-600">
+              <p
+                className="font-mono leading-relaxed mb-4 pl-3"
+                style={{
+                  fontSize: "0.6rem",
+                  color: "#84898E",
+                  borderLeft: `2px solid ${vc.borderColor}`,
+                }}
+              >
                 {verdict.reason}
               </p>
               <div className="flex gap-2.5">
                 <button
                   type="button"
                   onClick={() => document.getElementById("breakdown")?.scrollIntoView({ behavior: "smooth" })}
-                  className="flex-1 flex items-center justify-center gap-1.5 h-11 rounded-xl border-2 border-emerald-600 dark:border-emerald-500 bg-white dark:bg-neutral-900 text-emerald-700 dark:text-emerald-400 text-sm font-semibold cursor-pointer touch-manipulation transition-all hover:bg-emerald-50 dark:hover:bg-emerald-950/30 active:scale-[0.98]"
+                  className="flex-1 flex items-center justify-center gap-1.5 font-mono uppercase cursor-pointer touch-manipulation transition-opacity hover:opacity-80 active:opacity-60"
+                  style={{
+                    height: "2.75rem",
+                    border: "1px solid rgba(255,255,255,0.15)",
+                    background: "transparent",
+                    color: "#84898E",
+                    fontSize: "0.58rem",
+                    letterSpacing: "0.1em",
+                  }}
                 >
-                  <BarChart2 className="w-4 h-4" />
-                  See Breakdown
+                  <BarChart2 className="w-3.5 h-3.5" />
+                  SEE BREAKDOWN
                 </button>
                 <button
                   type="button"
@@ -470,42 +590,77 @@ export default function OpenFoodFactsDetail() {
                     });
                     setInBasket(true);
                   }}
-                  className={cn(
-                    "flex-1 flex items-center justify-center gap-1.5 h-11 rounded-xl text-white text-sm font-semibold cursor-pointer touch-manipulation transition-all active:scale-[0.98] shadow-md",
-                    inBasket
-                      ? "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 shadow-none"
-                      : cn("bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/30")
-                  )}
+                  className="flex-1 flex items-center justify-center gap-1.5 font-mono uppercase cursor-pointer touch-manipulation transition-opacity active:opacity-60"
+                  style={{
+                    height: "2.75rem",
+                    background: inBasket ? "transparent" : "#00c853",
+                    border: inBasket ? `1px solid ${vc.borderColor}` : "none",
+                    color: inBasket ? vc.textColor : "#ffffff",
+                    fontSize: "0.58rem",
+                    letterSpacing: "0.1em",
+                    opacity: inBasket ? 0.7 : 1,
+                  }}
                 >
-                  <ShoppingBag className="w-4 h-4" />
-                  {inBasket ? "In Basket" : "Add to Basket"}
+                  <ShoppingBag className="w-3.5 h-3.5" />
+                  {inBasket ? "IN BASKET" : "ADD TO BASKET"}
                 </button>
               </div>
             </div>
-          </Card>
+          </TerminalCard>
 
           {/* ── 3. Scan confirmation ─────────────────────────────────────────── */}
           {fromScan && !confirmDismissed && !showCandidates && (
-            <div className="rounded-2xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 p-4 flex items-start gap-3">
-              <ScanLine className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+            <div
+              className="flex items-start gap-3 p-4"
+              style={{
+                border: "1px solid rgba(64, 170, 255, 0.2)",
+                borderLeft: "3px solid #40aaff",
+              }}
+            >
+              <ScanLine className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: "#40aaff" }} />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-100">Is this the right product?</p>
-                <p className="text-xs text-neutral-500 mt-0.5 mb-3">We matched your scan automatically.</p>
+                <p
+                  className="font-mono font-bold uppercase"
+                  style={{ fontSize: "0.65rem", color: "#ffffff", letterSpacing: "0.08em" }}
+                >
+                  IS THIS THE RIGHT PRODUCT?
+                </p>
+                <p
+                  className="font-mono mt-0.5 mb-3"
+                  style={{ fontSize: "0.58rem", color: "#84898E" }}
+                >
+                  We matched your scan automatically.
+                </p>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={() => setConfirmDismissed(true)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-600 text-white text-xs font-semibold cursor-pointer touch-manipulation"
+                    className="font-mono uppercase flex items-center gap-1.5 cursor-pointer touch-manipulation transition-opacity hover:opacity-80"
+                    style={{
+                      fontSize: "0.55rem",
+                      color: "#000000",
+                      background: "#40aaff",
+                      border: "none",
+                      padding: "5px 10px",
+                      letterSpacing: "0.08em",
+                    }}
                   >
-                    <Check className="w-3 h-3" /> Yes, correct
+                    <Check className="w-3 h-3" /> YES, CORRECT
                   </button>
                   {candidates.length > 0 && (
                     <button
                       type="button"
                       onClick={() => setShowCandidates(true)}
-                      className="inline-flex items-center gap-1 text-xs text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 font-medium cursor-pointer touch-manipulation"
+                      className="font-mono uppercase flex items-center gap-1 cursor-pointer touch-manipulation transition-opacity hover:opacity-80"
+                      style={{
+                        fontSize: "0.55rem",
+                        color: "#84898E",
+                        background: "none",
+                        border: "none",
+                        letterSpacing: "0.08em",
+                      }}
                     >
-                      See other matches <ChevronRight className="w-3.5 h-3.5" />
+                      SEE OTHER MATCHES <ChevronRight className="w-3.5 h-3.5" />
                     </button>
                   )}
                 </div>
@@ -515,104 +670,202 @@ export default function OpenFoodFactsDetail() {
 
           {/* Candidate picker */}
           {fromScan && showCandidates && (
-            <Card>
-              <div className="px-4 pt-4 pb-3 flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800">
+            <TerminalCard>
+              <div
+                className="px-4 pt-3 pb-3 flex items-center justify-between"
+                style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
+              >
                 <div>
-                  <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">Other Matches</p>
-                  <p className="text-xs text-neutral-500 mt-0.5">Select the correct product</p>
+                  <p
+                    className="font-mono font-bold uppercase"
+                    style={{ fontSize: "0.65rem", color: "#ffffff", letterSpacing: "0.08em" }}
+                  >
+                    OTHER MATCHES
+                  </p>
+                  <p
+                    className="font-mono mt-0.5 uppercase"
+                    style={{ fontSize: "0.55rem", color: "#84898E", letterSpacing: "0.06em" }}
+                  >
+                    Select the correct product
+                  </p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setShowCandidates(false)}
-                  className="text-xs font-semibold text-emerald-600 cursor-pointer touch-manipulation"
+                  className="font-mono uppercase cursor-pointer touch-manipulation transition-opacity hover:opacity-80"
+                  style={{ fontSize: "0.58rem", color: "#40aaff", background: "none", border: "none", letterSpacing: "0.08em" }}
                 >
-                  Cancel
+                  CANCEL
                 </button>
               </div>
-              <div className="divide-y divide-neutral-100 dark:divide-neutral-800">
-                {candidates.map(c => {
+              <div>
+                {candidates.map((c, ci) => {
                   const g = c.ecoscoreGrade?.toLowerCase();
-                  const gs = g ? GRADE_STYLE[g] : null;
                   return (
                     <button
                       key={c.barcode}
                       type="button"
                       onClick={() => { sessionStorage.removeItem("scan_candidates"); navigate(`/product-off/${c.barcode}`); }}
-                      className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors active:scale-[0.98] cursor-pointer touch-manipulation"
+                      className="w-full flex items-center gap-3 px-4 py-3 text-left cursor-pointer touch-manipulation terminal-row active:opacity-70"
+                      style={{
+                        borderBottom: ci < candidates.length - 1 ? "1px solid rgba(255,255,255,0.06)" : "none",
+                        background: "none",
+                        border: "none",
+                      }}
                     >
                       {c.imageUrl ? (
-                        <img src={c.imageUrl} alt="" className="w-11 h-11 rounded-xl object-cover flex-shrink-0 border border-neutral-200 dark:border-neutral-700" />
+                        <img
+                          src={c.imageUrl}
+                          alt=""
+                          className="object-cover flex-shrink-0"
+                          style={{ width: "2.5rem", height: "2.5rem", border: "1px solid rgba(255,255,255,0.1)" }}
+                        />
                       ) : (
-                        <div className="w-11 h-11 rounded-xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center flex-shrink-0">
-                          <Package className="w-5 h-5 text-neutral-400" />
+                        <div
+                          className="flex items-center justify-center flex-shrink-0"
+                          style={{ width: "2.5rem", height: "2.5rem", border: "1px solid rgba(255,255,255,0.08)", background: "#0a0a0a" }}
+                        >
+                          <Package className="w-4 h-4" style={{ color: "#84898E" }} />
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 truncate">{c.productName || "Unknown Product"}</p>
-                        {c.brand && <p className="text-xs text-neutral-500 mt-0.5 truncate">{c.brand}</p>}
+                        <p
+                          className="font-mono font-bold uppercase truncate"
+                          style={{ fontSize: "0.65rem", color: "#ffffff", letterSpacing: "0.04em" }}
+                        >
+                          {c.productName || "UNKNOWN PRODUCT"}
+                        </p>
+                        {c.brand && (
+                          <p
+                            className="font-mono mt-0.5 uppercase truncate"
+                            style={{ fontSize: "0.55rem", color: "#84898E", letterSpacing: "0.06em" }}
+                          >
+                            {c.brand}
+                          </p>
+                        )}
                       </div>
-                      {g && gs && (
-                        <span className={cn(
-                          "w-9 h-9 rounded-xl flex items-center justify-center text-sm font-black text-white flex-shrink-0",
-                          gs.solidBg
-                        )}>
+                      {g && (
+                        <span
+                          className="font-mono font-black flex items-center justify-center flex-shrink-0"
+                          style={{
+                            width: "2rem",
+                            height: "2rem",
+                            border: `1px solid ${GRADE_BORDER[g] ?? "#84898E"}`,
+                            color: GRADE_TEXT[g] ?? "#84898E",
+                            fontSize: "0.85rem",
+                          }}
+                        >
                           {g.toUpperCase()}
                         </span>
                       )}
-                      <ChevronRight className="w-4 h-4 text-neutral-400 flex-shrink-0" />
+                      <ChevronRight className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "#84898E" }} />
                     </button>
                   );
                 })}
               </div>
-            </Card>
+            </TerminalCard>
           )}
 
           {/* ── 4. Score tiles ──────────────────────────────────────────────── */}
           {(product.ecoscoreGrade || product.nutriscoreGrade || product.novaGroup) && (
-            <div className="grid grid-cols-3 gap-2.5" id="breakdown">
+            <div className="grid grid-cols-3 gap-2" id="breakdown">
               {product.ecoscoreGrade && (() => {
                 const g = product.ecoscoreGrade.toLowerCase();
-                const s = GRADE_STYLE[g] ?? GRADE_STYLE.e;
+                const color = GRADE_TEXT[g] ?? "#84898E";
                 return (
-                  <div className={cn(
-                    "rounded-2xl flex flex-col items-center gap-1 border relative overflow-hidden shadow-sm pt-1 pb-4 px-2",
-                    s.bg, s.border
-                  )}>
-                    <div className={cn("w-full h-1 mb-2", s.indicator)} />
-                    <span className="text-[9px] font-bold uppercase tracking-widest text-neutral-500 dark:text-neutral-400">Eco</span>
-                    <span className={cn("text-4xl font-black leading-none", s.text)}>{g.toUpperCase()}</span>
+                  <div
+                    className="flex flex-col items-center py-4 px-2"
+                    style={{
+                      border: `1px solid ${GRADE_BORDER[g] ?? "#84898E"}`,
+                      borderTop: `3px solid ${GRADE_BORDER[g] ?? "#84898E"}`,
+                      background: "#000000",
+                    }}
+                  >
+                    <span
+                      className="font-mono uppercase mb-1"
+                      style={{ fontSize: "0.48rem", color: "#84898E", letterSpacing: "0.14em" }}
+                    >
+                      ECO
+                    </span>
+                    <span
+                      className="font-mono font-black leading-none"
+                      style={{ fontSize: "2.5rem", color }}
+                    >
+                      {g.toUpperCase()}
+                    </span>
                     {product.ecoscoreScore !== null && (
-                      <span className="text-[10px] text-neutral-400 tabular-nums">{product.ecoscoreScore}/100</span>
+                      <span
+                        className="font-mono tabular-nums mt-1"
+                        style={{ fontSize: "0.52rem", color: "#84898E" }}
+                      >
+                        {product.ecoscoreScore}/100
+                      </span>
                     )}
                   </div>
                 );
               })()}
               {product.nutriscoreGrade && (() => {
                 const g = product.nutriscoreGrade.toLowerCase();
-                const s = GRADE_STYLE[g] ?? GRADE_STYLE.e;
+                const color = GRADE_TEXT[g] ?? "#84898E";
                 return (
-                  <div className={cn(
-                    "rounded-2xl flex flex-col items-center gap-1 border relative overflow-hidden shadow-sm pt-1 pb-4 px-2",
-                    s.bg, s.border
-                  )}>
-                    <div className={cn("w-full h-1 mb-2", s.indicator)} />
-                    <span className="text-[9px] font-bold uppercase tracking-widest text-neutral-500 dark:text-neutral-400">Nutri</span>
-                    <span className={cn("text-4xl font-black leading-none", s.text)}>{g.toUpperCase()}</span>
-                    <span className="text-[10px] text-neutral-400">Nutrition</span>
+                  <div
+                    className="flex flex-col items-center py-4 px-2"
+                    style={{
+                      border: `1px solid ${GRADE_BORDER[g] ?? "#84898E"}`,
+                      borderTop: `3px solid ${GRADE_BORDER[g] ?? "#84898E"}`,
+                      background: "#000000",
+                    }}
+                  >
+                    <span
+                      className="font-mono uppercase mb-1"
+                      style={{ fontSize: "0.48rem", color: "#84898E", letterSpacing: "0.14em" }}
+                    >
+                      NUTRI
+                    </span>
+                    <span
+                      className="font-mono font-black leading-none"
+                      style={{ fontSize: "2.5rem", color }}
+                    >
+                      {g.toUpperCase()}
+                    </span>
+                    <span
+                      className="font-mono uppercase mt-1 text-center leading-tight"
+                      style={{ fontSize: "0.48rem", color: "#84898E", letterSpacing: "0.06em" }}
+                    >
+                      NUTRITION
+                    </span>
                   </div>
                 );
               })()}
-              {product.novaGroup !== null && NOVA_STYLE[product.novaGroup] && (() => {
-                const s = NOVA_STYLE[product.novaGroup!];
+              {product.novaGroup !== null && NOVA_LABEL[product.novaGroup!] && (() => {
+                const color = NOVA_COLOR[product.novaGroup!] ?? "#84898E";
                 return (
-                  <div className={cn(
-                    "rounded-2xl flex flex-col items-center gap-1 border relative overflow-hidden shadow-sm pt-1 pb-4 px-2",
-                    s.bg, s.border
-                  )}>
-                    <div className={cn("w-full h-1 mb-2", s.indicator)} />
-                    <span className="text-[9px] font-bold uppercase tracking-widest text-neutral-500 dark:text-neutral-400">NOVA</span>
-                    <span className={cn("text-4xl font-black leading-none", s.text)}>{product.novaGroup}</span>
-                    <span className="text-[10px] text-neutral-400 text-center leading-tight">{s.label}</span>
+                  <div
+                    className="flex flex-col items-center py-4 px-2"
+                    style={{
+                      border: `1px solid ${color}`,
+                      borderTop: `3px solid ${color}`,
+                      background: "#000000",
+                    }}
+                  >
+                    <span
+                      className="font-mono uppercase mb-1"
+                      style={{ fontSize: "0.48rem", color: "#84898E", letterSpacing: "0.14em" }}
+                    >
+                      NOVA
+                    </span>
+                    <span
+                      className="font-mono font-black leading-none"
+                      style={{ fontSize: "2.5rem", color }}
+                    >
+                      {product.novaGroup}
+                    </span>
+                    <span
+                      className="font-mono uppercase mt-1 text-center leading-tight"
+                      style={{ fontSize: "0.42rem", color: "#84898E", letterSpacing: "0.06em" }}
+                    >
+                      {NOVA_LABEL[product.novaGroup!]}
+                    </span>
                   </div>
                 );
               })()}
@@ -621,42 +874,74 @@ export default function OpenFoodFactsDetail() {
 
           {/* ── 5. CO₂ Footprint ────────────────────────────────────────────── */}
           {agri?.co2_total !== undefined && (
-            <Card>
-              <div className="p-5">
-                <SectionLabel Icon={Leaf} label="CO₂ Footprint" />
+            <TerminalCard accentColor="#10b981">
+              <div className="p-4">
+                <SectionLabel label="// CO2 FOOTPRINT" />
 
-                {/* Big stat */}
-                <div className="rounded-xl bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-100 dark:border-neutral-700 p-4 mb-5">
+                {/* Terminal readout block */}
+                <div
+                  className="p-3 mb-4"
+                  style={{
+                    border: "1px solid rgba(255,255,255,0.06)",
+                    background: "#050505",
+                    fontFamily: "'JetBrains Mono', monospace",
+                  }}
+                >
                   <div className="flex items-baseline gap-2 mb-1">
-                    <span className="text-5xl font-bold text-neutral-900 dark:text-neutral-100 tabular-nums leading-none">
+                    <span
+                      className="font-mono font-black tabular-nums leading-none"
+                      style={{ fontSize: "3rem", color: "#ffffff" }}
+                    >
                       {agri.co2_total.toFixed(2)}
                     </span>
-                    <span className="text-sm text-neutral-500 font-medium">kg CO₂/kg</span>
+                    <span
+                      className="font-mono uppercase"
+                      style={{ fontSize: "0.6rem", color: "#84898E", letterSpacing: "0.1em" }}
+                    >
+                      KG CO₂/KG
+                    </span>
                   </div>
                   {drivingKm !== null && (
-                    <p className="text-xs text-neutral-400">
-                      Like driving{" "}
-                      <span className="font-semibold text-neutral-600 dark:text-neutral-300">{drivingKm} km</span>
-                      {" "}in an average car
+                    <p
+                      className="font-mono"
+                      style={{ fontSize: "0.58rem", color: "#84898E" }}
+                    >
+                      &gt; EQUIV: DRIVING{" "}
+                      <span style={{ color: "#40aaff" }}>{drivingKm} KM</span>
+                      {" "}IN AVERAGE CAR
                     </p>
                   )}
                 </div>
 
-                {/* Lifecycle bars */}
+                {/* Lifecycle breakdown — ASCII-style bars */}
                 {co2Values.length > 0 && (
-                  <div className="space-y-3">
-                    {CO2_BARS.map(({ key, label, Icon, color, track }) => {
+                  <div className="space-y-2.5">
+                    {CO2_BARS.map(({ key, label, Icon, color }) => {
                       const val = agri[key as keyof typeof agri] as number | undefined;
                       if (typeof val !== "number" || val <= 0) return null;
-                      const pct = (val / maxCo2) * 100;
+                      const pct = Math.round((val / maxCo2) * 100);
+                      // Build ASCII-style bar: filled blocks
+                      const totalBlocks = 20;
+                      const filledBlocks = Math.round((pct / 100) * totalBlocks);
+                      const bar = "█".repeat(filledBlocks) + "░".repeat(totalBlocks - filledBlocks);
                       return (
-                        <div key={key} className="flex items-center gap-2.5">
-                          <Icon className="w-3.5 h-3.5 text-neutral-400 flex-shrink-0" />
-                          <span className="text-xs text-neutral-600 dark:text-neutral-400 w-24 flex-shrink-0">{label}</span>
-                          <div className={cn("flex-1 h-2.5 rounded-full overflow-hidden", track)}>
-                            <div className={cn("h-full rounded-full", color)} style={{ width: `${pct}%` }} />
-                          </div>
-                          <span className="text-xs font-semibold tabular-nums text-neutral-600 dark:text-neutral-400 w-14 text-right flex-shrink-0">
+                        <div key={key} className="flex items-center gap-2">
+                          <span
+                            className="font-mono uppercase flex-shrink-0"
+                            style={{ fontSize: "0.52rem", color: "#84898E", width: "5.5rem", letterSpacing: "0.04em" }}
+                          >
+                            {label.toUpperCase()}
+                          </span>
+                          <span
+                            className="font-mono flex-1 overflow-hidden"
+                            style={{ fontSize: "0.52rem", color, letterSpacing: "-0.02em" }}
+                          >
+                            {bar}
+                          </span>
+                          <span
+                            className="font-mono tabular-nums flex-shrink-0 text-right"
+                            style={{ fontSize: "0.52rem", color: "#84898E", width: "3.5rem" }}
+                          >
                             {val.toFixed(2)} kg
                           </span>
                         </div>
@@ -665,22 +950,38 @@ export default function OpenFoodFactsDetail() {
                   </div>
                 )}
               </div>
-            </Card>
+            </TerminalCard>
           )}
 
           {/* ── 6. Ethics ───────────────────────────────────────────────────── */}
           {(laborRecord || boycottMatch || welfare.isFlagged) ? (
-            <Card>
-              <div className="p-5">
-                <SectionLabel Icon={Scale} label="Ethics" />
+            <TerminalCard accentColor="#00c853">
+              <div className="p-4">
+                <SectionLabel label="// ETHICS ANALYSIS" />
 
                 {/* Labor: clean */}
                 {!laborRecord && (
-                  <div className="flex items-center gap-3 p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 mb-3">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                  <div
+                    className="flex items-center gap-3 p-3 mb-3"
+                    style={{
+                      border: "1px solid rgba(16, 185, 129, 0.25)",
+                      borderLeft: "2px solid #10b981",
+                    }}
+                  >
+                    <CheckCircle2 className="w-4 h-4 flex-shrink-0" style={{ color: "#10b981" }} />
                     <div>
-                      <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">No Labor Concerns</p>
-                      <p className="text-xs text-neutral-500 mt-0.5">No allegations found in our database.</p>
+                      <p
+                        className="font-mono font-bold uppercase"
+                        style={{ fontSize: "0.65rem", color: "#10b981", letterSpacing: "0.08em" }}
+                      >
+                        NO LABOR CONCERNS
+                      </p>
+                      <p
+                        className="font-mono mt-0.5"
+                        style={{ fontSize: "0.58rem", color: "#84898E" }}
+                      >
+                        No allegations found in our database.
+                      </p>
                     </div>
                   </div>
                 )}
@@ -688,72 +989,156 @@ export default function OpenFoodFactsDetail() {
                 {/* Labor: concerns */}
                 {laborRecord && (
                   <div className="space-y-2.5 mb-4">
-                    <p className="text-xs text-neutral-500">
-                      Parent: <span className="font-semibold text-neutral-700 dark:text-neutral-300">{laborRecord.parentCompany}</span>
+                    <p
+                      className="font-mono"
+                      style={{ fontSize: "0.58rem", color: "#84898E" }}
+                    >
+                      PARENT:{" "}
+                      <span style={{ color: "#ffffff" }}>{laborRecord.parentCompany}</span>
                     </p>
                     {laborRecord.allegations.map((al, i) => (
-                      <div key={i} className="rounded-xl bg-red-50 dark:bg-red-950/20 border-l-4 border-red-500 overflow-hidden">
-                        <div className="p-3.5">
+                      <div
+                        key={i}
+                        style={{
+                          border: "1px solid rgba(240, 0, 7, 0.25)",
+                          borderLeft: "3px solid #00c853",
+                          background: "#050505",
+                        }}
+                      >
+                        <div className="p-3">
                           <div className="flex items-start gap-2">
-                            <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+                            <span
+                              className="font-mono font-black flex-shrink-0"
+                              style={{ fontSize: "0.65rem", color: "#00c853" }}
+                            >
+                              [!]
+                            </span>
                             <div className="flex-1 min-w-0">
-                              <p className="text-xs font-bold text-red-800 dark:text-red-200">{al.issue}</p>
-                              <p className="text-xs text-neutral-500 mt-1 leading-relaxed">{al.details}</p>
+                              <p
+                                className="font-mono font-bold uppercase"
+                                style={{ fontSize: "0.62rem", color: "#ffffff", letterSpacing: "0.04em" }}
+                              >
+                                {al.issue}
+                              </p>
+                              <p
+                                className="font-mono mt-1 leading-relaxed"
+                                style={{ fontSize: "0.58rem", color: "#84898E" }}
+                              >
+                                {al.details}
+                              </p>
                               <div className="flex items-center justify-between mt-2">
                                 <a
                                   href={al.sourceUrl}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-red-700 dark:text-red-400 hover:opacity-80 cursor-pointer"
+                                  className="font-mono flex items-center gap-1 cursor-pointer transition-opacity hover:opacity-70"
+                                  style={{ fontSize: "0.55rem", color: "#00c853", textDecoration: "none", letterSpacing: "0.06em" }}
                                 >
                                   <ExternalLink className="w-2.5 h-2.5" />{al.source}
                                 </a>
-                                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400">{al.year}</span>
+                                <span
+                                  className="font-mono font-bold px-2 py-0.5"
+                                  style={{
+                                    fontSize: "0.52rem",
+                                    color: "#00c853",
+                                    border: "1px solid rgba(240, 0, 7, 0.3)",
+                                  }}
+                                >
+                                  {al.year}
+                                </span>
                               </div>
                             </div>
                           </div>
                         </div>
                       </div>
                     ))}
-                    <p className="text-[10px] text-neutral-400 italic leading-relaxed">
+                    <p
+                      className="font-mono leading-relaxed"
+                      style={{ fontSize: "0.52rem", color: "#84898E", fontStyle: "italic" }}
+                    >
                       Based on publicly available reports. Companies may have taken corrective steps.
                     </p>
                   </div>
                 )}
 
                 {/* Animal welfare */}
-                <div className={cn("pt-3", (laborRecord || boycottMatch) && "border-t border-neutral-100 dark:border-neutral-800")}>
+                <div
+                  className={cn("pt-3", (laborRecord || boycottMatch) && "mt-3")}
+                  style={{ borderTop: (laborRecord || boycottMatch) ? "1px solid rgba(255,255,255,0.06)" : "none" }}
+                >
                   <AnimalWelfareFlagBadge brand={product.brand} showDetails={true} />
                 </div>
 
                 {/* Boycott */}
                 {boycottMatch && (
-                  <div className="mt-3 pt-3 border-t border-neutral-100 dark:border-neutral-800">
-                    <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800">
-                      <Megaphone className="w-4 h-4 text-orange-600 dark:text-orange-400 flex-shrink-0 mt-0.5" />
+                  <div
+                    className="mt-3 pt-3"
+                    style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
+                  >
+                    <div
+                      className="flex items-start gap-2.5 p-3"
+                      style={{
+                        border: "1px solid rgba(249, 115, 22, 0.25)",
+                        borderLeft: "3px solid #f97316",
+                        background: "#050505",
+                      }}
+                    >
+                      <span
+                        className="font-mono font-black flex-shrink-0"
+                        style={{ fontSize: "0.65rem", color: "#f97316" }}
+                      >
+                        [!]
+                      </span>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-orange-800 dark:text-orange-200">{boycottMatch.parent} — Boycott Listed</p>
-                        <p className="text-xs text-neutral-500 mt-0.5 leading-relaxed">{boycottMatch.reason}</p>
+                        <p
+                          className="font-mono font-bold uppercase"
+                          style={{ fontSize: "0.65rem", color: "#ffffff", letterSpacing: "0.04em" }}
+                        >
+                          {boycottMatch.parent} — BOYCOTT LISTED
+                        </p>
+                        <p
+                          className="font-mono mt-0.5 leading-relaxed"
+                          style={{ fontSize: "0.58rem", color: "#84898E" }}
+                        >
+                          {boycottMatch.reason}
+                        </p>
                         <a
                           href="https://boycott-israel.org/boycott.html"
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-xs text-orange-600 dark:text-orange-400 hover:opacity-80 mt-1.5 cursor-pointer"
+                          className="font-mono flex items-center gap-1 mt-1.5 cursor-pointer transition-opacity hover:opacity-70"
+                          style={{ fontSize: "0.55rem", color: "#f97316", textDecoration: "none" }}
                         >
-                          <ExternalLink className="w-3 h-3" /> BDS Boycott List
+                          <ExternalLink className="w-2.5 h-2.5" /> BDS BOYCOTT LIST
                         </a>
                       </div>
                     </div>
                   </div>
                 )}
               </div>
-            </Card>
+            </TerminalCard>
           ) : (
-            <div className="flex items-center gap-3 p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800">
-              <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+            <div
+              className="flex items-center gap-3 p-4"
+              style={{
+                border: "1px solid rgba(16, 185, 129, 0.2)",
+                borderLeft: "3px solid #10b981",
+              }}
+            >
+              <CheckCircle2 className="w-4 h-4 flex-shrink-0" style={{ color: "#10b981" }} />
               <div>
-                <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">No Ethical Concerns Found</p>
-                <p className="text-xs text-neutral-500 mt-0.5">No labor, boycott, or animal welfare flags for this brand.</p>
+                <p
+                  className="font-mono font-bold uppercase"
+                  style={{ fontSize: "0.65rem", color: "#10b981", letterSpacing: "0.08em" }}
+                >
+                  NO ETHICAL CONCERNS FOUND
+                </p>
+                <p
+                  className="font-mono mt-0.5"
+                  style={{ fontSize: "0.58rem", color: "#84898E" }}
+                >
+                  No labor, boycott, or animal welfare flags for this brand.
+                </p>
               </div>
             </div>
           )}
@@ -763,28 +1148,43 @@ export default function OpenFoodFactsDetail() {
 
           {/* ── 8. Certifications ───────────────────────────────────────────── */}
           {product.labels.length > 0 && (
-            <Card>
-              <div className="p-5">
-                <SectionLabel Icon={BadgeCheck} label="Certifications & Labels" />
+            <TerminalCard accentColor="#40aaff">
+              <div className="p-4">
+                <SectionLabel label="// CERTIFICATIONS & LABELS" />
                 <div className="flex flex-wrap gap-2">
                   {product.labels.map(label => (
                     <span
                       key={label}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-xs font-semibold text-emerald-700 dark:text-emerald-300 capitalize"
+                      className="font-mono uppercase flex items-center gap-1.5"
+                      style={{
+                        fontSize: "0.55rem",
+                        color: "#40aaff",
+                        border: "1px solid rgba(64, 170, 255, 0.25)",
+                        padding: "4px 8px",
+                        letterSpacing: "0.08em",
+                      }}
                     >
-                      <Check className="w-3 h-3" />
+                      <Check className="w-2.5 h-2.5" />
                       {label}
                     </span>
                   ))}
                 </div>
               </div>
-            </Card>
+            </TerminalCard>
           )}
 
           {/* Barcode footer */}
           <div className="flex items-center justify-center pb-2">
-            <span className="font-mono text-[10px] text-neutral-400 px-3 py-1.5 rounded-full border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
-              {product.barcode}
+            <span
+              className="font-mono px-3 py-1.5"
+              style={{
+                fontSize: "0.55rem",
+                color: "#84898E",
+                border: "1px solid rgba(255,255,255,0.08)",
+                letterSpacing: "0.1em",
+              }}
+            >
+              BARCODE: {product.barcode}
             </span>
           </div>
 

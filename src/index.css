@@ -1,37 +1,119 @@
-@import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@300;400;500;600;700&family=Rubik:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@300;400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@layer components {
-  /* Aurora gradient glow — apply to any button to get the purple→cyan→emerald glow */
-  .btn-aurora {
-    position: relative;
-    z-index: 0;
-  }
-  .btn-aurora::before {
-    content: '';
-    position: absolute;
-    inset: -2px;
-    border-radius: inherit;
-    z-index: -10;
-    background: linear-gradient(to right, #34d399, #2dd4bf, #38bdf8);
-    opacity: 0.75;
-    filter: blur(12px);
-    transition: opacity 0.2s, filter 0.2s;
-    pointer-events: none;
-  }
-  .btn-aurora:hover::before {
-    opacity: 1;
-    filter: blur(16px);
-  }
-  .btn-aurora:disabled::before {
-    opacity: 0.3;
-  }
+/* ── MSCHF Design System ─────────────────────────────────────────────────── */
+
+:root {
+  /* MSCHF color tokens */
+  --mschf-black:   #000000;
+  --mschf-gray:    #84898E;
+  --mschf-white:   #ffffff;
+  --mschf-red:     #00c853;
+  --mschf-cyan:    #40aaff;
+  --mschf-gold:    #ffc700;
+  --mschf-border:  rgba(255, 255, 255, 0.08);
+  --mschf-border-bright: rgba(255, 255, 255, 0.18);
+
+  /* Legacy tokens (kept for compatibility with shadcn components) */
+  --background: 0 0% 0%;
+  --foreground: 0 0% 100%;
+  --card: 0 0% 4%;
+  --card-foreground: 0 0% 90%;
+  --popover: 0 0% 4%;
+  --popover-foreground: 0 0% 90%;
+  --primary: 0 100% 47%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 0 0% 8%;
+  --secondary-foreground: 0 0% 80%;
+  --muted: 0 0% 8%;
+  --muted-foreground: 0 0% 52%;
+  --accent: 207 100% 62%;
+  --accent-foreground: 0 0% 0%;
+  --destructive: 0 100% 47%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 0 0% 12%;
+  --input: 0 0% 12%;
+  --ring: 0 100% 47%;
+  --radius: 0rem;
+
+  /* Shadows */
+  --shadow-soft: 0 1px 8px rgba(0,0,0,0.4);
+  --shadow-card: 0 2px 12px rgba(0,0,0,0.6);
+  --shadow-elevated: 0 8px 32px rgba(0,0,0,0.8);
+  --shadow-bottom-nav: 0 -1px 0 rgba(255,255,255,0.06);
 }
 
-/* ── BottomNav (Cal AI–style pill active state) ───────────────────────── */
+/* ── Scanlines overlay ───────────────────────────────────────────────────── */
+.scanlines {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 55;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0px,
+    transparent 2px,
+    rgba(0, 0, 0, 0.15) 2px,
+    rgba(0, 0, 0, 0.15) 4px
+  );
+  opacity: 0.04;
+}
+
+/* ── Diagonal stripe texture ─────────────────────────────────────────────── */
+.diagonal-stripe {
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent 0px,
+    transparent 4px,
+    rgba(255, 255, 255, 0.015) 4px,
+    rgba(255, 255, 255, 0.015) 8px
+  );
+}
+
+/* ── Glitch animation ────────────────────────────────────────────────────── */
+@keyframes glitch {
+  0%   { transform: translate(0); clip-path: none; }
+  10%  { transform: translate(-2px, 1px); clip-path: polygon(0 20%, 100% 20%, 100% 30%, 0 30%); color: var(--mschf-cyan); }
+  20%  { transform: translate(2px, -1px); clip-path: polygon(0 60%, 100% 60%, 100% 75%, 0 75%); color: var(--mschf-red); }
+  30%  { transform: translate(0); clip-path: none; }
+  100% { transform: translate(0); clip-path: none; }
+}
+
+.glitch {
+  animation: glitch 4s steps(1) infinite;
+}
+
+/* ── Terminal cursor blink ───────────────────────────────────────────────── */
+@keyframes terminal-cursor {
+  0%, 49%  { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+.terminal-cursor {
+  display: inline-block;
+  animation: terminal-cursor 1s step-start infinite;
+}
+
+/* ── Flicker animation ───────────────────────────────────────────────────── */
+@keyframes flicker {
+  0%   { opacity: 1; }
+  5%   { opacity: 0.92; }
+  10%  { opacity: 1; }
+  15%  { opacity: 0.97; }
+  25%  { opacity: 1; }
+  30%  { opacity: 0.94; }
+  35%  { opacity: 1; }
+  100% { opacity: 1; }
+}
+
+.flicker {
+  animation: flicker 8s ease-in-out infinite;
+}
+
+/* ── BottomNav terminal style ────────────────────────────────────────────── */
 .menu {
   display: flex;
   flex-direction: row;
@@ -52,25 +134,30 @@
   background: none;
   cursor: pointer;
   position: relative;
-  color: hsl(220 10% 56%);
-  transition: color 0.18s ease;
+  color: var(--mschf-gray);
+  transition: color 0.15s ease;
   min-width: 3rem;
-  border-radius: 0.75rem;
+  border-radius: 0;
   -webkit-tap-highlight-color: transparent;
+  font-family: 'JetBrains Mono', monospace;
+  text-transform: uppercase;
 }
 
 .menu__item.active {
-  color: hsl(220 14% 10%);
+  color: var(--mschf-white);
 }
 
-/* Active pill background */
+/* Red dot indicator above active item */
 .menu__item.active::before {
   content: '';
   position: absolute;
-  inset: 0;
-  border-radius: 0.75rem;
-  background: hsl(220 14% 90%);
-  z-index: -1;
+  top: -1px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--mschf-red);
 }
 
 .menu__icon {
@@ -80,148 +167,32 @@
 }
 
 .icon {
-  width: 1.3rem;
-  height: 1.3rem;
-  stroke-width: 1.75;
+  width: 1.2rem;
+  height: 1.2rem;
+  stroke-width: 1.5;
 }
 
 .menu__item.active .icon {
-  stroke-width: 2.25;
+  stroke-width: 2;
 }
 
 .menu__text {
-  font-size: 0.6rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
   white-space: nowrap;
   opacity: 0;
   max-height: 0;
   overflow: hidden;
-  transition: opacity 0.18s ease, max-height 0.18s ease;
+  transition: opacity 0.15s ease, max-height 0.15s ease;
 }
 
 .menu__text.active {
   opacity: 1;
   max-height: 1rem;
 }
-/* ──────────────────────────────────────────────────────────────────────── */
 
-@layer base {
-  :root {
-    /* Cal AI–inspired Mobile Design System */
-    --background: 220 14% 96%;
-    --foreground: 220 14% 10%;
-
-    --card: 0 0% 100%;
-    --card-foreground: 220 14% 10%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 220 14% 10%;
-
-    --primary: 172 80% 32%;
-    --primary-foreground: 0 0% 100%;
-
-    --secondary: 220 14% 90%;
-    --secondary-foreground: 220 14% 20%;
-
-    --muted: 220 14% 92%;
-    --muted-foreground: 220 10% 50%;
-
-    --accent: 36 95% 54%;
-    --accent-foreground: 30 50% 10%;
-
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 220 13% 88%;
-    --input: 220 13% 90%;
-    --ring: 172 80% 32%;
-
-    --radius: 1rem;
-
-    /* Eco color palette — vivid ocean-to-emerald */
-    --eco-forest: 172 80% 28%;
-    --eco-leaf: 155 78% 38%;
-    --eco-sage: 162 42% 62%;
-    --eco-cream: 50 45% 97%;
-    --eco-sand: 38 38% 88%;
-    --eco-amber: 36 95% 54%;
-    --eco-terracotta: 16 68% 54%;
-    --eco-ocean: 195 82% 36%;
-
-    /* Score colors — semantic */
-    --score-excellent: 172 80% 30%;
-    --score-good: 145 65% 34%;
-    --score-fair: 42 90% 44%;
-    --score-poor: 24 80% 44%;
-    --score-critical: 0 70% 44%;
-
-    /* Gradients */
-    --gradient-hero: linear-gradient(160deg, hsl(196 88% 20%) 0%, hsl(180 85% 26%) 50%, hsl(162 82% 34%) 100%);
-    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(220 14% 98%) 100%);
-    --gradient-score: linear-gradient(90deg, hsl(0 70% 48%) 0%, hsl(42 90% 50%) 50%, hsl(172 80% 34%) 100%);
-
-    /* Shadows — pure black, Cal AI–style */
-    --shadow-soft: 0 1px 8px rgba(0,0,0,0.05), 0 2px 16px rgba(0,0,0,0.04);
-    --shadow-card: 0 2px 12px rgba(0,0,0,0.07), 0 1px 4px rgba(0,0,0,0.04);
-    --shadow-elevated: 0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
-    --shadow-bottom-nav: 0 -1px 0 rgba(0,0,0,0.06), 0 -4px 16px rgba(0,0,0,0.05);
-
-    --sidebar-background: 172 30% 98%;
-    --sidebar-foreground: 195 55% 16%;
-    --sidebar-primary: 172 80% 30%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 172 45% 90%;
-    --sidebar-accent-foreground: 195 55% 16%;
-    --sidebar-border: 172 30% 86%;
-    --sidebar-ring: 172 80% 32%;
-
-    /* CalAI Macro Colors */
-    --color-protein: 0 84% 45%;
-    --color-carbs: 172 80% 32%;
-    --color-fats: 217 91% 50%;
-    --color-calories: 172 80% 32%;
-  }
-
-  .dark {
-    --background: 195 35% 7%;
-    --foreground: 172 25% 92%;
-
-    --card: 193 30% 11%;
-    --card-foreground: 172 25% 92%;
-
-    --popover: 193 30% 11%;
-    --popover-foreground: 172 25% 92%;
-
-    --primary: 168 75% 48%;
-    --primary-foreground: 195 35% 7%;
-
-    --secondary: 190 20% 17%;
-    --secondary-foreground: 172 25% 92%;
-
-    --muted: 190 20% 17%;
-    --muted-foreground: 172 18% 56%;
-
-    --accent: 36 92% 56%;
-    --accent-foreground: 195 35% 7%;
-
-    --destructive: 0 62% 48%;
-    --destructive-foreground: 172 25% 92%;
-
-    --border: 190 18% 19%;
-    --input: 190 18% 19%;
-    --ring: 168 75% 48%;
-
-    --sidebar-background: 195 30% 9%;
-    --sidebar-foreground: 172 25% 92%;
-    --sidebar-primary: 168 75% 48%;
-    --sidebar-primary-foreground: 195 35% 7%;
-    --sidebar-accent: 190 20% 17%;
-    --sidebar-accent-foreground: 172 25% 92%;
-    --sidebar-border: 190 18% 19%;
-    --sidebar-ring: 168 75% 48%;
-  }
-}
+/* ── Base layer ──────────────────────────────────────────────────────────── */
 
 @layer base {
   * {
@@ -229,40 +200,21 @@
   }
 
   body {
-    @apply bg-background text-foreground font-sans antialiased;
+    @apply bg-black text-white antialiased;
+    font-family: 'JetBrains Mono', monospace;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    @apply font-display font-bold tracking-tight;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
   }
 }
 
+/* ── Utility layer ───────────────────────────────────────────────────────── */
+
 @layer utilities {
-  .text-gradient-hero {
-    @apply bg-clip-text text-transparent;
-    background-image: var(--gradient-hero);
-  }
-
-  .bg-gradient-hero {
-    background-image: var(--gradient-hero);
-  }
-
-  .shadow-soft {
-    box-shadow: var(--shadow-soft);
-  }
-
-  .shadow-card {
-    box-shadow: var(--shadow-card);
-  }
-
-  .shadow-elevated {
-    box-shadow: var(--shadow-elevated);
-  }
-
-  .shadow-bottom-nav {
-    box-shadow: var(--shadow-bottom-nav);
-  }
-
   /* Safe area for bottom nav on iOS */
   .pb-safe {
     padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
@@ -278,88 +230,6 @@
     }
   }
 
-  .animate-float {
-    animation: float 6s ease-in-out infinite;
-  }
-
-  .animate-pulse-soft {
-    animation: pulse-soft 3s ease-in-out infinite;
-  }
-
-  .animate-pulse-slow {
-    animation: pulse-slow 4s ease-in-out infinite;
-  }
-
-  .animate-shimmer {
-    animation: shimmer 2s ease-in-out infinite;
-  }
-
-  .animate-ring-fill {
-    animation: ring-fill 1s ease-out forwards;
-  }
-
-  @keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-8px); }
-  }
-
-  @keyframes pulse-soft {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.72; }
-  }
-
-  @keyframes pulse-slow {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.82; }
-  }
-
-  @keyframes shimmer {
-    0% { transform: translateX(-100%); }
-    100% { transform: translateX(100%); }
-  }
-
-  @keyframes ring-fill {
-    from { stroke-dashoffset: 283; }
-    to { stroke-dashoffset: var(--target-offset); }
-  }
-
-  /* Aurora orb animations */
-  .animate-orb-1 {
-    animation: orb-breathe-1 7s ease-in-out infinite;
-  }
-  .animate-orb-2 {
-    animation: orb-breathe-2 9s ease-in-out infinite;
-  }
-  .animate-orb-3 {
-    animation: orb-breathe-3 11s ease-in-out infinite;
-  }
-
-  @keyframes orb-breathe-1 {
-    0%, 100% { transform: scale(1);    opacity: 0.45; }
-    50%       { transform: scale(1.25); opacity: 0.65; }
-  }
-
-  @keyframes orb-breathe-2 {
-    0%, 100% { transform: scale(1.1);  opacity: 0.35; }
-    50%       { transform: scale(0.85); opacity: 0.55; }
-  }
-
-  @keyframes orb-breathe-3 {
-    0%, 100% { transform: scale(1);    opacity: 0.30; }
-    33%       { transform: scale(1.20); opacity: 0.50; }
-    66%       { transform: scale(0.90); opacity: 0.40; }
-  }
-
-  /* Scan-line pulse on hero icon */
-  .animate-icon-ring {
-    animation: icon-ring-pulse 2.5s ease-in-out infinite;
-  }
-
-  @keyframes icon-ring-pulse {
-    0%, 100% { box-shadow: 0 0 0 0px rgba(255,255,255,0.35); }
-    50%       { box-shadow: 0 0 0 12px rgba(255,255,255,0.00); }
-  }
-
   /* Page transition */
   @keyframes page-enter {
     from { opacity: 0; }
@@ -367,16 +237,132 @@
   }
 
   .page-transition {
-    animation: page-enter 0.22s ease-out both;
+    animation: page-enter 0.15s ease-out both;
+  }
+
+  /* Red glow for CTAs */
+  .glow-red {
+    box-shadow: 0 0 20px rgba(240, 0, 7, 0.4), 0 0 40px rgba(240, 0, 7, 0.15);
+  }
+
+  /* Cyan glow */
+  .glow-cyan {
+    box-shadow: 0 0 20px rgba(64, 170, 255, 0.3);
+  }
+
+  /* Terminal row hover */
+  .terminal-row {
+    transition: background-color 0.1s ease, color 0.1s ease;
+  }
+
+  .terminal-row:hover {
+    background-color: rgba(255, 255, 255, 0.04);
+    color: var(--mschf-white);
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .animate-orb-1,
-    .animate-orb-2,
-    .animate-orb-3,
-    .animate-icon-ring,
+    .glitch,
+    .flicker,
+    .terminal-cursor,
     .page-transition {
       animation: none;
     }
   }
+}
+
+/* ── Interactive texture removal (MSCHF pattern) ────────────────────────── */
+/* Diagonal stripe disappears when hovering over a clickable card */
+.card-interactive:hover .diagonal-stripe-overlay {
+  display: none;
+}
+.card-interactive {
+  position: relative;
+  transition: border-color 0.1s ease;
+}
+.diagonal-stripe-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent 0px,
+    transparent 4px,
+    rgba(255, 255, 255, 0.015) 4px,
+    rgba(255, 255, 255, 0.015) 8px
+  );
+}
+
+/* ── Floating product animations ────────────────────────────────────────── */
+@keyframes floatA {
+  0%   { transform: translateY(0px)   rotate(-12deg) scale(1);    }
+  33%  { transform: translateY(-18px) rotate(-8deg)  scale(1.04); }
+  66%  { transform: translateY(8px)   rotate(-15deg) scale(0.97); }
+  100% { transform: translateY(0px)   rotate(-12deg) scale(1);    }
+}
+@keyframes floatB {
+  0%   { transform: translateY(0px)   rotate(8deg)  scale(1);    }
+  40%  { transform: translateY(14px)  rotate(12deg) scale(1.05); }
+  70%  { transform: translateY(-10px) rotate(5deg)  scale(0.96); }
+  100% { transform: translateY(0px)   rotate(8deg)  scale(1);    }
+}
+@keyframes floatC {
+  0%   { transform: translateY(0px)   rotate(-5deg)  scale(1);    }
+  50%  { transform: translateY(-22px) rotate(-9deg)  scale(1.06); }
+  100% { transform: translateY(0px)   rotate(-5deg)  scale(1);    }
+}
+@keyframes floatD {
+  0%   { transform: translateY(0px)   rotate(14deg) scale(1);    }
+  30%  { transform: translateY(16px)  rotate(10deg) scale(0.95); }
+  60%  { transform: translateY(-8px)  rotate(18deg) scale(1.04); }
+  100% { transform: translateY(0px)   rotate(14deg) scale(1);    }
+}
+@keyframes floatE {
+  0%   { transform: translateY(0px)   rotate(-18deg) scale(1);    }
+  45%  { transform: translateY(-14px) rotate(-12deg) scale(1.05); }
+  80%  { transform: translateY(10px)  rotate(-20deg) scale(0.97); }
+  100% { transform: translateY(0px)   rotate(-18deg) scale(1);    }
+}
+
+/* ── Ticker / marquee ────────────────────────────────────────────────────── */
+@keyframes tickerLeft {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+@keyframes tickerRight {
+  from { transform: translateX(-50%); }
+  to   { transform: translateX(0); }
+}
+
+.ticker-track {
+  display: flex;
+  width: max-content;
+  white-space: nowrap;
+  animation: tickerLeft 28s linear infinite;
+}
+.ticker-track--rev {
+  animation: tickerRight 22s linear infinite;
+}
+
+/* ── Food background drift ───────────────────────────────────────────────── */
+@keyframes bgDrift {
+  from { background-position: 0 0; }
+  to   { background-position: 180px 180px; }
+}
+
+/* ── GOODSCAN logo glitch (GOOD → FOOD) ─────────────────────────────────── */
+@keyframes logoGood {
+  0%,  79% { opacity: 1; color: #84898E; }
+  80%      { opacity: 0; }
+  95%      { opacity: 0; }
+  96%      { opacity: 1; color: #84898E; }
+  100%     { opacity: 1; color: #84898E; }
+}
+
+@keyframes logoFood {
+  0%,  79% { opacity: 0; }
+  80%      { opacity: 1; color: #40aaff; }
+  82%      { opacity: 1; color: #00c853; }
+  95%      { opacity: 1; color: #00c853; }
+  96%      { opacity: 0; }
+  100%     { opacity: 0; }
 }

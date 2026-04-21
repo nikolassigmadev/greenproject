@@ -18,7 +18,6 @@ import {
   TrendingDown,
   TrendingUp,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { searchProducts as searchOffProducts } from "@/services/openfoodfacts";
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
 import { getLaborAllegationCount } from "@/utils/laborCheck";
@@ -33,43 +32,13 @@ import {
 
 // ── helpers ────────────────────────────────────────────────────────────────
 
-const GRADE_STYLE: Record<string, { bg: string; text: string }> = {
-  a: { bg: "bg-emerald-500", text: "text-white" },
-  b: { bg: "bg-lime-500",    text: "text-white" },
-  c: { bg: "bg-amber-500",   text: "text-white" },
-  d: { bg: "bg-orange-500",  text: "text-white" },
-  e: { bg: "bg-red-500",     text: "text-white" },
+const NUTRI_COLOR: Record<string, string> = {
+  a: '#00c853', b: '#40aaff', c: '#ffc700', d: '#ff8c00', e: '#ff3b30',
 };
 
-const GRADE_LABEL: Record<string, string> = {
-  a: "Excellent", b: "Good", c: "Fair", d: "Poor", e: "Avoid",
+const ECO_COLOR: Record<string, string> = {
+  a: '#00c853', b: '#40aaff', c: '#ffc700', d: '#ff8c00', e: '#ff3b30',
 };
-
-const SCORE_COLOR = (score: number) =>
-  score >= 70 ? "hsl(152 48% 30%)"
-  : score >= 45 ? "hsl(38 88% 44%)"
-  : "hsl(0 68% 50%)";
-
-function ScoreRing({ score, grade }: { score: number; grade: string }) {
-  const R = 44;
-  const C = 2 * Math.PI * R;
-  const dash = (score / 100) * C;
-  const color = SCORE_COLOR(score);
-  return (
-    <svg width="110" height="110" viewBox="0 0 110 110">
-      <circle cx="55" cy="55" r={R} fill="none" stroke="hsl(var(--muted))" strokeWidth="10" />
-      <circle cx="55" cy="55" r={R} fill="none" stroke={color} strokeWidth="10"
-        strokeLinecap="round" strokeDasharray={`${dash} ${C}`} strokeDashoffset={C / 4}
-        style={{ transition: "stroke-dasharray 0.6s ease" }} />
-      <text x="55" y="50" textAnchor="middle" dominantBaseline="middle"
-        fontSize="22" fontWeight="800" fill={color} fontFamily="Rubik, sans-serif">{score}</text>
-      <text x="55" y="68" textAnchor="middle" dominantBaseline="middle"
-        fontSize="11" fontWeight="700" fill={color} fontFamily="Rubik, sans-serif">
-        {grade !== 'unknown' ? `Grade ${grade.toUpperCase()}` : 'No data'}
-      </text>
-    </svg>
-  );
-}
 
 function addResultToBasket(result: OpenFoodFactsResult) {
   addToBasket({
@@ -86,6 +55,8 @@ function addResultToBasket(result: OpenFoodFactsResult) {
 }
 
 // ── component ──────────────────────────────────────────────────────────────
+
+const MONO: React.CSSProperties = { fontFamily: "'JetBrains Mono', monospace" };
 
 export default function ShoppingList() {
   const [basket, setBasket] = useState<BasketItem[]>([]);
@@ -133,389 +104,261 @@ export default function ShoppingList() {
   const inBasket = (barcode: string) => basket.some(b => b.barcode === barcode);
 
   return (
-    <div className="min-h-screen bg-background">
-      <main className="flex-1 pb-nav">
-        {/* Cal AI-style header */}
-        <div className="px-5 pt-14 pb-4">
-          <div className="max-w-xl mx-auto flex items-center justify-between">
+    <div className="min-h-screen bg-black diagonal-stripe">
+      <div className="scanlines" />
+
+      <main className="pb-nav">
+
+        {/* ── Header ── */}
+        <div className="px-5 pt-14 pb-0">
+          <div className="max-w-xl mx-auto flex items-start justify-between">
             <div>
-              <p className="text-xs font-semibold text-muted-foreground mb-0.5 uppercase tracking-wider">Shopping</p>
-              <h1 className="text-[1.75rem] font-display font-extrabold text-foreground leading-tight">My Basket</h1>
+              <p style={{ ...MONO, fontSize: '0.55rem', color: '#84898E', letterSpacing: '0.22em', textTransform: 'uppercase' }}>
+                // SHOPPING
+              </p>
+              <h1 style={{ ...MONO, fontSize: 'clamp(1.8rem, 9vw, 2.5rem)', color: '#ffffff', letterSpacing: '-0.03em', fontWeight: 900, textTransform: 'uppercase', lineHeight: 1 }}>
+                MY BASKET<span style={{ color: '#00c853' }}>_</span>
+              </h1>
             </div>
             {basket.length > 0 && (
               <button
                 onClick={() => setShowClearConfirm(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium hover:opacity-90 active:scale-[0.97] transition-transform"
-                style={{ borderColor: "hsl(var(--border))", color: "hsl(var(--muted-foreground))" }}
+                style={{
+                  ...MONO, marginTop: 8,
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '6px 12px',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  background: 'transparent', color: '#84898E', cursor: 'pointer',
+                  fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
+                }}
               >
-                <Trash2 className="w-3.5 h-3.5" /> Clear
+                <Trash2 size={12} /> CLEAR
               </button>
             )}
           </div>
         </div>
 
-        <div className="px-5 relative z-10">
-          <div className="max-w-2xl mx-auto space-y-4">
+        {/* ── Divider ── */}
+        <div className="px-5 pt-4">
+          <div className="max-w-xl mx-auto" style={{ borderBottom: '1px solid rgba(132,137,142,0.2)' }} />
+        </div>
 
-            {/* Clear confirm */}
+        <div className="px-5 pt-4">
+          <div className="max-w-xl mx-auto space-y-3">
+
+            {/* ── Clear confirm ── */}
             {showClearConfirm && (
-              <div className="bg-destructive/8 border border-destructive/25 rounded-2xl p-4 flex items-center justify-between gap-4 flex-wrap animate-fade-in">
-                <div className="flex items-center gap-2 text-sm font-medium text-destructive">
-                  <AlertTriangle className="w-4 h-4" /> Clear the entire basket?
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleClear}
-                    className="px-4 py-1.5 rounded-lg text-xs font-bold active:scale-[0.97] transition-transform"
-                    style={{ backgroundColor: "hsl(var(--destructive))", color: "hsl(var(--destructive-foreground))" }}
-                  >
-                    Yes, Clear
-                  </button>
-                  <button
-                    onClick={() => setShowClearConfirm(false)}
-                    className="px-4 py-1.5 rounded-lg border border-border bg-card text-muted-foreground text-xs font-medium active:scale-[0.97] transition-transform"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* ── Ethics Score Card ── */}
-            {basket.length > 0 && report.scoredCount > 0 && (
-              <div className="bg-card rounded-2xl border border-border/60 shadow-soft overflow-hidden">
-                <div className="h-1.5 w-full" style={{ background: SCORE_COLOR(report.overallScore) }} />
-                <div className="p-4">
-                  <div className="flex items-center gap-4">
-                    <ScoreRing score={report.overallScore} grade={report.overallGrade} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-foreground mb-1">Basket Ethics Score</p>
-                      <p className="text-xs text-muted-foreground mb-3">
-                        {report.scoredCount} of {report.itemCount} item{report.itemCount !== 1 ? "s" : ""} scored
-                      </p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {report.goodCount > 0 && (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300">
-                            <CheckCircle2 className="w-3 h-3" />{report.goodCount} good
-                          </span>
-                        )}
-                        {report.fairCount > 0 && (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300">
-                            {report.fairCount} fair
-                          </span>
-                        )}
-                        {report.poorCount > 0 && (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-950/50 text-red-700 dark:text-red-300">
-                            <AlertCircle className="w-3 h-3" />{report.poorCount} poor
-                          </span>
-                        )}
-                        {report.unknownCount > 0 && (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
-                            {report.unknownCount} unknown
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* ── CO2 + Labour Impact ── */}
-            {basket.length > 0 && (report.co2ScoredCount > 0 || report.itemCount > 0) && (
-              <div className="grid grid-cols-2 gap-3">
-
-                {/* CO2 card */}
-                {report.co2ScoredCount > 0 && (
-                  <div className={cn(
-                    "rounded-2xl border-2 p-4",
-                    report.co2NetKg >= 0
-                      ? "border-emerald-200 dark:border-emerald-800 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/20"
-                      : "border-orange-200 dark:border-orange-800 bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-950/30 dark:to-red-950/20"
-                  )}>
-                    <div className={cn(
-                      "w-9 h-9 rounded-xl flex items-center justify-center mb-3",
-                      report.co2NetKg >= 0 ? "bg-emerald-500" : "bg-orange-500"
-                    )}>
-                      {report.co2NetKg >= 0
-                        ? <TrendingDown className="w-5 h-5 text-white" />
-                        : <TrendingUp className="w-5 h-5 text-white" />
-                      }
-                    </div>
-                    <p className={cn(
-                      "text-2xl font-display font-extrabold tabular-nums leading-none mb-0.5",
-                      report.co2NetKg >= 0 ? "text-emerald-700 dark:text-emerald-300" : "text-orange-700 dark:text-orange-300"
-                    )}>
-                      {report.co2NetKg >= 0 ? "-" : "+"}{Math.abs(report.co2NetKg)}
-                      <span className="text-sm font-normal ml-1">kg CO₂</span>
-                    </p>
-                    <p className={cn(
-                      "text-xs font-semibold mb-2",
-                      report.co2NetKg >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-orange-600 dark:text-orange-400"
-                    )}>
-                      {report.co2NetKg >= 0 ? "saved vs. avg basket" : "more than avg basket"}
-                    </p>
-                    {report.co2SavedKg > 0 && report.co2ExtraKg > 0 && (
-                      <div className="space-y-1 border-t border-emerald-200/60 dark:border-emerald-800/40 pt-2 mt-1">
-                        <div className="flex justify-between text-[10px]">
-                          <span className="text-emerald-600 dark:text-emerald-400">Greener picks save</span>
-                          <span className="font-bold text-emerald-700 dark:text-emerald-300">{report.co2SavedKg} kg</span>
-                        </div>
-                        <div className="flex justify-between text-[10px]">
-                          <span className="text-orange-600 dark:text-orange-400">Worse picks cost</span>
-                          <span className="font-bold text-orange-700 dark:text-orange-300">+{report.co2ExtraKg} kg</span>
-                        </div>
-                      </div>
-                    )}
-                    {report.bestCO2Item && (
-                      <p className="text-[10px] text-emerald-600 dark:text-emerald-400 mt-2 leading-tight">
-                        🌿 Greenest: <span className="font-semibold">{report.bestCO2Item.productName}</span>
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {/* Labour card */}
-                <div className={cn(
-                  "rounded-2xl border-2 p-4",
-                  report.laborFlagCount === 0
-                    ? "border-emerald-200 dark:border-emerald-800 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/20"
-                    : "border-orange-200 dark:border-orange-800 bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-950/30 dark:to-red-950/20"
-                )}>
-                  <div className={cn(
-                    "w-9 h-9 rounded-xl flex items-center justify-center mb-3",
-                    report.laborFlagCount === 0 ? "bg-emerald-500" : "bg-orange-500"
-                  )}>
-                    <Users className="w-5 h-5 text-white" />
-                  </div>
-                  <p className={cn(
-                    "text-2xl font-display font-extrabold tabular-nums leading-none mb-0.5",
-                    report.laborFlagCount === 0 ? "text-emerald-700 dark:text-emerald-300" : "text-orange-700 dark:text-orange-300"
-                  )}>
-                    {report.laborFlagCount === 0
-                      ? report.cleanBrandCount
-                      : report.laborFlagCount
-                    }
-                    <span className="text-sm font-normal ml-1">
-                      {report.laborFlagCount === 0 ? "clean" : "flagged"}
+              <div style={{ border: '1px solid rgba(255,59,48,0.3)', borderLeft: '3px solid #ff3b30', background: 'rgba(255,59,48,0.05)', padding: '14px 16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <AlertTriangle size={14} style={{ color: '#ff3b30' }} />
+                    <span style={{ ...MONO, fontSize: '0.65rem', fontWeight: 700, color: '#ff3b30', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                      CLEAR ENTIRE BASKET?
                     </span>
-                  </p>
-                  <p className={cn(
-                    "text-xs font-semibold mb-2",
-                    report.laborFlagCount === 0 ? "text-emerald-600 dark:text-emerald-400" : "text-orange-600 dark:text-orange-400"
-                  )}>
-                    {report.laborFlagCount === 0
-                      ? "no labour concerns"
-                      : `brand${report.laborFlagCount !== 1 ? "s" : ""} with labour issues`
-                    }
-                  </p>
-                  {report.laborFlagCount > 0 && report.cleanBrandCount > 0 && (
-                    <div className="space-y-1 border-t border-orange-200/60 dark:border-orange-800/40 pt-2 mt-1">
-                      <div className="flex justify-between text-[10px]">
-                        <span className="text-emerald-600 dark:text-emerald-400">Clean brands</span>
-                        <span className="font-bold text-emerald-700 dark:text-emerald-300">{report.cleanBrandCount}</span>
-                      </div>
-                      <div className="flex justify-between text-[10px]">
-                        <span className="text-orange-600 dark:text-orange-400">With concerns</span>
-                        <span className="font-bold text-orange-700 dark:text-orange-300">{report.laborFlagCount}</span>
-                      </div>
-                    </div>
-                  )}
-                  {report.flaggedItems.length > 0 && (
-                    <p className="text-[10px] text-orange-600 dark:text-orange-400 mt-2 leading-tight">
-                      🚩 <span className="font-semibold">{report.flaggedItems.map(i => i.brand || i.productName).slice(0, 2).join(", ")}</span>
-                      {report.flaggedItems.length > 2 && ` +${report.flaggedItems.length - 2} more`}
-                    </p>
-                  )}
+                  </div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button onClick={handleClear} style={{ ...MONO, padding: '6px 14px', border: 'none', background: '#ff3b30', color: '#fff', fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer' }}>
+                      [YES]
+                    </button>
+                    <button onClick={() => setShowClearConfirm(false)} style={{ ...MONO, padding: '6px 14px', border: '1px solid rgba(255,255,255,0.12)', background: 'transparent', color: '#84898E', fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer' }}>
+                      [NO]
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
 
-            {/* ── Weakest Link Banner ── */}
-            {report.weakestItem && ['d','e'].includes(report.weakestItem.ecoscoreGrade?.toLowerCase() ?? '') && (
-              <Link to={`/product-off/${report.weakestItem.barcode}`}
-                className="flex items-center gap-3 p-3.5 rounded-2xl border-2 border-orange-300 dark:border-orange-700 bg-orange-50 dark:bg-orange-950/30 hover:shadow-soft transition-all">
-                <div className="w-9 h-9 rounded-xl bg-orange-500 flex items-center justify-center flex-shrink-0">
-                  <AlertCircle className="w-5 h-5 text-white" />
+            {/* ── Labour Impact Card ── */}
+            {basket.length > 0 && (
+              <div style={{ border: '1px solid rgba(255,255,255,0.08)', borderLeft: `3px solid ${report.laborFlagCount > 0 ? '#ff3b30' : '#00c853'}`, background: '#000', padding: '16px' }}>
+                <p style={{ ...MONO, fontSize: '0.48rem', color: '#84898E', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 10 }}>
+                  // LABOUR_SCAN
+                </p>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
+                  <span style={{ ...MONO, fontSize: '2rem', fontWeight: 900, color: report.laborFlagCount > 0 ? '#ff3b30' : '#00c853', lineHeight: 1 }}>
+                    {report.laborFlagCount > 0 ? report.laborFlagCount : report.cleanBrandCount}
+                  </span>
+                  <span style={{ ...MONO, fontSize: '0.65rem', color: '#84898E', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                    {report.laborFlagCount > 0 ? 'flagged' : 'clean'}
+                  </span>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-bold text-orange-800 dark:text-orange-200 uppercase tracking-wide mb-0.5">Weakest link</p>
-                  <p className="text-sm font-semibold text-orange-900 dark:text-orange-100 truncate">{report.weakestItem.productName}</p>
-                  <p className="text-xs text-orange-600 dark:text-orange-400">
-                    Eco grade {report.weakestItem.ecoscoreGrade?.toUpperCase()} · consider swapping this one
+                <p style={{ ...MONO, fontSize: '0.6rem', color: report.laborFlagCount > 0 ? '#ff3b30' : '#00c853', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  {report.laborFlagCount > 0
+                    ? `brand${report.laborFlagCount !== 1 ? 's' : ''} with labour issues`
+                    : 'no labour concerns'}
+                </p>
+                {report.flaggedItems.length > 0 && (
+                  <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                    {report.flaggedItems.slice(0, 3).map(item => (
+                      <div key={item.barcode} style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                        <span style={{ color: '#ff3b30', fontSize: '0.6rem' }}>▶</span>
+                        <span style={{ ...MONO, fontSize: '0.6rem', color: '#84898E' }}>{item.brand || item.productName}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── CO2 card ── */}
+            {basket.length > 0 && report.co2ScoredCount > 0 && (
+              <div style={{ border: '1px solid rgba(255,255,255,0.08)', borderLeft: `3px solid ${report.co2NetKg >= 0 ? '#00c853' : '#ff8c00'}`, background: '#000', padding: '16px' }}>
+                <p style={{ ...MONO, fontSize: '0.48rem', color: '#84898E', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 10 }}>
+                  // CO2_IMPACT
+                </p>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
+                  <span style={{ ...MONO, fontSize: '2rem', fontWeight: 900, color: report.co2NetKg >= 0 ? '#00c853' : '#ff8c00', lineHeight: 1 }}>
+                    {report.co2NetKg >= 0 ? '-' : '+'}{Math.abs(report.co2NetKg)}
+                  </span>
+                  <span style={{ ...MONO, fontSize: '0.65rem', color: '#84898E', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                    kg CO₂
+                  </span>
+                </div>
+                <p style={{ ...MONO, fontSize: '0.6rem', color: report.co2NetKg >= 0 ? '#00c853' : '#ff8c00', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  {report.co2NetKg >= 0 ? 'saved vs avg basket' : 'more than avg basket'}
+                </p>
+              </div>
+            )}
+
+            {/* ── Weakest Link ── */}
+            {report.weakestItem && ['d','e'].includes(report.weakestItem.ecoscoreGrade?.toLowerCase() ?? '') && (
+              <Link to={`/product-off/${report.weakestItem.barcode}`} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', border: '1px solid rgba(255,140,0,0.3)', borderLeft: '3px solid #ff8c00', background: '#000', textDecoration: 'none' }}>
+                <AlertCircle size={16} style={{ color: '#ff8c00', flexShrink: 0 }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ ...MONO, fontSize: '0.5rem', color: '#ff8c00', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: 3 }}>
+                    [!] WEAKEST LINK
+                  </p>
+                  <p style={{ ...MONO, fontSize: '0.75rem', color: '#ffffff', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {report.weakestItem.productName}
+                  </p>
+                  <p style={{ ...MONO, fontSize: '0.55rem', color: '#84898E', marginTop: 2 }}>
+                    ECO_{report.weakestItem.ecoscoreGrade?.toUpperCase()} · consider swapping
                   </p>
                 </div>
-                {report.weakestItem.imageUrl && (
-                  <img src={report.weakestItem.imageUrl} alt="" className="w-11 h-11 rounded-lg object-cover flex-shrink-0 opacity-80" />
-                )}
-                <ChevronRight className="w-4 h-4 text-orange-400 flex-shrink-0" />
+                <ChevronRight size={14} style={{ color: '#84898E', flexShrink: 0 }} />
               </Link>
             )}
 
-            {/* ── Search to Add ── */}
-            <div className="bg-card rounded-2xl border border-border/60 shadow-soft overflow-hidden">
-              <div className="p-3 border-b border-border/60">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/60" />
+            {/* ── Search ── */}
+            <div style={{ border: '1px solid rgba(255,255,255,0.08)', background: '#000' }}>
+              <div style={{ padding: '10px 12px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                <span style={{ ...MONO, fontSize: '0.45rem', color: '#84898E', letterSpacing: '0.18em', textTransform: 'uppercase' }}>
+                  // ADD_PRODUCT
+                </span>
+              </div>
+              <div style={{ padding: '10px 12px 12px' }}>
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <span style={{ position: 'absolute', left: 10, ...MONO, fontSize: '0.7rem', color: '#00c853', pointerEvents: 'none' }}>›</span>
+                  {searching
+                    ? <Loader2 size={13} style={{ position: 'absolute', right: 10, color: '#84898E', animation: 'spin 1s linear infinite' }} />
+                    : query
+                    ? <button onClick={() => { setQuery(""); setSearchResults([]); }} style={{ position: 'absolute', right: 10, background: 'none', border: 'none', color: '#84898E', cursor: 'pointer', padding: 0 }}><X size={13} /></button>
+                    : null
+                  }
                   <input
                     type="text"
                     value={query}
                     onChange={e => setQuery(e.target.value)}
-                    placeholder="Search products to add…"
-                    className="w-full pl-9 pr-9 py-2.5 text-sm bg-muted/40 rounded-xl border border-border/40 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40 placeholder:text-muted-foreground/50"
+                    placeholder="search products to add..."
+                    style={{
+                      width: '100%', height: 40,
+                      background: 'rgba(255,255,255,0.04)',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      color: '#fff', ...MONO, fontSize: '0.75rem',
+                      paddingLeft: 24, paddingRight: 32, outline: 'none',
+                    }}
                   />
-                  {query && (
-                    <button
-                      onClick={() => { setQuery(""); setSearchResults([]); }}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground active:scale-[0.97] transition-transform"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  )}
                 </div>
-              </div>
 
-              {(searching || searchResults.length > 0) && (
-                <div className="divide-y divide-border/40">
-                  {searching && (
-                    <div className="flex items-center gap-2 px-4 py-3 text-sm text-muted-foreground">
-                      <Loader2 className="w-4 h-4 animate-spin" /> Searching…
-                    </div>
-                  )}
-                  {!searching && searchResults.map(result => {
-                    const grade = result.ecoscoreGrade?.toLowerCase();
-                    const gradeStyle = grade ? GRADE_STYLE[grade] : null;
-                    const already = inBasket(result.barcode);
-                    return (
-                      <div key={result.barcode} className="flex items-center gap-3 px-4 py-2.5">
-                        {result.imageUrl ? (
-                          <img src={result.imageUrl} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0 border border-border/40" />
-                        ) : (
-                          <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center flex-shrink-0 text-lg">📦</div>
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-foreground truncate">{result.productName || "Unknown"}</p>
-                          <div className="flex items-center gap-1.5 mt-0.5">
-                            {result.brand && <span className="text-xs text-muted-foreground truncate">{result.brand}</span>}
-                            {gradeStyle && (
-                              <span className={cn("text-[9px] font-bold px-1.5 py-0.5 rounded-md", gradeStyle.bg, gradeStyle.text)}>
-                                Eco {grade!.toUpperCase()}
-                              </span>
-                            )}
-                            {result.carbonFootprint100g !== null && result.carbonFootprint100g !== undefined && (
-                              <span className="text-[9px] text-muted-foreground">
-                                {result.carbonFootprint100g.toFixed(1)}g CO₂/100g
-                              </span>
-                            )}
+                {(searchResults.length > 0) && (
+                  <div style={{ marginTop: 8, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                    {searchResults.map(result => {
+                      const grade = result.ecoscoreGrade?.toLowerCase();
+                      const already = inBasket(result.barcode);
+                      return (
+                        <div key={result.barcode} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                          {result.imageUrl
+                            ? <img src={result.imageUrl} alt="" style={{ width: 36, height: 36, objectFit: 'cover', flexShrink: 0, border: '1px solid rgba(255,255,255,0.08)' }} />
+                            : <div style={{ width: 36, height: 36, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ShoppingBag size={14} style={{ color: '#84898E' }} /></div>
+                          }
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{ ...MONO, fontSize: '0.7rem', fontWeight: 700, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{result.productName || 'Unknown'}</p>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3 }}>
+                              {result.brand && <span style={{ ...MONO, fontSize: '0.55rem', color: '#84898E' }}>{result.brand}</span>}
+                              {grade && <span style={{ ...MONO, fontSize: '0.5rem', fontWeight: 700, color: ECO_COLOR[grade] || '#84898E', border: `1px solid ${ECO_COLOR[grade] || '#84898E'}`, padding: '1px 4px' }}>ECO_{grade.toUpperCase()}</span>}
+                            </div>
                           </div>
+                          <button
+                            onClick={() => !already && handleAdd(result)}
+                            disabled={already}
+                            style={{ width: 30, height: 30, border: `1px solid ${already ? 'rgba(0,200,83,0.4)' : 'rgba(255,255,255,0.15)'}`, background: already ? 'rgba(0,200,83,0.08)' : 'transparent', color: already ? '#00c853' : '#84898E', cursor: already ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                          >
+                            {already ? <CheckCircle2 size={13} /> : <Plus size={13} />}
+                          </button>
                         </div>
-                        <button
-                          onClick={() => !already && handleAdd(result)}
-                          disabled={already}
-                          className={cn(
-                            "flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center active:scale-[0.97] transition-transform",
-                            already
-                              ? "bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 cursor-default"
-                              : "hover:opacity-90"
-                          )}
-                          style={already ? undefined : { backgroundColor: "hsl(172 72% 28%)", color: "white" }}
-                        >
-                          {already ? <CheckCircle2 className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-                        </button>
-                      </div>
-                    );
-                  })}
-                  {!searching && searchResults.length === 0 && query.trim().length >= 2 && (
-                    <p className="px-4 py-3 text-sm text-muted-foreground">No products found.</p>
-                  )}
-                </div>
-              )}
+                      );
+                    })}
+                    {searchResults.length === 0 && query.trim().length >= 2 && !searching && (
+                      <p style={{ ...MONO, fontSize: '0.6rem', color: '#84898E', padding: '10px 0' }}>NO_RESULTS_FOUND</p>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* ── Basket Items ── */}
             {basket.length === 0 ? (
-              <div className="bg-card rounded-2xl border border-border/60 shadow-soft p-10 text-center">
-                <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                  <ShoppingCart className="w-7 h-7 text-primary" />
-                </div>
-                <h2 className="text-lg font-display font-bold text-foreground mb-2">Your basket is empty</h2>
-                <p className="text-sm text-muted-foreground mb-6 max-w-xs mx-auto">
-                  Search above, or{" "}
-                  <Link to="/scan" className="text-primary font-semibold hover:underline">scan a product</Link>
-                  {" "}and tap "Add to Basket" on the product page.
+              <div style={{ border: '1px solid rgba(255,255,255,0.08)', borderLeft: '3px solid #84898E', background: '#000', padding: '32px 20px', textAlign: 'center' }}>
+                <ShoppingCart size={28} style={{ color: '#84898E', margin: '0 auto 12px' }} />
+                <p style={{ ...MONO, fontSize: '0.75rem', fontWeight: 700, color: '#ffffff', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
+                  BASKET_EMPTY
                 </p>
-                <Link
-                  to="/scan"
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold shadow-soft hover:opacity-90 active:scale-[0.97] transition-transform"
-                  style={{ backgroundColor: "hsl(172 72% 28%)", color: "white" }}
-                >
-                  <ShoppingBag className="w-4 h-4" /> Start Scanning
+                <p style={{ ...MONO, fontSize: '0.6rem', color: '#84898E', marginBottom: 20, lineHeight: 1.6 }}>
+                  Search above or scan a product
+                </p>
+                <Link to="/scan" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px', background: '#00c853', color: '#000', textDecoration: 'none', ...MONO, fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+                  <ShoppingBag size={13} /> [START SCANNING]
                 </Link>
               </div>
             ) : (
               <div>
-                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2 px-1">
-                  {basket.length} item{basket.length !== 1 ? "s" : ""} in basket
+                <p style={{ ...MONO, fontSize: '0.48rem', color: '#84898E', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 8 }}>
+                  // {basket.length} ITEM{basket.length !== 1 ? 'S' : ''} IN BASKET
                 </p>
-                <div className="space-y-2">
-                  {basket.map(item => {
-                    const grade = item.ecoscoreGrade?.toLowerCase();
-                    const gradeStyle = grade ? GRADE_STYLE[grade] : null;
-                    const isWeakest = report.weakestItem?.barcode === item.barcode;
+                <div style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
+                  {basket.map((item, i) => {
+                    const ecoGrade = item.ecoscoreGrade?.toLowerCase();
+                    const nutriGrade = item.nutriscoreGrade?.toLowerCase();
                     const isFlagged = item.laborAllegations > 0;
+                    const isWeakest = report.weakestItem?.barcode === item.barcode;
 
                     return (
-                      <div key={item.id} className={cn(
-                        "flex items-center gap-3 p-3 rounded-xl border bg-card transition-all",
-                        isWeakest
-                          ? "border-orange-300 dark:border-orange-700 bg-orange-50/50 dark:bg-orange-950/10"
-                          : isFlagged
-                          ? "border-red-200 dark:border-red-900 bg-red-50/30 dark:bg-red-950/10"
-                          : "border-border/60"
-                      )}>
-                        <Link to={`/product-off/${item.barcode}`} className="flex items-center gap-3 flex-1 min-w-0">
-                          {item.imageUrl ? (
-                            <img src={item.imageUrl} alt="" className="w-11 h-11 rounded-lg object-cover flex-shrink-0" />
-                          ) : (
-                            <div className="w-11 h-11 rounded-lg bg-muted flex items-center justify-center flex-shrink-0 text-xl">📦</div>
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1.5">
-                              {isWeakest && <AlertCircle className="w-3.5 h-3.5 text-orange-500 flex-shrink-0" />}
-                              <span className="text-sm font-semibold text-foreground truncate">{item.productName}</span>
-                            </div>
-                            <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                              {item.brand && <span className="text-xs text-muted-foreground">{item.brand}</span>}
-                              {gradeStyle ? (
-                                <span className={cn("text-[9px] font-bold px-1.5 py-0.5 rounded-md", gradeStyle.bg, gradeStyle.text)}>
-                                  Eco {grade!.toUpperCase()} · {GRADE_LABEL[grade!]}
-                                </span>
-                              ) : (
-                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground">No eco data</span>
-                              )}
-                              {item.nutriscoreGrade && (
-                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-blue-500 text-white">
-                                  Nutri {item.nutriscoreGrade.toUpperCase()}
-                                </span>
-                              )}
-                              {item.co2Per100g !== null && item.co2Per100g !== undefined && (
-                                <span className="inline-flex items-center gap-0.5 text-[9px] text-muted-foreground">
-                                  <Leaf className="w-2.5 h-2.5" />
-                                  {item.co2Per100g.toFixed(1)}g CO₂/100g
-                                </span>
-                              )}
-                              {isFlagged && (
-                                <span className="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-300">
-                                  <Users className="w-2.5 h-2.5" /> Labour flag
-                                </span>
-                              )}
+                      <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', borderBottom: i < basket.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none', borderLeft: isFlagged ? '2px solid #ff3b30' : isWeakest ? '2px solid #ff8c00' : '2px solid transparent' }}>
+                        <Link to={`/product-off/${item.barcode}`} style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0, textDecoration: 'none' }}>
+                          {item.imageUrl
+                            ? <img src={item.imageUrl} alt="" style={{ width: 44, height: 44, objectFit: 'cover', flexShrink: 0, border: '1px solid rgba(255,255,255,0.08)' }} />
+                            : <div style={{ width: 44, height: 44, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ShoppingBag size={16} style={{ color: '#84898E' }} /></div>
+                          }
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{ ...MONO, fontSize: '0.7rem', fontWeight: 700, color: '#ffffff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 4 }}>
+                              {item.productName}
+                            </p>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+                              {item.brand && <span style={{ ...MONO, fontSize: '0.55rem', color: '#84898E' }}>{item.brand}</span>}
+                              {ecoGrade
+                                ? <span style={{ ...MONO, fontSize: '0.48rem', fontWeight: 700, border: `1px solid ${ECO_COLOR[ecoGrade] || '#84898E'}`, color: ECO_COLOR[ecoGrade] || '#84898E', padding: '1px 5px' }}>ECO_{ecoGrade.toUpperCase()}</span>
+                                : <span style={{ ...MONO, fontSize: '0.48rem', color: '#84898E', border: '1px solid rgba(255,255,255,0.1)', padding: '1px 5px' }}>NO_ECO</span>
+                              }
+                              {nutriGrade && <span style={{ ...MONO, fontSize: '0.48rem', fontWeight: 700, border: `1px solid ${NUTRI_COLOR[nutriGrade] || '#84898E'}`, color: NUTRI_COLOR[nutriGrade] || '#84898E', padding: '1px 5px' }}>NUTRI_{nutriGrade.toUpperCase()}</span>}
+                              {isFlagged && <span style={{ ...MONO, fontSize: '0.48rem', fontWeight: 700, border: '1px solid rgba(255,59,48,0.5)', color: '#ff3b30', padding: '1px 5px', display: 'inline-flex', alignItems: 'center', gap: 3 }}><Users size={9} /> LABOUR</span>}
                             </div>
                           </div>
                         </Link>
                         <button
                           onClick={() => handleRemove(item.barcode)}
-                          className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 active:scale-[0.97] transition-transform">
-                          <X className="w-4 h-4" />
+                          style={{ width: 30, height: 30, border: '1px solid rgba(255,255,255,0.08)', background: 'transparent', color: '#84898E', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                        >
+                          <X size={13} />
                         </button>
                       </div>
                     );
@@ -529,6 +372,13 @@ export default function ShoppingList() {
       </main>
 
       <BottomNav />
+
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 }

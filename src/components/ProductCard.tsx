@@ -1,9 +1,7 @@
 import { Link } from "react-router-dom";
-import { MapPin, Leaf, AlertTriangle, Package, Award, TrendingUp } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { MapPin, Leaf, Package, Award } from "lucide-react";
 import { ScoreDisplay } from "@/components/ScoreDisplay";
 import { Product, calculateScore } from "@/data/products";
-import { cn } from "@/lib/utils";
 
 interface ProductCardProps {
   product: Product;
@@ -11,43 +9,62 @@ interface ProductCardProps {
 
 const laborRiskConfig = {
   low: {
-    label: "Low Risk",
-    className: "bg-emerald-50 text-emerald-700 border-emerald-200",
-    dot: "bg-emerald-500",
+    label: "LOW RISK",
+    borderColor: "rgba(16, 185, 129, 0.4)",
+    textColor: "#10b981",
   },
   medium: {
-    label: "Medium Risk",
-    className: "bg-amber-50 text-amber-700 border-amber-200",
-    dot: "bg-amber-500",
+    label: "MED RISK",
+    borderColor: "rgba(245, 158, 11, 0.4)",
+    textColor: "#f59e0b",
   },
   high: {
-    label: "High Risk",
-    className: "bg-red-50 text-red-700 border-red-200",
-    dot: "bg-red-500",
+    label: "HIGH RISK",
+    borderColor: "rgba(240, 0, 7, 0.5)",
+    textColor: "#00c853",
   },
 };
 
-const scoreGradient: (score: number) => string = (score) => {
-  if (score >= 80) return "from-emerald-400/20 via-teal-300/10 to-emerald-200/20";
-  if (score >= 60) return "from-lime-400/20 via-lime-300/10 to-emerald-200/20";
-  if (score >= 40) return "from-amber-400/20 via-amber-300/10 to-yellow-200/20";
-  if (score >= 20) return "from-orange-400/20 via-orange-300/10 to-amber-200/20";
-  return "from-red-400/20 via-red-300/10 to-orange-200/20";
+const gradeAccentColor = (score: number): string => {
+  if (score >= 80) return "#10b981";
+  if (score >= 60) return "#84cc16";
+  if (score >= 40) return "#f59e0b";
+  if (score >= 20) return "#f97316";
+  return "#00c853";
 };
 
 export function ProductCard({ product }: ProductCardProps) {
   const score = calculateScore(product);
   const labor = laborRiskConfig[product.laborRisk];
+  const accentColor = gradeAccentColor(score);
+
+  // Grade letter from score
+  const gradeLetter =
+    score >= 80 ? "A" :
+    score >= 60 ? "B" :
+    score >= 40 ? "C" :
+    score >= 20 ? "D" : "E";
 
   return (
     <Link
       to={`/product/${product.id.replace("#", "")}`}
-      className="group block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 rounded-2xl cursor-pointer"
+      className="group block focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/30"
+      style={{ textDecoration: "none" }}
     >
-      <article className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 overflow-hidden transition-all duration-200 group-hover:shadow-lg group-hover:shadow-emerald-500/10 group-hover:-translate-y-0.5 group-hover:border-emerald-200 dark:group-hover:border-emerald-800 h-full flex flex-col">
+      <article
+        className="h-full flex flex-col overflow-hidden transition-all duration-150 group-hover:border-white/20"
+        style={{
+          background: "#000000",
+          border: "1px solid rgba(255,255,255,0.08)",
+          borderTop: `2px solid ${accentColor}`,
+        }}
+      >
 
         {/* Image area */}
-        <div className={cn("relative h-40 bg-gradient-to-br overflow-hidden flex-shrink-0", scoreGradient(score))}>
+        <div
+          className="relative overflow-hidden flex-shrink-0"
+          style={{ height: "9rem", background: "#0a0a0a" }}
+        >
           {product.imageUrl ? (
             <img
               src={product.imageUrl}
@@ -57,56 +74,91 @@ export function ProductCard({ product }: ProductCardProps) {
             />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center">
-              <Leaf className="w-14 h-14 text-emerald-500/20 transition-all duration-300 group-hover:text-emerald-500/35" />
+              <Leaf className="w-10 h-10" style={{ color: "rgba(132,137,142,0.2)" }} />
             </div>
           )}
 
-          {/* Top-left: Top badge */}
-          {score >= 90 && (
-            <div className="absolute top-3 left-3">
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500 text-white shadow-sm shadow-emerald-500/30">
-                <TrendingUp className="w-3 h-3" />
-                Top Pick
-              </span>
-            </div>
-          )}
-
-          {/* Top-right: Score badge */}
-          <div className="absolute top-3 right-3">
-            <ScoreDisplay score={score} size="sm" showLabel={false} />
+          {/* Score badge — outlined box */}
+          <div
+            className="absolute top-2 right-2 flex flex-col items-center justify-center"
+            style={{
+              width: "2.25rem",
+              height: "2.25rem",
+              border: `1px solid ${accentColor}`,
+              background: "rgba(0,0,0,0.85)",
+            }}
+          >
+            <span
+              className="font-mono font-black leading-none"
+              style={{ fontSize: "1.1rem", color: accentColor }}
+            >
+              {gradeLetter}
+            </span>
           </div>
+
+          {/* Score overlay */}
+          <div className="absolute bottom-0 left-0 right-0" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%)", height: "2rem" }} />
         </div>
 
         {/* Content */}
-        <div className="p-4 flex flex-col gap-3 flex-1">
+        <div className="p-3 flex flex-col gap-2 flex-1">
 
           {/* Name + brand */}
           <div className="flex-1">
-            <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 text-[15px] leading-snug line-clamp-2 group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors">
+            <h3
+              className="font-mono font-bold uppercase leading-tight line-clamp-2 transition-colors group-hover:text-white"
+              style={{ fontSize: "0.7rem", color: "#ffffff", letterSpacing: "0.04em" }}
+            >
               {product.name}
             </h3>
-            <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5 font-medium">{product.brand}</p>
+            <p
+              className="font-mono mt-0.5 uppercase"
+              style={{ fontSize: "0.55rem", color: "#84898E", letterSpacing: "0.08em" }}
+            >
+              {product.brand}
+            </p>
           </div>
 
           {/* Origin */}
-          <div className="flex items-center gap-1.5 text-xs text-neutral-500">
-            <MapPin className="w-3 h-3 text-emerald-500 flex-shrink-0" />
-            <span className="truncate">{product.origin.country}</span>
+          <div className="flex items-center gap-1.5">
+            <MapPin className="w-2.5 h-2.5 flex-shrink-0" style={{ color: "#84898E" }} />
+            <span
+              className="font-mono truncate"
+              style={{ fontSize: "0.58rem", color: "#84898E" }}
+            >
+              {product.origin.country}
+            </span>
           </div>
 
           {/* Badges row */}
           <div className="flex flex-wrap gap-1.5 mt-auto">
-            <span className={cn(
-              "inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border font-medium",
-              labor.className
-            )}>
-              <span className={cn("w-1.5 h-1.5 rounded-full flex-shrink-0", labor.dot)} />
-              {labor.label}
+            {/* Labor risk badge */}
+            <span
+              className="font-mono uppercase"
+              style={{
+                fontSize: "0.5rem",
+                color: labor.textColor,
+                border: `1px solid ${labor.borderColor}`,
+                padding: "2px 6px",
+                letterSpacing: "0.08em",
+              }}
+            >
+              [{labor.label}]
             </span>
 
-            <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 font-medium">
-              <Package className="w-3 h-3" />
-              {product.carbonFootprint} kg CO₂
+            {/* CO2 badge */}
+            <span
+              className="font-mono uppercase flex items-center gap-1"
+              style={{
+                fontSize: "0.5rem",
+                color: "#84898E",
+                border: "1px solid rgba(255,255,255,0.1)",
+                padding: "2px 6px",
+                letterSpacing: "0.06em",
+              }}
+            >
+              <Package className="w-2 h-2" />
+              {product.carbonFootprint} CO₂
             </span>
           </div>
 
@@ -116,14 +168,29 @@ export function ProductCard({ product }: ProductCardProps) {
               {product.certifications.slice(0, 2).map((cert, i) => (
                 <span
                   key={i}
-                  className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-medium"
+                  className="font-mono uppercase flex items-center gap-1"
+                  style={{
+                    fontSize: "0.48rem",
+                    color: "#40aaff",
+                    border: "1px solid rgba(64, 170, 255, 0.25)",
+                    padding: "2px 5px",
+                    letterSpacing: "0.06em",
+                  }}
                 >
-                  <Award className="w-2.5 h-2.5" />
+                  <Award className="w-2 h-2" />
                   {cert}
                 </span>
               ))}
               {product.certifications.length > 2 && (
-                <span className="text-[11px] px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-500 font-medium">
+                <span
+                  className="font-mono"
+                  style={{
+                    fontSize: "0.48rem",
+                    color: "#84898E",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    padding: "2px 5px",
+                  }}
+                >
                   +{product.certifications.length - 2}
                 </span>
               )}
