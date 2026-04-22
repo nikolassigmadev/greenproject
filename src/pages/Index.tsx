@@ -139,7 +139,7 @@ export default function Index() {
           </p>
 
           {/* ── Side-by-side: headline + scanner ── */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 200px", gap: 6, alignItems: "stretch" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 200px", gap: 6, alignItems: "start" }}>
 
             {/* LEFT: headline */}
             <div>
@@ -153,7 +153,7 @@ export default function Index() {
             </div>
 
             {/* RIGHT: animated scanner visual */}
-            <div style={{ position: "relative", height: "100%" }}>
+            <div style={{ position: "relative", minHeight: 295 }}>
 
               {/* Dot-grid background */}
               <div style={{
