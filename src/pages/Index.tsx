@@ -137,6 +137,33 @@ const Index = () => {
             </Link>
           </div>
 
+          {/* ── Floating food emojis — green tinted background layer ── */}
+          {[
+            { e: '🥫', top: '5%',  left: '2%',   size: '3.4rem', anim: 'floatA', delay: '0s',    opacity: 0.55 },
+            { e: '🍫', top: '3%',  right: '3%',  size: '3rem',   anim: 'floatB', delay: '-2.1s', opacity: 0.5  },
+            { e: '🥤', top: '27%', left: '0%',   size: '4rem',   anim: 'floatC', delay: '-1.3s', opacity: 0.45 },
+            { e: '🧃', top: '20%', right: '1%',  size: '3.4rem', anim: 'floatD', delay: '-3.2s', opacity: 0.5  },
+            { e: '🫙', top: '53%', left: '2%',   size: '3.8rem', anim: 'floatE', delay: '-0.7s', opacity: 0.45 },
+            { e: '🧂', top: '48%', right: '2%',  size: '3rem',   anim: 'floatA', delay: '-4s',   opacity: 0.5  },
+            { e: '🍬', top: '76%', left: '1%',   size: '3.4rem', anim: 'floatB', delay: '-2.8s', opacity: 0.45 },
+            { e: '🥛', top: '72%', right: '2%',  size: '3.2rem', anim: 'floatC', delay: '-1.8s', opacity: 0.5  },
+            { e: '🍪', top: '13%', left: '43%',  size: '2.6rem', anim: 'floatD', delay: '-0.4s', opacity: 0.28 },
+            { e: '🥡', top: '64%', left: '46%',  size: '2.4rem', anim: 'floatE', delay: '-3.6s', opacity: 0.28 },
+          ].map(({ e, top, left, right, size, anim, delay, opacity }, i) => (
+            <div key={i} style={{
+              position: 'absolute',
+              top, left, right,
+              fontSize: size,
+              lineHeight: 1,
+              zIndex: 1,
+              pointerEvents: 'none',
+              userSelect: 'none',
+              filter: 'grayscale(1) sepia(1) hue-rotate(72deg) saturate(22) brightness(0.6) drop-shadow(0 0 8px rgba(0,200,83,0.5))',
+              opacity,
+              animation: `${anim} ${5 + i * 0.4}s ease-in-out ${delay} infinite`,
+            }}>{e}</div>
+          ))}
+
           {/* ── Giant two-line wordmark — each word fills full width ── */}
           <div style={{ position: 'relative', zIndex: 2, lineHeight: 0.85, padding: '4px 0 0', overflow: 'hidden' }}>
             {/* GOOD — outlined, glitches to FOOD */}
