@@ -72,6 +72,15 @@ export default function Index() {
     return () => clearTimeout(t);
   }, []);
 
+  const [buySignal, setBuySignal] = useState(true);
+  useEffect(() => {
+    let intervalId: ReturnType<typeof setInterval>;
+    const timeoutId = setTimeout(() => {
+      intervalId = setInterval(() => setBuySignal(v => !v), 2200);
+    }, 3600);
+    return () => { clearTimeout(timeoutId); clearInterval(intervalId); };
+  }, []);
+
   useEffect(() => {
     const check = () => {
       const p = loadPriorities();
@@ -130,23 +139,21 @@ export default function Index() {
           </p>
 
           {/* ── Side-by-side: headline + scanner ── */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 148px", gap: 10, alignItems: "start" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 200px", gap: 6, alignItems: "stretch" }}>
 
             {/* LEFT: headline */}
             <div>
-              <h1 style={{ fontFamily: D, fontWeight: 400, lineHeight: 0.86, margin: "0 0 20px" }}>
-                <span style={{ display: "block", fontSize: "clamp(2.4rem, 11.8vw, 3.8rem)", color: "#fff", letterSpacing: "0.02em" }}>SCAN ANY</span>
-                <span style={{ display: "block", fontSize: "clamp(2.4rem, 11.8vw, 3.8rem)", color: "#fff", letterSpacing: "0.02em" }}>PRODUCT.</span>
-                <span style={{ display: "block", fontSize: "clamp(2.4rem, 11.8vw, 3.8rem)", color: G, letterSpacing: "0.02em", textShadow: "0 0 30px rgba(0,200,83,0.3)" }}>SEE ITS</span>
-                <span style={{ display: "block", fontSize: "clamp(2.4rem, 11.8vw, 3.8rem)", color: G, letterSpacing: "0.02em", textShadow: "0 0 30px rgba(0,200,83,0.3)" }}>ETHICS.</span>
+              <h1 style={{ fontFamily: D, fontWeight: 400, lineHeight: 0.9, margin: "0 0 20px" }}>
+                <span style={{ display: "block", fontSize: "clamp(2.6rem, 12vw, 4.2rem)", color: "#fff", letterSpacing: "0.02em" }}>SCAN ANY PRODUCT.</span>
+                <span style={{ display: "block", fontSize: "clamp(2.6rem, 12vw, 4.2rem)", color: G, letterSpacing: "0.02em", textShadow: "0 0 30px rgba(0,200,83,0.3)" }}>SEE ITS ETHICS.</span>
               </h1>
-              <p style={{ fontFamily: M, fontSize: "0.55rem", color: GR, lineHeight: 1.75, letterSpacing: "0.02em" }}>
+              <p style={{ fontFamily: M, fontSize: "0.75rem", color: GR, lineHeight: 1.75, letterSpacing: "0.02em" }}>
                 Point your camera at any barcode. Instantly see labour rights, carbon footprint, animal welfare, nutrition grade, origin & greener alternatives — free.
               </p>
             </div>
 
             {/* RIGHT: animated scanner visual */}
-            <div style={{ position: "relative", minHeight: 290 }}>
+            <div style={{ position: "relative", height: "100%" }}>
 
               {/* Dot-grid background */}
               <div style={{
@@ -156,7 +163,7 @@ export default function Index() {
               }} />
 
               {/* ── Product box ── */}
-              <div className="scanner-product" style={{ position: "absolute", left: 3, top: 8, width: 94, height: 134 }}>
+              <div className="scanner-product" style={{ position: "absolute", left: 3, top: 8, width: 130, height: 190 }}>
 
                 {/* Lock-on bracket corners (4 L-shapes) */}
                 {[0,1,2,3].map((i) => {
@@ -186,13 +193,13 @@ export default function Index() {
 
                   {/* Label band */}
                   <div style={{ height: "30%", borderBottom: "1px solid rgba(0,200,83,0.18)", background: "rgba(0,200,83,0.07)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <span style={{ fontFamily: D, fontSize: "1.05rem", color: "rgba(0,200,83,0.75)", letterSpacing: "0.06em" }}>OAT MILK</span>
+                    <span style={{ fontFamily: D, fontSize: "1.5rem", color: "rgba(0,200,83,0.75)", letterSpacing: "0.06em" }}>OAT MILK</span>
                   </div>
 
                   {/* Product icon */}
                   <div style={{ height: "42%", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <span style={{
-                      fontSize: "2rem", lineHeight: 1,
+                      fontSize: "3.2rem", lineHeight: 1,
                       filter: "grayscale(1) sepia(1) hue-rotate(72deg) saturate(14) brightness(0.6) drop-shadow(0 0 6px rgba(0,200,83,0.5))",
                       opacity: 0.7,
                     }}>🥛</span>
@@ -222,7 +229,7 @@ export default function Index() {
               </div>
 
               {/* ── Score chips (right column) ── */}
-              <div style={{ position: "absolute", left: 101, top: 8, display: "flex", flexDirection: "column", gap: 10 }}>
+              <div style={{ position: "absolute", left: 138, top: 8, display: "flex", flexDirection: "column", gap: 10 }}>
                 {SCANNER_CHIPS.map((chip, i) => (
                   <div key={chip.label} className={chip.cls} style={{ opacity: 0 }}>
                     {/* Connector tick */}
@@ -253,20 +260,57 @@ export default function Index() {
               </div>
 
               {/* ── Processing label ── */}
-              <div style={{ position: "absolute", bottom: 0, left: 0, width: 100, textAlign: "center" }}>
+              <div style={{ position: "absolute", bottom: 0, left: 0, width: 136, textAlign: "center" }}>
                 <span className="terminal-cursor" style={{ fontFamily: M, fontSize: "0.4rem", color: "rgba(0,200,83,0.4)", letterSpacing: "0.12em", textTransform: "uppercase" }}>
                   SCANNING...
                 </span>
               </div>
 
+              {/* ── Verdict arrow ── */}
+              <div className="scanner-verdict" style={{
+                position: "absolute", left: 3, top: 206, width: 130,
+                display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
+              }}>
+                <div style={{
+                  fontFamily: M, fontSize: "0.5rem", color: "rgba(132,137,142,0.7)",
+                  letterSpacing: "0.18em", textTransform: "uppercase", marginBottom: 2,
+                }}>VERDICT</div>
+                <div className="scanner-verdict-arrow" style={{
+                  fontFamily: M, fontSize: "0.7rem", lineHeight: 1,
+                  color: buySignal ? G : "#ff4136",
+                  transition: "color 0.3s",
+                }}>▼</div>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 3 }}>
+                  <div style={{
+                    fontFamily: D, fontSize: "2rem", letterSpacing: "0.04em", lineHeight: 1,
+                    color: buySignal ? G : "#ff4136",
+                    textShadow: buySignal ? "0 0 18px rgba(0,200,83,0.8)" : "0 0 18px rgba(255,65,54,0.8)",
+                    transition: "color 0.3s, text-shadow 0.3s",
+                  }}>
+                    {buySignal ? "82" : "31"}
+                  </div>
+                  <div style={{
+                    fontFamily: M, fontSize: "0.85rem", color: "rgba(132,137,142,0.6)",
+                    letterSpacing: "0.1em",
+                  }}>/100</div>
+                </div>
+                <div style={{
+                  fontFamily: D, fontSize: "1.5rem", letterSpacing: "0.08em", lineHeight: 1,
+                  color: buySignal ? G : "#ff4136",
+                  transition: "color 0.3s",
+                }}>
+                  {buySignal ? "BUY" : "AVOID"}
+                </div>
+              </div>
+
               {/* ── Data flow lines (decorative vertical dashes) ── */}
-              {[28, 56, 108].map((left, i) => (
+              {[38, 78, 148].map((left, i) => (
                 <div key={i} style={{
                   position: "absolute",
                   left,
-                  top: 152,
+                  top: 210,
                   width: 1,
-                  height: 70,
+                  height: 80,
                   overflow: "hidden",
                   opacity: 0.25,
                   pointerEvents: "none",

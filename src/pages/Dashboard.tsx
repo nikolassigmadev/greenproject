@@ -36,12 +36,12 @@ const formatDate = (ts: number) => {
   return new Date(ts).toLocaleDateString();
 };
 
-const ecoBadge: Record<string, { bg: string; text: string; label: string }> = {
-  a: { bg: "bg-emerald-500", text: "text-white", label: "A" },
-  b: { bg: "bg-lime-500", text: "text-white", label: "B" },
-  c: { bg: "bg-amber-500", text: "text-white", label: "C" },
-  d: { bg: "bg-orange-500", text: "text-white", label: "D" },
-  e: { bg: "bg-red-500", text: "text-white", label: "E" },
+const ecoBadge: Record<string, { color: string; label: string }> = {
+  a: { color: "#00c853", label: "A" },
+  b: { color: "#00c853", label: "B" },
+  c: { color: "#ffc700", label: "C" },
+  d: { color: "#ffc700", label: "D" },
+  e: { color: "#ff4136", label: "E" },
 };
 
 // SVG sparkline of eco scores over time (last N scans)
@@ -81,15 +81,15 @@ function EcoSparkline({ history }: { history: ScanHistoryEntry[] }) {
     >
       <defs>
         <linearGradient id="sparkGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="hsl(152 48% 30%)" stopOpacity="0.25" />
-          <stop offset="100%" stopColor="hsl(152 48% 30%)" stopOpacity="0" />
+          <stop offset="0%" stopColor="#00c853" stopOpacity="0.25" />
+          <stop offset="100%" stopColor="#00c853" stopOpacity="0" />
         </linearGradient>
       </defs>
       <path d={areaD} fill="url(#sparkGrad)" />
       <path
         d={pathD}
         fill="none"
-        stroke="hsl(152 48% 30%)"
+        stroke="#00c853"
         strokeWidth="1.8"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -99,7 +99,7 @@ function EcoSparkline({ history }: { history: ScanHistoryEntry[] }) {
         cx={toX(scores.length - 1)}
         cy={toY(scores[scores.length - 1])}
         r="3"
-        fill="hsl(152 48% 30%)"
+        fill="#00c853"
       />
     </svg>
   );
@@ -127,7 +127,7 @@ export default function Dashboard() {
   };
 
   const statCards = [
-    { label: "Total Scans", value: stats.total, color: "hsl(152 48% 30%)", bg: "hsl(152 42% 96%)" },
+    { label: "Total Scans", value: stats.total, color: "#00c853", bg: "hsl(152 42% 96%)" },
     { label: "Good Choices", value: stats.good, color: "hsl(142 55% 38%)", bg: "hsl(142 45% 96%)" },
     { label: "Moderate", value: stats.moderate, color: "hsl(38 88% 44%)", bg: "hsl(38 70% 96%)" },
     { label: "Avoid", value: stats.avoid, color: "hsl(0 68% 48%)", bg: "hsl(0 50% 97%)" },
@@ -222,52 +222,52 @@ export default function Dashboard() {
 
                 {/* Personal Impact Stats */}
                 {impact.totalThisMonth > 0 && (
-                  <div className="bg-gradient-to-br from-emerald-50 via-teal-50 to-emerald-50 dark:from-emerald-950/30 dark:via-teal-950/20 dark:to-emerald-950/30 rounded-2xl border-2 border-emerald-200 dark:border-emerald-800 p-4">
+                  <div style={{ background: "#000", border: "1px solid rgba(0,200,83,0.25)", borderLeft: "3px solid #00c853", padding: "16px" }}>
                     <div className="flex items-center gap-2 mb-3">
-                      <div className="w-7 h-7 rounded-xl bg-emerald-500 flex items-center justify-center flex-shrink-0">
-                        <Zap className="w-3.5 h-3.5 text-white" />
+                      <div style={{ width: 28, height: 28, background: "rgba(0,200,83,0.12)", border: "1px solid rgba(0,200,83,0.3)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <Zap style={{ width: 14, height: 14, color: "#00c853" }} />
                       </div>
-                      <h2 className="text-sm font-bold text-emerald-900 dark:text-emerald-100">
+                      <h2 style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.55rem", fontWeight: 700, color: "#fff", letterSpacing: "0.18em", textTransform: "uppercase" }}>
                         Your Impact This Month
                       </h2>
-                      <span className="text-xs text-emerald-600 dark:text-emerald-400 ml-auto">
+                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.44rem", color: "#84898E", letterSpacing: "0.1em", marginLeft: "auto" }}>
                         {impact.totalThisMonth} scan{impact.totalThisMonth !== 1 ? "s" : ""}
                       </span>
                     </div>
 
                     <div className="grid grid-cols-3 gap-2">
                       {/* CO2 avoided */}
-                      <div className="bg-white/70 dark:bg-black/20 rounded-xl p-3 text-center">
+                      <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", padding: "12px 8px", textAlign: "center" }}>
                         <div className="text-2xl mb-0.5">🌿</div>
-                        <div className="text-lg font-display font-extrabold text-emerald-700 dark:text-emerald-300 tabular-nums leading-none">
+                        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "1rem", fontWeight: 900, color: "#00c853", lineHeight: 1 }}>
                           {impact.co2AvoidedKg > 0 ? `${impact.co2AvoidedKg}` : "—"}
                           {impact.co2AvoidedKg > 0 && (
-                            <span className="text-[10px] font-normal ml-0.5">kg</span>
+                            <span style={{ fontSize: "0.45rem", fontWeight: 400, marginLeft: 2 }}>kg</span>
                           )}
                         </div>
-                        <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium mt-0.5 leading-tight">
+                        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.4rem", color: "#84898E", marginTop: 4, letterSpacing: "0.06em" }}>
                           CO₂ avoided
                         </div>
                       </div>
 
                       {/* Fair Trade */}
-                      <div className="bg-white/70 dark:bg-black/20 rounded-xl p-3 text-center">
+                      <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", padding: "12px 8px", textAlign: "center" }}>
                         <div className="text-2xl mb-0.5">🤝</div>
-                        <div className="text-lg font-display font-extrabold text-emerald-700 dark:text-emerald-300 tabular-nums leading-none">
+                        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "1rem", fontWeight: 900, color: "#00c853", lineHeight: 1 }}>
                           {impact.fairTradeCount}
                         </div>
-                        <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium mt-0.5 leading-tight">
+                        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.4rem", color: "#84898E", marginTop: 4, letterSpacing: "0.06em" }}>
                           Fair Trade scanned
                         </div>
                       </div>
 
                       {/* Labor violations */}
-                      <div className="bg-white/70 dark:bg-black/20 rounded-xl p-3 text-center">
+                      <div style={{ background: "rgba(255,65,54,0.05)", border: "1px solid rgba(255,65,54,0.2)", padding: "12px 8px", textAlign: "center" }}>
                         <div className="text-2xl mb-0.5">🚩</div>
-                        <div className="text-lg font-display font-extrabold text-orange-600 dark:text-orange-400 tabular-nums leading-none">
+                        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "1rem", fontWeight: 900, color: "#ff4136", lineHeight: 1 }}>
                           {impact.laborFlaggedCount}
                         </div>
-                        <div className="text-[10px] text-orange-600 dark:text-orange-400 font-medium mt-0.5 leading-tight">
+                        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.4rem", color: "#ff4136", marginTop: 4, letterSpacing: "0.06em", opacity: 0.7 }}>
                           Labor violations
                         </div>
                       </div>
@@ -275,9 +275,9 @@ export default function Dashboard() {
 
                     {/* Motivational message */}
                     {impact.co2AvoidedKg > 0 && (
-                      <p className="text-xs text-emerald-700 dark:text-emerald-300 mt-3 text-center leading-relaxed">
+                      <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.44rem", color: "#84898E", marginTop: 12, textAlign: "center", lineHeight: 1.7, letterSpacing: "0.04em" }}>
                         {impact.co2AvoidedKg >= 5
-                          ? `Impressive! You've avoided ${impact.co2AvoidedKg} kg CO₂ — that's like skipping a 30 km car trip. 🚗`
+                          ? `Impressive! You've avoided ${impact.co2AvoidedKg} kg CO₂ — that's like skipping a 30 km car trip.`
                           : impact.co2AvoidedKg >= 1
                           ? `You've avoided ${impact.co2AvoidedKg} kg CO₂ this month — keep it up!`
                           : `Every scan helps. You're making greener choices!`}
@@ -288,108 +288,91 @@ export default function Dashboard() {
 
                 {/* Carbon Impact Calculator */}
                 {carbon.scoredCount > 0 && (
-                  <div className="bg-card rounded-2xl border border-border/60 shadow-soft p-4">
+                  <div style={{ background: "#000", border: "1px solid rgba(0,200,83,0.25)", borderLeft: "3px solid #40aaff", padding: "16px" }}>
                     <div className="flex items-center gap-2 mb-4">
-                      <div className="w-7 h-7 rounded-xl flex items-center justify-center flex-shrink-0"
-                        style={{ background: "linear-gradient(135deg, hsl(196 88% 22%) 0%, hsl(172 82% 34%) 100%)" }}>
-                        <Leaf className="w-3.5 h-3.5 text-white" />
+                      <div style={{ width: 28, height: 28, background: "rgba(64,170,255,0.1)", border: "1px solid rgba(64,170,255,0.3)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <Leaf style={{ width: 14, height: 14, color: "#40aaff" }} />
                       </div>
-                      <h2 className="text-sm font-bold text-foreground">Carbon Impact</h2>
-                      <span className="ml-auto text-xs text-muted-foreground">{carbon.scoredCount} scored scans</span>
+                      <h2 style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.55rem", fontWeight: 700, color: "#fff", letterSpacing: "0.18em", textTransform: "uppercase" }}>Carbon Impact</h2>
+                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.44rem", color: "#84898E", letterSpacing: "0.1em", marginLeft: "auto" }}>{carbon.scoredCount} scored scans</span>
                     </div>
 
                     {/* Progress bar */}
                     <div className="mb-4">
-                      <div className="flex justify-between text-xs mb-1.5">
-                        <span className="text-muted-foreground">Your CO₂</span>
-                        <span className="font-semibold text-foreground">
+                      <div className="flex justify-between mb-1.5">
+                        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.44rem", color: "#84898E", letterSpacing: "0.08em" }}>Your CO₂</span>
+                        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.44rem", fontWeight: 700, color: "#fff", letterSpacing: "0.06em" }}>
                           {carbon.pctReduced > 0
                             ? `${carbon.pctReduced}% below average`
                             : `${Math.abs(carbon.pctReduced)}% above average`}
                         </span>
                       </div>
-                      <div className="h-2.5 bg-muted rounded-full overflow-hidden">
+                      <div style={{ height: 4, background: "rgba(255,255,255,0.06)" }}>
                         <div
-                          className="h-full rounded-full transition-all duration-700"
+                          className="transition-all duration-700"
                           style={{
+                            height: "100%",
                             width: `${Math.min(100, Math.max(4, 100 - carbon.pctReduced))}%`,
-                            background: carbon.pctReduced >= 20
-                              ? "linear-gradient(90deg, hsl(196 88% 22%), hsl(172 82% 34%))"
-                              : carbon.pctReduced >= 0
-                              ? "hsl(38 88% 44%)"
-                              : "hsl(0 68% 48%)",
+                            background: carbon.pctReduced >= 20 ? "#00c853" : carbon.pctReduced >= 0 ? "#ffc700" : "#ff4136",
+                            boxShadow: carbon.pctReduced >= 20 ? "0 0 8px rgba(0,200,83,0.5)" : carbon.pctReduced >= 0 ? "0 0 8px rgba(255,199,0,0.5)" : "0 0 8px rgba(255,65,54,0.5)",
                           }}
                         />
                       </div>
-                      <div className="flex justify-between text-[9px] text-muted-foreground/60 mt-1">
-                        <span>0 kg</span>
-                        <span>Avg consumer</span>
+                      <div className="flex justify-between mt-1">
+                        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.38rem", color: "rgba(132,137,142,0.5)", letterSpacing: "0.08em" }}>0 kg</span>
+                        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.38rem", color: "rgba(132,137,142,0.5)", letterSpacing: "0.08em" }}>Avg consumer</span>
                       </div>
                     </div>
 
                     {/* Stats row */}
                     <div className="grid grid-cols-3 gap-2 mb-4">
-                      <div className="bg-muted/40 rounded-xl p-3 text-center">
-                        <div className="text-lg font-display font-extrabold tabular-nums"
-                          style={{ color: "hsl(172 80% 28%)" }}>
-                          {carbon.co2SavedKg}
-                          <span className="text-[10px] font-normal ml-0.5">kg</span>
+                      <div style={{ background: "rgba(0,200,83,0.05)", border: "1px solid rgba(0,200,83,0.15)", padding: "12px 8px", textAlign: "center" }}>
+                        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "1rem", fontWeight: 900, color: "#00c853", lineHeight: 1 }}>
+                          {carbon.co2SavedKg}<span style={{ fontSize: "0.45rem", fontWeight: 400, marginLeft: 2 }}>kg</span>
                         </div>
-                        <div className="text-[10px] text-muted-foreground font-medium mt-0.5 leading-tight">
-                          CO₂ saved
-                        </div>
+                        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.4rem", color: "#84898E", marginTop: 4, letterSpacing: "0.06em" }}>CO₂ saved</div>
                       </div>
-                      <div className="bg-muted/40 rounded-xl p-3 text-center">
-                        <div className="text-lg font-display font-extrabold tabular-nums text-foreground">
-                          {carbon.totalUserCO2}
-                          <span className="text-[10px] font-normal ml-0.5">kg</span>
+                      <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", padding: "12px 8px", textAlign: "center" }}>
+                        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "1rem", fontWeight: 900, color: "#fff", lineHeight: 1 }}>
+                          {carbon.totalUserCO2}<span style={{ fontSize: "0.45rem", fontWeight: 400, marginLeft: 2 }}>kg</span>
                         </div>
-                        <div className="text-[10px] text-muted-foreground font-medium mt-0.5 leading-tight">
-                          your total
-                        </div>
+                        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.4rem", color: "#84898E", marginTop: 4, letterSpacing: "0.06em" }}>your total</div>
                       </div>
-                      <div className="bg-muted/40 rounded-xl p-3 text-center">
-                        <div className="text-lg font-display font-extrabold tabular-nums"
-                          style={{ color: "hsl(196 88% 28%)" }}>
-                          {carbon.projectedSavedKgPerYear}
-                          <span className="text-[10px] font-normal ml-0.5">kg/yr</span>
+                      <div style={{ background: "rgba(64,170,255,0.05)", border: "1px solid rgba(64,170,255,0.15)", padding: "12px 8px", textAlign: "center" }}>
+                        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "1rem", fontWeight: 900, color: "#40aaff", lineHeight: 1 }}>
+                          {carbon.projectedSavedKgPerYear}<span style={{ fontSize: "0.45rem", fontWeight: 400, marginLeft: 2 }}>kg/yr</span>
                         </div>
-                        <div className="text-[10px] text-muted-foreground font-medium mt-0.5 leading-tight">
-                          projected saving
-                        </div>
+                        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.4rem", color: "#84898E", marginTop: 4, letterSpacing: "0.06em" }}>projected saving</div>
                       </div>
                     </div>
 
                     {/* Badges */}
                     {carbon.co2SavedKg > 0 && (
                       <div>
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">
+                        <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.4rem", color: "#84898E", letterSpacing: "0.18em", textTransform: "uppercase", marginBottom: 8 }}>
                           Badges earned
                         </p>
                         <div className="flex gap-2 flex-wrap">
                           {carbon.co2SavedKg >= 0.1 && (
-                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold"
-                              style={{ backgroundColor: "hsl(172 50% 95%)", color: "hsl(172 80% 28%)" }}>
-                              <Award className="w-3 h-3" />
-                              CO₂ Saver
+                            <div className="inline-flex items-center gap-1.5" style={{ padding: "3px 8px", fontFamily: "'JetBrains Mono', monospace", fontSize: "0.4rem", fontWeight: 700, background: "rgba(0,200,83,0.1)", color: "#00c853", border: "1px solid rgba(0,200,83,0.3)", letterSpacing: "0.08em" }}>
+                              <Award style={{ width: 10, height: 10 }} />
+                              CO₂ SAVER
                             </div>
                           )}
                           {carbon.co2SavedKg >= 5 && (
-                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold"
-                              style={{ backgroundColor: "hsl(196 50% 94%)", color: "hsl(196 88% 22%)" }}>
-                              <Award className="w-3 h-3" />
-                              Carbon Reducer
+                            <div className="inline-flex items-center gap-1.5" style={{ padding: "3px 8px", fontFamily: "'JetBrains Mono', monospace", fontSize: "0.4rem", fontWeight: 700, background: "rgba(64,170,255,0.1)", color: "#40aaff", border: "1px solid rgba(64,170,255,0.3)", letterSpacing: "0.08em" }}>
+                              <Award style={{ width: 10, height: 10 }} />
+                              CARBON REDUCER
                             </div>
                           )}
                           {carbon.co2SavedKg >= 20 && (
-                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold"
-                              style={{ backgroundColor: "hsl(280 40% 96%)", color: "hsl(280 52% 46%)" }}>
-                              <Award className="w-3 h-3" />
-                              Green Champion
+                            <div className="inline-flex items-center gap-1.5" style={{ padding: "3px 8px", fontFamily: "'JetBrains Mono', monospace", fontSize: "0.4rem", fontWeight: 700, background: "rgba(204,136,255,0.1)", color: "#cc88ff", border: "1px solid rgba(204,136,255,0.3)", letterSpacing: "0.08em" }}>
+                              <Award style={{ width: 10, height: 10 }} />
+                              GREEN CHAMPION
                             </div>
                           )}
                           {carbon.co2SavedKg < 0.1 && (
-                            <p className="text-[10px] text-muted-foreground">
+                            <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.4rem", color: "#84898E", letterSpacing: "0.06em" }}>
                               Scan more eco-friendly products to unlock badges
                             </p>
                           )}
@@ -408,7 +391,7 @@ export default function Dashboard() {
                         style={{
                           backgroundColor:
                             stats.avgEcoScore >= 50
-                              ? "hsl(152 48% 30%)"
+                              ? "#00c853"
                               : stats.avgEcoScore >= 30
                               ? "hsl(38 88% 44%)"
                               : "hsl(0 68% 50%)",
@@ -438,7 +421,7 @@ export default function Dashboard() {
                 {/* Weekly trend */}
                 <div className="bg-card rounded-2xl border border-border/60 shadow-soft p-4">
                   <div className="flex items-center gap-2 mb-4">
-                    <TrendingUp className="w-4 h-4 text-primary" />
+                    <TrendingUp className="w-4 h-4" style={{ color: "#00c853" }} />
                     <h2 className="text-sm font-bold text-foreground">Weekly Trend</h2>
                   </div>
                   <div className="grid grid-cols-4 gap-3">
@@ -452,10 +435,10 @@ export default function Dashboard() {
                                 height: `${Math.max(22, week.percentage)}%`,
                                 backgroundColor:
                                   week.percentage >= 60
-                                    ? "hsl(152 48% 32%)"
+                                    ? "#00c853"
                                     : week.percentage >= 30
-                                    ? "hsl(38 88% 44%)"
-                                    : "hsl(0 68% 52%)",
+                                    ? "#ffc700"
+                                    : "#ff4136",
                               }}
                             >
                               {week.percentage}%
@@ -479,7 +462,7 @@ export default function Dashboard() {
                 {/* Recent scans */}
                 <div>
                   <div className="flex items-center gap-2 mb-3">
-                    <Clock className="w-4 h-4 text-primary" />
+                    <Clock className="w-4 h-4" style={{ color: "#00c853" }} />
                     <h2 className="text-sm font-bold text-foreground">Recent Scans</h2>
                   </div>
                   <div className="space-y-2">
@@ -520,19 +503,19 @@ export default function Dashboard() {
                               )}
                               {/* Eco grade badge */}
                               {badge && (
-                                <span className={cn("text-[9px] font-bold px-1.5 py-0.5 rounded-md", badge.bg, badge.text)}>
+                                <span style={{ fontSize: "0.5rem", fontWeight: 700, padding: "2px 5px", background: `${badge.color}22`, color: badge.color, border: `1px solid ${badge.color}55` }}>
                                   Eco {badge.label}
                                 </span>
                               )}
                               {/* Nutri score badge */}
                               {entry.scores.nutriScore && (
-                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-blue-500 text-white">
+                                <span style={{ fontSize: "0.5rem", fontWeight: 700, padding: "2px 5px", background: "rgba(64,170,255,0.15)", color: "#40aaff", border: "1px solid rgba(64,170,255,0.35)" }}>
                                   Nutri {entry.scores.nutriScore.toUpperCase()}
                                 </span>
                               )}
                               {/* Labor flag */}
                               {entry.scores.laborAllegations > 0 && (
-                                <span className="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-300">
+                                <span className="inline-flex items-center gap-0.5" style={{ fontSize: "0.5rem", fontWeight: 700, padding: "2px 5px", background: "rgba(255,65,54,0.12)", color: "#ff4136", border: "1px solid rgba(255,65,54,0.35)" }}>
                                   <Users className="w-2.5 h-2.5" />
                                   Labor
                                 </span>

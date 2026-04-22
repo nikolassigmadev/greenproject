@@ -1,112 +1,154 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ShoppingCart, Camera, BarChart3, Info, Settings } from "lucide-react";
-import { cn } from "@/lib/utils";
+
+const D  = "'Bebas Neue', sans-serif";
+const M  = "'JetBrains Mono', monospace";
+const G  = "#00c853";
+const GR = "#84898E";
 
 const NAV_ITEMS = [
-  { path: "/basket",      label: "Cart",    icon: ShoppingCart },
-  { path: "/dashboard",   label: "History", icon: BarChart3    },
-  { path: "/scan",        label: "Scan",    icon: Camera, fab: true },
-  { path: "/about",       label: "About",   icon: Info         },
-  { path: "/preferences", label: "Values",  icon: Settings     },
+  { path: "/basket",      label: "CART",    icon: ShoppingCart, idx: "01" },
+  { path: "/dashboard",   label: "HISTORY", icon: BarChart3,    idx: "02" },
+  { path: "/about",       label: "ABOUT",   icon: Info,         idx: "04" },
+  { path: "/preferences", label: "VALUES",  icon: Settings,     idx: "05" },
 ];
-
-function NavTab({ path, label, icon: Icon, isActive }: {
-  path: string; label: string; icon: typeof Home; isActive: boolean;
-}) {
-  return (
-    <Link
-      to={path}
-      aria-current={isActive ? "page" : undefined}
-      className={cn("menu__item", isActive && "active")}
-    >
-      <div className="menu__icon">
-        <Icon className="icon" />
-      </div>
-      <span className={cn("menu__text", isActive && "active")}>
-        {label}
-      </span>
-    </Link>
-  );
-}
-
-function ScanFab({ isActive }: { isActive: boolean }) {
-  const navigate = useNavigate();
-  return (
-    <button
-      onClick={() => navigate("/scan")}
-      aria-label="Scan a product"
-      className="flex flex-col items-center select-none flex-shrink-0"
-      style={{ marginTop: "-2.6rem" }}
-    >
-      <div
-        className={cn(
-          "relative flex items-center justify-center transition-transform duration-200 active:scale-90",
-          isActive ? "scale-105" : "scale-100 hover:scale-[1.03]"
-        )}
-      >
-        {/* FAB circle — red */}
-        <div
-          className="relative w-[3.5rem] h-[3.5rem] rounded-full flex items-center justify-center"
-          style={{
-            background: "#00c853",
-            boxShadow: isActive
-              ? "0 0 24px rgba(240, 0, 7, 0.6), 0 4px 16px rgba(240, 0, 7, 0.4)"
-              : "0 4px 16px rgba(240, 0, 7, 0.35), 0 1px 4px rgba(0,0,0,0.4)",
-          }}
-        >
-          <Camera className="w-[1.3rem] h-[1.3rem] text-white" strokeWidth={2} />
-        </div>
-      </div>
-      <span
-        className="font-mono uppercase"
-        style={{
-          fontSize: "0.48rem",
-          marginTop: "0.3rem",
-          letterSpacing: "0.12em",
-          color: isActive ? "#ffffff" : "#84898E",
-        }}
-      >
-        Scan
-      </span>
-    </button>
-  );
-}
 
 export function BottomNav() {
   const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const scanActive = pathname === "/scan";
 
   return (
     <nav
       className="fixed bottom-0 left-0 right-0 z-50 md:hidden"
       aria-label="Main navigation"
+      style={{ fontFamily: M }}
     >
-      {/* Black backdrop — no blur */}
-      <div
-        className="absolute inset-0"
-        style={{
-          background: "#000000",
-          borderTop: "1px solid rgba(255,255,255,0.08)",
-        }}
-      />
+      {/* Top border — green line */}
+      <div style={{ height: 2, background: `linear-gradient(to right, transparent, ${G}, transparent)`, opacity: 0.5 }} />
 
-      {/* Tab row */}
-      <div
-        className="relative menu items-end px-2 pt-2"
-        style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 2px)" }}
-      >
-        {NAV_ITEMS.map((tab) =>
-          tab.fab ? (
-            <ScanFab key={tab.path} isActive={pathname === tab.path} />
-          ) : (
-            <NavTab
-              key={tab.path}
-              path={tab.path}
-              label={tab.label}
-              icon={tab.icon}
-              isActive={pathname === tab.path}
-            />
-          )
-        )}
+      {/* Main bar */}
+      <div style={{
+        background: "#000",
+        borderTop: `1px solid rgba(0,200,83,0.12)`,
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr 1.4fr 1fr 1fr",
+        paddingBottom: "calc(env(safe-area-inset-bottom) + 4px)",
+      }}>
+
+        {/* Regular nav items — left two */}
+        {NAV_ITEMS.slice(0, 2).map((item, i) => {
+          const Icon = item.icon;
+          const active = pathname === item.path;
+          return (
+            <Link key={item.path} to={item.path} style={{
+              textDecoration: "none",
+              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end",
+              padding: "10px 4px 10px",
+              borderRight: `1px solid rgba(0,200,83,0.1)`,
+              position: "relative",
+              gap: 4,
+              WebkitTapHighlightColor: "transparent",
+            }}>
+              {/* Active top bar */}
+              {active && (
+                <div style={{
+                  position: "absolute", top: 0, left: "20%", right: "20%", height: 2,
+                  background: G, boxShadow: `0 0 8px rgba(0,200,83,0.8)`,
+                }} />
+              )}
+              <span style={{
+                fontFamily: M, fontSize: "0.36rem", color: active ? "rgba(0,200,83,0.5)" : "rgba(132,137,142,0.3)",
+                letterSpacing: "0.1em", position: "absolute", top: 8, left: 6,
+              }}>{item.idx}</span>
+              <Icon style={{ width: 16, height: 16, color: active ? G : GR, strokeWidth: active ? 2 : 1.5 }} />
+              <span style={{
+                fontFamily: M, fontSize: "0.4rem", letterSpacing: "0.14em",
+                color: active ? G : GR,
+                textTransform: "uppercase",
+              }}>{item.label}</span>
+            </Link>
+          );
+        })}
+
+        {/* Centre SCAN button */}
+        <button
+          onClick={() => navigate("/scan")}
+          aria-label="Scan a product"
+          style={{
+            background: "none", border: "none", cursor: "pointer", padding: "0",
+            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+            borderRight: `1px solid rgba(0,200,83,0.1)`,
+            WebkitTapHighlightColor: "transparent",
+            paddingBottom: "calc(env(safe-area-inset-bottom) + 4px)",
+          }}
+        >
+          <div style={{
+            marginTop: "-1.4rem",
+            background: scanActive ? G : "#000",
+            border: `2px solid ${G}`,
+            width: "3.6rem", height: "3.6rem",
+            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+            gap: 3,
+            boxShadow: scanActive
+              ? `0 0 24px rgba(0,200,83,0.7), 0 0 48px rgba(0,200,83,0.3)`
+              : `0 0 12px rgba(0,200,83,0.25)`,
+            transition: "box-shadow 0.2s, background 0.2s",
+            position: "relative",
+          }}>
+            {/* Corner marks */}
+            {(["tl","tr","bl","br"] as const).map(c => (
+              <div key={c} style={{
+                position: "absolute",
+                [c.startsWith("t") ? "top" : "bottom"]: 3,
+                [c.endsWith("l") ? "left" : "right"]: 4,
+                fontFamily: "monospace", fontSize: 8,
+                color: scanActive ? "rgba(0,0,0,0.4)" : "rgba(0,200,83,0.35)",
+                userSelect: "none", lineHeight: 1,
+              }}>+</div>
+            ))}
+            <Camera style={{ width: 18, height: 18, color: scanActive ? "#000" : G, strokeWidth: 1.5 }} />
+            <span style={{
+              fontFamily: D, fontSize: "0.75rem", letterSpacing: "0.08em", lineHeight: 1,
+              color: scanActive ? "#000" : G,
+            }}>SCAN</span>
+          </div>
+        </button>
+
+        {/* Regular nav items — right two */}
+        {NAV_ITEMS.slice(2).map((item) => {
+          const Icon = item.icon;
+          const active = pathname === item.path;
+          return (
+            <Link key={item.path} to={item.path} style={{
+              textDecoration: "none",
+              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end",
+              padding: "10px 4px 10px",
+              borderLeft: `1px solid rgba(0,200,83,0.1)`,
+              position: "relative",
+              gap: 4,
+              WebkitTapHighlightColor: "transparent",
+            }}>
+              {active && (
+                <div style={{
+                  position: "absolute", top: 0, left: "20%", right: "20%", height: 2,
+                  background: G, boxShadow: `0 0 8px rgba(0,200,83,0.8)`,
+                }} />
+              )}
+              <span style={{
+                fontFamily: M, fontSize: "0.36rem", color: active ? "rgba(0,200,83,0.5)" : "rgba(132,137,142,0.3)",
+                letterSpacing: "0.1em", position: "absolute", top: 8, right: 6,
+              }}>{item.idx}</span>
+              <Icon style={{ width: 16, height: 16, color: active ? G : GR, strokeWidth: active ? 2 : 1.5 }} />
+              <span style={{
+                fontFamily: M, fontSize: "0.4rem", letterSpacing: "0.14em",
+                color: active ? G : GR,
+                textTransform: "uppercase",
+              }}>{item.label}</span>
+            </Link>
+          );
+        })}
+
       </div>
     </nav>
   );

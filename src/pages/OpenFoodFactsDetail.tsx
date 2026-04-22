@@ -202,7 +202,7 @@ export default function OpenFoodFactsDetail() {
     const laborCount = laborRecord?.allegations.length || 0;
     const verdictKey = getVerdictKey(product, priorities);
     const colorMap: Record<string, string> = {
-      BUY: "#059669", CONSIDER: "#D97706", CAUTION: "#EA580C", AVOID: "#DC2626", UNKNOWN: "#6B7280",
+      BUY: "#00c853", CONSIDER: "#ffc700", CAUTION: "#ffc700", AVOID: "#ff4136", UNKNOWN: "#84898E",
     };
     saveScanToHistory({
       id: `${product.barcode}-${Date.now()}`,
