@@ -1,4 +1,4 @@
-import { AlertTriangle, Package, Truck } from "lucide-react";
+import { Package, Truck } from "lucide-react";
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
 
 interface EnvironmentalImpactCardProps {
@@ -20,9 +20,8 @@ export function EnvironmentalImpactCard({ result }: EnvironmentalImpactCardProps
   const adjustments = result.ecoscoreData?.adjustments;
   const packaging = adjustments?.packaging;
   const origins = adjustments?.origins_of_ingredients;
-  const threatened = adjustments?.threatened_species;
 
-  if (!packaging && !origins && !result.origins && !threatened) return null;
+  if (!packaging && !origins && !result.origins) return null;
 
   return (
     <div className="space-y-2">
@@ -93,29 +92,6 @@ export function EnvironmentalImpactCard({ result }: EnvironmentalImpactCardProps
         </div>
       )}
 
-      {/* Threatened Species */}
-      {threatened && (
-        <div
-          className="rounded-2xl border shadow-soft p-4"
-          style={{ backgroundColor: "hsl(0 50% 98%)", borderColor: "hsl(0 60% 88%)" }}
-        >
-          <div className="flex items-center gap-2 mb-2">
-            <AlertTriangle className="w-4 h-4 flex-shrink-0" style={{ color: "hsl(0 68% 50%)" }} />
-            <h3 className="text-sm font-bold" style={{ color: "hsl(0 68% 38%)" }}>
-              Threatened Species Risk
-            </h3>
-          </div>
-          {threatened.ingredient && (
-            <p className="text-xs text-muted-foreground">
-              Contains{" "}
-              <span className="font-semibold text-foreground capitalize">
-                {threatened.ingredient.replace(/^en:/, "").replace(/-/g, " ")}
-              </span>{" "}
-              — drives deforestation and threatens species such as the orangutan.
-            </p>
-          )}
-        </div>
-      )}
     </div>
   );
 }

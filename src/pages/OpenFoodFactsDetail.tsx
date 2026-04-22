@@ -806,10 +806,11 @@ export default function OpenFoodFactsDetail() {
               })()}
               {product.nutriscoreGrade && (() => {
                 const g = product.nutriscoreGrade.toLowerCase();
+                const isLetter = ["a", "b", "c", "d", "e"].includes(g);
                 const color = GRADE_TEXT[g] ?? "#84898E";
                 return (
                   <div
-                    className="flex flex-col items-center py-4 px-2"
+                    className="flex flex-col items-center py-4 px-2 overflow-hidden"
                     style={{
                       border: `1px solid ${GRADE_BORDER[g] ?? "#84898E"}`,
                       borderTop: `3px solid ${GRADE_BORDER[g] ?? "#84898E"}`,
@@ -824,9 +825,9 @@ export default function OpenFoodFactsDetail() {
                     </span>
                     <span
                       className="font-mono font-black leading-none"
-                      style={{ fontSize: "2.5rem", color }}
+                      style={{ fontSize: isLetter ? "2.5rem" : "1.1rem", color }}
                     >
-                      {g.toUpperCase()}
+                      {isLetter ? g.toUpperCase() : "—"}
                     </span>
                     <span
                       className="font-mono uppercase mt-1 text-center leading-tight"
@@ -955,7 +956,7 @@ export default function OpenFoodFactsDetail() {
 
           {/* ── 6. Ethics ───────────────────────────────────────────────────── */}
           {(laborRecord || boycottMatch || welfare.isFlagged) ? (
-            <TerminalCard accentColor="#00c853">
+            <TerminalCard accentColor={laborRecord ? "#ef4444" : boycottMatch ? "#f97316" : "#00c853"}>
               <div className="p-4">
                 <SectionLabel label="// ETHICS ANALYSIS" />
 
@@ -1000,8 +1001,8 @@ export default function OpenFoodFactsDetail() {
                       <div
                         key={i}
                         style={{
-                          border: "1px solid rgba(240, 0, 7, 0.25)",
-                          borderLeft: "3px solid #00c853",
+                          border: "1px solid rgba(239, 68, 68, 0.25)",
+                          borderLeft: "3px solid #ef4444",
                           background: "#050505",
                         }}
                       >
@@ -1009,7 +1010,7 @@ export default function OpenFoodFactsDetail() {
                           <div className="flex items-start gap-2">
                             <span
                               className="font-mono font-black flex-shrink-0"
-                              style={{ fontSize: "0.65rem", color: "#00c853" }}
+                              style={{ fontSize: "0.65rem", color: "#ef4444" }}
                             >
                               [!]
                             </span>
@@ -1032,7 +1033,7 @@ export default function OpenFoodFactsDetail() {
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="font-mono flex items-center gap-1 cursor-pointer transition-opacity hover:opacity-70"
-                                  style={{ fontSize: "0.55rem", color: "#00c853", textDecoration: "none", letterSpacing: "0.06em" }}
+                                  style={{ fontSize: "0.55rem", color: "#ef4444", textDecoration: "none", letterSpacing: "0.06em" }}
                                 >
                                   <ExternalLink className="w-2.5 h-2.5" />{al.source}
                                 </a>
@@ -1040,8 +1041,8 @@ export default function OpenFoodFactsDetail() {
                                   className="font-mono font-bold px-2 py-0.5"
                                   style={{
                                     fontSize: "0.52rem",
-                                    color: "#00c853",
-                                    border: "1px solid rgba(240, 0, 7, 0.3)",
+                                    color: "#ef4444",
+                                    border: "1px solid rgba(239, 68, 68, 0.3)",
                                   }}
                                 >
                                   {al.year}
@@ -1145,6 +1146,61 @@ export default function OpenFoodFactsDetail() {
 
           {/* ── 7. Environmental adjustments ────────────────────────────────── */}
           <EnvironmentalImpactCard result={product} />
+
+          {/* ── 7b. Threatened Species ───────────────────────────────────────── */}
+          {(() => {
+            const threatened = product.ecoscoreData?.adjustments?.threatened_species;
+            if (!threatened?.ingredient) return null;
+            const ingredientRaw = threatened.ingredient.replace(/^en:/, "").replace(/-/g, " ");
+            const isPalmOil = ingredientRaw.toLowerCase().includes("palm");
+            const explanation = isPalmOil
+              ? "Palm oil is the #1 driver of tropical deforestation. Its cultivation destroys critical habitat for orangutans, pygmy elephants, and Sumatran tigers — all critically endangered. An estimated 3.5 million hectares of forest are cleared for palm plantations every year."
+              : `${ingredientRaw} production is linked to habitat destruction in biodiversity hotspots. Sourcing from high-risk regions accelerates species loss and ecosystem collapse at a scale that cannot be reversed.`;
+            return (
+              <TerminalCard accentColor="#ef4444">
+                <div className="p-4">
+                  <SectionLabel label="// THREATENED SPECIES RISK" />
+                  <div
+                    className="p-3 mb-3"
+                    style={{
+                      border: "1px solid rgba(239, 68, 68, 0.25)",
+                      borderLeft: "3px solid #ef4444",
+                      background: "#050505",
+                    }}
+                  >
+                    <div className="flex items-start gap-2">
+                      <span
+                        className="font-mono font-black flex-shrink-0"
+                        style={{ fontSize: "0.65rem", color: "#ef4444" }}
+                      >
+                        [!]
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p
+                          className="font-mono font-bold uppercase"
+                          style={{ fontSize: "0.62rem", color: "#ffffff", letterSpacing: "0.04em" }}
+                        >
+                          CONTAINS {ingredientRaw.toUpperCase()}
+                        </p>
+                        <p
+                          className="font-mono mt-1 leading-relaxed"
+                          style={{ fontSize: "0.58rem", color: "#84898E" }}
+                        >
+                          {explanation}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <p
+                    className="font-mono"
+                    style={{ fontSize: "0.52rem", color: "#84898E" }}
+                  >
+                    &gt; SOURCE: OPEN FOOD FACTS ECOSCORE ANALYSIS
+                  </p>
+                </div>
+              </TerminalCard>
+            );
+          })()}
 
           {/* ── 8. Certifications ───────────────────────────────────────────── */}
           {product.labels.length > 0 && (
