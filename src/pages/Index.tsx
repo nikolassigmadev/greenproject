@@ -139,7 +139,7 @@ export default function Index() {
           </p>
 
           {/* ── Side-by-side: headline + scanner ── */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 200px", gap: 6, alignItems: "start" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 155px", gap: 8, alignItems: "start" }}>
 
             {/* LEFT: headline */}
             <div>
@@ -152,8 +152,8 @@ export default function Index() {
               </p>
             </div>
 
-            {/* RIGHT: animated scanner visual */}
-            <div style={{ position: "relative", minHeight: 295 }}>
+            {/* RIGHT: animated scanner visual — chips intentionally bleed off-screen right */}
+            <div style={{ position: "relative", minHeight: 315, overflow: "visible" }}>
 
               {/* Dot-grid background */}
               <div style={{
@@ -163,7 +163,7 @@ export default function Index() {
               }} />
 
               {/* ── Product box ── */}
-              <div className="scanner-product" style={{ position: "absolute", left: 3, top: 8, width: 130, height: 190 }}>
+              <div className="scanner-product" style={{ position: "absolute", left: 3, top: 8, width: 145, height: 205 }}>
 
                 {/* Lock-on bracket corners (4 L-shapes) */}
                 {[0,1,2,3].map((i) => {
@@ -228,8 +228,8 @@ export default function Index() {
                 </div>
               </div>
 
-              {/* ── Score chips (right column) ── */}
-              <div style={{ position: "absolute", left: 138, top: 8, display: "flex", flexDirection: "column", gap: 10 }}>
+              {/* ── Score chips — bleed off right edge ── */}
+              <div style={{ position: "absolute", left: 150, top: 8, display: "flex", flexDirection: "column", gap: 10 }}>
                 {SCANNER_CHIPS.map((chip, i) => (
                   <div key={chip.label} className={chip.cls} style={{ opacity: 0 }}>
                     {/* Connector tick */}
@@ -260,7 +260,7 @@ export default function Index() {
               </div>
 
               {/* ── Processing label ── */}
-              <div style={{ position: "absolute", bottom: 0, left: 0, width: 136, textAlign: "center" }}>
+              <div style={{ position: "absolute", bottom: 0, left: 0, width: 148, textAlign: "center" }}>
                 <span className="terminal-cursor" style={{ fontFamily: M, fontSize: "0.4rem", color: "rgba(0,200,83,0.4)", letterSpacing: "0.12em", textTransform: "uppercase" }}>
                   SCANNING...
                 </span>
@@ -268,7 +268,7 @@ export default function Index() {
 
               {/* ── Verdict arrow ── */}
               <div className="scanner-verdict" style={{
-                position: "absolute", left: 3, top: 206, width: 130,
+                position: "absolute", left: 3, top: 221, width: 145,
                 display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
               }}>
                 <div style={{
@@ -304,13 +304,13 @@ export default function Index() {
               </div>
 
               {/* ── Data flow lines (decorative vertical dashes) ── */}
-              {[38, 78, 148].map((left, i) => (
+              {[42, 88, 148].map((left, i) => (
                 <div key={i} style={{
                   position: "absolute",
                   left,
-                  top: 210,
+                  top: 225,
                   width: 1,
-                  height: 80,
+                  height: 85,
                   overflow: "hidden",
                   opacity: 0.25,
                   pointerEvents: "none",
