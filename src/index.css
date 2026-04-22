@@ -237,7 +237,15 @@
   }
 
   .page-transition {
-    animation: page-enter 0.15s ease-out both;
+    animation: page-enter 0.18s ease-out 0.19s both;
+  }
+
+  /* Green blade wipe */
+  @keyframes blade-sweep {
+    0%   { transform: translateX(-101%); }
+    22%  { transform: translateX(0%); }
+    55%  { transform: translateX(0%); }
+    100% { transform: translateX(101%); }
   }
 
   /* Red glow for CTAs */

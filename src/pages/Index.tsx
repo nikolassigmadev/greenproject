@@ -117,56 +117,83 @@ const Index = () => {
         {/* ══════════════════════════════════════════
             MSCHF-STYLE HERO POSTER
         ══════════════════════════════════════════ */}
-        <div style={{ position: 'relative', minHeight: '72vw', maxHeight: 520, overflow: 'hidden', borderBottom: '2px solid #fff' }}>
+        <div style={{ position: 'relative', overflow: 'hidden', borderBottom: '2px solid rgba(255,255,255,0.15)' }}>
 
-          {/* Giant background letterforms */}
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', pointerEvents: 'none', userSelect: 'none', overflow: 'hidden' }}>
-            <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(5rem, 28vw, 14rem)', lineHeight: 0.82, fontWeight: 400, color: 'rgba(255,255,255,0.04)', letterSpacing: '-0.02em', textTransform: 'uppercase', paddingLeft: '2vw', whiteSpace: 'nowrap' }}>
-              GOOD
+          {/* ── Compact top bar ── */}
+          <div style={{
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            padding: 'max(52px, env(safe-area-inset-top)) 20px 14px',
+            borderBottom: '1px solid rgba(255,255,255,0.07)',
+            position: 'relative', zIndex: 2,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+              <span className="terminal-cursor" style={{ width: 6, height: 6, borderRadius: '50%', background: '#00c853', display: 'inline-block', flexShrink: 0 }} />
+              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.44rem', color: '#84898E', letterSpacing: '0.24em', textTransform: 'uppercase' }}>
+                ETHICAL SCANNER
+              </span>
             </div>
-            <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(5rem, 28vw, 14rem)', lineHeight: 0.82, fontWeight: 400, color: 'rgba(255,255,255,0.04)', letterSpacing: '-0.02em', textTransform: 'uppercase', paddingLeft: '8vw', whiteSpace: 'nowrap' }}>
-              SCAN
-            </div>
-          </div>
-
-          {/* Top bar: wordmark + basket */}
-          <div style={{ position: 'relative', zIndex: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: 'max(52px, env(safe-area-inset-top)) 20px 0' }}>
-            <div>
-              <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.5rem', color: '#84898E', letterSpacing: '0.22em', textTransform: 'uppercase', marginBottom: 4 }}>
-                MSCHF-STYLE
-              </p>
-              <h1 className="flicker" style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(3rem, 14vw, 5rem)', color: '#84898E', letterSpacing: '0.04em', fontWeight: 400, lineHeight: 1, margin: 0 }}>
-                GOOD<span style={{ color: '#fff' }}>SCAN</span><span className="terminal-cursor" style={{ color: '#00c853' }}>_</span>
-              </h1>
-            </div>
-            <Link to="/basket" style={{ marginTop: 4, width: 36, height: 36, border: '1px solid rgba(255,255,255,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#84898E', flexShrink: 0 }} aria-label="View basket">
+            <Link to="/basket" style={{ width: 36, height: 36, border: '1px solid rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#84898E' }} aria-label="View basket">
               <ShoppingCart className="w-4 h-4" />
             </Link>
           </div>
 
-          {/* Bold italic statement — like MSCHF's "Part of an extremely unbalanced breakfast" */}
-          <div style={{ position: 'relative', zIndex: 2, padding: '0 20px', marginTop: 'auto', paddingTop: '8vw' }}>
-            <p style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(2rem, 10vw, 3.8rem)', color: '#ffffff', lineHeight: 1.0, fontWeight: 400, maxWidth: '85%' }}>
-              Part of an extremely
-            </p>
-            <p style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(2rem, 10vw, 3.8rem)', color: '#00c853', lineHeight: 1.0, fontWeight: 400 }}>
-              uninformed
-            </p>
-            <p style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(2rem, 10vw, 3.8rem)', color: '#ffffff', lineHeight: 1.0, fontWeight: 400 }}>
-              shopping trip.
-            </p>
+          {/* ── Giant two-line wordmark — each word fills full width ── */}
+          <div style={{ position: 'relative', zIndex: 2, lineHeight: 0.85, padding: '4px 0 0', overflow: 'hidden' }}>
+            {/* GOOD — outlined, glitches to FOOD */}
+            <div style={{ position: 'relative', display: 'block', textAlign: 'center' }}>
+              <span style={{
+                fontFamily: "'Bebas Neue', sans-serif", fontWeight: 400,
+                fontSize: 'min(41.5vw, 180px)',
+                color: 'transparent',
+                WebkitTextStroke: '1.5px #84898E',
+                letterSpacing: '0.01em', display: 'inline-block',
+                animation: 'logoGood 10s linear infinite',
+              }}>GOOD</span>
+              <span style={{
+                fontFamily: "'Bebas Neue', sans-serif", fontWeight: 400,
+                fontSize: 'min(41.5vw, 180px)',
+                color: 'transparent',
+                WebkitTextStroke: '1.5px #40aaff',
+                letterSpacing: '0.01em',
+                position: 'absolute', left: '50%', top: 0, transform: 'translateX(-50%)',
+                animation: 'logoFood 10s linear infinite',
+              }}>FOOD</span>
+            </div>
+            {/* SCAN — solid white + green glow */}
+            <div style={{ textAlign: 'center' }}>
+              <span style={{
+                fontFamily: "'Bebas Neue', sans-serif", fontWeight: 400,
+                fontSize: 'min(41.5vw, 180px)',
+                color: '#fff',
+                textShadow: '0 0 50px rgba(0,200,83,0.5)',
+                letterSpacing: '0.01em', display: 'inline-block',
+              }}>SCAN</span>
+            </div>
           </div>
 
-          {/* Fine-print circular badge — bottom right */}
-          <div style={{ position: 'absolute', bottom: 16, right: 16, zIndex: 3, width: 80, height: 80, borderRadius: '50%', background: '#00c853', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 8 }}>
-            <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.38rem', color: '#000', textAlign: 'center', lineHeight: 1.4, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              GoodScan is not affiliated with any brand listed or shown.
+          {/* ── Mission block ── */}
+          <div style={{
+            position: 'relative', zIndex: 2,
+            borderTop: '1px solid rgba(255,255,255,0.07)',
+            padding: '16px 20px 20px',
+            textAlign: 'center',
+          }}>
+            <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.42rem', color: '#84898E', letterSpacing: '0.26em', textTransform: 'uppercase', marginBottom: 10 }}>
+              // MISSION
+            </p>
+            <h2 style={{ fontFamily: "'Bebas Neue', sans-serif", fontWeight: 400, fontSize: 'clamp(1.5rem, 7vw, 2.6rem)', lineHeight: 1.05, margin: '0 0 12px' }}>
+              <span style={{ color: '#fff' }}>SCAN ANY PRODUCT. </span>
+              <span style={{ color: '#00c853', textShadow: '0 0 16px rgba(0,200,83,0.35)' }}>SEE WHAT BRANDS </span>
+              <span style={{ color: '#fff' }}>DON'T WANT YOU TO KNOW.</span>
+            </h2>
+            <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.48rem', color: '#84898E', letterSpacing: '0.05em', lineHeight: 1.8 }}>
+              Labour · CO₂ · Origin · Nutrition · Animal welfare · Greener swaps
             </p>
           </div>
 
           {/* Corner registration marks */}
           {(['tl','tr','bl','br'] as const).map(c => (
-            <div key={c} style={{ position: 'absolute', [c.startsWith('t') ? 'top' : 'bottom']: 10, [c.endsWith('l') ? 'left' : 'right']: 10, zIndex: 3, fontFamily: 'monospace', fontSize: 14, color: 'rgba(255,255,255,0.3)', lineHeight: 1, userSelect: 'none' }}>+</div>
+            <div key={c} style={{ position: 'absolute', [c.startsWith('t') ? 'top' : 'bottom']: 10, [c.endsWith('l') ? 'left' : 'right']: 10, zIndex: 3, fontFamily: 'monospace', fontSize: 13, color: 'rgba(255,255,255,0.2)', lineHeight: 1, userSelect: 'none' }}>+</div>
           ))}
         </div>
 
