@@ -118,7 +118,7 @@ export default function Index() {
         {/* ══════════════════════════════════════════
             HERO — headline left, scanner visual right
         ══════════════════════════════════════════ */}
-        <div style={{ padding: "28px 20px 0", position: "relative" }}>
+        <div style={{ padding: "36px 20px 0", position: "relative" }}>
           {/* Corner marks */}
           {(["tl","tr","bl","br"] as const).map(c => (
             <div key={c} style={{ position: "absolute", [c.startsWith("t")?"top":"bottom"]: 10, [c.endsWith("l")?"left":"right"]: 10, fontFamily: "monospace", fontSize: 13, color: "rgba(255,255,255,0.14)", userSelect: "none" }}>+</div>
@@ -134,11 +134,11 @@ export default function Index() {
 
             {/* LEFT: headline */}
             <div>
-              <h1 style={{ fontFamily: D, fontWeight: 400, lineHeight: 0.88, margin: "0 0 18px" }}>
-                <span style={{ display: "block", fontSize: "clamp(1.9rem, 9.5vw, 3rem)", color: "#fff", letterSpacing: "0.02em" }}>SCAN ANY</span>
-                <span style={{ display: "block", fontSize: "clamp(1.9rem, 9.5vw, 3rem)", color: "#fff", letterSpacing: "0.02em" }}>PRODUCT.</span>
-                <span style={{ display: "block", fontSize: "clamp(1.9rem, 9.5vw, 3rem)", color: G, letterSpacing: "0.02em", textShadow: "0 0 30px rgba(0,200,83,0.3)" }}>SEE ITS</span>
-                <span style={{ display: "block", fontSize: "clamp(1.9rem, 9.5vw, 3rem)", color: G, letterSpacing: "0.02em", textShadow: "0 0 30px rgba(0,200,83,0.3)" }}>ETHICS.</span>
+              <h1 style={{ fontFamily: D, fontWeight: 400, lineHeight: 0.86, margin: "0 0 20px" }}>
+                <span style={{ display: "block", fontSize: "clamp(2.4rem, 11.8vw, 3.8rem)", color: "#fff", letterSpacing: "0.02em" }}>SCAN ANY</span>
+                <span style={{ display: "block", fontSize: "clamp(2.4rem, 11.8vw, 3.8rem)", color: "#fff", letterSpacing: "0.02em" }}>PRODUCT.</span>
+                <span style={{ display: "block", fontSize: "clamp(2.4rem, 11.8vw, 3.8rem)", color: G, letterSpacing: "0.02em", textShadow: "0 0 30px rgba(0,200,83,0.3)" }}>SEE ITS</span>
+                <span style={{ display: "block", fontSize: "clamp(2.4rem, 11.8vw, 3.8rem)", color: G, letterSpacing: "0.02em", textShadow: "0 0 30px rgba(0,200,83,0.3)" }}>ETHICS.</span>
               </h1>
               <p style={{ fontFamily: M, fontSize: "0.55rem", color: GR, lineHeight: 1.75, letterSpacing: "0.02em" }}>
                 Point your camera at any barcode. Instantly see labour rights, carbon footprint, animal welfare, nutrition grade, origin & greener alternatives — free.
@@ -146,7 +146,7 @@ export default function Index() {
             </div>
 
             {/* RIGHT: animated scanner visual */}
-            <div style={{ position: "relative", minHeight: 230 }}>
+            <div style={{ position: "relative", minHeight: 290 }}>
 
               {/* Dot-grid background */}
               <div style={{
@@ -156,30 +156,25 @@ export default function Index() {
               }} />
 
               {/* ── Product box ── */}
-              <div className="scanner-product" style={{ position: "absolute", left: 4, top: 10, width: 78, height: 112 }}>
+              <div className="scanner-product" style={{ position: "absolute", left: 3, top: 8, width: 94, height: 134 }}>
 
                 {/* Lock-on bracket corners (4 L-shapes) */}
-                {[
-                  { t: -3, l: -3, bdr: "none",   bdl: "1.5px solid", bdt: "1.5px solid", bdb: "none" },
-                  { t: -3, r: -3, bdr: "none",   bdl: "none", bdt: "1.5px solid", bdb: "none", bdRight: "1.5px solid" },
-                  { b: -3, l: -3, bdr: "none",   bdl: "1.5px solid", bdt: "none",        bdb: "1.5px solid" },
-                  { b: -3, r: -3, bdr: "none",   bdl: "none", bdt: "none",        bdb: "1.5px solid", bdRight: "1.5px solid" },
-                ].map((_, i) => {
+                {[0,1,2,3].map((i) => {
                   const pos = [
-                    { top: -3, left: -3 },
-                    { top: -3, right: -3 },
-                    { bottom: -3, left: -3 },
-                    { bottom: -3, right: -3 },
+                    { top: -4, left: -4 },
+                    { top: -4, right: -4 },
+                    { bottom: -4, left: -4 },
+                    { bottom: -4, right: -4 },
                   ][i];
                   const borders = [
-                    { borderTop: "1.5px solid", borderLeft: "1.5px solid" },
-                    { borderTop: "1.5px solid", borderRight: "1.5px solid" },
-                    { borderBottom: "1.5px solid", borderLeft: "1.5px solid" },
-                    { borderBottom: "1.5px solid", borderRight: "1.5px solid" },
+                    { borderTop: "2px solid", borderLeft: "2px solid" },
+                    { borderTop: "2px solid", borderRight: "2px solid" },
+                    { borderBottom: "2px solid", borderLeft: "2px solid" },
+                    { borderBottom: "2px solid", borderRight: "2px solid" },
                   ][i];
                   return (
                     <div key={i} className="scanner-bracket" style={{
-                      position: "absolute", width: 9, height: 9,
+                      position: "absolute", width: 11, height: 11,
                       borderColor: G,
                       ...pos, ...borders,
                     }} />
@@ -191,20 +186,20 @@ export default function Index() {
 
                   {/* Label band */}
                   <div style={{ height: "30%", borderBottom: "1px solid rgba(0,200,83,0.18)", background: "rgba(0,200,83,0.07)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <span style={{ fontFamily: D, fontSize: "0.85rem", color: "rgba(0,200,83,0.7)", letterSpacing: "0.06em" }}>OAT MILK</span>
+                    <span style={{ fontFamily: D, fontSize: "1.05rem", color: "rgba(0,200,83,0.75)", letterSpacing: "0.06em" }}>OAT MILK</span>
                   </div>
 
                   {/* Product icon */}
                   <div style={{ height: "42%", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <span style={{
-                      fontSize: "1.6rem", lineHeight: 1,
-                      filter: "grayscale(1) sepia(1) hue-rotate(72deg) saturate(14) brightness(0.6) drop-shadow(0 0 5px rgba(0,200,83,0.5))",
-                      opacity: 0.65,
+                      fontSize: "2rem", lineHeight: 1,
+                      filter: "grayscale(1) sepia(1) hue-rotate(72deg) saturate(14) brightness(0.6) drop-shadow(0 0 6px rgba(0,200,83,0.5))",
+                      opacity: 0.7,
                     }}>🥛</span>
                   </div>
 
                   {/* Barcode */}
-                  <div style={{ height: "28%", display: "flex", alignItems: "flex-end", padding: "0 6px 4px", gap: 1 }}>
+                  <div style={{ height: "28%", display: "flex", alignItems: "flex-end", padding: "0 7px 5px", gap: 1 }}>
                     {BARCODE.map((w, i) => (
                       <div key={i} style={{ flexBasis: w * 2, flexShrink: 0, height: i % 4 === 0 ? "75%" : "55%", background: "rgba(255,255,255,0.22)" }} />
                     ))}
@@ -214,42 +209,42 @@ export default function Index() {
                   <div className="scanner-beam" style={{
                     position: "absolute", top: 0, left: 0, right: 0, height: 2,
                     background: G,
-                    boxShadow: `0 0 6px ${G}, 0 0 16px rgba(0,200,83,0.4)`,
+                    boxShadow: `0 0 8px ${G}, 0 0 20px rgba(0,200,83,0.4)`,
                   }} />
 
                   {/* Scan beam glow strip */}
                   <div className="scanner-beam" style={{
-                    position: "absolute", top: 0, left: 0, right: 0, height: 16,
-                    background: "linear-gradient(to bottom, rgba(0,200,83,0.14), transparent)",
+                    position: "absolute", top: 0, left: 0, right: 0, height: 20,
+                    background: "linear-gradient(to bottom, rgba(0,200,83,0.16), transparent)",
                     pointerEvents: "none",
                   }} />
                 </div>
               </div>
 
               {/* ── Score chips (right column) ── */}
-              <div style={{ position: "absolute", left: 90, top: 10, display: "flex", flexDirection: "column", gap: 8 }}>
+              <div style={{ position: "absolute", left: 101, top: 8, display: "flex", flexDirection: "column", gap: 10 }}>
                 {SCANNER_CHIPS.map((chip, i) => (
                   <div key={chip.label} className={chip.cls} style={{ opacity: 0 }}>
                     {/* Connector tick */}
                     <div style={{ display: "flex", alignItems: "center", gap: 0 }}>
-                      <div style={{ width: 7, height: 1, background: `${chip.color}55`, flexShrink: 0 }} />
+                      <div style={{ width: 6, height: 1, background: `${chip.color}55`, flexShrink: 0 }} />
                       {/* Chip */}
                       <div style={{
                         background: "#000",
                         border: `1px solid ${chip.color}`,
-                        padding: "3px 6px",
+                        padding: "4px 7px",
                         display: "flex", alignItems: "center", gap: 4,
                         whiteSpace: "nowrap",
                       }}>
                         <div className="scanner-dot" style={{
-                          width: 5, height: 5, borderRadius: "50%",
+                          width: 6, height: 6, borderRadius: "50%",
                           background: chip.color,
                           animationDelay: `${i * 0.4}s`,
                           flexShrink: 0,
                         }} />
                         <div style={{ lineHeight: 1 }}>
-                          <div style={{ fontFamily: M, fontSize: "0.4rem", color: chip.color, letterSpacing: "0.08em" }}>{chip.label}</div>
-                          <div style={{ fontFamily: D, fontSize: "0.65rem", color: "#fff", letterSpacing: "0.06em", lineHeight: 1.1 }}>{chip.verdict}</div>
+                          <div style={{ fontFamily: M, fontSize: "0.44rem", color: chip.color, letterSpacing: "0.08em" }}>{chip.label}</div>
+                          <div style={{ fontFamily: D, fontSize: "0.75rem", color: "#fff", letterSpacing: "0.06em", lineHeight: 1.1 }}>{chip.verdict}</div>
                         </div>
                       </div>
                     </div>
@@ -258,20 +253,20 @@ export default function Index() {
               </div>
 
               {/* ── Processing label ── */}
-              <div style={{ position: "absolute", bottom: 0, left: 0, width: 86, textAlign: "center" }}>
-                <span className="terminal-cursor" style={{ fontFamily: M, fontSize: "0.38rem", color: "rgba(0,200,83,0.4)", letterSpacing: "0.12em", textTransform: "uppercase" }}>
+              <div style={{ position: "absolute", bottom: 0, left: 0, width: 100, textAlign: "center" }}>
+                <span className="terminal-cursor" style={{ fontFamily: M, fontSize: "0.4rem", color: "rgba(0,200,83,0.4)", letterSpacing: "0.12em", textTransform: "uppercase" }}>
                   SCANNING...
                 </span>
               </div>
 
               {/* ── Data flow lines (decorative vertical dashes) ── */}
-              {[26, 52, 100].map((left, i) => (
+              {[28, 56, 108].map((left, i) => (
                 <div key={i} style={{
                   position: "absolute",
                   left,
-                  top: 130,
+                  top: 152,
                   width: 1,
-                  height: 60,
+                  height: 70,
                   overflow: "hidden",
                   opacity: 0.25,
                   pointerEvents: "none",

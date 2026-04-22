@@ -1,12 +1,13 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { ShoppingCart, Camera, BarChart3, Info } from "lucide-react";
+import { ShoppingCart, Camera, BarChart3, Info, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
-  { path: "/basket",     label: "Cart",    icon: ShoppingCart },
-  { path: "/scan",       label: "Scan",    icon: Camera, fab: true },
-  { path: "/dashboard",  label: "History", icon: BarChart3  },
-  { path: "/about",      label: "About",   icon: Info       },
+  { path: "/basket",      label: "Cart",    icon: ShoppingCart },
+  { path: "/dashboard",   label: "History", icon: BarChart3    },
+  { path: "/scan",        label: "Scan",    icon: Camera, fab: true },
+  { path: "/about",       label: "About",   icon: Info         },
+  { path: "/preferences", label: "Values",  icon: Settings     },
 ];
 
 function NavTab({ path, label, icon: Icon, isActive }: {
@@ -35,7 +36,7 @@ function ScanFab({ isActive }: { isActive: boolean }) {
       onClick={() => navigate("/scan")}
       aria-label="Scan a product"
       className="flex flex-col items-center select-none flex-shrink-0"
-      style={{ marginTop: "-2.375rem" }}
+      style={{ marginTop: "-2.6rem" }}
     >
       <div
         className={cn(
@@ -91,7 +92,7 @@ export function BottomNav() {
       {/* Tab row */}
       <div
         className="relative menu items-end px-2 pt-2"
-        style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 8px)" }}
+        style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 2px)" }}
       >
         {NAV_ITEMS.map((tab) =>
           tab.fab ? (
