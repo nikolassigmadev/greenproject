@@ -1688,7 +1688,6 @@ const Scan = () => {
         ref={offFileInputRef}
         type="file"
         accept="image/*"
-        capture="environment"
         onChange={handleOffFileUpload}
         style={{ display: 'none' }}
       />

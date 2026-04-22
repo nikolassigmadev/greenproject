@@ -1,13 +1,12 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Home, ShoppingCart, Camera, BarChart3, Info } from "lucide-react";
+import { ShoppingCart, Camera, BarChart3, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
-  { path: "/",          label: "Home",    icon: Home        },
-  { path: "/basket",    label: "Basket",  icon: ShoppingCart },
-  { path: "/scan",      label: "Scan",    icon: Camera, fab: true },
-  { path: "/dashboard", label: "History", icon: BarChart3   },
-  { path: "/about",     label: "About",   icon: Info        },
+  { path: "/basket",     label: "Cart",    icon: ShoppingCart },
+  { path: "/scan",       label: "Scan",    icon: Camera, fab: true },
+  { path: "/dashboard",  label: "History", icon: BarChart3  },
+  { path: "/about",      label: "About",   icon: Info       },
 ];
 
 function NavTab({ path, label, icon: Icon, isActive }: {

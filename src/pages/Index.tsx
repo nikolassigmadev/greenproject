@@ -1,83 +1,85 @@
-import { BottomNav } from "@/components/BottomNav";
-import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import {
-  Camera, Leaf, Heart,
-  Settings, Globe, Shield,
-  BarChart3, TrendingUp, Activity,
-  Scan, Receipt, ScanLine, ChevronRight, AlertCircle, ShoppingCart,
+  ScanLine, ShoppingCart, AlertCircle, ChevronRight,
+  Globe, Shield, Leaf, TrendingUp, Heart, Activity,
+  Scan, Receipt, BarChart3, Settings,
 } from "lucide-react";
+import { BottomNav } from "@/components/BottomNav";
 import { loadPriorities, DEFAULT_PRIORITIES } from "@/utils/userPreferences";
 
-const analysisCategories = [
-  { icon: Globe,      title: "Origin",       desc: "Where ingredients actually come from", accent: "#40aaff" },
-  { icon: Shield,     title: "Labor",        desc: "Forced & child labor flags",           accent: "#ff4136" },
-  { icon: Leaf,       title: "Carbon",       desc: "CO₂ lifecycle per 100g",               accent: "#00c853" },
-  { icon: TrendingUp, title: "Alternatives", desc: "Greener swaps ranked for you",         accent: "#ffc700" },
-  { icon: Heart,      title: "Animal",       desc: "BBFAW welfare scores",                 accent: "#ff69b4" },
-  { icon: Activity,   title: "Nutrition",    desc: "Nutri-Score A–E grades",               accent: "#00c853" },
+/* ─── Scanner visual chip data ──────────────────────────────────────── */
+const SCANNER_CHIPS = [
+  { label: "LABOUR", color: "#ff4136", verdict: "⚠", cls: "scanner-chip-0" },
+  { label: "CARBON", color: "#00c853", verdict: "✓", cls: "scanner-chip-1" },
+  { label: "ANIMAL", color: "#00c853", verdict: "✓", cls: "scanner-chip-2" },
+  { label: "NUTRI",  color: "#ffc700", verdict: "B", cls: "scanner-chip-3" },
 ];
 
-const quickActions = [
-  {
-    icon: Scan,
-    label: "Scan",
-    sub: "Any product",
-    to: "/scan",
-    color: "hsl(172 72% 28%)",
-    bg: "hsl(172 50% 92%)",
-  },
-  {
-    icon: Receipt,
-    label: "View Cart",
-    sub: "Whole shop",
-    to: "/receipt",
-    color: "hsl(36 80% 38%)",
-    bg: "hsl(36 80% 93%)",
-  },
-  {
-    icon: BarChart3,
-    label: "History",
-    sub: "Past scans",
-    to: "/dashboard",
-    color: "hsl(220 68% 46%)",
-    bg: "hsl(220 60% 94%)",
-  },
-  {
-    icon: Settings,
-    label: "Priorities",
-    sub: "Your values",
-    to: "/preferences",
-    color: "hsl(280 52% 46%)",
-    bg: "hsl(280 40% 94%)",
-  },
+// Barcode bar widths (flex-basis units)
+const BARCODE = [2,1,1,2,1,3,1,1,2,1,2,1,1,2,1,1,2,1,1,3];
+
+/* ─── Demo card data ────────────────────────────────────────────────── */
+const DEMO_SCORES = [
+  { label: "Labour Rights", score: 38, color: "#ff4136", icon: Shield,     verdict: "Issues found" },
+  { label: "Carbon (CO₂)",  score: 74, color: "#00c853", icon: Leaf,       verdict: "Low impact"   },
+  { label: "Animal Welfare",score: 88, color: "#00c853", icon: Heart,       verdict: "Good"         },
+  { label: "Nutrition",     score: 72, color: "#ffc700", icon: Activity,    verdict: "B Grade"      },
+  { label: "Origin",        score: 55, color: "#ffc700", icon: Globe,       verdict: "Mixed"        },
 ];
 
-const stats = [
-  { value: "3M+", label: "Products" },
-  { value: "6", label: "Ethics checks" },
-  { value: "Free", label: "Always" },
+/* ─── Quick actions ─────────────────────────────────────────────────── */
+const QUICK_ACTIONS = [
+  { icon: Scan,      label: "SCAN",    sub: "any product", to: "/scan",        col: "#00c853" },
+  { icon: Receipt,   label: "CART",    sub: "whole shop",  to: "/receipt",     col: "#ffc700" },
+  { icon: BarChart3, label: "HISTORY", sub: "past scans",  to: "/dashboard",   col: "#40aaff" },
+  { icon: Settings,  label: "VALUES",  sub: "priorities",  to: "/preferences", col: "#cc88ff" },
 ];
 
-const Index = () => {
+/* ─── Analysis dimensions ───────────────────────────────────────────── */
+const CHECKS = [
+  { icon: Globe,      label: "ORIGIN",       desc: "Where ingredients come from", color: "#40aaff" },
+  { icon: Shield,     label: "LABOUR",       desc: "Forced & child labour flags",  color: "#ff4136" },
+  { icon: Leaf,       label: "CARBON",       desc: "CO₂ per 100 g lifecycle",      color: "#00c853" },
+  { icon: TrendingUp, label: "ALTERNATIVES", desc: "Greener swaps ranked for you", color: "#ffc700" },
+  { icon: Heart,      label: "ANIMAL",       desc: "BBFAW welfare scores",         color: "#ff69b4" },
+  { icon: Activity,   label: "NUTRITION",    desc: "Nutri-Score A–E grade",        color: "#00c853" },
+];
+
+/* ─── Shared tokens ─────────────────────────────────────────────────── */
+const D  = "'Bebas Neue', sans-serif";
+const M  = "'JetBrains Mono', monospace";
+const G  = "#00c853";
+const GR = "#84898E";
+const B  = "rgba(255,255,255,0.08)";
+
+/* ═══════════════════════════════════════════════════════════════════ */
+
+export default function Index() {
   const [isDefaultPriorities, setIsDefaultPriorities] = useState(() => {
     const p = loadPriorities();
     return (
-      p.environment === DEFAULT_PRIORITIES.environment &&
-      p.laborRights === DEFAULT_PRIORITIES.laborRights &&
-      p.animalWelfare === DEFAULT_PRIORITIES.animalWelfare &&
-      p.nutrition === DEFAULT_PRIORITIES.nutrition
+      p.environment  === DEFAULT_PRIORITIES.environment &&
+      p.laborRights  === DEFAULT_PRIORITIES.laborRights &&
+      p.animalWelfare=== DEFAULT_PRIORITIES.animalWelfare &&
+      p.nutrition    === DEFAULT_PRIORITIES.nutrition
     );
   });
+
+  const [barsVisible, setBarsVisible] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setBarsVisible(true), 320);
+    return () => clearTimeout(t);
+  }, []);
 
   useEffect(() => {
     const check = () => {
       const p = loadPriorities();
       setIsDefaultPriorities(
-        p.environment === DEFAULT_PRIORITIES.environment &&
-        p.laborRights === DEFAULT_PRIORITIES.laborRights &&
-        p.animalWelfare === DEFAULT_PRIORITIES.animalWelfare &&
-        p.nutrition === DEFAULT_PRIORITIES.nutrition
+        p.environment  === DEFAULT_PRIORITIES.environment &&
+        p.laborRights  === DEFAULT_PRIORITIES.laborRights &&
+        p.animalWelfare=== DEFAULT_PRIORITIES.animalWelfare &&
+        p.nutrition    === DEFAULT_PRIORITIES.nutrition
       );
     };
     window.addEventListener("prioritiesUpdated", check);
@@ -88,366 +90,421 @@ const Index = () => {
     };
   }, []);
 
-  // Ticker items
-  const tickerItems = [
-    "COCA-COLA", "WHOLE MILK", "DORITOS", "MINERAL WATER", "ORANGE JUICE",
-    "OAT MILK", "PRINGLES", "SPARKLING WATER", "ENERGY DRINK", "SOY MILK",
-    "KETTLE CHIPS", "ALMOND MILK", "PEPSI", "COCONUT WATER", "RICE MILK",
-    "LAYS", "APPLE JUICE", "GREEK YOGURT", "TOMATO SAUCE", "OLIVE OIL",
-  ];
-
+  const scoreColor = (s: number) => s >= 70 ? G : s >= 45 ? "#ffc700" : "#ff4136";
 
   return (
-    <div className="min-h-screen bg-black" style={{ position: 'relative', overflow: 'hidden' }}>
+    <div style={{ background: "#000", minHeight: "100vh", overflowX: "hidden" }}>
       <div className="scanlines" />
 
-      <main className="pb-nav" style={{ position: 'relative', zIndex: 1 }}>
+      <main className="pb-nav" style={{ position: "relative", zIndex: 1 }}>
 
-        {/* ── Ticker row ── */}
-        <div style={{ overflow: 'hidden', borderBottom: '1px solid rgba(255,255,255,0.06)', background: '#000' }}>
-          <div className="ticker-track">
-            {[...tickerItems, ...tickerItems].map((item, i) => (
-              <span key={i} style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.48rem', color: 'rgba(132,137,142,0.5)', letterSpacing: '0.18em', textTransform: 'uppercase', padding: '5px 18px', borderRight: '1px solid rgba(255,255,255,0.05)' }}>
-                {item}
-              </span>
-            ))}
+        {/* ── Top bar ── */}
+        <div style={{
+          display: "flex", justifyContent: "space-between", alignItems: "center",
+          padding: "max(52px, env(safe-area-inset-top)) 20px 14px",
+          borderBottom: `1px solid ${B}`,
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+            <span className="terminal-cursor" style={{ width: 6, height: 6, borderRadius: "50%", background: G, display: "inline-block" }} />
+            <span style={{ fontFamily: M, fontSize: "0.44rem", color: GR, letterSpacing: "0.24em", textTransform: "uppercase" }}>
+              ETHICAL SCANNER
+            </span>
+          </div>
+          <Link to="/basket" style={{ width: 36, height: 36, border: `1px solid ${B}`, display: "flex", alignItems: "center", justifyContent: "center", color: GR }} aria-label="View basket">
+            <ShoppingCart className="w-4 h-4" />
+          </Link>
+        </div>
+
+        {/* ══════════════════════════════════════════
+            HERO — headline left, scanner visual right
+        ══════════════════════════════════════════ */}
+        <div style={{ padding: "28px 20px 0", position: "relative" }}>
+          {/* Corner marks */}
+          {(["tl","tr","bl","br"] as const).map(c => (
+            <div key={c} style={{ position: "absolute", [c.startsWith("t")?"top":"bottom"]: 10, [c.endsWith("l")?"left":"right"]: 10, fontFamily: "monospace", fontSize: 13, color: "rgba(255,255,255,0.14)", userSelect: "none" }}>+</div>
+          ))}
+
+          {/* Tag */}
+          <p style={{ fontFamily: M, fontSize: "0.48rem", color: G, letterSpacing: "0.26em", textTransform: "uppercase", marginBottom: 16, opacity: 0.85 }}>
+            // WHAT IS THIS APP?
+          </p>
+
+          {/* ── Side-by-side: headline + scanner ── */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 148px", gap: 10, alignItems: "start" }}>
+
+            {/* LEFT: headline */}
+            <div>
+              <h1 style={{ fontFamily: D, fontWeight: 400, lineHeight: 0.88, margin: "0 0 18px" }}>
+                <span style={{ display: "block", fontSize: "clamp(1.9rem, 9.5vw, 3rem)", color: "#fff", letterSpacing: "0.02em" }}>SCAN ANY</span>
+                <span style={{ display: "block", fontSize: "clamp(1.9rem, 9.5vw, 3rem)", color: "#fff", letterSpacing: "0.02em" }}>PRODUCT.</span>
+                <span style={{ display: "block", fontSize: "clamp(1.9rem, 9.5vw, 3rem)", color: G, letterSpacing: "0.02em", textShadow: "0 0 30px rgba(0,200,83,0.3)" }}>SEE ITS</span>
+                <span style={{ display: "block", fontSize: "clamp(1.9rem, 9.5vw, 3rem)", color: G, letterSpacing: "0.02em", textShadow: "0 0 30px rgba(0,200,83,0.3)" }}>ETHICS.</span>
+              </h1>
+              <p style={{ fontFamily: M, fontSize: "0.55rem", color: GR, lineHeight: 1.75, letterSpacing: "0.02em" }}>
+                Point your camera at any barcode. Instantly see labour rights, carbon footprint, animal welfare, nutrition grade, origin & greener alternatives — free.
+              </p>
+            </div>
+
+            {/* RIGHT: animated scanner visual */}
+            <div style={{ position: "relative", minHeight: 230 }}>
+
+              {/* Dot-grid background */}
+              <div style={{
+                position: "absolute", inset: 0, pointerEvents: "none",
+                backgroundImage: "radial-gradient(circle, rgba(0,200,83,0.12) 1px, transparent 1px)",
+                backgroundSize: "8px 8px",
+              }} />
+
+              {/* ── Product box ── */}
+              <div className="scanner-product" style={{ position: "absolute", left: 4, top: 10, width: 78, height: 112 }}>
+
+                {/* Lock-on bracket corners (4 L-shapes) */}
+                {[
+                  { t: -3, l: -3, bdr: "none",   bdl: "1.5px solid", bdt: "1.5px solid", bdb: "none" },
+                  { t: -3, r: -3, bdr: "none",   bdl: "none", bdt: "1.5px solid", bdb: "none", bdRight: "1.5px solid" },
+                  { b: -3, l: -3, bdr: "none",   bdl: "1.5px solid", bdt: "none",        bdb: "1.5px solid" },
+                  { b: -3, r: -3, bdr: "none",   bdl: "none", bdt: "none",        bdb: "1.5px solid", bdRight: "1.5px solid" },
+                ].map((_, i) => {
+                  const pos = [
+                    { top: -3, left: -3 },
+                    { top: -3, right: -3 },
+                    { bottom: -3, left: -3 },
+                    { bottom: -3, right: -3 },
+                  ][i];
+                  const borders = [
+                    { borderTop: "1.5px solid", borderLeft: "1.5px solid" },
+                    { borderTop: "1.5px solid", borderRight: "1.5px solid" },
+                    { borderBottom: "1.5px solid", borderLeft: "1.5px solid" },
+                    { borderBottom: "1.5px solid", borderRight: "1.5px solid" },
+                  ][i];
+                  return (
+                    <div key={i} className="scanner-bracket" style={{
+                      position: "absolute", width: 9, height: 9,
+                      borderColor: G,
+                      ...pos, ...borders,
+                    }} />
+                  );
+                })}
+
+                {/* Product body */}
+                <div style={{ width: "100%", height: "100%", border: "1px solid rgba(0,200,83,0.35)", overflow: "hidden", position: "relative", background: "rgba(0,200,83,0.03)" }}>
+
+                  {/* Label band */}
+                  <div style={{ height: "30%", borderBottom: "1px solid rgba(0,200,83,0.18)", background: "rgba(0,200,83,0.07)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <span style={{ fontFamily: D, fontSize: "0.85rem", color: "rgba(0,200,83,0.7)", letterSpacing: "0.06em" }}>OAT MILK</span>
+                  </div>
+
+                  {/* Product icon */}
+                  <div style={{ height: "42%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <span style={{
+                      fontSize: "1.6rem", lineHeight: 1,
+                      filter: "grayscale(1) sepia(1) hue-rotate(72deg) saturate(14) brightness(0.6) drop-shadow(0 0 5px rgba(0,200,83,0.5))",
+                      opacity: 0.65,
+                    }}>🥛</span>
+                  </div>
+
+                  {/* Barcode */}
+                  <div style={{ height: "28%", display: "flex", alignItems: "flex-end", padding: "0 6px 4px", gap: 1 }}>
+                    {BARCODE.map((w, i) => (
+                      <div key={i} style={{ flexBasis: w * 2, flexShrink: 0, height: i % 4 === 0 ? "75%" : "55%", background: "rgba(255,255,255,0.22)" }} />
+                    ))}
+                  </div>
+
+                  {/* Scan beam */}
+                  <div className="scanner-beam" style={{
+                    position: "absolute", top: 0, left: 0, right: 0, height: 2,
+                    background: G,
+                    boxShadow: `0 0 6px ${G}, 0 0 16px rgba(0,200,83,0.4)`,
+                  }} />
+
+                  {/* Scan beam glow strip */}
+                  <div className="scanner-beam" style={{
+                    position: "absolute", top: 0, left: 0, right: 0, height: 16,
+                    background: "linear-gradient(to bottom, rgba(0,200,83,0.14), transparent)",
+                    pointerEvents: "none",
+                  }} />
+                </div>
+              </div>
+
+              {/* ── Score chips (right column) ── */}
+              <div style={{ position: "absolute", left: 90, top: 10, display: "flex", flexDirection: "column", gap: 8 }}>
+                {SCANNER_CHIPS.map((chip, i) => (
+                  <div key={chip.label} className={chip.cls} style={{ opacity: 0 }}>
+                    {/* Connector tick */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 0 }}>
+                      <div style={{ width: 7, height: 1, background: `${chip.color}55`, flexShrink: 0 }} />
+                      {/* Chip */}
+                      <div style={{
+                        background: "#000",
+                        border: `1px solid ${chip.color}`,
+                        padding: "3px 6px",
+                        display: "flex", alignItems: "center", gap: 4,
+                        whiteSpace: "nowrap",
+                      }}>
+                        <div className="scanner-dot" style={{
+                          width: 5, height: 5, borderRadius: "50%",
+                          background: chip.color,
+                          animationDelay: `${i * 0.4}s`,
+                          flexShrink: 0,
+                        }} />
+                        <div style={{ lineHeight: 1 }}>
+                          <div style={{ fontFamily: M, fontSize: "0.4rem", color: chip.color, letterSpacing: "0.08em" }}>{chip.label}</div>
+                          <div style={{ fontFamily: D, fontSize: "0.65rem", color: "#fff", letterSpacing: "0.06em", lineHeight: 1.1 }}>{chip.verdict}</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* ── Processing label ── */}
+              <div style={{ position: "absolute", bottom: 0, left: 0, width: 86, textAlign: "center" }}>
+                <span className="terminal-cursor" style={{ fontFamily: M, fontSize: "0.38rem", color: "rgba(0,200,83,0.4)", letterSpacing: "0.12em", textTransform: "uppercase" }}>
+                  SCANNING...
+                </span>
+              </div>
+
+              {/* ── Data flow lines (decorative vertical dashes) ── */}
+              {[26, 52, 100].map((left, i) => (
+                <div key={i} style={{
+                  position: "absolute",
+                  left,
+                  top: 130,
+                  width: 1,
+                  height: 60,
+                  overflow: "hidden",
+                  opacity: 0.25,
+                  pointerEvents: "none",
+                }}>
+                  <div style={{
+                    width: 1,
+                    height: "200%",
+                    background: `repeating-linear-gradient(to bottom, ${G} 0px, ${G} 4px, transparent 4px, transparent 9px)`,
+                    animation: `dataFlow ${2.2 + i * 0.6}s linear ${i * 0.7}s infinite`,
+                  }} />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* ── CTA — full width below grid ── */}
+          <div style={{ marginTop: 24, paddingBottom: 24, borderBottom: `2px solid rgba(255,255,255,0.12)` }}>
+            <Link to="/scan" style={{ display: "block", textDecoration: "none" }}>
+              <div style={{ background: G, padding: "18px 22px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "relative" }}>
+                {(["tl","tr","bl","br"] as const).map(c => (
+                  <div key={c} style={{ position: "absolute", [c.startsWith("t")?"top":"bottom"]: 5, [c.endsWith("l")?"left":"right"]: 8, fontFamily: "monospace", fontSize: 11, color: "rgba(0,0,0,0.28)", userSelect: "none" }}>+</div>
+                ))}
+                <div>
+                  <p style={{ fontFamily: M, fontSize: "0.44rem", color: "rgba(0,0,0,0.5)", letterSpacing: "0.2em", textTransform: "uppercase", marginBottom: 3 }}>
+                    TAP TO BEGIN
+                  </p>
+                  <p style={{ fontFamily: D, fontSize: "clamp(2rem, 9vw, 2.6rem)", color: "#000", letterSpacing: "0.04em", lineHeight: 1, fontWeight: 400 }}>
+                    START SCANNING
+                  </p>
+                </div>
+                <ScanLine style={{ width: 30, height: 30, color: "#000", opacity: 0.65, flexShrink: 0 }} strokeWidth={1.5} />
+              </div>
+            </Link>
+
+            {isDefaultPriorities && (
+              <Link to="/preferences" style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10, textDecoration: "none", padding: "8px 0" }}>
+                <AlertCircle size={12} style={{ color: "#ffc700", flexShrink: 0 }} />
+                <span style={{ fontFamily: M, fontSize: "0.53rem", color: "#ffc700", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                  Personalise results — set your priorities →
+                </span>
+              </Link>
+            )}
           </div>
         </div>
 
         {/* ══════════════════════════════════════════
-            MSCHF-STYLE HERO POSTER
+            DEMO SCAN CARD — shows what you get
         ══════════════════════════════════════════ */}
-        <div style={{ position: 'relative', overflow: 'hidden', borderBottom: '2px solid rgba(255,255,255,0.15)' }}>
+        <div style={{ padding: "24px 20px", borderBottom: `1px solid ${B}` }}>
+          <p style={{ fontFamily: M, fontSize: "0.48rem", color: GR, letterSpacing: "0.26em", textTransform: "uppercase", marginBottom: 14 }}>
+            // EXAMPLE SCAN RESULT
+          </p>
 
-          {/* ── Compact top bar ── */}
-          <div style={{
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            padding: 'max(52px, env(safe-area-inset-top)) 20px 14px',
-            borderBottom: '1px solid rgba(255,255,255,0.07)',
-            position: 'relative', zIndex: 2,
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-              <span className="terminal-cursor" style={{ width: 6, height: 6, borderRadius: '50%', background: '#00c853', display: 'inline-block', flexShrink: 0 }} />
-              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.44rem', color: '#84898E', letterSpacing: '0.24em', textTransform: 'uppercase' }}>
-                ETHICAL SCANNER
-              </span>
-            </div>
-            <Link to="/basket" style={{ width: 36, height: 36, border: '1px solid rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#84898E' }} aria-label="View basket">
-              <ShoppingCart className="w-4 h-4" />
-            </Link>
-          </div>
-
-          {/* ── Floating food emojis — green tinted background layer ── */}
-          {[
-            { e: '🥫', top: '5%',  left: '2%',   size: '3.4rem', anim: 'floatA', delay: '0s',    opacity: 0.55 },
-            { e: '🍫', top: '3%',  right: '3%',  size: '3rem',   anim: 'floatB', delay: '-2.1s', opacity: 0.5  },
-            { e: '🥤', top: '27%', left: '0%',   size: '4rem',   anim: 'floatC', delay: '-1.3s', opacity: 0.45 },
-            { e: '🧃', top: '20%', right: '1%',  size: '3.4rem', anim: 'floatD', delay: '-3.2s', opacity: 0.5  },
-            { e: '🫙', top: '53%', left: '2%',   size: '3.8rem', anim: 'floatE', delay: '-0.7s', opacity: 0.45 },
-            { e: '🧂', top: '48%', right: '2%',  size: '3rem',   anim: 'floatA', delay: '-4s',   opacity: 0.5  },
-            { e: '🍬', top: '76%', left: '1%',   size: '3.4rem', anim: 'floatB', delay: '-2.8s', opacity: 0.45 },
-            { e: '🥛', top: '72%', right: '2%',  size: '3.2rem', anim: 'floatC', delay: '-1.8s', opacity: 0.5  },
-            { e: '🍪', top: '13%', left: '43%',  size: '2.6rem', anim: 'floatD', delay: '-0.4s', opacity: 0.28 },
-            { e: '🥡', top: '64%', left: '46%',  size: '2.4rem', anim: 'floatE', delay: '-3.6s', opacity: 0.28 },
-          ].map(({ e, top, left, right, size, anim, delay, opacity }, i) => (
-            <div key={i} style={{
-              position: 'absolute',
-              top, left, right,
-              fontSize: size,
-              lineHeight: 1,
-              zIndex: 1,
-              pointerEvents: 'none',
-              userSelect: 'none',
-              filter: 'grayscale(1) sepia(1) hue-rotate(72deg) saturate(22) brightness(0.6) drop-shadow(0 0 8px rgba(0,200,83,0.5))',
-              opacity,
-              animation: `${anim} ${5 + i * 0.4}s ease-in-out ${delay} infinite`,
-            }}>{e}</div>
-          ))}
-
-          {/* ── Giant two-line wordmark — each word fills full width ── */}
-          <div style={{ position: 'relative', zIndex: 2, lineHeight: 0.85, padding: '4px 0 0', overflow: 'hidden' }}>
-            {/* GOOD — outlined, glitches to FOOD */}
-            <div style={{ position: 'relative', display: 'block', textAlign: 'center' }}>
-              <span style={{
-                fontFamily: "'Bebas Neue', sans-serif", fontWeight: 400,
-                fontSize: 'min(41.5vw, 180px)',
-                color: 'transparent',
-                WebkitTextStroke: '1.5px #84898E',
-                letterSpacing: '0.01em', display: 'inline-block',
-                animation: 'logoGood 10s linear infinite',
-              }}>GOOD</span>
-              <span style={{
-                fontFamily: "'Bebas Neue', sans-serif", fontWeight: 400,
-                fontSize: 'min(41.5vw, 180px)',
-                color: 'transparent',
-                WebkitTextStroke: '1.5px #40aaff',
-                letterSpacing: '0.01em',
-                position: 'absolute', left: '50%', top: 0, transform: 'translateX(-50%)',
-                animation: 'logoFood 10s linear infinite',
-              }}>FOOD</span>
-            </div>
-            {/* SCAN — solid white + green glow */}
-            <div style={{ textAlign: 'center' }}>
-              <span style={{
-                fontFamily: "'Bebas Neue', sans-serif", fontWeight: 400,
-                fontSize: 'min(41.5vw, 180px)',
-                color: '#fff',
-                textShadow: '0 0 50px rgba(0,200,83,0.5)',
-                letterSpacing: '0.01em', display: 'inline-block',
-              }}>SCAN</span>
-            </div>
-          </div>
-
-          {/* ── Mission block ── */}
-          <div style={{
-            position: 'relative', zIndex: 2,
-            borderTop: '1px solid rgba(255,255,255,0.07)',
-            padding: '16px 20px 20px',
-            textAlign: 'center',
-          }}>
-            <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.42rem', color: '#84898E', letterSpacing: '0.26em', textTransform: 'uppercase', marginBottom: 10 }}>
-              // MISSION
-            </p>
-            <h2 style={{ fontFamily: "'Bebas Neue', sans-serif", fontWeight: 400, fontSize: 'clamp(1.5rem, 7vw, 2.6rem)', lineHeight: 1.05, margin: '0 0 12px' }}>
-              <span style={{ color: '#fff' }}>SCAN ANY PRODUCT. </span>
-              <span style={{ color: '#00c853', textShadow: '0 0 16px rgba(0,200,83,0.35)' }}>SEE WHAT BRANDS </span>
-              <span style={{ color: '#fff' }}>DON'T WANT YOU TO KNOW.</span>
-            </h2>
-            <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.48rem', color: '#84898E', letterSpacing: '0.05em', lineHeight: 1.8 }}>
-              Labour · CO₂ · Origin · Nutrition · Animal welfare · Greener swaps
-            </p>
-          </div>
-
-          {/* Corner registration marks */}
-          {(['tl','tr','bl','br'] as const).map(c => (
-            <div key={c} style={{ position: 'absolute', [c.startsWith('t') ? 'top' : 'bottom']: 10, [c.endsWith('l') ? 'left' : 'right']: 10, zIndex: 3, fontFamily: 'monospace', fontSize: 13, color: 'rgba(255,255,255,0.2)', lineHeight: 1, userSelect: 'none' }}>+</div>
-          ))}
-        </div>
-
-        {/* ── Full-width green scan CTA strip ── */}
-        <Link to="/scan" style={{ display: 'block', textDecoration: 'none', position: 'relative', background: '#00c853', borderBottom: '2px solid #fff' }}>
-          {/* Corner marks */}
-          {(['tl','tr','bl','br'] as const).map(c => (
-            <div key={c} style={{ position: 'absolute', [c.startsWith('t') ? 'top' : 'bottom']: 6, [c.endsWith('l') ? 'left' : 'right']: 10, fontFamily: 'monospace', fontSize: 13, color: 'rgba(0,0,0,0.4)', lineHeight: 1, userSelect: 'none', zIndex: 1 }}>+</div>
-          ))}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 24px' }}>
-            <div>
-              <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.5rem', color: 'rgba(0,0,0,0.55)', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 3 }}>
-                TAP TO BEGIN
-              </p>
-              <p style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.6rem, 8vw, 2.4rem)', color: '#000', letterSpacing: '0.04em', lineHeight: 1, fontWeight: 400 }}>
-                SCAN YOUR PRODUCT
-              </p>
-            </div>
-            <ScanLine className="w-9 h-9" style={{ color: '#000', opacity: 0.7, flexShrink: 0 }} strokeWidth={1.5} />
-          </div>
-          {isDefaultPriorities && (
-            <div style={{ padding: '0 24px 14px', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <AlertCircle size={12} style={{ color: 'rgba(0,0,0,0.6)', flexShrink: 0 }} />
-              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.55rem', color: 'rgba(0,0,0,0.6)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                Set priorities first →
-              </span>
-            </div>
-          )}
-        </Link>
-
-        {/* ── Reverse ticker ── */}
-        <div style={{ overflow: 'hidden', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-          <div className="ticker-track ticker-track--rev">
-            {[...tickerItems, ...tickerItems].map((item, i) => (
-              <span key={i} style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.48rem', color: 'rgba(0,200,83,0.3)', letterSpacing: '0.18em', textTransform: 'uppercase', padding: '5px 18px', borderRight: '1px solid rgba(255,255,255,0.05)' }}>
-                {item}
-              </span>
+          <div style={{ border: `1px solid rgba(255,255,255,0.14)`, position: "relative", overflow: "hidden" }}>
+            {(["tl","tr","bl","br"] as const).map(c => (
+              <div key={c} style={{ position: "absolute", [c.startsWith("t")?"top":"bottom"]: 8, [c.endsWith("l")?"left":"right"]: 10, fontFamily: "monospace", fontSize: 11, color: "rgba(0,200,83,0.22)", userSelect: "none" }}>+</div>
             ))}
-          </div>
-        </div>
 
-        {/* ── Stats row ── */}
-        <div className="px-5 pt-4">
-          <div className="max-w-xl mx-auto grid grid-cols-3">
-            {stats.map((s, i) => (
-              <div
-                key={s.label}
-                className="py-4 px-3 text-center"
-                style={{
-                  borderRight: i < stats.length - 1 ? "1px solid rgba(255,255,255,0.06)" : "none",
-                  borderTop: "1px solid rgba(255,255,255,0.06)",
-                  borderBottom: "1px solid rgba(255,255,255,0.06)",
-                  borderLeft: i === 0 ? "1px solid rgba(255,255,255,0.06)" : "none",
-                }}
-              >
-                <p
-                  className="font-mono font-black tabular-nums leading-none mb-1"
-                  style={{ fontSize: "1.4rem", color: "#ffffff", letterSpacing: "-0.03em" }}
-                >
-                  {s.value}
+            {/* Card header */}
+            <div style={{ padding: "16px 18px 14px", borderBottom: `1px solid ${B}`, display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+              <div>
+                <p style={{ fontFamily: M, fontSize: "0.44rem", color: GR, letterSpacing: "0.18em", textTransform: "uppercase", marginBottom: 4 }}>
+                  SCANNED PRODUCT
                 </p>
-                <p
-                  className="font-mono uppercase"
-                  style={{ fontSize: "0.5rem", color: "#84898E", letterSpacing: "0.15em" }}
-                >
-                  {s.label}
+                <p style={{ fontFamily: D, fontSize: "clamp(1.6rem, 7vw, 2.2rem)", color: "#fff", letterSpacing: "0.04em", lineHeight: 1, marginBottom: 2 }}>
+                  OAT MILK
+                </p>
+                <p style={{ fontFamily: M, fontSize: "0.5rem", color: GR, letterSpacing: "0.12em" }}>
+                  SOME BRAND CO.
                 </p>
               </div>
-            ))}
-          </div>
-        </div>
-
-        {/* ── Priorities CTA ── */}
-        {isDefaultPriorities && (
-          <div className="px-5 pt-3">
-            <div className="max-w-xl mx-auto">
-              <Link
-                to="/preferences"
-                className="flex items-center gap-3 px-4 py-3.5 active:opacity-70 transition-opacity"
-                style={{
-                  border: "1px solid rgba(255, 199, 0, 0.25)",
-                  borderLeft: "3px solid #ffc700",
-                  textDecoration: "none",
-                }}
-              >
-                <AlertCircle className="w-4 h-4 flex-shrink-0" style={{ color: "#ffc700" }} strokeWidth={2} />
-                <div className="flex-1 min-w-0">
-                  <p
-                    className="font-mono font-bold uppercase leading-tight"
-                    style={{ fontSize: "0.7rem", color: "#ffc700", letterSpacing: "0.08em" }}
-                  >
-                    SET YOUR PRIORITIES
-                  </p>
-                  <p
-                    className="font-mono mt-0.5 leading-tight"
-                    style={{ fontSize: "0.6rem", color: "#84898E" }}
-                  >
-                    Personalise every scan result to your values
-                  </p>
-                </div>
-                <ChevronRight className="w-4 h-4 flex-shrink-0" style={{ color: "#84898E" }} />
-              </Link>
+              <div style={{ textAlign: "right", flexShrink: 0 }}>
+                <p style={{ fontFamily: M, fontSize: "0.42rem", color: GR, letterSpacing: "0.14em", marginBottom: 3 }}>SCORE</p>
+                <p style={{ fontFamily: D, fontSize: "clamp(2rem, 9vw, 2.8rem)", color: scoreColor(61), lineHeight: 1, textShadow: `0 0 18px ${scoreColor(61)}55` }}>
+                  61
+                </p>
+                <p style={{ fontFamily: M, fontSize: "0.38rem", color: GR, letterSpacing: "0.1em" }}>/100</p>
+              </div>
             </div>
-          </div>
-        )}
 
-        {/* ── Quick actions 2×2 grid ── */}
-        <div className="px-5 pt-5">
-          <div className="max-w-xl mx-auto">
-            <p className="font-mono uppercase mb-3" style={{ fontSize: "0.55rem", color: "#84898E", letterSpacing: "0.22em" }}>
-              // QUICK ACCESS
-            </p>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', border: '1px solid rgba(255,255,255,0.1)' }}>
-              {quickActions.map((item, i) => {
+            {/* Score bars */}
+            <div style={{ padding: "14px 18px 18px", display: "flex", flexDirection: "column", gap: 12 }}>
+              {DEMO_SCORES.map((item, i) => {
                 const Icon = item.icon;
-                const num = String(i + 1).padStart(2, "0");
                 return (
-                  <Link
-                    key={item.label}
-                    to={item.to}
-                    className="card-interactive"
-                    style={{
-                      textDecoration: 'none',
-                      padding: '18px 16px 16px',
-                      borderRight: i % 2 === 0 ? '1px solid rgba(255,255,255,0.1)' : 'none',
-                      borderBottom: i < 2 ? '1px solid rgba(255,255,255,0.1)' : 'none',
-                      position: 'relative',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: 10,
-                    }}
-                  >
-                    <div className="diagonal-stripe-overlay" />
-                    {/* Top row: number + icon */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.5rem', color: 'rgba(132,137,142,0.5)', letterSpacing: '0.12em' }}>{num}</span>
-                      <Icon style={{ width: 14, height: 14, color: '#84898E', flexShrink: 0 }} strokeWidth={1.5} />
-                    </div>
-                    {/* Action name */}
-                    <div>
-                      <p style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1.5rem, 7vw, 2.1rem)', color: '#fff', letterSpacing: '0.04em', lineHeight: 1, marginBottom: 5 }}>
-                        {item.label}
-                      </p>
-                      <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.5rem', color: '#84898E', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                        {item.sub}
-                      </p>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        {/* ── Analysis dimensions manifest ── */}
-        <div className="px-5 pt-5">
-          <div className="max-w-xl mx-auto">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 12 }}>
-              <p className="font-mono uppercase" style={{ fontSize: "0.55rem", color: "#84898E", letterSpacing: "0.22em" }}>
-                // ANALYSIS DIMENSIONS
-              </p>
-              <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.4rem', color: '#40aaff', lineHeight: 1 }}>6</span>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {analysisCategories.map((cat, i) => {
-                const Icon = cat.icon;
-                const num = String(i + 1).padStart(2, "0");
-                return (
-                  <div
-                    key={cat.title}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 0,
-                      borderLeft: `3px solid ${cat.accent}`,
-                      background: 'rgba(255,255,255,0.02)',
-                      padding: '14px 0',
-                    }}
-                  >
-                    {/* Number */}
-                    <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.5rem', color: 'rgba(132,137,142,0.4)', letterSpacing: '0.1em', minWidth: '2.8rem', paddingLeft: 12 }}>
-                      {num}
-                    </span>
-                    {/* Icon */}
-                    <Icon style={{ width: 13, height: 13, color: cat.accent, flexShrink: 0, marginRight: 10, opacity: 0.8 }} strokeWidth={1.5} />
-                    {/* Title + desc */}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(1rem, 4.5vw, 1.3rem)', color: '#ffffff', letterSpacing: '0.06em', lineHeight: 1 }}>
-                        {cat.title}
-                      </span>
-                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.52rem', color: '#84898E', marginLeft: 10, letterSpacing: '0.04em' }}>
-                        {cat.desc}
+                  <div key={item.label}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                        <Icon style={{ width: 11, height: 11, color: item.color, flexShrink: 0 }} strokeWidth={1.5} />
+                        <span style={{ fontFamily: M, fontSize: "0.5rem", color: "#fff", letterSpacing: "0.07em", textTransform: "uppercase" }}>
+                          {item.label}
+                        </span>
+                      </div>
+                      <span style={{ fontFamily: M, fontSize: "0.5rem", color: item.color, letterSpacing: "0.05em" }}>
+                        {item.verdict}
                       </span>
                     </div>
-                    {/* ON tag */}
-                    <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.48rem', color: '#00c853', letterSpacing: '0.12em', paddingRight: 14, flexShrink: 0 }}>
-                      [ON]
-                    </span>
+                    <div style={{ height: 4, background: "rgba(255,255,255,0.06)", position: "relative", overflow: "hidden" }}>
+                      <div style={{
+                        position: "absolute", top: 0, left: 0, height: "100%",
+                        background: item.color,
+                        width: barsVisible ? `${item.score}%` : "0%",
+                        transition: `width 0.7s cubic-bezier(0.25,1,0.5,1) ${i * 100}ms`,
+                        boxShadow: `0 0 8px ${item.color}88`,
+                      }} />
+                    </div>
                   </div>
                 );
               })}
             </div>
+
+            {/* Greener swap teaser */}
+            <div style={{ borderTop: `1px solid ${B}`, padding: "12px 18px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <TrendingUp style={{ width: 11, height: 11, color: "#ffc700", flexShrink: 0 }} strokeWidth={1.5} />
+                <span style={{ fontFamily: M, fontSize: "0.5rem", color: "#ffc700", letterSpacing: "0.08em" }}>
+                  GREENER SWAP AVAILABLE
+                </span>
+              </div>
+              <ChevronRight style={{ width: 14, height: 14, color: GR }} />
+            </div>
+          </div>
+
+          <p style={{ fontFamily: M, fontSize: "0.44rem", color: "rgba(132,137,142,0.4)", letterSpacing: "0.1em", marginTop: 10, textAlign: "center" }}>
+            DEMO · Real results vary by product
+          </p>
+        </div>
+
+        {/* ── Stats row ── */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", borderBottom: `1px solid ${B}` }}>
+          {[
+            { value: "3M+",  label: "Products" },
+            { value: "6",    label: "Checks" },
+            { value: "Free", label: "Always" },
+          ].map((s, i) => (
+            <div key={s.label} style={{ padding: "20px 12px", textAlign: "center", borderRight: i < 2 ? `1px solid ${B}` : "none" }}>
+              <p style={{ fontFamily: M, fontWeight: 900, fontSize: "1.5rem", color: "#fff", letterSpacing: "-0.03em", lineHeight: 1, marginBottom: 4 }}>
+                {s.value}
+              </p>
+              <p style={{ fontFamily: M, fontSize: "0.46rem", color: GR, letterSpacing: "0.15em", textTransform: "uppercase" }}>
+                {s.label}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        {/* ── Quick access grid ── */}
+        <div style={{ padding: "20px 20px 0" }}>
+          <p style={{ fontFamily: M, fontSize: "0.48rem", color: GR, letterSpacing: "0.24em", textTransform: "uppercase", marginBottom: 12 }}>
+            // QUICK ACCESS
+          </p>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", border: `1px solid ${B}` }}>
+            {QUICK_ACTIONS.map((item, i) => {
+              const Icon = item.icon;
+              return (
+                <Link key={item.label} to={item.to} style={{
+                  textDecoration: "none", padding: "18px 16px 16px",
+                  borderRight: i % 2 === 0 ? `1px solid ${B}` : "none",
+                  borderBottom: i < 2 ? `1px solid ${B}` : "none",
+                  display: "flex", flexDirection: "column", gap: 10, position: "relative",
+                }}>
+                  <div className="diagonal-stripe" style={{ position: "absolute", inset: 0, opacity: 0.5 }} />
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", position: "relative" }}>
+                    <span style={{ fontFamily: M, fontSize: "0.46rem", color: "rgba(132,137,142,0.4)", letterSpacing: "0.12em" }}>
+                      {String(i + 1).padStart(2, "0")}
+                    </span>
+                    <Icon style={{ width: 13, height: 13, color: item.col, flexShrink: 0, opacity: 0.9 }} strokeWidth={1.5} />
+                  </div>
+                  <div style={{ position: "relative" }}>
+                    <p style={{ fontFamily: D, fontSize: "clamp(1.5rem, 7vw, 2rem)", color: "#fff", letterSpacing: "0.04em", lineHeight: 1, marginBottom: 5 }}>
+                      {item.label}
+                    </p>
+                    <p style={{ fontFamily: M, fontSize: "0.48rem", color: GR, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                      {item.sub}
+                    </p>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         </div>
 
-        {/* ── Bottom CTA — full bleed MSCHF strip ── */}
-        <div style={{ marginTop: 20, borderTop: '2px solid rgba(255,255,255,0.1)' }}>
-          <Link
-            to="/scan"
-            style={{ display: 'block', textDecoration: 'none', position: 'relative', background: '#000' }}
-          >
-            {/* Corner marks */}
-            {(['tl','tr','bl','br'] as const).map(c => (
-              <div key={c} style={{ position: 'absolute', [c.startsWith('t') ? 'top' : 'bottom']: 8, [c.endsWith('l') ? 'left' : 'right']: 12, fontFamily: 'monospace', fontSize: 12, color: 'rgba(0,200,83,0.4)', lineHeight: 1, userSelect: 'none', zIndex: 1 }}>+</div>
+        {/* ── 6 Checks manifest ── */}
+        <div style={{ padding: "24px 20px 0" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 12 }}>
+            <p style={{ fontFamily: M, fontSize: "0.48rem", color: GR, letterSpacing: "0.24em", textTransform: "uppercase" }}>
+              // 6 ETHICS CHECKS
+            </p>
+            <span style={{ fontFamily: D, fontSize: "1.6rem", color: "#40aaff", lineHeight: 1 }}>6</span>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            {CHECKS.map((c, i) => {
+              const Icon = c.icon;
+              return (
+                <div key={c.label} style={{ display: "flex", alignItems: "center", gap: 0, borderLeft: `3px solid ${c.color}`, background: "rgba(255,255,255,0.02)", padding: "13px 0" }}>
+                  <span style={{ fontFamily: M, fontSize: "0.46rem", color: "rgba(132,137,142,0.35)", letterSpacing: "0.1em", minWidth: "2.8rem", paddingLeft: 12 }}>
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  <Icon style={{ width: 12, height: 12, color: c.color, flexShrink: 0, marginRight: 10, opacity: 0.85 }} strokeWidth={1.5} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{ fontFamily: D, fontSize: "clamp(1rem, 4.5vw, 1.3rem)", color: "#fff", letterSpacing: "0.06em", lineHeight: 1 }}>
+                      {c.label}
+                    </span>
+                    <span style={{ fontFamily: M, fontSize: "0.5rem", color: GR, marginLeft: 10, letterSpacing: "0.03em" }}>
+                      {c.desc}
+                    </span>
+                  </div>
+                  <span style={{ fontFamily: M, fontSize: "0.44rem", color: G, letterSpacing: "0.12em", paddingRight: 14, flexShrink: 0 }}>
+                    [ON]
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ── Bottom CTA ── */}
+        <div style={{ marginTop: 24, borderTop: "2px solid rgba(255,255,255,0.1)" }}>
+          <Link to="/scan" style={{ display: "block", textDecoration: "none", background: "#000", position: "relative" }}>
+            {(["tl","tr","bl","br"] as const).map(c => (
+              <div key={c} style={{ position: "absolute", [c.startsWith("t")?"top":"bottom"]: 8, [c.endsWith("l")?"left":"right"]: 12, fontFamily: "monospace", fontSize: 12, color: "rgba(0,200,83,0.3)", userSelect: "none", zIndex: 1 }}>+</div>
             ))}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '22px 28px' }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "22px 28px" }}>
               <div>
-                <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.48rem', color: '#00c853', letterSpacing: '0.22em', textTransform: 'uppercase', marginBottom: 6, opacity: 0.7 }}>
+                <p style={{ fontFamily: M, fontSize: "0.46rem", color: G, letterSpacing: "0.22em", textTransform: "uppercase", marginBottom: 6, opacity: 0.7 }}>
                   // START_SESSION
                 </p>
-                <p style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(2rem, 9vw, 2.8rem)', color: '#fff', letterSpacing: '0.06em', lineHeight: 1, fontWeight: 400 }}>
+                <p style={{ fontFamily: D, fontSize: "clamp(2rem, 9vw, 2.8rem)", color: "#fff", letterSpacing: "0.06em", lineHeight: 1, fontWeight: 400 }}>
                   [ START SCANNING ]
                 </p>
               </div>
-              <div style={{ width: 44, height: 44, border: '1px solid #00c853', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <ScanLine style={{ width: 20, height: 20, color: '#00c853' }} strokeWidth={1.5} />
+              <div style={{ width: 44, height: 44, border: `1px solid ${G}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <ScanLine style={{ width: 20, height: 20, color: G }} strokeWidth={1.5} />
               </div>
             </div>
           </Link>
@@ -458,6 +515,4 @@ const Index = () => {
       <BottomNav />
     </div>
   );
-};
-
-export default Index;
+}

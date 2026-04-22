@@ -1,6 +1,36 @@
-import { createBrowserRouter, Outlet, useLocation } from "react-router-dom";
+import { createBrowserRouter, Outlet, useLocation, Link } from "react-router-dom";
+import { Home } from "lucide-react";
 import { ScrollToTop } from "./components/ScrollToTop";
 import { HackerTransition } from "./components/HackerTransition";
+
+function HomeButton() {
+  const { pathname } = useLocation();
+  if (pathname === "/" || pathname === "/scan") return null;
+  return (
+    <Link
+      to="/"
+      aria-label="Home"
+      style={{
+        position: "fixed",
+        top: "max(14px, env(safe-area-inset-top))",
+        right: 16,
+        zIndex: 200,
+        width: 34,
+        height: 34,
+        border: "1px solid rgba(255,255,255,0.12)",
+        background: "rgba(0,0,0,0.88)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        color: "#84898E",
+        textDecoration: "none",
+        flexShrink: 0,
+      }}
+    >
+      <Home size={14} strokeWidth={1.5} />
+    </Link>
+  );
+}
 import Index from "./pages/Index";
 import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
@@ -24,6 +54,7 @@ function RootLayout() {
     <>
       <ScrollToTop />
       <HackerTransition />
+      <HomeButton />
       <div key={location.pathname} className="page-transition" style={{ isolation: 'auto' }}>
         <Outlet />
       </div>
