@@ -111,7 +111,7 @@ export default function ShoppingList() {
 
         {/* ── Header ── */}
         <div className="px-5 pt-14 pb-0">
-          <div className="max-w-xl mx-auto flex items-start justify-between">
+          <div className="max-w-xl mx-auto flex items-start justify-between" style={{ paddingRight: 50 }}>
             <div>
               <p style={{ ...MONO, fontSize: '0.55rem', color: '#84898E', letterSpacing: '0.22em', textTransform: 'uppercase' }}>
                 // SHOPPING

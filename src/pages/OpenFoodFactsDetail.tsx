@@ -93,8 +93,8 @@ const VERDICT_CONFIG = {
     label: "CAUTION",
   },
   AVOID: {
-    borderColor: "#00c853",
-    textColor: "#00c853",
+    borderColor: "#ff3b30",
+    textColor: "#ff3b30",
     Icon: XCircle,
     label: "AVOID",
   },

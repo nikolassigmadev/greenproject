@@ -1090,9 +1090,14 @@ const Scan = () => {
       // Step 3: Search OFF — searchOffProducts internally tries multiple query
       // variations (full → prefix shrink → suffix → brand alone), so one call suffices.
       const fullQuery = [identified.brandName, identified.productName]
-        .filter(Boolean)
+        .filter(s => !isUnknownResponse(s))
         .join(' ')
         .trim();
+
+      if (!fullQuery) {
+        setProductUnknown(true);
+        return;
+      }
 
       setOffSearchText(fullQuery);
       const results = await searchOffProducts(fullQuery, 20);
@@ -1542,39 +1547,24 @@ const Scan = () => {
             </span>
           </div>
           <p style={{ color: 'white', fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8 }}>
-            [!] PRODUCT_UNKNOWN
+            [!] PRODUCT_NOT_FOUND
           </p>
           <p style={{ color: '#84898E', fontFamily: "'JetBrains Mono', monospace", fontSize: '0.65rem', lineHeight: 1.6, marginBottom: 20 }}>
-            Could not identify product from image.<br />Try a clearer photo of the barcode or label.
+            Product not found. Try again with a clearer photo of the barcode or label.
           </p>
-          <div style={{ display: 'flex', gap: 8, width: '100%' }}>
-            <button
-              onClick={() => setProductUnknown(false)}
-              style={{
-                flex: 1, height: 44, border: '1px solid rgba(255,255,255,0.14)',
-                backgroundColor: 'transparent', color: '#84898E',
-                fontFamily: "'JetBrains Mono', monospace",
-                fontWeight: 700, fontSize: '0.6rem',
-                letterSpacing: '0.1em', textTransform: 'uppercase',
-                cursor: 'pointer',
-              }}
-            >
-              [DISMISS]
-            </button>
-            <button
-              onClick={() => { setProductUnknown(false); offFileInputRef.current?.click(); }}
-              style={{
-                flex: 2, height: 44, border: 'none',
-                backgroundColor: '#00c853', color: '#000',
-                fontFamily: "'JetBrains Mono', monospace",
-                fontWeight: 700, fontSize: '0.6rem',
-                letterSpacing: '0.1em', textTransform: 'uppercase',
-                cursor: 'pointer',
-              }}
-            >
-              [RETRY]
-            </button>
-          </div>
+          <button
+            onClick={() => { setProductUnknown(false); offFileInputRef.current?.click(); }}
+            style={{
+              width: '100%', height: 44, border: 'none',
+              backgroundColor: '#00c853', color: '#000',
+              fontFamily: "'JetBrains Mono', monospace",
+              fontWeight: 700, fontSize: '0.6rem',
+              letterSpacing: '0.1em', textTransform: 'uppercase',
+              cursor: 'pointer',
+            }}
+          >
+            [TRY AGAIN]
+          </button>
         </div>
       )}
 
