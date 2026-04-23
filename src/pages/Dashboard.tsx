@@ -136,7 +136,7 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-background">
       {/* Clean header */}
-      <div className="px-5 pt-14 pb-4">
+      <div className="px-5 pb-4" style={{ paddingTop: "max(3.5rem, calc(env(safe-area-inset-top) + 3rem))" }}>
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <div>
             <p className="text-xs font-semibold text-muted-foreground mb-0.5 uppercase tracking-wider">Overview</p>

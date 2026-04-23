@@ -37,7 +37,7 @@ export function Header() {
           ? "bg-background/94 backdrop-blur-2xl border-b border-border/40 shadow-[0_1px_12px_-2px_hsl(180_50%_20%/0.08)]"
           : "bg-background/60 backdrop-blur-xl border-b border-transparent"
       )}
-      style={{ WebkitBackdropFilter: "blur(20px)" }}
+      style={{ WebkitBackdropFilter: "blur(20px)", paddingTop: "env(safe-area-inset-top)" }}
     >
       {/* ── Mobile header ── */}
       <div className="md:hidden flex items-center justify-between px-4 h-12">

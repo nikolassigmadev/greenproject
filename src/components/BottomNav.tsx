@@ -80,7 +80,6 @@ export function BottomNav() {
             display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
             borderRight: `1px solid rgba(0,200,83,0.1)`,
             WebkitTapHighlightColor: "transparent",
-            paddingBottom: "calc(env(safe-area-inset-bottom) + 4px)",
           }}
         >
           <div style={{
