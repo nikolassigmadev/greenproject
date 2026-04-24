@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { ShoppingCart, Camera, BarChart3, Info, Settings } from "lucide-react";
+import { Home, Camera, BarChart3, Info, Settings } from "lucide-react";
 
 const D  = "'Bebas Neue', sans-serif";
 const M  = "'JetBrains Mono', monospace";
@@ -7,7 +7,7 @@ const G  = "#00c853";
 const GR = "#84898E";
 
 const NAV_ITEMS = [
-  { path: "/basket",      label: "CART",    icon: ShoppingCart, idx: "01" },
+  { path: "/",            label: "HOME",    icon: Home,         idx: "01" },
   { path: "/dashboard",   label: "HISTORY", icon: BarChart3,    idx: "02" },
   { path: "/about",       label: "ABOUT",   icon: Info,         idx: "04" },
   { path: "/preferences", label: "VALUES",  icon: Settings,     idx: "05" },
