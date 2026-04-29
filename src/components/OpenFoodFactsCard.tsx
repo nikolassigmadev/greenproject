@@ -5,7 +5,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
-import { getBrandFlag } from "@/data/brandFlags";
+import { getVerifiedFlagForBrand } from "@/services/brandFlags";
 import { LaborFlagBanner } from "@/components/LaborFlagBanner";
 import { AnimalWelfareFlagBadge } from "@/components/AnimalWelfareFlagBadge";
 import { checkBoycott } from "@/data/boycottBrands";
@@ -88,7 +88,7 @@ function GradeHero({ grade, score }: { grade: string; score: number | null }) {
 export function OpenFoodFactsCard({ result }: OpenFoodFactsCardProps) {
   if (!result.found) return null;
 
-  const brandFlag    = getBrandFlag(result.brand);
+  const brandFlag    = getVerifiedFlagForBrand(result.brand);
   const boycottMatch = checkBoycott(result.brand);
   const agri         = result.ecoscoreData?.agribalyse;
   const adjustments  = result.ecoscoreData?.adjustments;

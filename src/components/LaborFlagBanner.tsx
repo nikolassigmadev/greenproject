@@ -1,6 +1,8 @@
-import { AlertTriangle, ShieldAlert, Info } from "lucide-react";
+import { AlertTriangle, ShieldAlert, Info, Flag } from "lucide-react";
 import { useState } from "react";
-import type { BrandFlag } from "@/data/brandFlags";
+import { Link } from "react-router-dom";
+import type { BrandFlagV2 } from "@/types/brandFlag";
+import { ReportIssue } from "@/components/ReportIssue";
 
 const severityStyles = {
   critical: {
@@ -27,17 +29,26 @@ const severityStyles = {
     text: "text-amber-700 dark:text-amber-300",
     label: "Labor Concerns Under Investigation",
   },
+  low: {
+    bg: "bg-yellow-50 dark:bg-yellow-950/40",
+    border: "border-yellow-300 dark:border-yellow-800",
+    icon: "text-yellow-600",
+    title: "text-yellow-800 dark:text-yellow-200",
+    text: "text-yellow-700 dark:text-yellow-300",
+    label: "Labor Concerns Noted",
+  },
 };
 
 interface LaborFlagBannerProps {
-  flag: BrandFlag;
+  flag: BrandFlagV2;
   brandName?: string | null;
   compact?: boolean;
 }
 
 export function LaborFlagBanner({ flag, brandName, compact = false }: LaborFlagBannerProps) {
   const [expanded, setExpanded] = useState(false);
-  const style = severityStyles[flag.severity];
+  const [reporting, setReporting] = useState(false);
+  const style = severityStyles[flag.severity] ?? severityStyles.medium;
 
   if (compact) {
     return (
@@ -60,8 +71,13 @@ export function LaborFlagBanner({ flag, brandName, compact = false }: LaborFlagB
               {style.label}
             </h4>
             <p className={`text-sm mt-1 ${style.text}`}>
-              {flag.allegation}
+              {flag.summary}
             </p>
+            {expanded && flag.details && (
+              <p className={`text-xs mt-2 ${style.text} opacity-90`}>
+                {flag.details}
+              </p>
+            )}
 
             {!expanded && flag.sources.length > 0 && (
               <button
@@ -79,7 +95,23 @@ export function LaborFlagBanner({ flag, brandName, compact = false }: LaborFlagB
                 <ul className="list-disc list-inside space-y-0.5">
                   {flag.sources.map((source, i) => (
                     <li key={i} className={`text-xs ${style.text}`}>
-                      {source}
+                      {source.url ? (
+                        <a
+                          href={source.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="underline underline-offset-2 hover:opacity-80"
+                        >
+                          {source.title}
+                        </a>
+                      ) : (
+                        source.title
+                      )}
+                      {" — "}
+                      <span className="opacity-75">{source.publisher}</span>
+                      {source.publishedDate && (
+                        <span className="opacity-50"> ({source.publishedDate.slice(0, 4)})</span>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -89,7 +121,28 @@ export function LaborFlagBanner({ flag, brandName, compact = false }: LaborFlagB
                 >
                   Hide sources
                 </button>
+                <Link
+                  to="/methodology"
+                  className={`text-xs underline underline-offset-2 ${style.text} opacity-60 hover:opacity-100 mt-1 block`}
+                >
+                  How we source and verify flags →
+                </Link>
+                <button
+                  onClick={() => setReporting(true)}
+                  className={`btn-aurora flex items-center gap-1 text-xs mt-2 ${style.text} opacity-60 hover:opacity-100`}
+                >
+                  <Flag className="w-3 h-3" />
+                  Report an issue with this flag
+                </button>
               </div>
+            )}
+
+            {reporting && (
+              <ReportIssue
+                brandName={brandName ?? flag.brandName}
+                flagId={flag.id}
+                onClose={() => setReporting(false)}
+              />
             )}
           </div>
         </div>

@@ -42,11 +42,13 @@ import Preferences from "./pages/Preferences";
 import Dashboard from "./pages/Dashboard";
 import ShoppingList from "./pages/ShoppingList";
 import AboutUs from "./pages/AboutUs";
+import Methodology from "./pages/Methodology";
 import { CalAIShowcase } from "./components/CalAIShowcase";
 
 // Import admin components - uncomment to enable
 import Admin from "./pages/Admin";
 import AdminLogin from "./pages/AdminLogin";
+import AdminDisputes from "./pages/AdminDisputes";
 
 function RootLayout() {
   const location = useLocation();
@@ -107,6 +109,10 @@ export const router = createBrowserRouter([
         element: <AboutUs />,
       },
       {
+        path: "/methodology",
+        element: <Methodology />,
+      },
+      {
         path: "/design-system",
         element: <CalAIShowcase />,
       },
@@ -118,6 +124,10 @@ export const router = createBrowserRouter([
       {
         path: "/admin/login",
         element: <AdminLogin />,
+      },
+      {
+        path: "/admin/disputes",
+        element: <AdminDisputes />,
       },
     ],
   },

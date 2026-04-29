@@ -11,7 +11,7 @@ import { browseProducts, lookupBarcode, type BrowseResult } from "@/services/ope
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
 import { EnvironmentalImpactCard } from "@/components/EnvironmentalImpactCard";
 import { cn } from "@/lib/utils";
-import { getBrandFlag } from "@/data/brandFlags";
+import { getVerifiedFlagForBrand } from "@/services/brandFlags";
 import { LaborFlagBanner } from "@/components/LaborFlagBanner";
 
 const CATEGORIES = [
@@ -330,9 +330,9 @@ const Database = () => {
                       )}
 
                       {/* Labor flag */}
-                      {getBrandFlag(product.brand) && (
+                      {getVerifiedFlagForBrand(product.brand) && (
                         <div className="mb-2">
-                          <LaborFlagBanner flag={getBrandFlag(product.brand)!} compact />
+                          <LaborFlagBanner flag={getVerifiedFlagForBrand(product.brand)!} compact />
                         </div>
                       )}
 
