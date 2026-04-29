@@ -17,14 +17,16 @@ function HomeButton() {
         zIndex: 200,
         width: 34,
         height: 34,
-        border: "1px solid rgba(255,255,255,0.12)",
-        background: "rgba(0,0,0,0.88)",
+        borderRadius: 10,
+        border: "1px solid #E5E7EB",
+        background: "#ffffff",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        color: "#84898E",
+        color: "#6B7280",
         textDecoration: "none",
         flexShrink: 0,
+        boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
       }}
     >
       <Home size={14} strokeWidth={1.5} />

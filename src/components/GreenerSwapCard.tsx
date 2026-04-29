@@ -9,29 +9,30 @@ interface GreenerSwapCardProps {
   loading?: boolean;
 }
 
-// Grade color tokens — terminal style
-const gradeColors: Record<string, { border: string; text: string; label: string }> = {
-  a: { border: "#10b981", text: "#10b981", label: "EXCELLENT" },
-  b: { border: "#84cc16", text: "#84cc16", label: "GOOD"      },
-  c: { border: "#f59e0b", text: "#f59e0b", label: "FAIR"      },
-  d: { border: "#f97316", text: "#f97316", label: "POOR"      },
-  e: { border: "#00c853", text: "#00c853", label: "BAD"       },
+const BLUE = "#2979FF";
+const BG   = "#F5F7FA";
+const CARD = "#FFFFFF";
+const BORDER = "#E5E7EB";
+const TEXT = "#111827";
+const TEXT_MUTED = "#6B7280";
+
+const gradeColors: Record<string, { text: string; bg: string }> = {
+  a: { text: "#10b981", bg: "#F0FAF6" },
+  b: { text: "#84cc16", bg: "#F7FAF0" },
+  c: { text: "#f59e0b", bg: "#FFFBEB" },
+  d: { text: "#f97316", bg: "#FFF5EE" },
+  e: { text: "#ef4444", bg: "#FFF0F0" },
 };
 
 function GradeBadge({ grade }: { grade: string }) {
-  const s = gradeColors[grade] ?? { border: "#84898E", text: "#84898E", label: "UNKNOWN" };
+  const s = gradeColors[grade] ?? { text: TEXT_MUTED, bg: BG };
   return (
-    <span
-      className="inline-flex items-center justify-center font-mono font-black flex-shrink-0"
-      style={{
-        width: "1.75rem",
-        height: "1.75rem",
-        border: `1px solid ${s.border}`,
-        color: s.text,
-        fontSize: "0.8rem",
-        background: "transparent",
-      }}
-    >
+    <span style={{
+      display: "inline-flex", alignItems: "center", justifyContent: "center",
+      width: 24, height: 24, borderRadius: 6,
+      background: s.bg, color: s.text,
+      fontSize: "0.75rem", fontWeight: 800,
+    }}>
       {grade.toUpperCase()}
     </span>
   );
@@ -52,62 +53,43 @@ function ProductChip({
   return (
     <Tag
       {...(onClick ? { onClick, type: "button" } : {})}
-      className={cn(
-        "flex items-center gap-2.5 min-w-0 flex-1 transition-all duration-150",
-        onClick && "cursor-pointer"
-      )}
       style={{
-        padding: "0.625rem",
-        border: isAlternative
-          ? "1px solid rgba(64, 170, 255, 0.25)"
-          : "1px solid rgba(255,255,255,0.08)",
-        background: isAlternative
-          ? "rgba(64, 170, 255, 0.04)"
-          : "transparent",
+        display: "flex", alignItems: "center", gap: 8,
+        flex: 1, minWidth: 0,
+        padding: 8, borderRadius: 10,
+        border: `1px solid ${isAlternative ? "#C3D6FF" : BORDER}`,
+        background: isAlternative ? "#EBF2FF" : BG,
+        cursor: onClick ? "pointer" : "default",
       }}
     >
       {product.imageUrl ? (
         <img
           src={product.imageUrl}
           alt={product.productName || "Product"}
-          className="object-cover flex-shrink-0"
           style={{
-            width: "2.25rem",
-            height: "2.25rem",
-            border: isAlternative
-              ? "1px solid rgba(64, 170, 255, 0.2)"
-              : "1px solid rgba(255,255,255,0.08)",
+            width: 36, height: 36, borderRadius: 8, objectFit: "contain",
+            border: `1px solid ${BORDER}`, flexShrink: 0,
           }}
         />
       ) : (
-        <div
-          className="flex items-center justify-center flex-shrink-0"
-          style={{
-            width: "2.25rem",
-            height: "2.25rem",
-            border: "1px solid rgba(255,255,255,0.08)",
-            background: "#0a0a0a",
-          }}
-        >
-          <Package2
-            className="w-4 h-4"
-            style={{ color: isAlternative ? "#40aaff" : "#84898E" }}
-          />
+        <div style={{
+          width: 36, height: 36, borderRadius: 8,
+          border: `1px solid ${BORDER}`, background: CARD,
+          flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
+          <Package2 style={{ width: 16, height: 16, color: isAlternative ? BLUE : TEXT_MUTED }} />
         </div>
       )}
-      <div className="flex-1 min-w-0">
-        <p
-          className="font-mono font-bold truncate leading-tight uppercase"
-          style={{
-            fontSize: "0.58rem",
-            color: isAlternative ? "#40aaff" : "#84898E",
-            letterSpacing: "0.04em",
-          }}
-        >
-          {product.productName || (isAlternative ? "BETTER OPTION" : "CURRENT PRODUCT")}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{
+          fontSize: "0.72rem", fontWeight: 600,
+          color: isAlternative ? BLUE : TEXT,
+          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+        }}>
+          {product.productName || (isAlternative ? "Better option" : "Current product")}
         </p>
         {grade && (
-          <div className="mt-1.5">
+          <div style={{ marginTop: 4 }}>
             <GradeBadge grade={grade} />
           </div>
         )}
@@ -122,22 +104,10 @@ export function GreenerSwapCard({ original, alternatives, loading }: GreenerSwap
 
   if (loading) {
     return (
-      <div
-        className="mb-4 animate-pulse"
-        style={{
-          border: "1px solid rgba(64, 170, 255, 0.15)",
-          borderLeft: "3px solid #40aaff",
-          padding: "1.25rem",
-        }}
-      >
-        <div className="flex items-center gap-3 mb-4">
-          <div style={{ width: "2.5rem", height: "2.5rem", background: "rgba(64,170,255,0.1)", border: "1px solid rgba(64,170,255,0.15)" }} />
-          <div className="space-y-1.5">
-            <div style={{ height: "0.75rem", width: "8rem", background: "rgba(64,170,255,0.1)" }} />
-            <div style={{ height: "0.6rem", width: "6rem", background: "rgba(64,170,255,0.06)" }} />
-          </div>
-        </div>
-        <div style={{ height: "5rem", background: "rgba(64,170,255,0.05)" }} />
+      <div style={{ background: CARD, borderRadius: 18, border: `1px solid ${BORDER}`, padding: 16, marginBottom: 10, opacity: 0.6 }}>
+        <div style={{ height: 12, width: 120, background: BORDER, borderRadius: 6, marginBottom: 8 }} />
+        <div style={{ height: 10, width: 80, background: BORDER, borderRadius: 6, marginBottom: 16 }} />
+        <div style={{ height: 60, background: BG, borderRadius: 10 }} />
       </div>
     );
   }
@@ -152,55 +122,34 @@ export function GreenerSwapCard({ original, alternatives, loading }: GreenerSwap
     : null;
 
   return (
-    <div
-      className="overflow-hidden mb-4"
-      style={{
-        background: "#000000",
-        border: "1px solid rgba(64, 170, 255, 0.15)",
-        borderLeft: "3px solid #40aaff",
-      }}
-    >
-      <div className="p-4">
+    <div style={{
+      background: CARD, borderRadius: 18,
+      border: `1px solid ${BORDER}`, borderLeft: `4px solid ${BLUE}`,
+      overflow: "hidden", marginBottom: 10,
+      boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
+    }}>
+      <div style={{ padding: 16 }}>
         {/* Header */}
-        <div className="flex items-start justify-between gap-3 mb-4">
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 14 }}>
           <div>
-            <p
-              className="font-mono font-black uppercase"
-              style={{ fontSize: "0.65rem", color: "#40aaff", letterSpacing: "0.15em" }}
-            >
-              // GREENER SWAP
-            </p>
-            <p
-              className="font-mono mt-0.5"
-              style={{ fontSize: "0.58rem", color: "#84898E" }}
-            >
-              Same category — lower footprint
-            </p>
+            <p style={{ fontSize: "0.85rem", fontWeight: 700, color: TEXT }}>Greener Swap</p>
+            <p style={{ fontSize: "0.72rem", color: TEXT_MUTED, marginTop: 2 }}>Same category — lower footprint</p>
           </div>
 
-          {/* CO2 savings */}
           {co2Saved != null && co2Saved > 0 && (
-            <div
-              className="flex-shrink-0 text-right flex items-center gap-1.5 px-3 py-2"
-              style={{
-                border: "1px solid rgba(64, 170, 255, 0.2)",
-                background: "rgba(64, 170, 255, 0.04)",
-              }}
-            >
-              <TrendingDown className="w-3 h-3 flex-shrink-0" style={{ color: "#40aaff" }} />
+            <div style={{
+              flexShrink: 0, display: "flex", alignItems: "center", gap: 6,
+              padding: "6px 10px", borderRadius: 10,
+              background: "#EBF2FF", border: "1px solid #C3D6FF",
+            }}>
+              <TrendingDown style={{ width: 12, height: 12, color: BLUE, flexShrink: 0 }} />
               <div>
-                <p
-                  className="font-mono font-black tabular-nums leading-none"
-                  style={{ fontSize: "0.85rem", color: "#40aaff" }}
-                >
+                <p style={{ fontSize: "0.82rem", fontWeight: 800, color: BLUE, lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>
                   -{co2Saved.toFixed(1)} kg
                 </p>
                 {pctSaved != null && (
-                  <p
-                    className="font-mono leading-none mt-0.5 uppercase"
-                    style={{ fontSize: "0.5rem", color: "#84898E", letterSpacing: "0.08em" }}
-                  >
-                    {pctSaved}% LESS CO₂
+                  <p style={{ fontSize: "0.6rem", color: TEXT_MUTED, lineHeight: 1, marginTop: 2 }}>
+                    {pctSaved}% less CO₂
                   </p>
                 )}
               </div>
@@ -208,39 +157,20 @@ export function GreenerSwapCard({ original, alternatives, loading }: GreenerSwap
           )}
         </div>
 
-        {/* Side-by-side comparison table */}
-        <div className="mb-1">
-          {/* Table header */}
-          <div
-            className="grid grid-cols-2 gap-0 mb-1"
-            style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
-          >
-            <span
-              className="font-mono uppercase pb-1.5"
-              style={{ fontSize: "0.48rem", color: "#84898E", letterSpacing: "0.14em" }}
-            >
-              CURRENT
-            </span>
-            <span
-              className="font-mono uppercase pb-1.5 pl-2"
-              style={{ fontSize: "0.48rem", color: "#40aaff", letterSpacing: "0.14em" }}
-            >
-              SWAP TO
-            </span>
+        {/* Side-by-side comparison */}
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4, marginBottom: 6 }}>
+            <span style={{ fontSize: "0.65rem", fontWeight: 600, color: TEXT_MUTED, textTransform: "uppercase" }}>Current</span>
+            <span style={{ fontSize: "0.65rem", fontWeight: 600, color: BLUE, textTransform: "uppercase" }}>Swap to</span>
           </div>
-
-          {/* Comparison row */}
-          <div className="flex items-center gap-2 pt-2">
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <ProductChip product={original} />
-            <div
-              className="flex-shrink-0 flex items-center justify-center"
-              style={{
-                width: "1.75rem",
-                height: "1.75rem",
-                border: "1px solid rgba(64, 170, 255, 0.2)",
-              }}
-            >
-              <ArrowRight className="w-3 h-3" style={{ color: "#40aaff" }} />
+            <div style={{
+              flexShrink: 0, width: 28, height: 28, borderRadius: "50%",
+              background: "#EBF2FF", border: "1px solid #C3D6FF",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              <ArrowRight style={{ width: 12, height: 12, color: BLUE }} />
             </div>
             <ProductChip
               product={best}
@@ -254,27 +184,19 @@ export function GreenerSwapCard({ original, alternatives, loading }: GreenerSwap
         <button
           type="button"
           onClick={() => navigate(`/product-off/${best.barcode}`)}
-          className="w-full mt-4 font-mono font-black uppercase flex items-center justify-center gap-2 cursor-pointer touch-manipulation transition-opacity active:opacity-70 hover:opacity-90"
           style={{
-            height: "2.75rem",
-            background: "#40aaff",
-            color: "#000000",
-            fontSize: "0.65rem",
-            letterSpacing: "0.15em",
-            border: "none",
+            width: "100%", height: 44, borderRadius: 12, border: "none",
+            background: BLUE, color: "#fff",
+            fontWeight: 700, fontSize: "0.85rem",
+            cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
           }}
         >
-          SWITCH TO THIS PRODUCT
+          Switch to this product
           {alternatives.length > 1 && (
-            <span
-              className="font-mono ml-1"
-              style={{
-                fontSize: "0.5rem",
-                padding: "2px 6px",
-                background: "rgba(0,0,0,0.25)",
-                color: "#000000",
-              }}
-            >
+            <span style={{
+              fontSize: "0.68rem", padding: "1px 8px", borderRadius: 10,
+              background: "rgba(255,255,255,0.2)", color: "#fff",
+            }}>
               +{alternatives.length - 1}
             </span>
           )}
@@ -284,16 +206,14 @@ export function GreenerSwapCard({ original, alternatives, loading }: GreenerSwap
           <button
             type="button"
             onClick={() => document.getElementById("greener-alternatives-section")?.scrollIntoView({ behavior: "smooth" })}
-            className="w-full mt-2 font-mono uppercase cursor-pointer touch-manipulation text-center transition-colors hover:text-white"
             style={{
-              fontSize: "0.55rem",
-              color: "#84898E",
-              background: "none",
-              border: "none",
-              letterSpacing: "0.1em",
+              width: "100%", marginTop: 8,
+              background: "none", border: "none",
+              fontSize: "0.75rem", color: TEXT_MUTED,
+              cursor: "pointer", textAlign: "center",
             }}
           >
-            VIEW ALL {alternatives.length} ALTERNATIVES
+            View all {alternatives.length} alternatives
           </button>
         )}
       </div>

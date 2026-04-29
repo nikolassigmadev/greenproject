@@ -22,11 +22,13 @@ interface ReportIssueProps {
   onClose: () => void;
 }
 
-const M = "'JetBrains Mono', monospace";
-const G = "#00c853";
-const GR = "#84898E";
-const B = "rgba(255,255,255,0.08)";
-const RED = "#ff4136";
+const BLUE = "#2979FF";
+const BG   = "#F5F7FA";
+const CARD = "#FFFFFF";
+const BORDER = "#E5E7EB";
+const TEXT = "#111827";
+const TEXT_MUTED = "#6B7280";
+const RED = "#ef4444";
 
 export function ReportIssue({ brandName, flagId, onClose }: ReportIssueProps) {
   const [issueType, setIssueType] = useState<IssueType>("incorrect_flag");
@@ -94,67 +96,75 @@ export function ReportIssue({ brandName, flagId, onClose }: ReportIssueProps) {
     }
   };
 
+  const inputStyle = {
+    width: "100%", boxSizing: "border-box" as const,
+    background: BG,
+    border: `1px solid ${BORDER}`,
+    color: TEXT,
+    fontSize: "0.85rem",
+    padding: "10px 14px",
+    borderRadius: 10,
+    outline: "none",
+  };
+
   return (
-    /* Backdrop */
     <div
       style={{
         position: "fixed", inset: 0, zIndex: 1000,
-        background: "rgba(0,0,0,0.85)",
+        background: "rgba(0,0,0,0.5)",
         display: "flex", alignItems: "flex-end", justifyContent: "center",
         padding: "0 0 env(safe-area-inset-bottom)",
       }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      {/* Sheet */}
       <div style={{
-        background: "#0a0a0a",
-        border: `1px solid ${B}`,
+        background: CARD,
+        border: `1px solid ${BORDER}`,
         borderBottom: "none",
         width: "100%",
         maxWidth: 560,
         maxHeight: "90dvh",
         overflowY: "auto",
-        borderTopLeftRadius: 2,
-        borderTopRightRadius: 2,
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
       }}>
+        {/* Drag handle */}
+        <div style={{ display: "flex", justifyContent: "center", paddingTop: 10, paddingBottom: 4 }}>
+          <div style={{ width: 36, height: 4, borderRadius: 2, background: BORDER }} />
+        </div>
+
         {/* Header */}
         <div style={{
           display: "flex", alignItems: "center", justifyContent: "space-between",
-          padding: "18px 20px 14px",
-          borderBottom: `1px solid ${B}`,
+          padding: "12px 20px 14px",
+          borderBottom: `1px solid ${BORDER}`,
         }}>
           <div>
-            <p style={{ fontFamily: M, fontSize: "0.44rem", color: G, letterSpacing: "0.24em", textTransform: "uppercase", marginBottom: 4 }}>
-              // REPORT AN ISSUE
-            </p>
-            <p style={{ fontFamily: M, fontSize: "0.72rem", color: "#fff", letterSpacing: "0.03em" }}>
-              {brandName}
-            </p>
+            <p style={{ fontSize: "0.68rem", fontWeight: 600, color: TEXT_MUTED, marginBottom: 2 }}>Report an issue</p>
+            <p style={{ fontSize: "0.9rem", fontWeight: 700, color: TEXT }}>{brandName}</p>
           </div>
           <button
             onClick={onClose}
-            style={{ background: "none", border: "none", cursor: "pointer", color: GR, padding: 4 }}
+            style={{ background: BG, border: `1px solid ${BORDER}`, borderRadius: "50%", width: 32, height: 32, cursor: "pointer", color: TEXT_MUTED, display: "flex", alignItems: "center", justifyContent: "center" }}
             aria-label="Close"
           >
-            <X size={18} />
+            <X size={16} />
           </button>
         </div>
 
         {status === "success" ? (
           <div style={{ padding: "32px 20px", textAlign: "center" }}>
-            <CheckCircle style={{ width: 36, height: 36, color: G, margin: "0 auto 16px" }} />
-            <p style={{ fontFamily: M, fontSize: "0.72rem", color: "#fff", marginBottom: 8 }}>
-              Report received
-            </p>
-            <p style={{ fontFamily: M, fontSize: "0.6rem", color: GR, lineHeight: 1.7, marginBottom: 20 }}>
+            <CheckCircle style={{ width: 40, height: 40, color: "#10b981", margin: "0 auto 16px" }} />
+            <p style={{ fontSize: "1rem", fontWeight: 700, color: TEXT, marginBottom: 8 }}>Report received</p>
+            <p style={{ fontSize: "0.82rem", color: TEXT_MUTED, lineHeight: 1.7, marginBottom: 24 }}>
               We aim to review all submissions within 14 days. Thank you for helping keep this data accurate.
             </p>
             <button
               onClick={onClose}
               style={{
-                fontFamily: M, fontSize: "0.6rem", color: G, letterSpacing: "0.12em",
-                textTransform: "uppercase", background: "none", border: `1px solid ${G}`,
-                padding: "10px 20px", cursor: "pointer",
+                background: BLUE, color: "#fff", border: "none",
+                padding: "10px 28px", borderRadius: 12,
+                fontSize: "0.85rem", fontWeight: 600, cursor: "pointer",
               }}
             >
               Close
@@ -165,16 +175,16 @@ export function ReportIssue({ brandName, flagId, onClose }: ReportIssueProps) {
 
             {/* Issue type */}
             <div style={{ marginBottom: 18 }}>
-              <p style={{ fontFamily: M, fontSize: "0.46rem", color: GR, letterSpacing: "0.16em", textTransform: "uppercase", marginBottom: 10 }}>
+              <p style={{ fontSize: "0.72rem", fontWeight: 600, color: TEXT_MUTED, marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.04em" }}>
                 Issue type
               </p>
-              <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 {(Object.entries(ISSUE_LABELS) as [IssueType, string][]).map(([val, label]) => (
                   <label key={val} style={{
                     display: "flex", alignItems: "center", gap: 10,
-                    padding: "10px 12px",
-                    border: `1px solid ${issueType === val ? G : "rgba(255,255,255,0.08)"}`,
-                    background: issueType === val ? "rgba(0,200,83,0.05)" : "transparent",
+                    padding: "10px 12px", borderRadius: 10,
+                    border: `1px solid ${issueType === val ? BLUE : BORDER}`,
+                    background: issueType === val ? "#EBF2FF" : BG,
                     cursor: "pointer",
                   }}>
                     <input
@@ -183,9 +193,9 @@ export function ReportIssue({ brandName, flagId, onClose }: ReportIssueProps) {
                       value={val}
                       checked={issueType === val}
                       onChange={() => setIssueType(val)}
-                      style={{ accentColor: G, flexShrink: 0 }}
+                      style={{ accentColor: BLUE, flexShrink: 0 }}
                     />
-                    <span style={{ fontFamily: M, fontSize: "0.6rem", color: issueType === val ? "#fff" : GR }}>
+                    <span style={{ fontSize: "0.82rem", color: issueType === val ? BLUE : TEXT, fontWeight: issueType === val ? 600 : 400 }}>
                       {label}
                     </span>
                   </label>
@@ -196,10 +206,10 @@ export function ReportIssue({ brandName, flagId, onClose }: ReportIssueProps) {
             {/* Description */}
             <div style={{ marginBottom: 18 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
-                <p style={{ fontFamily: M, fontSize: "0.46rem", color: GR, letterSpacing: "0.16em", textTransform: "uppercase" }}>
+                <p style={{ fontSize: "0.72rem", fontWeight: 600, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.04em" }}>
                   Description <span style={{ color: RED }}>*</span>
                 </p>
-                <span style={{ fontFamily: M, fontSize: "0.44rem", color: descLength > 2000 ? RED : descLength >= 50 ? G : GR }}>
+                <span style={{ fontSize: "0.72rem", color: descLength > 2000 ? RED : descLength >= 50 ? "#10b981" : TEXT_MUTED }}>
                   {descLength} / 2000
                 </span>
               </div>
@@ -209,20 +219,13 @@ export function ReportIssue({ brandName, flagId, onClose }: ReportIssueProps) {
                 placeholder="Describe the issue in detail. Include what is incorrect and what the correct information should be. Minimum 50 characters."
                 rows={5}
                 style={{
-                  width: "100%", boxSizing: "border-box",
-                  background: "rgba(255,255,255,0.03)",
-                  border: `1px solid ${descLength > 0 && !descValid ? RED : "rgba(255,255,255,0.12)"}`,
-                  color: "#fff",
-                  fontFamily: M,
-                  fontSize: "0.62rem",
-                  lineHeight: 1.7,
-                  padding: "12px 14px",
+                  ...inputStyle,
+                  border: `1px solid ${descLength > 0 && !descValid ? RED : BORDER}`,
                   resize: "vertical",
-                  outline: "none",
                 }}
               />
               {descLength > 0 && descLength < 50 && (
-                <p style={{ fontFamily: M, fontSize: "0.44rem", color: RED, marginTop: 4 }}>
+                <p style={{ fontSize: "0.72rem", color: RED, marginTop: 4 }}>
                   Minimum 50 characters ({50 - descLength} more needed)
                 </p>
               )}
@@ -230,7 +233,7 @@ export function ReportIssue({ brandName, flagId, onClose }: ReportIssueProps) {
 
             {/* Source URL */}
             <div style={{ marginBottom: 18 }}>
-              <p style={{ fontFamily: M, fontSize: "0.46rem", color: GR, letterSpacing: "0.16em", textTransform: "uppercase", marginBottom: 8 }}>
+              <p style={{ fontSize: "0.72rem", fontWeight: 600, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>
                 Source URL (optional)
               </p>
               <input
@@ -238,22 +241,13 @@ export function ReportIssue({ brandName, flagId, onClose }: ReportIssueProps) {
                 value={sourceUrl}
                 onChange={(e) => setSourceUrl(e.target.value)}
                 placeholder="https://..."
-                style={{
-                  width: "100%", boxSizing: "border-box",
-                  background: "rgba(255,255,255,0.03)",
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  color: "#fff",
-                  fontFamily: M,
-                  fontSize: "0.62rem",
-                  padding: "10px 14px",
-                  outline: "none",
-                }}
+                style={inputStyle}
               />
             </div>
 
             {/* Email */}
             <div style={{ marginBottom: 24 }}>
-              <p style={{ fontFamily: M, fontSize: "0.46rem", color: GR, letterSpacing: "0.16em", textTransform: "uppercase", marginBottom: 8 }}>
+              <p style={{ fontSize: "0.72rem", fontWeight: 600, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>
                 Your email (optional)
               </p>
               <input
@@ -261,23 +255,14 @@ export function ReportIssue({ brandName, flagId, onClose }: ReportIssueProps) {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="so we can follow up"
-                style={{
-                  width: "100%", boxSizing: "border-box",
-                  background: "rgba(255,255,255,0.03)",
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  color: "#fff",
-                  fontFamily: M,
-                  fontSize: "0.62rem",
-                  padding: "10px 14px",
-                  outline: "none",
-                }}
+                style={inputStyle}
               />
             </div>
 
             {status === "error" && (
-              <div style={{ display: "flex", gap: 8, padding: "10px 12px", border: `1px solid ${RED}`, marginBottom: 16, background: "rgba(255,65,54,0.06)" }}>
+              <div style={{ display: "flex", gap: 8, padding: "10px 12px", borderRadius: 10, border: `1px solid ${RED}`, marginBottom: 16, background: "#FFF0F0" }}>
                 <AlertCircle size={14} style={{ color: RED, flexShrink: 0, marginTop: 1 }} />
-                <p style={{ fontFamily: M, fontSize: "0.56rem", color: RED, lineHeight: 1.6 }}>{errorMsg}</p>
+                <p style={{ fontSize: "0.78rem", color: RED, lineHeight: 1.6 }}>{errorMsg}</p>
               </div>
             )}
 
@@ -286,9 +271,8 @@ export function ReportIssue({ brandName, flagId, onClose }: ReportIssueProps) {
                 type="button"
                 onClick={onClose}
                 style={{
-                  flex: 1, fontFamily: M, fontSize: "0.6rem", color: GR, letterSpacing: "0.1em",
-                  textTransform: "uppercase", background: "none",
-                  border: "1px solid rgba(255,255,255,0.1)", padding: "12px", cursor: "pointer",
+                  flex: 1, fontSize: "0.85rem", fontWeight: 600, color: TEXT_MUTED,
+                  background: BG, border: `1px solid ${BORDER}`, padding: "12px", borderRadius: 12, cursor: "pointer",
                 }}
               >
                 Cancel
@@ -297,27 +281,26 @@ export function ReportIssue({ brandName, flagId, onClose }: ReportIssueProps) {
                 type="submit"
                 disabled={!descValid || status === "submitting"}
                 style={{
-                  flex: 2, fontFamily: M, fontSize: "0.6rem",
-                  letterSpacing: "0.1em", textTransform: "uppercase",
-                  background: descValid ? G : "rgba(0,200,83,0.15)",
-                  color: descValid ? "#000" : "rgba(0,200,83,0.4)",
-                  border: "none", padding: "12px",
+                  flex: 2, fontSize: "0.85rem", fontWeight: 700,
+                  background: descValid ? BLUE : "#C3D6FF",
+                  color: descValid ? "#fff" : "#9DB8E8",
+                  border: "none", padding: "12px", borderRadius: 12,
                   cursor: descValid ? "pointer" : "not-allowed",
                   display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
                 }}
               >
-                {status === "submitting" ? "Sending..." : (
+                {status === "submitting" ? "Sending…" : (
                   <>
-                    <Send size={13} />
+                    <Send size={14} />
                     Submit report
                   </>
                 )}
               </button>
             </div>
 
-            <p style={{ fontFamily: M, fontSize: "0.44rem", color: "rgba(132,137,142,0.4)", marginTop: 14, textAlign: "center", lineHeight: 1.6 }}>
+            <p style={{ fontSize: "0.7rem", color: TEXT_MUTED, marginTop: 14, textAlign: "center", lineHeight: 1.6 }}>
               We review all reports within 14 days.{" "}
-              <a href="/methodology" style={{ color: "rgba(132,137,142,0.6)", textDecoration: "underline" }}>
+              <a href="/methodology" style={{ color: BLUE, textDecoration: "underline" }}>
                 Our methodology
               </a>
             </p>

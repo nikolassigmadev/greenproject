@@ -33,11 +33,11 @@ import {
 // ── helpers ────────────────────────────────────────────────────────────────
 
 const NUTRI_COLOR: Record<string, string> = {
-  a: '#00c853', b: '#40aaff', c: '#ffc700', d: '#ff8c00', e: '#ff3b30',
+  a: '#00C853', b: '#2979FF', c: '#F59E0B', d: '#F97316', e: '#EF4444',
 };
 
 const ECO_COLOR: Record<string, string> = {
-  a: '#00c853', b: '#40aaff', c: '#ffc700', d: '#ff8c00', e: '#ff3b30',
+  a: '#00C853', b: '#2979FF', c: '#F59E0B', d: '#F97316', e: '#EF4444',
 };
 
 function addResultToBasket(result: OpenFoodFactsResult) {
@@ -54,9 +54,17 @@ function addResultToBasket(result: OpenFoodFactsResult) {
   });
 }
 
-// ── component ──────────────────────────────────────────────────────────────
+// ── design tokens ──────────────────────────────────────────────────────────
 
-const MONO: React.CSSProperties = { fontFamily: "'JetBrains Mono', monospace" };
+const BLUE = "#2979FF";
+const BG = "#F5F7FA";
+const CARD = "#FFFFFF";
+const BORDER = "#E5E7EB";
+const TEXT = "#111827";
+const TEXT_MUTED = "#6B7280";
+const RED = "#EF4444";
+const GREEN = "#00C853";
+const AMBER = "#F59E0B";
 
 export default function ShoppingList() {
   const [basket, setBasket] = useState<BasketItem[]>([]);
@@ -104,270 +112,348 @@ export default function ShoppingList() {
   const inBasket = (barcode: string) => basket.some(b => b.barcode === barcode);
 
   return (
-    <div className="min-h-screen bg-black diagonal-stripe">
-      <div className="scanlines" />
-
-      <main className="pb-nav">
+    <div style={{ background: BG, minHeight: "100vh" }}>
+      <main style={{ paddingBottom: "5.5rem" }}>
 
         {/* ── Header ── */}
-        <div className="px-5 pt-14 pb-0">
-          <div className="max-w-xl mx-auto flex items-start justify-between" style={{ paddingRight: 50 }}>
-            <div>
-              <p style={{ ...MONO, fontSize: '0.55rem', color: '#84898E', letterSpacing: '0.22em', textTransform: 'uppercase' }}>
-                // SHOPPING
-              </p>
-              <h1 style={{ ...MONO, fontSize: 'clamp(1.8rem, 9vw, 2.5rem)', color: '#ffffff', letterSpacing: '-0.03em', fontWeight: 900, textTransform: 'uppercase', lineHeight: 1 }}>
-                MY BASKET<span style={{ color: '#00c853' }}>_</span>
-              </h1>
-            </div>
-            {basket.length > 0 && (
-              <button
-                onClick={() => setShowClearConfirm(true)}
-                style={{
-                  ...MONO, marginTop: 8,
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  padding: '6px 12px',
-                  border: '1px solid rgba(255,255,255,0.12)',
-                  background: 'transparent', color: '#84898E', cursor: 'pointer',
-                  fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
-                }}
-              >
-                <Trash2 size={12} /> CLEAR
-              </button>
-            )}
+        <div style={{
+          background: CARD,
+          borderBottom: `1px solid ${BORDER}`,
+          padding: "max(52px, env(safe-area-inset-top)) 20px 16px",
+          display: "flex", justifyContent: "space-between", alignItems: "flex-end",
+        }}>
+          <div>
+            <p style={{ fontSize: "0.7rem", fontWeight: 600, color: TEXT_MUTED, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 4 }}>
+              Shopping
+            </p>
+            <h1 style={{ fontSize: "1.65rem", fontWeight: 800, color: TEXT, letterSpacing: "-0.025em", lineHeight: 1 }}>
+              My Basket
+              {basket.length > 0 && (
+                <span style={{ marginLeft: 10, fontSize: "1rem", fontWeight: 700, color: BLUE }}>
+                  {basket.length}
+                </span>
+              )}
+            </h1>
           </div>
+          {basket.length > 0 && (
+            <button
+              onClick={() => setShowClearConfirm(true)}
+              style={{
+                display: "flex", alignItems: "center", gap: 6,
+                padding: "8px 14px", borderRadius: 10,
+                border: `1px solid ${BORDER}`,
+                background: CARD, color: TEXT_MUTED, cursor: "pointer",
+                fontSize: "0.8rem", fontWeight: 600,
+              }}
+            >
+              <Trash2 size={14} /> Clear
+            </button>
+          )}
         </div>
 
-        {/* ── Divider ── */}
-        <div className="px-5 pt-4">
-          <div className="max-w-xl mx-auto" style={{ borderBottom: '1px solid rgba(132,137,142,0.2)' }} />
-        </div>
+        <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: 12 }}>
 
-        <div className="px-5 pt-4">
-          <div className="max-w-xl mx-auto space-y-3">
-
-            {/* ── Clear confirm ── */}
-            {showClearConfirm && (
-              <div style={{ border: '1px solid rgba(255,59,48,0.3)', borderLeft: '3px solid #ff3b30', background: 'rgba(255,59,48,0.05)', padding: '14px 16px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <AlertTriangle size={14} style={{ color: '#ff3b30' }} />
-                    <span style={{ ...MONO, fontSize: '0.65rem', fontWeight: 700, color: '#ff3b30', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                      CLEAR ENTIRE BASKET?
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <button onClick={handleClear} style={{ ...MONO, padding: '6px 14px', border: 'none', background: '#ff3b30', color: '#fff', fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer' }}>
-                      [YES]
-                    </button>
-                    <button onClick={() => setShowClearConfirm(false)} style={{ ...MONO, padding: '6px 14px', border: '1px solid rgba(255,255,255,0.12)', background: 'transparent', color: '#84898E', fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer' }}>
-                      [NO]
-                    </button>
-                  </div>
-                </div>
+          {/* ── Clear confirm ── */}
+          {showClearConfirm && (
+            <div style={{
+              background: "#FFF5F5", border: `1px solid #FECACA`,
+              borderRadius: 16, padding: "16px",
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+                <AlertTriangle size={16} style={{ color: RED, flexShrink: 0 }} />
+                <p style={{ fontSize: "0.9rem", fontWeight: 700, color: "#7F1D1D" }}>Clear entire basket?</p>
               </div>
-            )}
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={handleClear} style={{ flex: 1, height: 40, borderRadius: 10, border: "none", background: RED, color: "#fff", fontWeight: 700, fontSize: "0.85rem", cursor: "pointer" }}>
+                  Yes, clear
+                </button>
+                <button onClick={() => setShowClearConfirm(false)} style={{ flex: 1, height: 40, borderRadius: 10, border: `1px solid ${BORDER}`, background: CARD, color: TEXT_MUTED, fontWeight: 600, fontSize: "0.85rem", cursor: "pointer" }}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
 
-            {/* ── Labour Impact Card ── */}
-            {basket.length > 0 && (
-              <div style={{ border: '1px solid rgba(255,255,255,0.08)', borderLeft: `3px solid ${report.laborFlagCount > 0 ? '#ff3b30' : '#00c853'}`, background: '#000', padding: '16px' }}>
-                <p style={{ ...MONO, fontSize: '0.48rem', color: '#84898E', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 10 }}>
-                  // LABOUR_SCAN
-                </p>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
-                  <span style={{ ...MONO, fontSize: '2rem', fontWeight: 900, color: report.laborFlagCount > 0 ? '#ff3b30' : '#00c853', lineHeight: 1 }}>
-                    {report.laborFlagCount > 0 ? report.laborFlagCount : report.cleanBrandCount}
-                  </span>
-                  <span style={{ ...MONO, fontSize: '0.65rem', color: '#84898E', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                    {report.laborFlagCount > 0 ? 'flagged' : 'clean'}
-                  </span>
+          {/* ── Stats row ── */}
+          {basket.length > 0 && (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+
+              {/* Labour card */}
+              <div style={{
+                background: CARD, borderRadius: 16, border: `1px solid ${BORDER}`,
+                borderLeft: `4px solid ${report.laborFlagCount > 0 ? RED : GREEN}`,
+                padding: "14px 14px",
+                boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                  <div style={{
+                    width: 28, height: 28, borderRadius: 8,
+                    background: report.laborFlagCount > 0 ? "#FEF2F2" : "#F0FAF1",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                  }}>
+                    <Users size={14} style={{ color: report.laborFlagCount > 0 ? RED : GREEN }} />
+                  </div>
+                  <span style={{ fontSize: "0.68rem", fontWeight: 600, color: TEXT_MUTED }}>Labour</span>
                 </div>
-                <p style={{ ...MONO, fontSize: '0.6rem', color: report.laborFlagCount > 0 ? '#ff3b30' : '#00c853', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                  {report.laborFlagCount > 0
-                    ? `brand${report.laborFlagCount !== 1 ? 's' : ''} with labour issues`
-                    : 'no labour concerns'}
+                <p style={{ fontSize: "1.6rem", fontWeight: 900, color: report.laborFlagCount > 0 ? RED : GREEN, lineHeight: 1, marginBottom: 2 }}>
+                  {report.laborFlagCount > 0 ? report.laborFlagCount : report.cleanBrandCount}
+                </p>
+                <p style={{ fontSize: "0.68rem", color: report.laborFlagCount > 0 ? RED : GREEN, fontWeight: 600 }}>
+                  {report.laborFlagCount > 0 ? `flagged brand${report.laborFlagCount !== 1 ? "s" : ""}` : "clean brands"}
                 </p>
                 {report.flaggedItems.length > 0 && (
-                  <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-                    {report.flaggedItems.slice(0, 3).map(item => (
-                      <div key={item.barcode} style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
-                        <span style={{ color: '#ff3b30', fontSize: '0.6rem' }}>▶</span>
-                        <span style={{ ...MONO, fontSize: '0.6rem', color: '#84898E' }}>{item.brand || item.productName}</span>
-                      </div>
+                  <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${BORDER}` }}>
+                    {report.flaggedItems.slice(0, 2).map(item => (
+                      <p key={item.barcode} style={{ fontSize: "0.65rem", color: TEXT_MUTED, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        · {item.brand || item.productName}
+                      </p>
                     ))}
                   </div>
                 )}
               </div>
-            )}
 
-            {/* ── CO2 card ── */}
-            {basket.length > 0 && report.co2ScoredCount > 0 && (
-              <div style={{ border: '1px solid rgba(255,255,255,0.08)', borderLeft: `3px solid ${report.co2NetKg >= 0 ? '#00c853' : '#ff8c00'}`, background: '#000', padding: '16px' }}>
-                <p style={{ ...MONO, fontSize: '0.48rem', color: '#84898E', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 10 }}>
-                  // CO2_IMPACT
-                </p>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
-                  <span style={{ ...MONO, fontSize: '2rem', fontWeight: 900, color: report.co2NetKg >= 0 ? '#00c853' : '#ff8c00', lineHeight: 1 }}>
-                    {report.co2NetKg >= 0 ? '-' : '+'}{Math.abs(report.co2NetKg)}
-                  </span>
-                  <span style={{ ...MONO, fontSize: '0.65rem', color: '#84898E', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                    kg CO₂
-                  </span>
-                </div>
-                <p style={{ ...MONO, fontSize: '0.6rem', color: report.co2NetKg >= 0 ? '#00c853' : '#ff8c00', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                  {report.co2NetKg >= 0 ? 'saved vs avg basket' : 'more than avg basket'}
-                </p>
-              </div>
-            )}
-
-            {/* ── Weakest Link ── */}
-            {report.weakestItem && ['d','e'].includes(report.weakestItem.ecoscoreGrade?.toLowerCase() ?? '') && (
-              <Link to={`/product-off/${report.weakestItem.barcode}`} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', border: '1px solid rgba(255,140,0,0.3)', borderLeft: '3px solid #ff8c00', background: '#000', textDecoration: 'none' }}>
-                <AlertCircle size={16} style={{ color: '#ff8c00', flexShrink: 0 }} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ ...MONO, fontSize: '0.5rem', color: '#ff8c00', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: 3 }}>
-                    [!] WEAKEST LINK
-                  </p>
-                  <p style={{ ...MONO, fontSize: '0.75rem', color: '#ffffff', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {report.weakestItem.productName}
-                  </p>
-                  <p style={{ ...MONO, fontSize: '0.55rem', color: '#84898E', marginTop: 2 }}>
-                    ECO_{report.weakestItem.ecoscoreGrade?.toUpperCase()} · consider swapping
-                  </p>
-                </div>
-                <ChevronRight size={14} style={{ color: '#84898E', flexShrink: 0 }} />
-              </Link>
-            )}
-
-            {/* ── Search ── */}
-            <div style={{ border: '1px solid rgba(255,255,255,0.08)', background: '#000' }}>
-              <div style={{ padding: '10px 12px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                <span style={{ ...MONO, fontSize: '0.45rem', color: '#84898E', letterSpacing: '0.18em', textTransform: 'uppercase' }}>
-                  // ADD_PRODUCT
-                </span>
-              </div>
-              <div style={{ padding: '10px 12px 12px' }}>
-                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                  <span style={{ position: 'absolute', left: 10, ...MONO, fontSize: '0.7rem', color: '#00c853', pointerEvents: 'none' }}>›</span>
-                  {searching
-                    ? <Loader2 size={13} style={{ position: 'absolute', right: 10, color: '#84898E', animation: 'spin 1s linear infinite' }} />
-                    : query
-                    ? <button onClick={() => { setQuery(""); setSearchResults([]); }} style={{ position: 'absolute', right: 10, background: 'none', border: 'none', color: '#84898E', cursor: 'pointer', padding: 0 }}><X size={13} /></button>
-                    : null
-                  }
-                  <input
-                    type="text"
-                    value={query}
-                    onChange={e => setQuery(e.target.value)}
-                    placeholder="search products to add..."
-                    style={{
-                      width: '100%', height: 40,
-                      background: 'rgba(255,255,255,0.04)',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      color: '#fff', ...MONO, fontSize: '0.75rem',
-                      paddingLeft: 24, paddingRight: 32, outline: 'none',
-                    }}
-                  />
-                </div>
-
-                {(searchResults.length > 0) && (
-                  <div style={{ marginTop: 8, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-                    {searchResults.map(result => {
-                      const grade = result.ecoscoreGrade?.toLowerCase();
-                      const already = inBasket(result.barcode);
-                      return (
-                        <div key={result.barcode} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                          {result.imageUrl
-                            ? <img src={result.imageUrl} alt="" style={{ width: 36, height: 36, objectFit: 'cover', flexShrink: 0, border: '1px solid rgba(255,255,255,0.08)' }} />
-                            : <div style={{ width: 36, height: 36, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ShoppingBag size={14} style={{ color: '#84898E' }} /></div>
-                          }
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <p style={{ ...MONO, fontSize: '0.7rem', fontWeight: 700, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{result.productName || 'Unknown'}</p>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3 }}>
-                              {result.brand && <span style={{ ...MONO, fontSize: '0.55rem', color: '#84898E' }}>{result.brand}</span>}
-                              {grade && <span style={{ ...MONO, fontSize: '0.5rem', fontWeight: 700, color: ECO_COLOR[grade] || '#84898E', border: `1px solid ${ECO_COLOR[grade] || '#84898E'}`, padding: '1px 4px' }}>ECO_{grade.toUpperCase()}</span>}
-                            </div>
-                          </div>
-                          <button
-                            onClick={() => !already && handleAdd(result)}
-                            disabled={already}
-                            style={{ width: 30, height: 30, border: `1px solid ${already ? 'rgba(0,200,83,0.4)' : 'rgba(255,255,255,0.15)'}`, background: already ? 'rgba(0,200,83,0.08)' : 'transparent', color: already ? '#00c853' : '#84898E', cursor: already ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
-                          >
-                            {already ? <CheckCircle2 size={13} /> : <Plus size={13} />}
-                          </button>
-                        </div>
-                      );
-                    })}
-                    {searchResults.length === 0 && query.trim().length >= 2 && !searching && (
-                      <p style={{ ...MONO, fontSize: '0.6rem', color: '#84898E', padding: '10px 0' }}>NO_RESULTS_FOUND</p>
-                    )}
+              {/* CO2 card */}
+              {report.co2ScoredCount > 0 ? (
+                <div style={{
+                  background: CARD, borderRadius: 16, border: `1px solid ${BORDER}`,
+                  borderLeft: `4px solid ${report.co2NetKg >= 0 ? GREEN : AMBER}`,
+                  padding: "14px 14px",
+                  boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                    <div style={{
+                      width: 28, height: 28, borderRadius: 8,
+                      background: report.co2NetKg >= 0 ? "#F0FAF1" : "#FFFBEB",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                    }}>
+                      {report.co2NetKg >= 0
+                        ? <TrendingDown size={14} style={{ color: GREEN }} />
+                        : <TrendingUp size={14} style={{ color: AMBER }} />}
+                    </div>
+                    <span style={{ fontSize: "0.68rem", fontWeight: 600, color: TEXT_MUTED }}>CO₂</span>
                   </div>
-                )}
+                  <p style={{ fontSize: "1.6rem", fontWeight: 900, color: report.co2NetKg >= 0 ? GREEN : AMBER, lineHeight: 1, marginBottom: 2 }}>
+                    {report.co2NetKg >= 0 ? "-" : "+"}{Math.abs(report.co2NetKg)}
+                    <span style={{ fontSize: "0.8rem", fontWeight: 700 }}> kg</span>
+                  </p>
+                  <p style={{ fontSize: "0.68rem", color: report.co2NetKg >= 0 ? GREEN : AMBER, fontWeight: 600 }}>
+                    {report.co2NetKg >= 0 ? "saved vs avg" : "above avg basket"}
+                  </p>
+                </div>
+              ) : (
+                <div style={{
+                  background: CARD, borderRadius: 16, border: `1px solid ${BORDER}`,
+                  padding: "14px 14px",
+                  boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
+                  display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center",
+                  gap: 6, color: TEXT_MUTED,
+                }}>
+                  <Leaf size={22} style={{ color: "#D1D5DB" }} />
+                  <p style={{ fontSize: "0.7rem", textAlign: "center", lineHeight: 1.4 }}>No eco data yet</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Weakest Link ── */}
+          {report.weakestItem && ["d", "e"].includes(report.weakestItem.ecoscoreGrade?.toLowerCase() ?? "") && (
+            <Link to={`/product-off/${report.weakestItem.barcode}`} style={{
+              display: "flex", alignItems: "center", gap: 12,
+              padding: "14px 16px",
+              background: "#FFFBEB", border: `1px solid #FDE68A`, borderRadius: 16,
+              textDecoration: "none",
+              boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
+            }}>
+              <div style={{ width: 36, height: 36, borderRadius: 10, background: "#FEF3C7", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <AlertCircle size={18} style={{ color: AMBER }} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontSize: "0.68rem", fontWeight: 700, color: "#92400E", marginBottom: 2 }}>Weakest link</p>
+                <p style={{ fontSize: "0.85rem", fontWeight: 700, color: TEXT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {report.weakestItem.productName}
+                </p>
+                <p style={{ fontSize: "0.7rem", color: TEXT_MUTED, marginTop: 1 }}>
+                  Eco-{report.weakestItem.ecoscoreGrade?.toUpperCase()} · consider swapping
+                </p>
+              </div>
+              <ChevronRight size={16} style={{ color: AMBER, flexShrink: 0 }} />
+            </Link>
+          )}
+
+          {/* ── Search / Add ── */}
+          <div style={{ background: CARD, borderRadius: 18, border: `1px solid ${BORDER}`, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
+            <div style={{ padding: "14px 16px 0" }}>
+              <p style={{ fontSize: "0.72rem", fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 10 }}>
+                Add product
+              </p>
+              <div style={{ position: "relative", display: "flex", alignItems: "center", marginBottom: 12 }}>
+                <Search size={15} style={{ position: "absolute", left: 12, color: "#9CA3AF", pointerEvents: "none" }} />
+                {searching
+                  ? <Loader2 size={14} style={{ position: "absolute", right: 12, color: BLUE, animation: "spin 1s linear infinite" }} />
+                  : query
+                  ? <button onClick={() => { setQuery(""); setSearchResults([]); }} style={{ position: "absolute", right: 10, background: "none", border: "none", color: TEXT_MUTED, cursor: "pointer", padding: 0 }}><X size={14} /></button>
+                  : null
+                }
+                <input
+                  type="text"
+                  value={query}
+                  onChange={e => setQuery(e.target.value)}
+                  placeholder="Search products to add…"
+                  style={{
+                    width: "100%", height: 44,
+                    background: BG,
+                    border: `1px solid ${BORDER}`, borderRadius: 12,
+                    color: TEXT, fontSize: "0.875rem",
+                    paddingLeft: 36, paddingRight: 36, outline: "none",
+                  }}
+                />
               </div>
             </div>
 
-            {/* ── Basket Items ── */}
-            {basket.length === 0 ? (
-              <div style={{ border: '1px solid rgba(255,255,255,0.08)', borderLeft: '3px solid #84898E', background: '#000', padding: '32px 20px', textAlign: 'center' }}>
-                <ShoppingCart size={28} style={{ color: '#84898E', margin: '0 auto 12px' }} />
-                <p style={{ ...MONO, fontSize: '0.75rem', fontWeight: 700, color: '#ffffff', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
-                  BASKET_EMPTY
-                </p>
-                <p style={{ ...MONO, fontSize: '0.6rem', color: '#84898E', marginBottom: 20, lineHeight: 1.6 }}>
-                  Search above or scan a product
-                </p>
-                <Link to="/scan" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px', background: '#00c853', color: '#000', textDecoration: 'none', ...MONO, fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
-                  <ShoppingBag size={13} /> [START SCANNING]
-                </Link>
-              </div>
-            ) : (
-              <div>
-                <p style={{ ...MONO, fontSize: '0.48rem', color: '#84898E', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 8 }}>
-                  // {basket.length} ITEM{basket.length !== 1 ? 'S' : ''} IN BASKET
-                </p>
-                <div style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
-                  {basket.map((item, i) => {
-                    const ecoGrade = item.ecoscoreGrade?.toLowerCase();
-                    const nutriGrade = item.nutriscoreGrade?.toLowerCase();
-                    const isFlagged = item.laborAllegations > 0;
-                    const isWeakest = report.weakestItem?.barcode === item.barcode;
-
-                    return (
-                      <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', borderBottom: i < basket.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none', borderLeft: isFlagged ? '2px solid #ff3b30' : isWeakest ? '2px solid #ff8c00' : '2px solid transparent' }}>
-                        <Link to={`/product-off/${item.barcode}`} style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0, textDecoration: 'none' }}>
-                          {item.imageUrl
-                            ? <img src={item.imageUrl} alt="" style={{ width: 44, height: 44, objectFit: 'cover', flexShrink: 0, border: '1px solid rgba(255,255,255,0.08)' }} />
-                            : <div style={{ width: 44, height: 44, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ShoppingBag size={16} style={{ color: '#84898E' }} /></div>
-                          }
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <p style={{ ...MONO, fontSize: '0.7rem', fontWeight: 700, color: '#ffffff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 4 }}>
-                              {item.productName}
-                            </p>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
-                              {item.brand && <span style={{ ...MONO, fontSize: '0.55rem', color: '#84898E' }}>{item.brand}</span>}
-                              {ecoGrade
-                                ? <span style={{ ...MONO, fontSize: '0.48rem', fontWeight: 700, border: `1px solid ${ECO_COLOR[ecoGrade] || '#84898E'}`, color: ECO_COLOR[ecoGrade] || '#84898E', padding: '1px 5px' }}>ECO_{ecoGrade.toUpperCase()}</span>
-                                : <span style={{ ...MONO, fontSize: '0.48rem', color: '#84898E', border: '1px solid rgba(255,255,255,0.1)', padding: '1px 5px' }}>NO_ECO</span>
-                              }
-                              {nutriGrade && <span style={{ ...MONO, fontSize: '0.48rem', fontWeight: 700, border: `1px solid ${NUTRI_COLOR[nutriGrade] || '#84898E'}`, color: NUTRI_COLOR[nutriGrade] || '#84898E', padding: '1px 5px' }}>NUTRI_{nutriGrade.toUpperCase()}</span>}
-                              {isFlagged && <span style={{ ...MONO, fontSize: '0.48rem', fontWeight: 700, border: '1px solid rgba(255,59,48,0.5)', color: '#ff3b30', padding: '1px 5px', display: 'inline-flex', alignItems: 'center', gap: 3 }}><Users size={9} /> LABOUR</span>}
-                            </div>
-                          </div>
-                        </Link>
-                        <button
-                          onClick={() => handleRemove(item.barcode)}
-                          style={{ width: 30, height: 30, border: '1px solid rgba(255,255,255,0.08)', background: 'transparent', color: '#84898E', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
-                        >
-                          <X size={13} />
-                        </button>
+            {searchResults.length > 0 && (
+              <div style={{ borderTop: `1px solid ${BORDER}` }}>
+                {searchResults.map((result, i) => {
+                  const grade = result.ecoscoreGrade?.toLowerCase();
+                  const already = inBasket(result.barcode);
+                  return (
+                    <div key={result.barcode} style={{
+                      display: "flex", alignItems: "center", gap: 10,
+                      padding: "12px 16px",
+                      borderBottom: i < searchResults.length - 1 ? `1px solid ${BORDER}` : "none",
+                    }}>
+                      {result.imageUrl
+                        ? <img src={result.imageUrl} alt="" style={{ width: 40, height: 40, objectFit: "cover", borderRadius: 10, flexShrink: 0, border: `1px solid ${BORDER}` }} />
+                        : <div style={{ width: 40, height: 40, background: BG, border: `1px solid ${BORDER}`, borderRadius: 10, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}><ShoppingBag size={16} style={{ color: "#D1D5DB" }} /></div>
+                      }
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontSize: "0.85rem", fontWeight: 700, color: TEXT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 3 }}>
+                          {result.productName || "Unknown"}
+                        </p>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          {result.brand && <span style={{ fontSize: "0.7rem", color: TEXT_MUTED }}>{result.brand}</span>}
+                          {grade && (
+                            <span style={{
+                              fontSize: "0.62rem", fontWeight: 700,
+                              color: ECO_COLOR[grade] || TEXT_MUTED,
+                              background: `${ECO_COLOR[grade] || TEXT_MUTED}18`,
+                              borderRadius: 6, padding: "1px 6px",
+                            }}>
+                              Eco-{grade.toUpperCase()}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    );
-                  })}
-                </div>
+                      <button
+                        onClick={() => !already && handleAdd(result)}
+                        disabled={already}
+                        style={{
+                          width: 34, height: 34, borderRadius: 10,
+                          border: "none",
+                          background: already ? "#F0FAF1" : BLUE,
+                          color: already ? GREEN : "#fff",
+                          cursor: already ? "default" : "pointer",
+                          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                        }}
+                      >
+                        {already ? <CheckCircle2 size={16} /> : <Plus size={16} />}
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             )}
 
+            {searchResults.length === 0 && query.trim().length >= 2 && !searching && (
+              <div style={{ padding: "14px 16px", borderTop: `1px solid ${BORDER}` }}>
+                <p style={{ fontSize: "0.8rem", color: TEXT_MUTED }}>No results found for "{query}"</p>
+              </div>
+            )}
           </div>
+
+          {/* ── Basket Items ── */}
+          {basket.length === 0 ? (
+            <div style={{
+              background: CARD, borderRadius: 18, border: `1px solid ${BORDER}`,
+              padding: "36px 20px", textAlign: "center",
+              boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
+            }}>
+              <div style={{ width: 56, height: 56, borderRadius: 18, background: "#EBF2FF", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
+                <ShoppingCart size={26} style={{ color: BLUE }} />
+              </div>
+              <p style={{ fontSize: "1rem", fontWeight: 800, color: TEXT, marginBottom: 6 }}>Your basket is empty</p>
+              <p style={{ fontSize: "0.82rem", color: TEXT_MUTED, marginBottom: 22, lineHeight: 1.5 }}>
+                Search above or scan a product to get started
+              </p>
+              <Link to="/scan" style={{
+                display: "inline-flex", alignItems: "center", gap: 8,
+                padding: "12px 24px", borderRadius: 14,
+                background: BLUE, color: "#fff",
+                textDecoration: "none", fontWeight: 700, fontSize: "0.875rem",
+              }}>
+                <ShoppingBag size={15} /> Start Scanning
+              </Link>
+            </div>
+          ) : (
+            <div>
+              <p style={{ fontSize: "0.72rem", fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>
+                {basket.length} item{basket.length !== 1 ? "s" : ""} in basket
+              </p>
+              <div style={{ background: CARD, borderRadius: 18, border: `1px solid ${BORDER}`, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
+                {basket.map((item, i) => {
+                  const ecoGrade = item.ecoscoreGrade?.toLowerCase();
+                  const nutriGrade = item.nutriscoreGrade?.toLowerCase();
+                  const isFlagged = item.laborAllegations > 0;
+                  const isWeakest = report.weakestItem?.barcode === item.barcode;
+
+                  return (
+                    <div key={item.id} style={{
+                      display: "flex", alignItems: "center", gap: 12,
+                      padding: "12px 14px",
+                      borderBottom: i < basket.length - 1 ? `1px solid ${BORDER}` : "none",
+                      borderLeft: `4px solid ${isFlagged ? RED : isWeakest ? AMBER : "transparent"}`,
+                    }}>
+                      <Link to={`/product-off/${item.barcode}`} style={{ display: "flex", alignItems: "center", gap: 12, flex: 1, minWidth: 0, textDecoration: "none" }}>
+                        {item.imageUrl
+                          ? <img src={item.imageUrl} alt="" style={{ width: 46, height: 46, objectFit: "cover", borderRadius: 12, flexShrink: 0, border: `1px solid ${BORDER}` }} />
+                          : <div style={{ width: 46, height: 46, background: BG, border: `1px solid ${BORDER}`, borderRadius: 12, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}><ShoppingBag size={18} style={{ color: "#D1D5DB" }} /></div>
+                        }
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{ fontSize: "0.875rem", fontWeight: 700, color: TEXT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 4 }}>
+                            {item.productName}
+                          </p>
+                          <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
+                            {item.brand && <span style={{ fontSize: "0.7rem", color: TEXT_MUTED }}>{item.brand}</span>}
+                            {ecoGrade
+                              ? <span style={{ fontSize: "0.62rem", fontWeight: 700, color: ECO_COLOR[ecoGrade] || TEXT_MUTED, background: `${ECO_COLOR[ecoGrade] || TEXT_MUTED}18`, borderRadius: 6, padding: "1px 6px" }}>Eco-{ecoGrade.toUpperCase()}</span>
+                              : null
+                            }
+                            {nutriGrade && <span style={{ fontSize: "0.62rem", fontWeight: 700, color: NUTRI_COLOR[nutriGrade] || TEXT_MUTED, background: `${NUTRI_COLOR[nutriGrade] || TEXT_MUTED}18`, borderRadius: 6, padding: "1px 6px" }}>Nutri-{nutriGrade.toUpperCase()}</span>}
+                            {isFlagged && (
+                              <span style={{ fontSize: "0.62rem", fontWeight: 700, color: RED, background: "#FEF2F2", borderRadius: 6, padding: "1px 6px", display: "inline-flex", alignItems: "center", gap: 3 }}>
+                                <Users size={9} /> Labour flag
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </Link>
+                      <button
+                        onClick={() => handleRemove(item.barcode)}
+                        style={{
+                          width: 32, height: 32, borderRadius: 9,
+                          border: `1px solid ${BORDER}`, background: BG,
+                          color: TEXT_MUTED, cursor: "pointer",
+                          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                        }}
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
         </div>
       </main>
 

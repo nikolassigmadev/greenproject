@@ -1,196 +1,44 @@
-@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ── MSCHF Design System ─────────────────────────────────────────────────── */
+/* ── Design tokens ───────────────────────────────────────────────────────── */
 
 :root {
-  /* MSCHF color tokens */
-  --mschf-black:   #000000;
-  --mschf-gray:    #84898E;
-  --mschf-white:   #ffffff;
-  --mschf-red:     #00c853;
-  --mschf-cyan:    #40aaff;
-  --mschf-gold:    #ffc700;
-  --mschf-border:  rgba(255, 255, 255, 0.08);
-  --mschf-border-bright: rgba(255, 255, 255, 0.18);
+  /* Brand */
+  --brand-blue:   #2979FF;
+  --brand-blue-dark: #1565C0;
+  --brand-blue-light: #E3EDFF;
 
-  /* Legacy tokens (kept for compatibility with shadcn components) */
-  --background: 0 0% 0%;
-  --foreground: 0 0% 100%;
-  --card: 0 0% 4%;
-  --card-foreground: 0 0% 90%;
-  --popover: 0 0% 4%;
-  --popover-foreground: 0 0% 90%;
-  --primary: 0 100% 47%;
+  /* Semantic color tokens (shadcn-compatible) */
+  --background: 220 20% 97%;
+  --foreground: 222 47% 11%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 47% 11%;
+  --primary: 221 100% 58%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 0 0% 8%;
-  --secondary-foreground: 0 0% 80%;
-  --muted: 0 0% 8%;
-  --muted-foreground: 0 0% 52%;
-  --accent: 207 100% 62%;
-  --accent-foreground: 0 0% 0%;
-  --destructive: 0 100% 47%;
+  --secondary: 220 14% 96%;
+  --secondary-foreground: 222 47% 11%;
+  --muted: 220 14% 96%;
+  --muted-foreground: 220 9% 46%;
+  --accent: 221 100% 58%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
-  --border: 0 0% 12%;
-  --input: 0 0% 12%;
-  --ring: 0 100% 47%;
-  --radius: 0rem;
+  --border: 220 13% 91%;
+  --input: 220 13% 91%;
+  --ring: 221 100% 58%;
+  --radius: 0.875rem;
 
   /* Shadows */
-  --shadow-soft: 0 1px 8px rgba(0,0,0,0.4);
-  --shadow-card: 0 2px 12px rgba(0,0,0,0.6);
-  --shadow-elevated: 0 8px 32px rgba(0,0,0,0.8);
-  --shadow-bottom-nav: 0 -1px 0 rgba(255,255,255,0.06);
-}
-
-/* ── Scanlines overlay ───────────────────────────────────────────────────── */
-.scanlines {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 55;
-  background: repeating-linear-gradient(
-    to bottom,
-    transparent 0px,
-    transparent 2px,
-    rgba(0, 0, 0, 0.15) 2px,
-    rgba(0, 0, 0, 0.15) 4px
-  );
-  opacity: 0.04;
-}
-
-/* ── Diagonal stripe texture ─────────────────────────────────────────────── */
-.diagonal-stripe {
-  background-image: repeating-linear-gradient(
-    45deg,
-    transparent 0px,
-    transparent 4px,
-    rgba(255, 255, 255, 0.015) 4px,
-    rgba(255, 255, 255, 0.015) 8px
-  );
-}
-
-/* ── Glitch animation ────────────────────────────────────────────────────── */
-@keyframes glitch {
-  0%   { transform: translate(0); clip-path: none; }
-  10%  { transform: translate(-2px, 1px); clip-path: polygon(0 20%, 100% 20%, 100% 30%, 0 30%); color: var(--mschf-cyan); }
-  20%  { transform: translate(2px, -1px); clip-path: polygon(0 60%, 100% 60%, 100% 75%, 0 75%); color: var(--mschf-red); }
-  30%  { transform: translate(0); clip-path: none; }
-  100% { transform: translate(0); clip-path: none; }
-}
-
-.glitch {
-  animation: glitch 4s steps(1) infinite;
-}
-
-/* ── Terminal cursor blink ───────────────────────────────────────────────── */
-@keyframes terminal-cursor {
-  0%, 49%  { opacity: 1; }
-  50%, 100% { opacity: 0; }
-}
-
-.terminal-cursor {
-  display: inline-block;
-  animation: terminal-cursor 1s step-start infinite;
-}
-
-/* ── Flicker animation ───────────────────────────────────────────────────── */
-@keyframes flicker {
-  0%   { opacity: 1; }
-  5%   { opacity: 0.92; }
-  10%  { opacity: 1; }
-  15%  { opacity: 0.97; }
-  25%  { opacity: 1; }
-  30%  { opacity: 0.94; }
-  35%  { opacity: 1; }
-  100% { opacity: 1; }
-}
-
-.flicker {
-  animation: flicker 8s ease-in-out infinite;
-}
-
-/* ── BottomNav terminal style ────────────────────────────────────────────── */
-.menu {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-around;
-  width: 100%;
-  padding: 0 0.25rem;
-}
-
-.menu__item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.2rem;
-  padding: 0.5rem 0.75rem;
-  border: none;
-  background: none;
-  cursor: pointer;
-  position: relative;
-  color: var(--mschf-gray);
-  transition: color 0.15s ease;
-  min-width: 3rem;
-  border-radius: 0;
-  -webkit-tap-highlight-color: transparent;
-  font-family: 'JetBrains Mono', monospace;
-  text-transform: uppercase;
-}
-
-.menu__item.active {
-  color: #00c853;
-}
-
-/* Green line indicator above active item */
-.menu__item.active::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 20px;
-  height: 2px;
-  border-radius: 0;
-  background: #00c853;
-  box-shadow: 0 0 8px rgba(0,200,83,0.6);
-}
-
-.menu__icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.icon {
-  width: 1.2rem;
-  height: 1.2rem;
-  stroke-width: 1.5;
-}
-
-.menu__item.active .icon {
-  stroke-width: 2;
-}
-
-.menu__text {
-  font-size: 0.5rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  white-space: nowrap;
-  opacity: 0;
-  max-height: 0;
-  overflow: hidden;
-  transition: opacity 0.15s ease, max-height 0.15s ease;
-}
-
-.menu__text.active {
-  opacity: 1;
-  max-height: 1rem;
+  --shadow-soft: 0 1px 4px rgba(0,0,0,0.06), 0 2px 12px rgba(0,0,0,0.04);
+  --shadow-card: 0 2px 8px rgba(0,0,0,0.06), 0 4px 24px rgba(0,0,0,0.04);
+  --shadow-elevated: 0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
+  --shadow-bottom-nav: 0 -1px 0 rgba(0,0,0,0.06), 0 -4px 16px rgba(0,0,0,0.04);
 }
 
 /* ── Base layer ──────────────────────────────────────────────────────────── */
@@ -201,16 +49,52 @@
   }
 
   body {
-    @apply bg-black text-white antialiased;
-    font-family: 'JetBrains Mono', monospace;
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Inter', system-ui, sans-serif;
     font-weight: 700;
-    letter-spacing: -0.02em;
-    text-transform: uppercase;
+    letter-spacing: -0.025em;
   }
+}
+
+/* ── Bottom nav styles ───────────────────────────────────────────────────── */
+
+.bottom-nav {
+  background: #fff;
+  border-top: 1px solid hsl(var(--border));
+  box-shadow: var(--shadow-bottom-nav);
+}
+
+.nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  padding: 0.5rem 0.75rem;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: hsl(var(--muted-foreground));
+  transition: color 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+  font-family: 'Inter', system-ui, sans-serif;
+  text-decoration: none;
+}
+
+.nav-item.active {
+  color: var(--brand-blue);
+}
+
+.nav-item-text {
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
 }
 
 /* ── Utility layer ───────────────────────────────────────────────────────── */
@@ -238,127 +122,31 @@
   }
 
   .page-transition {
-    animation: page-enter 0.18s ease-out 0.19s both;
+    animation: page-enter 0.18s ease-out both;
   }
 
-  /* Green blade wipe */
-  @keyframes blade-sweep {
-    0%   { transform: translateX(-101%); }
-    22%  { transform: translateX(0%); }
-    55%  { transform: translateX(0%); }
-    100% { transform: translateX(101%); }
+  /* Card shadows */
+  .shadow-soft {
+    box-shadow: var(--shadow-soft);
   }
 
-  /* Red glow for CTAs */
-  .glow-red {
-    box-shadow: 0 0 20px rgba(240, 0, 7, 0.4), 0 0 40px rgba(240, 0, 7, 0.15);
+  .shadow-card {
+    box-shadow: var(--shadow-card);
   }
 
-  /* Cyan glow */
-  .glow-cyan {
-    box-shadow: 0 0 20px rgba(64, 170, 255, 0.3);
-  }
-
-  /* Terminal row hover */
-  .terminal-row {
-    transition: background-color 0.1s ease, color 0.1s ease;
-  }
-
-  .terminal-row:hover {
-    background-color: rgba(255, 255, 255, 0.04);
-    color: var(--mschf-white);
+  .shadow-elevated {
+    box-shadow: var(--shadow-elevated);
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .glitch,
-    .flicker,
-    .terminal-cursor,
     .page-transition {
       animation: none;
     }
   }
 }
 
-/* ── Interactive texture removal (MSCHF pattern) ────────────────────────── */
-/* Diagonal stripe disappears when hovering over a clickable card */
-.card-interactive:hover .diagonal-stripe-overlay {
-  display: none;
-}
-.card-interactive {
-  position: relative;
-  transition: border-color 0.1s ease;
-}
-.diagonal-stripe-overlay {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background-image: repeating-linear-gradient(
-    45deg,
-    transparent 0px,
-    transparent 4px,
-    rgba(255, 255, 255, 0.015) 4px,
-    rgba(255, 255, 255, 0.015) 8px
-  );
-}
+/* ── Score bar animations ────────────────────────────────────────────────── */
 
-/* ── Floating product animations ────────────────────────────────────────── */
-@keyframes floatA {
-  0%   { transform: translateY(0px)   rotate(-12deg) scale(1);    }
-  33%  { transform: translateY(-18px) rotate(-8deg)  scale(1.04); }
-  66%  { transform: translateY(8px)   rotate(-15deg) scale(0.97); }
-  100% { transform: translateY(0px)   rotate(-12deg) scale(1);    }
-}
-@keyframes floatB {
-  0%   { transform: translateY(0px)   rotate(8deg)  scale(1);    }
-  40%  { transform: translateY(14px)  rotate(12deg) scale(1.05); }
-  70%  { transform: translateY(-10px) rotate(5deg)  scale(0.96); }
-  100% { transform: translateY(0px)   rotate(8deg)  scale(1);    }
-}
-@keyframes floatC {
-  0%   { transform: translateY(0px)   rotate(-5deg)  scale(1);    }
-  50%  { transform: translateY(-22px) rotate(-9deg)  scale(1.06); }
-  100% { transform: translateY(0px)   rotate(-5deg)  scale(1);    }
-}
-@keyframes floatD {
-  0%   { transform: translateY(0px)   rotate(14deg) scale(1);    }
-  30%  { transform: translateY(16px)  rotate(10deg) scale(0.95); }
-  60%  { transform: translateY(-8px)  rotate(18deg) scale(1.04); }
-  100% { transform: translateY(0px)   rotate(14deg) scale(1);    }
-}
-@keyframes floatE {
-  0%   { transform: translateY(0px)   rotate(-18deg) scale(1);    }
-  45%  { transform: translateY(-14px) rotate(-12deg) scale(1.05); }
-  80%  { transform: translateY(10px)  rotate(-20deg) scale(0.97); }
-  100% { transform: translateY(0px)   rotate(-18deg) scale(1);    }
-}
-
-/* ── Ticker / marquee ────────────────────────────────────────────────────── */
-@keyframes tickerLeft {
-  from { transform: translateX(0); }
-  to   { transform: translateX(-50%); }
-}
-@keyframes tickerRight {
-  from { transform: translateX(-50%); }
-  to   { transform: translateX(0); }
-}
-
-.ticker-track {
-  display: flex;
-  width: max-content;
-  white-space: nowrap;
-  animation: tickerLeft 28s linear infinite;
-}
-.ticker-track--rev {
-  animation: tickerRight 22s linear infinite;
-}
-
-/* ── Food background drift ───────────────────────────────────────────────── */
-@keyframes bgDrift {
-  from { background-position: 0 0; }
-  to   { background-position: 180px 180px; }
-}
-
-/* ── Scanner visual animations ──────────────────────────────────────────── */
 @keyframes scanBeam {
   0%   { top: 0%;                opacity: 1; }
   80%  { top: calc(100% - 2px);  opacity: 1; }
@@ -373,68 +161,56 @@
 }
 
 @keyframes chipReveal {
-  from { opacity: 0; transform: translateX(10px) scale(0.8); }
+  from { opacity: 0; transform: translateX(10px) scale(0.9); }
   to   { opacity: 1; transform: translateX(0)    scale(1);   }
 }
 
-@keyframes chipBlink {
-  0%, 78%, 100% { opacity: 1; }
-  82%, 94%      { opacity: 0.2; }
-}
-
-@keyframes bracketPulse {
-  0%, 100% { opacity: 0.35; }
-  50%      { opacity: 0.85; }
-}
-
-@keyframes dotPing {
-  0%, 100% { transform: scale(1);   opacity: 0.6; }
-  50%      { transform: scale(1.9); opacity: 1;   }
-}
-
-@keyframes dataFlow {
-  from { transform: translateY(-100%); opacity: 0; }
-  20%  { opacity: 0.7; }
-  80%  { opacity: 0.7; }
-  to   { transform: translateY(100%);  opacity: 0; }
-}
-
-/* Applied classes */
-.scanner-beam    { animation: scanBeam    2.8s linear                        0.4s infinite; }
-.scanner-product { animation: productFloat 4.5s ease-in-out                  0.2s infinite; }
-.scanner-chip-0  { animation: chipReveal  0.45s cubic-bezier(0.34,1.56,0.64,1) 1.4s both,
-                              chipBlink   4s ease-in-out                     2.6s infinite; }
-.scanner-chip-1  { animation: chipReveal  0.45s cubic-bezier(0.34,1.56,0.64,1) 1.9s both,
-                              chipBlink   4s ease-in-out                     3.1s infinite; }
-.scanner-chip-2  { animation: chipReveal  0.45s cubic-bezier(0.34,1.56,0.64,1) 2.4s both,
-                              chipBlink   4s ease-in-out                     3.6s infinite; }
-.scanner-chip-3  { animation: chipReveal  0.45s cubic-bezier(0.34,1.56,0.64,1) 2.9s both,
-                              chipBlink   4s ease-in-out                     4.1s infinite; }
-.scanner-bracket { animation: bracketPulse 2s ease-in-out infinite; }
-.scanner-dot     { animation: dotPing      1.6s ease-in-out infinite; }
+.scanner-beam    { animation: scanBeam    2.8s linear 0.4s infinite; }
+.scanner-product { animation: productFloat 4.5s ease-in-out 0.2s infinite; }
+.scanner-chip-0  { animation: chipReveal 0.4s cubic-bezier(0.34,1.56,0.64,1) 1.2s both; }
+.scanner-chip-1  { animation: chipReveal 0.4s cubic-bezier(0.34,1.56,0.64,1) 1.6s both; }
+.scanner-chip-2  { animation: chipReveal 0.4s cubic-bezier(0.34,1.56,0.64,1) 2.0s both; }
+.scanner-chip-3  { animation: chipReveal 0.4s cubic-bezier(0.34,1.56,0.64,1) 2.4s both; }
 
 @keyframes arrowBounce {
   0%, 100% { transform: translateY(0px); }
-  50%      { transform: translateY(5px); }
+  50%      { transform: translateY(4px); }
 }
 
-.scanner-verdict       { animation: chipReveal 0.45s cubic-bezier(0.34,1.56,0.64,1) 3.4s both; }
+.scanner-verdict       { animation: chipReveal 0.4s cubic-bezier(0.34,1.56,0.64,1) 2.8s both; }
 .scanner-verdict-arrow { animation: arrowBounce 0.65s ease-in-out infinite; }
 
-/* ── GOODSCAN logo glitch (GOOD → FOOD) ─────────────────────────────────── */
-@keyframes logoGood {
-  0%,  79% { opacity: 1; color: #84898E; }
-  80%      { opacity: 0; }
-  95%      { opacity: 0; }
-  96%      { opacity: 1; color: #84898E; }
-  100%     { opacity: 1; color: #84898E; }
+/* ── Ticker / marquee ────────────────────────────────────────────────────── */
+/* ── Blade sweep page transition ─────────────────────────────────────────── */
+@keyframes blade-sweep {
+  0%   { transform: translateX(-101%); }
+  22%  { transform: translateX(0%); }
+  55%  { transform: translateX(0%); }
+  100% { transform: translateX(101%); }
 }
 
-@keyframes logoFood {
-  0%,  79% { opacity: 0; }
-  80%      { opacity: 1; color: #40aaff; }
-  82%      { opacity: 1; color: #00c853; }
-  95%      { opacity: 1; color: #00c853; }
-  96%      { opacity: 0; }
-  100%     { opacity: 0; }
+@keyframes tickerLeft {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+.ticker-track {
+  display: flex;
+  width: max-content;
+  white-space: nowrap;
+  animation: tickerLeft 28s linear infinite;
+}
+
+/* ── Floating product animations ────────────────────────────────────────── */
+@keyframes floatA {
+  0%   { transform: translateY(0px)   rotate(-12deg) scale(1);    }
+  33%  { transform: translateY(-18px) rotate(-8deg)  scale(1.04); }
+  66%  { transform: translateY(8px)   rotate(-15deg) scale(0.97); }
+  100% { transform: translateY(0px)   rotate(-12deg) scale(1);    }
+}
+@keyframes floatB {
+  0%   { transform: translateY(0px)   rotate(8deg)  scale(1);    }
+  40%  { transform: translateY(14px)  rotate(12deg) scale(1.05); }
+  70%  { transform: translateY(-10px) rotate(5deg)  scale(0.96); }
+  100% { transform: translateY(0px)   rotate(8deg)  scale(1);    }
 }
