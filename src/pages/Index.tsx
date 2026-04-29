@@ -444,7 +444,7 @@ export default function Index() {
                     background: card.bg,
                     borderRadius: 18,
                     overflow: "hidden",
-                    aspectRatio: "1 / 0.82",
+                    aspectRatio: "1 / 1.05",
                     display: "flex",
                     flexDirection: "column",
                     padding: "12px 14px 14px",
