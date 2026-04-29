@@ -5,7 +5,7 @@ import { HackerTransition } from "./components/HackerTransition";
 
 function HomeButton() {
   const { pathname } = useLocation();
-  if (pathname === "/" || pathname === "/scan") return null;
+  if (pathname === "/" || pathname === "/scan" || pathname === "/basket") return null;
   return (
     <Link
       to="/"

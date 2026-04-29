@@ -1306,37 +1306,64 @@ const Scan = () => {
       <div style={{
         position: 'absolute', top: 0, left: 0, right: 0,
         paddingTop: 'max(52px, env(safe-area-inset-top))',
-        paddingLeft: 16, paddingRight: 16, paddingBottom: 12,
+        paddingLeft: 16, paddingRight: 16, paddingBottom: 14,
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         zIndex: 20,
-        background: 'rgba(255,255,255,0.95)',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
-        borderBottom: '1px solid rgba(0,0,0,0.07)',
+        background: 'linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0) 100%)',
       }}>
         <Link to="/" onClick={() => stopCamera()}>
           <button style={{
             width: 38, height: 38, borderRadius: 11,
-            backgroundColor: '#F5F7FA',
-            border: '1px solid #E5E7EB',
-            color: '#374151', cursor: 'pointer',
+            backgroundColor: 'rgba(255,255,255,0.15)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            border: '1px solid rgba(255,255,255,0.2)',
+            color: '#fff', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
             <X size={16} />
           </button>
         </Link>
 
-        <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#111827', letterSpacing: '-0.02em' }}>
-          Scan Product
-        </span>
+        {/* Mode selector */}
+        <div style={{
+          display: 'flex', gap: 4,
+          background: 'rgba(0,0,0,0.35)',
+          backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)',
+          borderRadius: 30,
+          padding: '4px',
+          border: '1px solid rgba(255,255,255,0.12)',
+        }}>
+          {(['Scan Food', 'Barcode', 'Food label'] as const).map(mode => (
+            <button
+              key={mode}
+              onClick={() => setScanMode(mode)}
+              style={{
+                padding: '5px 13px', borderRadius: 22,
+                border: 'none', cursor: 'pointer',
+                background: scanMode === mode ? '#fff' : 'transparent',
+                color: scanMode === mode ? '#111827' : 'rgba(255,255,255,0.7)',
+                fontSize: '0.7rem', fontWeight: 700,
+                letterSpacing: '0.01em',
+                transition: 'all 0.15s',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {mode}
+            </button>
+          ))}
+        </div>
 
         <button
           onClick={() => setShowSearch(s => !s)}
           style={{
             width: 38, height: 38, borderRadius: 11,
-            backgroundColor: showSearch ? '#2979FF' : '#F5F7FA',
-            border: showSearch ? 'none' : '1px solid #E5E7EB',
-            color: showSearch ? '#fff' : '#2979FF', cursor: 'pointer',
+            backgroundColor: showSearch ? '#2979FF' : 'rgba(255,255,255,0.15)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            border: showSearch ? 'none' : '1px solid rgba(255,255,255,0.2)',
+            color: '#fff', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}
         >
