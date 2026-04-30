@@ -45,6 +45,7 @@ import Dashboard from "./pages/Dashboard";
 import ShoppingList from "./pages/ShoppingList";
 import AboutUs from "./pages/AboutUs";
 import Methodology from "./pages/Methodology";
+import Privacy from "./pages/Privacy";
 import { CalAIShowcase } from "./components/CalAIShowcase";
 
 // Import admin components - uncomment to enable
@@ -113,6 +114,10 @@ export const router = createBrowserRouter([
       {
         path: "/methodology",
         element: <Methodology />,
+      },
+      {
+        path: "/privacy",
+        element: <Privacy />,
       },
       {
         path: "/design-system",

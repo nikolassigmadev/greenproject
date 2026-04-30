@@ -163,6 +163,21 @@ export default function Index() {
     return () => clearTimeout(t);
   }, []);
 
+  const [headerVisible, setHeaderVisible] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setHeaderVisible(true), 60);
+    return () => clearTimeout(t);
+  }, []);
+
+  const greeting = (() => {
+    const h = new Date().getHours();
+    if (h < 5)  return { text: "Good night",    emoji: "🌙" };
+    if (h < 12) return { text: "Good morning",  emoji: "☀️" };
+    if (h < 17) return { text: "Good afternoon",emoji: "🌤️" };
+    if (h < 21) return { text: "Good evening",  emoji: "🌆" };
+    return       { text: "Good night",          emoji: "🌙" };
+  })();
+
   const [buySignal, setBuySignal] = useState(true);
   useEffect(() => {
     let intervalId: ReturnType<typeof setInterval>;
@@ -198,33 +213,66 @@ export default function Index() {
         <div style={{
           background: CARD,
           borderBottom: `1px solid ${BORDER}`,
-          padding: "max(52px, env(safe-area-inset-top)) 20px 14px",
+          padding: "max(52px, env(safe-area-inset-top)) 20px 18px",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
+          opacity: headerVisible ? 1 : 0,
+          transform: headerVisible ? "translateY(0)" : "translateY(-10px)",
+          transition: "opacity 0.45s ease, transform 0.45s ease",
         }}>
           <div>
-            <p style={{ fontSize: "0.7rem", fontWeight: 600, color: TEXT_MUTED, letterSpacing: "0.04em", textTransform: "uppercase", marginBottom: 2 }}>
-              Good morning
-            </p>
-            <h1 style={{ fontSize: "1.5rem", fontWeight: 800, color: TEXT, letterSpacing: "-0.025em", lineHeight: 1 }}>
+            {/* Greeting pill */}
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+              <span style={{ fontSize: "1rem" }}>{greeting.emoji}</span>
+              <span style={{
+                fontSize: "0.68rem", fontWeight: 700,
+                color: BLUE,
+                letterSpacing: "0.06em", textTransform: "uppercase",
+              }}>
+                {greeting.text}
+              </span>
+            </div>
+
+            {/* Animated gradient title */}
+            <h1 style={{
+              fontSize: "1.75rem", fontWeight: 900,
+              letterSpacing: "-0.03em", lineHeight: 1,
+              margin: 0,
+              background: "linear-gradient(90deg, #2979FF 0%, #00B4D8 35%, #7C3AED 65%, #2979FF 100%)",
+              backgroundSize: "200% auto",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              backgroundClip: "text",
+              animation: "titleShimmer 4s linear infinite",
+            }}>
               Ethical Shopper
             </h1>
           </div>
+
           <Link
             to="/basket"
             aria-label="View basket"
             style={{
-              width: 38, height: 38,
-              borderRadius: 12,
-              background: BLUE_LIGHT,
+              width: 40, height: 40,
+              borderRadius: 13,
+              background: `linear-gradient(135deg, ${BLUE_LIGHT}, #EDE9FE)`,
               display: "flex", alignItems: "center", justifyContent: "center",
               color: BLUE,
+              border: `1px solid rgba(41,121,255,0.15)`,
+              boxShadow: "0 2px 8px rgba(41,121,255,0.12)",
             }}
           >
             <ShoppingCart style={{ width: 18, height: 18 }} />
           </Link>
         </div>
+
+        <style>{`
+          @keyframes titleShimmer {
+            0%   { background-position: 0% center; }
+            100% { background-position: 200% center; }
+          }
+        `}</style>
 
         <div style={{ padding: "20px 16px", display: "flex", flexDirection: "column", gap: 16 }}>
 

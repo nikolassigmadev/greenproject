@@ -102,17 +102,28 @@ const filterBestProducts = (results: OpenFoodFactsResult[], query?: string): Ope
         ecoScore: calculateEcoScore(r),
       }));
 
+      // Brand-priority filter: if the first query word matches a brand field in
+      // some results, restrict the candidate pool to those. This prevents a text
+      // search for "Lipton Iced Tea" from picking a result whose brand is unrelated.
+      const queryBrand = words[0];
+      const brandMatches = scored.filter(s =>
+        (s.result.brand || '').toLowerCase().split(/[\s,/&]+/).some(bw =>
+          bw.length >= 3 && (bw === queryBrand || bw.startsWith(queryBrand) || queryBrand.startsWith(bw))
+        )
+      );
+      // Only apply brand filter when it narrows meaningfully (≥1 match)
+      const searchPool = brandMatches.length >= 1 ? brandMatches : scored;
+
       // Require at least 40% of the query's weighted characters to match.
       // For a 1-word query the threshold is effectively "must contain that word".
-      // For multi-word queries at least the longest or two mid-size words must hit.
       const MIN_RELEVANCE = words.length === 1 ? 1.0 : 0.4;
 
-      const relevant = scored.filter(s => s.relevance >= MIN_RELEVANCE);
+      const relevant = searchPool.filter(s => s.relevance >= MIN_RELEVANCE);
 
       // If nothing clears the strict bar, fall back to any product that matches
       // at least one of the longer words (≥4 chars), ranked by how many match.
       const fallback = relevant.length === 0
-        ? scored.filter(s => s.relevance > 0 && words.some(w => w.length >= 4 &&
+        ? searchPool.filter(s => s.relevance > 0 && words.some(w => w.length >= 4 &&
             `${(s.result.productName || '').toLowerCase()} ${(s.result.brand || '').toLowerCase()}`.includes(w)))
         : [];
 
@@ -349,11 +360,13 @@ const Scan = () => {
     priorities.animalWelfare === DEFAULT_PRIORITIES.animalWelfare &&
     priorities.nutrition === DEFAULT_PRIORITIES.nutrition;
 
-  // Auto-start camera when page mounts
+  // Auto-start camera only when priorities are set
   useEffect(() => {
-    startCamera();
+    if (!isDefaultPriorities) {
+      startCamera();
+    }
     return () => { stopCamera(); };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isDefaultPriorities]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Debug: Check if video element is mounted
   useEffect(() => {
@@ -1111,12 +1124,44 @@ const Scan = () => {
         return;
       }
 
-      // Step 4: Rank by eco data completeness and navigate to best result
+      // Step 4: Rank by eco data completeness
       console.log(`Found results for query: "${fullQuery}"`);
       const topResults = filterBestProducts(results, fullQuery);
       const candidates = topResults.length > 0 ? topResults : results;
-      sessionStorage.setItem('scan_candidates', JSON.stringify(candidates));
-      navigate(`/product-off/${candidates[0].barcode}?from=scan`);
+
+      // Step 4b: Confidence check — verify that the top candidate's barcode
+      // actually resolves to a product matching what OCR identified. This catches
+      // cases where OpenFoodFacts text search returns a result whose barcode maps
+      // to a completely different product (data quality issue in OFF).
+      const ocrBrand = (identified.brandName || '').toLowerCase().trim();
+      const ocrProductWords = (identified.productName || '')
+        .toLowerCase().split(/\s+/).filter(w => w.length >= 4);
+
+      let chosenCandidate = candidates[0];
+      if (ocrBrand.length >= 3) {
+        for (const candidate of candidates.slice(0, 4)) {
+          try {
+            const verify = await lookupBarcode(candidate.barcode);
+            if (!verify.found) continue;
+            const verifyText = `${verify.productName || ''} ${verify.brand || ''}`.toLowerCase();
+            const brandOk = verifyText.includes(ocrBrand);
+            const productOk = ocrProductWords.length === 0 || ocrProductWords.some(w => verifyText.includes(w));
+            if (brandOk || productOk) {
+              chosenCandidate = candidate;
+              break;
+            }
+            console.warn(`⚠️ Candidate barcode "${candidate.barcode}" → "${verify.productName}" — doesn't match OCR brand "${ocrBrand}", skipping`);
+          } catch {
+            // Network error — use this candidate and move on
+            chosenCandidate = candidate;
+            break;
+          }
+        }
+      }
+
+      const finalCandidates = [chosenCandidate, ...candidates.filter(c => c.barcode !== chosenCandidate.barcode)];
+      sessionStorage.setItem('scan_candidates', JSON.stringify(finalCandidates));
+      navigate(`/product-off/${chosenCandidate.barcode}?from=scan`);
     } catch (error) {
       console.error("Image scan error:", error);
       toast({
@@ -1235,7 +1280,90 @@ const Scan = () => {
   };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 60, backgroundColor: '#000', overflow: 'hidden', fontFamily: "'Inter', system-ui, sans-serif" }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 60, backgroundColor: '#0a1540', overflow: 'hidden', fontFamily: "'Inter', system-ui, sans-serif" }}>
+
+      {/* ── Priorities gate ─────────────────────────────────────────────── */}
+      {isDefaultPriorities && (
+        <div style={{
+          position: 'absolute', inset: 0, zIndex: 100,
+          background: 'linear-gradient(160deg, #0a1540 0%, #0d1f5c 50%, #0a1540 100%)',
+          display: 'flex', flexDirection: 'column',
+          padding: 'max(52px, env(safe-area-inset-top)) 24px max(32px, env(safe-area-inset-bottom))',
+        }}>
+          {/* Close */}
+          <Link to="/" style={{ alignSelf: 'flex-start', marginBottom: 32 }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: 10,
+              backgroundColor: 'rgba(41,121,255,0.15)',
+              border: '1px solid rgba(41,121,255,0.3)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <X size={15} color="#fff" />
+            </div>
+          </Link>
+
+          {/* Icon */}
+          <div style={{ marginBottom: 24 }}>
+            <div style={{
+              width: 72, height: 72, borderRadius: 22,
+              background: 'linear-gradient(135deg, rgba(41,121,255,0.3), rgba(124,58,237,0.3))',
+              border: '1.5px solid rgba(41,121,255,0.4)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              marginBottom: 20,
+            }}>
+              <Settings size={32} color="#2979FF" strokeWidth={1.8} />
+            </div>
+            <p style={{ fontSize: '0.7rem', fontWeight: 700, color: 'rgba(41,121,255,0.8)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
+              Before you scan
+            </p>
+            <h2 style={{ fontSize: '1.9rem', fontWeight: 900, color: '#fff', letterSpacing: '-0.03em', lineHeight: 1.15, marginBottom: 12 }}>
+              Set your<br />values first
+            </h2>
+            <p style={{ fontSize: '0.88rem', color: 'rgba(255,255,255,0.5)', lineHeight: 1.6 }}>
+              Tell us what matters to you — labour rights, environment, animal welfare, or nutrition. Every scan result is personalised to your priorities.
+            </p>
+          </div>
+
+          {/* Priority category pills */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 32 }}>
+            {[
+              { icon: Users,  label: 'Labour Rights',  color: '#EF4444', bg: 'rgba(239,68,68,0.12)',   border: 'rgba(239,68,68,0.25)' },
+              { icon: Leaf,   label: 'Environment',    color: '#00C853', bg: 'rgba(0,200,83,0.12)',    border: 'rgba(0,200,83,0.25)' },
+              { icon: Heart,  label: 'Animal Welfare', color: '#A855F7', bg: 'rgba(168,85,247,0.12)',  border: 'rgba(168,85,247,0.25)' },
+              { icon: Apple,  label: 'Nutrition',      color: '#F97316', bg: 'rgba(249,115,22,0.12)',  border: 'rgba(249,115,22,0.25)' },
+            ].map(({ icon: Icon, label, color, bg, border }) => (
+              <div key={label} style={{
+                background: bg, border: `1px solid ${border}`,
+                borderRadius: 14, padding: '12px 14px',
+                display: 'flex', alignItems: 'center', gap: 10,
+              }}>
+                <Icon size={18} color={color} strokeWidth={2} />
+                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#fff' }}>{label}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* CTA */}
+          <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <Link
+              to="/preferences"
+              onClick={() => stopCamera()}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                height: 54, borderRadius: 16, textDecoration: 'none',
+                background: '#2979FF',
+                boxShadow: '0 4px 24px rgba(41,121,255,0.45)',
+              }}
+            >
+              <Settings size={18} color="#fff" strokeWidth={2} />
+              <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#fff' }}>Set my values</span>
+            </Link>
+            <p style={{ textAlign: 'center', fontSize: '0.72rem', color: 'rgba(255,255,255,0.3)', lineHeight: 1.5 }}>
+              Takes 30 seconds · you can change them anytime
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Hidden canvas for photo capture */}
       <canvas ref={canvasRef} style={{ display: 'none' }} />
@@ -1253,145 +1381,173 @@ const Scan = () => {
       {!cameraActive && !cameraInitializing && (
         frozenFrame
           ? <img src={frozenFrame} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
-          : <div style={{ position: 'absolute', inset: 0, background: '#000' }} />
+          : <div style={{ position: 'absolute', inset: 0, background: '#0a1540' }} />
       )}
 
-      {/* Diagonal stripe overlay */}
+      {/* Vignette overlay — blue-tinted */}
       <div style={{
         position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 2,
-        backgroundImage: 'repeating-linear-gradient(45deg, transparent 0px, transparent 4px, rgba(255,255,255,0.012) 4px, rgba(255,255,255,0.012) 8px)',
+        background: 'radial-gradient(ellipse 70% 55% at 50% 42%, transparent 60%, rgba(10,21,64,0.65) 100%)',
       }} />
 
       {/* Scan line when loading */}
       {offSearchLoading && (
         <div style={{
-          position: 'absolute', top: '22%', left: '10%', right: '10%',
+          position: 'absolute', top: '26%', left: '12%', right: '12%',
           height: '2px',
-          background: '#2979FF',
-          boxShadow: '0 0 10px #2979FF, 0 0 24px rgba(41,121,255,0.5)',
+          background: 'linear-gradient(90deg, transparent, #2979FF, transparent)',
+          boxShadow: '0 0 12px #2979FF, 0 0 28px rgba(41,121,255,0.6)',
           animation: 'scanLine 1.8s ease-in-out infinite',
           zIndex: 8,
           borderRadius: 99,
         }} />
       )}
 
-      {/* Scanning bracket corners — rounded, blue */}
+      {/* Scanning bracket corners */}
       {(['tl','tr','bl','br'] as const).map(corner => {
         const top = corner.startsWith('t');
         const left = corner.endsWith('l');
+        const color = offSearchLoading ? 'rgba(41,121,255,0.9)' : 'rgba(255,255,255,0.9)';
         return (
           <div key={corner} style={{
             position: 'absolute',
             top: top ? '20%' : undefined,
             bottom: !top ? '34%' : undefined,
-            left: left ? '10%' : undefined,
-            right: !left ? '10%' : undefined,
-            width: 52, height: 52,
-            borderTop: top ? '3px solid #2979FF' : undefined,
-            borderBottom: !top ? '3px solid #2979FF' : undefined,
-            borderLeft: left ? '3px solid #2979FF' : undefined,
-            borderRight: !left ? '3px solid #2979FF' : undefined,
-            borderRadius: top && left ? '12px 0 0 0' : top && !left ? '0 12px 0 0' : !top && left ? '0 0 0 12px' : '0 0 12px 0',
+            left: left ? '12%' : undefined,
+            right: !left ? '12%' : undefined,
+            width: 28, height: 28,
+            borderTop: top ? `2.5px solid ${color}` : undefined,
+            borderBottom: !top ? `2.5px solid ${color}` : undefined,
+            borderLeft: left ? `2.5px solid ${color}` : undefined,
+            borderRight: !left ? `2.5px solid ${color}` : undefined,
+            borderRadius: top && left ? '8px 0 0 0' : top && !left ? '0 8px 0 0' : !top && left ? '0 0 0 8px' : '0 0 8px 0',
             zIndex: 8,
+            transition: 'border-color 0.3s',
           }} />
         );
       })}
 
-      {/* Corner label */}
-      <div style={{ position: 'absolute', top: 'calc(20% - 22px)', left: '10%', fontFamily: "'Inter', sans-serif", fontSize: '0.62rem', fontWeight: 600, color: 'rgba(255,255,255,0.85)', letterSpacing: '0.02em', zIndex: 9 }}>
-        {offSearchLoading ? `Scanning ${Math.round(scanProgress)}%` : 'Aim here'}
+      {/* Viewfinder centre label */}
+      <div style={{
+        position: 'absolute',
+        top: '50%', left: '50%',
+        transform: 'translate(-50%, -50%)',
+        zIndex: 9, pointerEvents: 'none',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+      }}>
+        {offSearchLoading && (
+          <>
+            <div style={{
+              width: 48, height: 48, borderRadius: '50%',
+              background: 'rgba(41,121,255,0.15)',
+              border: '2px solid rgba(41,121,255,0.5)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              backdropFilter: 'blur(4px)',
+            }}>
+              <Loader2 size={22} style={{ color: '#2979FF', animation: 'spin 1s linear infinite' }} />
+            </div>
+            <div style={{
+              background: 'rgba(10,21,64,0.8)', backdropFilter: 'blur(8px)',
+              borderRadius: 20, padding: '5px 14px',
+              border: '1px solid rgba(41,121,255,0.3)',
+            }}>
+              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#fff', letterSpacing: '0.01em' }}>
+                Scanning {Math.round(scanProgress)}%
+              </span>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Top bar */}
       <div style={{
         position: 'absolute', top: 0, left: 0, right: 0,
-        paddingTop: 'max(52px, env(safe-area-inset-top))',
+        paddingTop: 'max(14px, env(safe-area-inset-top))',
         paddingLeft: 16, paddingRight: 16, paddingBottom: 14,
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         zIndex: 20,
-        background: 'linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0) 100%)',
+        background: 'linear-gradient(to bottom, rgba(10,21,64,0.75) 0%, rgba(10,21,64,0) 100%)',
       }}>
+        {/* Close */}
         <Link to="/" onClick={() => stopCamera()}>
           <button style={{
-            width: 38, height: 38, borderRadius: 11,
-            backgroundColor: 'rgba(255,255,255,0.15)',
-            backdropFilter: 'blur(8px)',
-            WebkitBackdropFilter: 'blur(8px)',
-            border: '1px solid rgba(255,255,255,0.2)',
+            width: 36, height: 36, borderRadius: 10,
+            backgroundColor: 'rgba(41,121,255,0.15)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+            border: '1px solid rgba(41,121,255,0.3)',
             color: '#fff', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <X size={16} />
+            <X size={15} />
           </button>
         </Link>
 
-        {/* Mode selector */}
-        <div style={{
-          display: 'flex', gap: 4,
-          background: 'rgba(0,0,0,0.35)',
-          backdropFilter: 'blur(10px)',
-          WebkitBackdropFilter: 'blur(10px)',
-          borderRadius: 30,
-          padding: '4px',
-          border: '1px solid rgba(255,255,255,0.12)',
-        }}>
-          {(['Scan Food', 'Barcode', 'Food label'] as const).map(mode => (
-            <button
-              key={mode}
-              onClick={() => setScanMode(mode)}
-              style={{
-                padding: '5px 13px', borderRadius: 22,
-                border: 'none', cursor: 'pointer',
-                background: scanMode === mode ? '#fff' : 'transparent',
-                color: scanMode === mode ? '#111827' : 'rgba(255,255,255,0.7)',
-                fontSize: '0.7rem', fontWeight: 700,
-                letterSpacing: '0.01em',
-                transition: 'all 0.15s',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {mode}
-            </button>
-          ))}
+        {/* Title */}
+        <div style={{ textAlign: 'center' }}>
+          <p style={{ fontSize: '0.85rem', fontWeight: 800, color: '#fff', letterSpacing: '-0.01em', margin: 0, lineHeight: 1.2 }}>
+            Scan2Source
+          </p>
+          <p style={{ fontSize: '0.6rem', fontWeight: 500, color: 'rgba(255,255,255,0.55)', margin: 0, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+            Ethical Scanner
+          </p>
         </div>
 
-        <button
-          onClick={() => setShowSearch(s => !s)}
-          style={{
-            width: 38, height: 38, borderRadius: 11,
-            backgroundColor: showSearch ? '#2979FF' : 'rgba(255,255,255,0.15)',
-            backdropFilter: 'blur(8px)',
-            WebkitBackdropFilter: 'blur(8px)',
-            border: showSearch ? 'none' : '1px solid rgba(255,255,255,0.2)',
-            color: '#fff', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}
-        >
-          <Search size={16} />
-        </button>
+        {/* Right actions */}
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button
+            onClick={() => setFlashOn(f => !f)}
+            style={{
+              width: 36, height: 36, borderRadius: 10,
+              backgroundColor: flashOn ? 'rgba(251,191,36,0.25)' : 'rgba(41,121,255,0.15)',
+              backdropFilter: 'blur(10px)',
+              WebkitBackdropFilter: 'blur(10px)',
+              border: `1px solid ${flashOn ? 'rgba(251,191,36,0.5)' : 'rgba(41,121,255,0.3)'}`,
+              color: flashOn ? '#FBBF24' : '#fff', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transition: 'all 0.15s',
+            }}
+          >
+            <Zap size={15} strokeWidth={flashOn ? 2.5 : 1.8} />
+          </button>
+          <button
+            onClick={() => setShowSearch(s => !s)}
+            style={{
+              width: 36, height: 36, borderRadius: 10,
+              backgroundColor: showSearch ? 'rgba(41,121,255,0.8)' : 'rgba(41,121,255,0.15)',
+              backdropFilter: 'blur(10px)',
+              WebkitBackdropFilter: 'blur(10px)',
+              border: `1px solid ${showSearch ? 'rgba(41,121,255,0.5)' : 'rgba(41,121,255,0.3)'}`,
+              color: '#fff', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transition: 'all 0.15s',
+            }}
+          >
+            <Search size={15} />
+          </button>
+        </div>
       </div>
 
-      {/* Status bar */}
-      {(cameraInitializing || offSearchLoading || prioritiesJustSaved) && (
+      {/* Status pills */}
+      {(cameraInitializing || prioritiesJustSaved) && (
         <div style={{
           position: 'absolute',
-          top: 'calc(max(52px, env(safe-area-inset-top)) + 62px)',
+          top: 'calc(max(62px, env(safe-area-inset-top)) + 52px)',
           left: '50%', transform: 'translateX(-50%)',
           display: 'flex', alignItems: 'center', gap: 6,
-          backgroundColor: 'rgba(255,255,255,0.95)',
-          border: '1px solid #E5E7EB',
-          boxShadow: '0 2px 12px rgba(0,0,0,0.1)',
+          background: 'rgba(10,21,64,0.85)',
+          backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)',
+          border: '1px solid rgba(41,121,255,0.25)',
           borderRadius: 50,
           padding: '6px 14px',
           whiteSpace: 'nowrap', zIndex: 15,
         }}>
-          {offSearchLoading ? (
-            <><Loader2 size={12} style={{ animation: 'spin 1s linear infinite', color: '#2979FF' }} /><span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#2979FF' }}>Scanning {Math.round(scanProgress)}%</span></>
-          ) : prioritiesJustSaved ? (
-            <><Check size={12} style={{ color: '#00C853' }} /><span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#00C853' }}>Values saved — ready!</span></>
-          ) : cameraInitializing ? (
-            <><Loader2 size={12} style={{ animation: 'spin 1s linear infinite', color: '#2979FF' }} /><span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#6B7280' }}>Starting camera…</span></>
-          ) : null}
+          {prioritiesJustSaved ? (
+            <><Check size={12} style={{ color: '#00C853' }} /><span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#fff' }}>Values saved — ready!</span></>
+          ) : (
+            <><Loader2 size={12} style={{ animation: 'spin 1s linear infinite', color: '#fff' }} /><span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'rgba(255,255,255,0.8)' }}>Starting camera…</span></>
+          )}
         </div>
       )}
 
@@ -1402,45 +1558,47 @@ const Scan = () => {
           onClick={() => stopCamera()}
           style={{
             position: 'absolute',
-            top: 'calc(max(52px, env(safe-area-inset-top)) + 62px)',
+            top: 'calc(max(62px, env(safe-area-inset-top)) + 52px)',
             left: '50%', transform: 'translateX(-50%)',
             display: 'flex', alignItems: 'center', gap: 8,
-            backgroundColor: 'rgba(255,255,255,0.95)',
-            border: '1px solid #FDE68A',
-            boxShadow: '0 2px 12px rgba(0,0,0,0.1)',
+            background: 'rgba(10,21,64,0.85)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+            border: '1px solid rgba(251,191,36,0.4)',
             borderRadius: 50,
-            color: '#92400E', padding: '7px 14px',
+            color: '#FBBF24', padding: '7px 16px',
             whiteSpace: 'nowrap', zIndex: 15, textDecoration: 'none',
           }}
         >
-          <AlertCircle size={13} style={{ color: '#F59E0B', flexShrink: 0 }} />
-          <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>Set your values to scan</span>
-          <ChevronRight size={13} style={{ color: '#F59E0B' }} />
+          <AlertCircle size={13} style={{ color: '#FBBF24', flexShrink: 0 }} />
+          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#fff' }}>Set your values to scan</span>
+          <ChevronRight size={13} style={{ color: 'rgba(255,255,255,0.5)' }} />
         </Link>
       )}
 
       {/* Bottom panel */}
       <div style={{
         position: 'absolute', bottom: 0, left: 0, right: 0,
-        background: '#fff',
-        borderTop: '1px solid #E5E7EB',
-        borderRadius: '20px 20px 0 0',
-        paddingBottom: 'max(28px, env(safe-area-inset-bottom))',
+        background: 'rgba(10,21,64,0.96)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        borderTop: '1px solid rgba(41,121,255,0.2)',
+        borderRadius: '24px 24px 0 0',
+        paddingBottom: 'max(24px, env(safe-area-inset-bottom))',
         zIndex: 20,
-        boxShadow: '0 -4px 24px rgba(0,0,0,0.12)',
       }}>
-        {/* Drag handle */}
-        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 10, paddingBottom: 2 }}>
-          <div style={{ width: 36, height: 4, borderRadius: 99, background: '#E5E7EB' }} />
+        {/* Handle */}
+        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 10, paddingBottom: 4 }}>
+          <div style={{ width: 32, height: 3, borderRadius: 99, background: 'rgba(41,121,255,0.3)' }} />
         </div>
 
         {/* Inline search */}
         <form
           onSubmit={e => { e.preventDefault(); if (inlineSearch.trim()) { handleProductSearch(inlineSearch); setInlineSearch(""); } }}
-          style={{ display: 'flex', gap: 8, padding: '8px 16px 10px' }}
+          style={{ display: 'flex', gap: 8, padding: '6px 16px 14px' }}
         >
           <div style={{ flex: 1, position: 'relative', display: 'flex', alignItems: 'center' }}>
-            <Search size={14} style={{ position: 'absolute', left: 12, color: '#9CA3AF', pointerEvents: 'none' }} />
+            <Search size={14} style={{ position: 'absolute', left: 12, color: 'rgba(255,255,255,0.3)', pointerEvents: 'none' }} />
             <input
               type="text"
               value={inlineSearch}
@@ -1448,11 +1606,12 @@ const Scan = () => {
               placeholder="Search a product name…"
               style={{
                 width: '100%', height: 42,
-                backgroundColor: '#F5F7FA',
-                border: '1px solid #E5E7EB',
+                backgroundColor: 'rgba(41,121,255,0.1)',
+                border: '1px solid rgba(41,121,255,0.25)',
                 borderRadius: 12,
-                color: '#111827', fontSize: '0.875rem',
+                color: '#fff', fontSize: '0.875rem',
                 paddingLeft: 34, paddingRight: 12, outline: 'none',
+                caretColor: '#2979FF',
               }}
             />
           </div>
@@ -1461,12 +1620,13 @@ const Scan = () => {
             disabled={!inlineSearch.trim() || offLoading}
             style={{
               height: 42, borderRadius: 12, border: 'none',
-              backgroundColor: inlineSearch.trim() ? '#2979FF' : '#F5F7FA',
-              color: inlineSearch.trim() ? '#fff' : '#9CA3AF',
+              backgroundColor: inlineSearch.trim() ? '#2979FF' : 'rgba(41,121,255,0.1)',
+              color: inlineSearch.trim() ? '#fff' : 'rgba(255,255,255,0.3)',
               fontWeight: 700, fontSize: '0.8rem',
               padding: '0 16px', cursor: inlineSearch.trim() ? 'pointer' : 'default',
               whiteSpace: 'nowrap', flexShrink: 0,
               transition: 'background 0.15s',
+              boxShadow: inlineSearch.trim() ? '0 2px 10px rgba(41,121,255,0.4)' : 'none',
             }}
           >
             {offLoading ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : 'Search'}
@@ -1474,74 +1634,94 @@ const Scan = () => {
         </form>
 
         {/* Camera controls */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 40px 12px' }}>
-          {/* Flash toggle */}
-          <button
-            onClick={() => setFlashOn(f => !f)}
-            style={{
-              width: 50, height: 50, borderRadius: '50%',
-              backgroundColor: flashOn ? '#FEF3C7' : '#F5F7FA',
-              border: `1px solid ${flashOn ? '#FDE68A' : '#E5E7EB'}`,
-              color: flashOn ? '#D97706' : '#9CA3AF',
-              cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}
-          >
-            <Zap size={20} strokeWidth={1.8} />
-          </button>
-
-          {/* Shutter — blue circle */}
-          <button
-            onClick={handleShutter}
-            disabled={offSearchLoading || isDefaultPriorities}
-            style={{
-              width: 72, height: 72, borderRadius: '50%',
-              backgroundColor: isDefaultPriorities ? '#E5E7EB' : offSearchLoading ? '#EBF2FF' : '#2979FF',
-              border: `4px solid ${isDefaultPriorities ? '#D1D5DB' : '#fff'}`,
-              boxShadow: (!offSearchLoading && !isDefaultPriorities) ? '0 4px 20px rgba(41,121,255,0.4)' : '0 2px 8px rgba(0,0,0,0.1)',
-              cursor: (offSearchLoading || isDefaultPriorities) ? 'not-allowed' : 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              transition: 'all 0.15s',
-              outline: `3px solid ${isDefaultPriorities ? 'transparent' : '#2979FF'}`,
-              outlineOffset: 3,
-            }}
-            onTouchStart={e => { if (!isDefaultPriorities) (e.currentTarget as HTMLButtonElement).style.transform = 'scale(0.93)'; }}
-            onTouchEnd={e => { if (!isDefaultPriorities) (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)'; }}
-          >
-            {offSearchLoading
-              ? <Loader2 size={24} style={{ color: '#2979FF', animation: 'spin 1s linear infinite' }} />
-              : <div style={{ width: 26, height: 26, borderRadius: '50%', background: isDefaultPriorities ? '#9CA3AF' : '#fff' }} />
-            }
-          </button>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 36, padding: '0 40px 14px' }}>
 
           {/* Gallery */}
           <button
             onClick={() => { if (!isDefaultPriorities) offFileInputRef.current?.click(); }}
             disabled={isDefaultPriorities}
             style={{
-              width: 50, height: 50, borderRadius: '50%',
-              backgroundColor: '#F5F7FA',
-              border: '1px solid #E5E7EB',
-              color: '#9CA3AF',
+              width: 52, height: 52, borderRadius: 14,
+              backgroundColor: 'rgba(41,121,255,0.12)',
+              border: '1px solid rgba(41,121,255,0.25)',
+              color: 'rgba(255,255,255,0.7)',
               cursor: isDefaultPriorities ? 'not-allowed' : 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               overflow: 'hidden',
-              opacity: isDefaultPriorities ? 0.4 : 1,
+              opacity: isDefaultPriorities ? 0.35 : 1,
             }}
           >
             {offSearchImage ? (
-              <img src={offSearchImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+              <img src={offSearchImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             ) : (
               <ImageIcon size={20} strokeWidth={1.5} />
             )}
           </button>
+
+          {/* Shutter */}
+          <button
+            onClick={handleShutter}
+            disabled={offSearchLoading || isDefaultPriorities}
+            style={{
+              width: 76, height: 76, borderRadius: '50%',
+              backgroundColor: 'transparent',
+              border: `3px solid ${isDefaultPriorities ? 'rgba(255,255,255,0.2)' : offSearchLoading ? 'rgba(41,121,255,0.6)' : 'rgba(255,255,255,0.85)'}`,
+              cursor: (offSearchLoading || isDefaultPriorities) ? 'not-allowed' : 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transition: 'all 0.15s',
+              padding: 0,
+            }}
+            onTouchStart={e => { if (!isDefaultPriorities && !offSearchLoading) (e.currentTarget as HTMLButtonElement).style.transform = 'scale(0.92)'; }}
+            onTouchEnd={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)'; }}
+          >
+            <div style={{
+              width: 60, height: 60, borderRadius: '50%',
+              background: isDefaultPriorities
+                ? 'rgba(255,255,255,0.2)'
+                : offSearchLoading
+                  ? 'rgba(41,121,255,0.3)'
+                  : '#fff',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transition: 'all 0.15s',
+            }}>
+              {offSearchLoading && (
+                <Loader2 size={22} style={{ color: '#2979FF', animation: 'spin 1s linear infinite' }} />
+              )}
+            </div>
+          </button>
+
+          {/* Values shortcut */}
+          <Link
+            to="/preferences"
+            onClick={() => stopCamera()}
+            style={{
+              width: 52, height: 52, borderRadius: 14,
+              backgroundColor: isDefaultPriorities ? 'rgba(251,191,36,0.15)' : 'rgba(41,121,255,0.12)',
+              border: `1px solid ${isDefaultPriorities ? 'rgba(251,191,36,0.35)' : 'rgba(41,121,255,0.25)'}`,
+              color: isDefaultPriorities ? '#FBBF24' : 'rgba(255,255,255,0.7)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              textDecoration: 'none',
+            }}
+          >
+            <Settings size={20} strokeWidth={1.6} />
+          </Link>
         </div>
 
-        {/* Bottom hint */}
+        {/* Hint */}
         <div style={{ textAlign: 'center', paddingBottom: 4 }}>
-          <span style={{ fontSize: '0.72rem', color: '#9CA3AF', fontWeight: 500 }}>
-            {cameraActive ? 'Point camera at product · Tap to capture' : 'Tap the button to capture a photo'}
+          <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.35)', fontWeight: 500 }}>
+            {offSearchLoading ? 'Analysing…' : cameraActive ? 'Point at product · tap to capture' : 'Tap to capture · or search above'}
           </span>
+        </div>
+
+        {/* Privacy notice */}
+        <div style={{ textAlign: 'center', paddingBottom: 2 }}>
+          <span style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.2)', fontWeight: 400 }}>
+            Images analysed by OpenAI · not stored.{' '}
+          </span>
+          <Link to="/privacy" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.3)', fontWeight: 500, textDecoration: 'underline' }}>
+            Privacy
+          </Link>
         </div>
       </div>
 
@@ -1696,19 +1876,15 @@ const Scan = () => {
       {/* CSS animations */}
       <style>{`
         @keyframes scanLine {
-          0% { top: 20%; opacity: 1; }
-          50% { top: 60%; opacity: 0.6; }
-          100% { top: 20%; opacity: 1; }
+          0%   { top: 22%; opacity: 0.9; }
+          50%  { top: 58%; opacity: 0.5; }
+          100% { top: 22%; opacity: 0.9; }
         }
         @keyframes spin {
           from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
+          to   { transform: rotate(360deg); }
         }
-        @keyframes priorityPulse {
-          0%   { transform: translateX(-50%) scale(1); }
-          50%  { transform: translateX(-50%) scale(1.02); }
-          100% { transform: translateX(-50%) scale(1); }
-        }
+        input::placeholder { color: rgba(255,255,255,0.28) !important; }
       `}</style>
 
     </div>

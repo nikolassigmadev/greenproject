@@ -154,7 +154,7 @@ function InfoCard({ children, accentColor }: {
 
 function SectionLabel({ label }: { label: string }) {
   return (
-    <p style={{ fontSize: "0.68rem", fontWeight: 600, color: TEXT_MUTED, letterSpacing: "0.04em", marginBottom: 14, textTransform: "uppercase" }}>
+    <p style={{ fontSize: "0.65rem", fontWeight: 800, color: TEXT_MUTED, letterSpacing: "0.07em", marginBottom: 14, textTransform: "uppercase" }}>
       {label}
     </p>
   );
@@ -405,30 +405,45 @@ export default function OpenFoodFactsDetail() {
         {/* ── 1. Hero ───────────────────────────────────────────────────────── */}
         <div
           ref={heroRef}
-          style={{ background: CARD, borderBottom: `1px solid ${BORDER}` }}
+          style={{
+            background: CARD,
+            borderBottom: `1px solid ${BORDER}`,
+            position: "relative",
+            overflow: "hidden",
+          }}
         >
+          {/* Subtle verdict color tint in top-right */}
+          <div style={{
+            position: "absolute", top: -40, right: -40,
+            width: 160, height: 160, borderRadius: "50%",
+            background: `${vc.borderColor}10`,
+            pointerEvents: "none",
+          }} />
+
           {/* Back button row */}
-          <div style={{ padding: "max(52px, env(safe-area-inset-top)) 16px 0" }}>
+          <div style={{ padding: "max(52px, env(safe-area-inset-top)) 16px 0", position: "relative" }}>
             <button
               type="button"
               onClick={() => navigate(-1)}
               style={{
-                display: "flex", alignItems: "center", gap: 6,
-                background: "none", border: "none",
-                color: TEXT_MUTED, fontSize: "0.85rem", cursor: "pointer",
+                display: "inline-flex", alignItems: "center", gap: 5,
+                background: BG, border: `1px solid ${BORDER}`,
+                borderRadius: 20, padding: "5px 12px 5px 8px",
+                color: TEXT_MUTED, fontSize: "0.78rem", fontWeight: 600, cursor: "pointer",
               }}
             >
-              <ChevronLeft className="w-4 h-4" /> Back
+              <ChevronLeft style={{ width: 14, height: 14 }} /> Back
             </button>
           </div>
 
-          <div style={{ display: "flex", gap: 16, padding: "16px 16px 20px" }}>
+          <div style={{ display: "flex", gap: 16, padding: "16px 16px 20px", position: "relative" }}>
             {/* Product image */}
             <div style={{
-              width: 100, height: 100, borderRadius: 16,
+              width: 110, height: 110, borderRadius: 18,
               border: `1px solid ${BORDER}`, background: BG,
               flexShrink: 0, overflow: "hidden",
               display: "flex", alignItems: "center", justifyContent: "center",
+              boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
             }}>
               {product.imageUrl ? (
                 <img
@@ -437,78 +452,102 @@ export default function OpenFoodFactsDetail() {
                   style={{ width: "100%", height: "100%", objectFit: "contain" }}
                 />
               ) : (
-                <Sprout style={{ width: 36, height: 36, color: BORDER }} />
+                <Sprout style={{ width: 40, height: 40, color: BORDER }} />
               )}
             </div>
 
             {/* Product info */}
-            <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "center" }}>
+            <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "center", gap: 6 }}>
               {product.brand && (
-                <p style={{ fontSize: "0.72rem", fontWeight: 600, color: TEXT_MUTED, marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                <p style={{ fontSize: "0.7rem", fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.06em", margin: 0 }}>
                   {product.brand}
                 </p>
               )}
-              <h1 style={{ fontSize: "clamp(1rem, 4.5vw, 1.25rem)", fontWeight: 800, color: TEXT, lineHeight: 1.2, letterSpacing: "-0.02em" }}>
+              <h1 style={{ fontSize: "clamp(1rem, 4.5vw, 1.2rem)", fontWeight: 800, color: TEXT, lineHeight: 1.25, letterSpacing: "-0.02em", margin: 0 }}>
                 {cleanName ?? product.productName ?? "Unknown product"}
               </h1>
-              {ecoGrade && (
-                <div style={{ marginTop: 8 }}>
+              {/* Verdict pill in hero */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                <span style={{
+                  display: "inline-flex", alignItems: "center", gap: 5,
+                  padding: "4px 10px", borderRadius: 20,
+                  background: `${vc.borderColor}15`,
+                  color: vc.textColor,
+                  fontSize: "0.72rem", fontWeight: 800, letterSpacing: "0.03em",
+                  border: `1px solid ${vc.borderColor}30`,
+                }}>
+                  <vc.Icon style={{ width: 11, height: 11 }} />
+                  {verdict.key}
+                </span>
+                {ecoGrade && (
                   <span style={{
-                    display: "inline-flex", alignItems: "center", gap: 6,
+                    display: "inline-flex", alignItems: "center", gap: 5,
                     padding: "4px 10px", borderRadius: 20,
                     background: GRADE_BG[ecoGrade] ?? BG,
                     color: GRADE_TEXT[ecoGrade] ?? TEXT_MUTED,
                     fontSize: "0.72rem", fontWeight: 700,
+                    border: `1px solid ${GRADE_TEXT[ecoGrade] ?? BORDER}20`,
                   }}>
-                    <Leaf style={{ width: 12, height: 12 }} />
-                    Eco-Score {ecoGrade.toUpperCase()}
+                    <Leaf style={{ width: 11, height: 11 }} />
+                    Eco {ecoGrade.toUpperCase()}
                   </span>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
         </div>
 
-        <div style={{ padding: "12px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
+        <div style={{ padding: "14px 16px", display: "flex", flexDirection: "column", gap: 12 }}>
 
           {/* ── 2. Verdict card ─────────────────────────────────────────────── */}
-          <InfoCard accentColor={vc.borderColor}>
-            <div style={{ padding: 16 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+          <div style={{
+            borderRadius: 18,
+            border: `1px solid ${vc.borderColor}40`,
+            background: `linear-gradient(135deg, ${vc.borderColor}08 0%, ${vc.borderColor}03 100%)`,
+            overflow: "hidden",
+            boxShadow: `0 2px 12px ${vc.borderColor}15`,
+          }}>
+            <div style={{ padding: "18px 18px 14px" }}>
+              {/* Top row: icon + verdict + reason */}
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 14 }}>
                 <div style={{
-                  width: 48, height: 48, borderRadius: 14, flexShrink: 0,
-                  background: `${vc.borderColor}18`,
+                  width: 52, height: 52, borderRadius: 16, flexShrink: 0,
+                  background: `${vc.borderColor}15`,
+                  border: `1.5px solid ${vc.borderColor}30`,
                   display: "flex", alignItems: "center", justifyContent: "center",
                 }}>
-                  <vc.Icon style={{ width: 22, height: 22, color: vc.textColor }} />
+                  <vc.Icon style={{ width: 24, height: 24, color: vc.textColor }} />
                 </div>
-                <div>
-                  <p style={{ fontSize: "0.68rem", fontWeight: 600, color: TEXT_MUTED, marginBottom: 2 }}>Our verdict</p>
-                  <p style={{ fontSize: "1.4rem", fontWeight: 800, color: vc.textColor, letterSpacing: "-0.025em", lineHeight: 1 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: "0.65rem", fontWeight: 700, color: TEXT_MUTED, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 2 }}>Verdict</p>
+                  <p style={{ fontSize: "1.6rem", fontWeight: 900, color: vc.textColor, letterSpacing: "-0.03em", lineHeight: 1, marginBottom: 8 }}>
                     {verdict.key}
+                  </p>
+                  <p style={{
+                    fontSize: "0.78rem", color: TEXT_MUTED, lineHeight: 1.55,
+                    borderLeft: `3px solid ${vc.borderColor}60`,
+                    paddingLeft: 9,
+                  }}>
+                    {verdict.reason}
                   </p>
                 </div>
               </div>
-              <p style={{
-                fontSize: "0.8rem", color: TEXT_MUTED, lineHeight: 1.5,
-                borderLeft: `3px solid ${vc.borderColor}`,
-                paddingLeft: 10, marginBottom: 14,
-              }}>
-                {verdict.reason}
-              </p>
+
+              {/* Action row */}
               <div style={{ display: "flex", gap: 8 }}>
                 <button
                   type="button"
                   onClick={() => document.getElementById("breakdown")?.scrollIntoView({ behavior: "smooth" })}
                   style={{
-                    flex: 1, height: 44, borderRadius: 12,
-                    border: `1px solid ${BORDER}`, background: BG,
-                    color: TEXT_MUTED, fontWeight: 600, fontSize: "0.8rem",
+                    flex: 1, height: 42, borderRadius: 11,
+                    border: `1px solid ${BORDER}`, background: "#fff",
+                    color: TEXT_MUTED, fontWeight: 600, fontSize: "0.78rem",
                     cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
                   }}
                 >
-                  <BarChart2 style={{ width: 14, height: 14 }} />
-                  Breakdown
+                  <BarChart2 style={{ width: 13, height: 13 }} />
+                  See breakdown
                 </button>
                 <button
                   type="button"
@@ -528,20 +567,21 @@ export default function OpenFoodFactsDetail() {
                     setInBasket(true);
                   }}
                   style={{
-                    flex: 1, height: 44, borderRadius: 12, border: "none",
-                    background: inBasket ? `${vc.borderColor}18` : BLUE,
+                    flex: 1, height: 42, borderRadius: 11, border: "none",
+                    background: inBasket ? `${vc.borderColor}15` : BLUE,
                     color: inBasket ? vc.textColor : "#fff",
-                    fontWeight: 700, fontSize: "0.8rem",
+                    fontWeight: 700, fontSize: "0.78rem",
                     cursor: inBasket ? "default" : "pointer",
                     display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                    boxShadow: inBasket ? "none" : "0 2px 8px rgba(41,121,255,0.35)",
                   }}
                 >
-                  <ShoppingBag style={{ width: 14, height: 14 }} />
-                  {inBasket ? "In basket" : "Add to basket"}
+                  <ShoppingBag style={{ width: 13, height: 13 }} />
+                  {inBasket ? "In basket ✓" : "Add to basket"}
                 </button>
               </div>
             </div>
-          </InfoCard>
+          </div>
 
           {/* ── 3. Scan confirmation ─────────────────────────────────────────── */}
           {fromScan && !confirmDismissed && !showCandidates && (
@@ -663,19 +703,23 @@ export default function OpenFoodFactsDetail() {
               {product.ecoscoreGrade && (() => {
                 const g = product.ecoscoreGrade.toLowerCase();
                 const color = GRADE_TEXT[g] ?? TEXT_MUTED;
+                const bg = GRADE_BG[g] ?? BG;
                 return (
                   <div style={{
                     background: CARD, borderRadius: 16,
-                    border: `1px solid ${BORDER}`,
-                    borderTop: `3px solid ${GRADE_BORDER[g] ?? BORDER}`,
-                    padding: "14px 8px",
+                    border: `1px solid ${color}25`,
+                    padding: "16px 8px 12px",
                     display: "flex", flexDirection: "column", alignItems: "center",
-                    boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
+                    boxShadow: `0 2px 8px ${color}12`,
+                    position: "relative", overflow: "hidden",
                   }}>
-                    <span style={{ fontSize: "0.62rem", fontWeight: 600, color: TEXT_MUTED, marginBottom: 4, textTransform: "uppercase" }}>Eco</span>
-                    <span style={{ fontSize: "2.2rem", fontWeight: 900, color, lineHeight: 1 }}>{g.toUpperCase()}</span>
+                    <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: color, borderRadius: "16px 16px 0 0" }} />
+                    <div style={{ width: 44, height: 44, borderRadius: 12, background: bg, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 6 }}>
+                      <span style={{ fontSize: "1.6rem", fontWeight: 900, color, lineHeight: 1 }}>{g.toUpperCase()}</span>
+                    </div>
+                    <span style={{ fontSize: "0.65rem", fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.04em" }}>Eco</span>
                     {product.ecoscoreScore !== null && (
-                      <span style={{ fontSize: "0.62rem", color: TEXT_MUTED, marginTop: 4 }}>{product.ecoscoreScore}/100</span>
+                      <span style={{ fontSize: "0.6rem", color: TEXT_MUTED, marginTop: 2 }}>{product.ecoscoreScore}/100</span>
                     )}
                   </div>
                 );
@@ -684,20 +728,24 @@ export default function OpenFoodFactsDetail() {
                 const g = product.nutriscoreGrade.toLowerCase();
                 const isLetter = ["a", "b", "c", "d", "e"].includes(g);
                 const color = GRADE_TEXT[g] ?? TEXT_MUTED;
+                const bg = GRADE_BG[g] ?? BG;
                 return (
                   <div style={{
                     background: CARD, borderRadius: 16,
-                    border: `1px solid ${BORDER}`,
-                    borderTop: `3px solid ${GRADE_BORDER[g] ?? BORDER}`,
-                    padding: "14px 8px", overflow: "hidden",
+                    border: `1px solid ${color}25`,
+                    padding: "16px 8px 12px",
                     display: "flex", flexDirection: "column", alignItems: "center",
-                    boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
+                    boxShadow: `0 2px 8px ${color}12`,
+                    position: "relative", overflow: "hidden",
                   }}>
-                    <span style={{ fontSize: "0.62rem", fontWeight: 600, color: TEXT_MUTED, marginBottom: 4, textTransform: "uppercase" }}>Nutri</span>
-                    <span style={{ fontSize: isLetter ? "2.2rem" : "1.2rem", fontWeight: 900, color, lineHeight: 1 }}>
-                      {isLetter ? g.toUpperCase() : "—"}
-                    </span>
-                    <span style={{ fontSize: "0.58rem", color: TEXT_MUTED, marginTop: 4, textAlign: "center" }}>Nutrition</span>
+                    <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: color, borderRadius: "16px 16px 0 0" }} />
+                    <div style={{ width: 44, height: 44, borderRadius: 12, background: bg, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 6 }}>
+                      <span style={{ fontSize: isLetter ? "1.6rem" : "1.1rem", fontWeight: 900, color, lineHeight: 1 }}>
+                        {isLetter ? g.toUpperCase() : "—"}
+                      </span>
+                    </div>
+                    <span style={{ fontSize: "0.65rem", fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.04em" }}>Nutri</span>
+                    <span style={{ fontSize: "0.6rem", color: TEXT_MUTED, marginTop: 2, textAlign: "center" }}>Score</span>
                   </div>
                 );
               })()}
@@ -706,15 +754,18 @@ export default function OpenFoodFactsDetail() {
                 return (
                   <div style={{
                     background: CARD, borderRadius: 16,
-                    border: `1px solid ${BORDER}`,
-                    borderTop: `3px solid ${color}`,
-                    padding: "14px 8px",
+                    border: `1px solid ${color}25`,
+                    padding: "16px 8px 12px",
                     display: "flex", flexDirection: "column", alignItems: "center",
-                    boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
+                    boxShadow: `0 2px 8px ${color}12`,
+                    position: "relative", overflow: "hidden",
                   }}>
-                    <span style={{ fontSize: "0.62rem", fontWeight: 600, color: TEXT_MUTED, marginBottom: 4, textTransform: "uppercase" }}>Nova</span>
-                    <span style={{ fontSize: "2.2rem", fontWeight: 900, color, lineHeight: 1 }}>{product.novaGroup}</span>
-                    <span style={{ fontSize: "0.58rem", color: TEXT_MUTED, marginTop: 4, textAlign: "center" }}>
+                    <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: color, borderRadius: "16px 16px 0 0" }} />
+                    <div style={{ width: 44, height: 44, borderRadius: 12, background: `${color}12`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 6 }}>
+                      <span style={{ fontSize: "1.6rem", fontWeight: 900, color, lineHeight: 1 }}>{product.novaGroup}</span>
+                    </div>
+                    <span style={{ fontSize: "0.65rem", fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.04em" }}>Nova</span>
+                    <span style={{ fontSize: "0.6rem", color: TEXT_MUTED, marginTop: 2, textAlign: "center" }}>
                       {NOVA_LABEL[product.novaGroup!]}
                     </span>
                   </div>
@@ -869,15 +920,19 @@ export default function OpenFoodFactsDetail() {
             </InfoCard>
           ) : (
             <div style={{
-              background: "#F0FAF6", borderRadius: 16,
+              background: "linear-gradient(135deg, #F0FAF6 0%, #E8F8F0 100%)",
+              borderRadius: 16,
               border: "1px solid #BBE8D4",
-              padding: "14px 16px",
-              display: "flex", alignItems: "center", gap: 12,
+              padding: "16px",
+              display: "flex", alignItems: "center", gap: 14,
+              boxShadow: "0 2px 8px rgba(16,185,129,0.08)",
             }}>
-              <CheckCircle2 style={{ width: 20, height: 20, color: "#10b981", flexShrink: 0 }} />
+              <div style={{ width: 44, height: 44, borderRadius: 12, background: "#10b98118", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <CheckCircle2 style={{ width: 22, height: 22, color: "#10b981" }} />
+              </div>
               <div>
-                <p style={{ fontSize: "0.85rem", fontWeight: 700, color: "#10b981", marginBottom: 2 }}>No ethical concerns found</p>
-                <p style={{ fontSize: "0.75rem", color: TEXT_MUTED }}>No labor, boycott, or animal welfare flags for this brand.</p>
+                <p style={{ fontSize: "0.88rem", fontWeight: 800, color: "#10b981", marginBottom: 3 }}>No ethical concerns found</p>
+                <p style={{ fontSize: "0.75rem", color: TEXT_MUTED, lineHeight: 1.5 }}>No labor, boycott, or animal welfare flags for this brand in our database.</p>
               </div>
             </div>
           )}
@@ -946,15 +1001,35 @@ export default function OpenFoodFactsDetail() {
           )}
 
           {/* Barcode footer */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, paddingBottom: 8, flexWrap: "wrap" }}>
             <span style={{
-              fontSize: "0.7rem", color: TEXT_MUTED,
+              fontSize: "0.68rem", color: TEXT_MUTED,
               background: CARD, border: `1px solid ${BORDER}`,
               padding: "4px 12px", borderRadius: 20,
+              fontVariantNumeric: "tabular-nums",
             }}>
               Barcode: {product.barcode}
             </span>
           </div>
+
+          {/* Scan again CTA */}
+          {fromScan && (
+            <button
+              type="button"
+              onClick={() => navigate("/scan")}
+              style={{
+                width: "100%", height: 50, borderRadius: 14, border: "none",
+                background: "#111827", color: "#fff",
+                fontWeight: 700, fontSize: "0.9rem",
+                cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                boxShadow: "0 2px 12px rgba(0,0,0,0.18)",
+                marginBottom: 8,
+              }}
+            >
+              <ScanLine style={{ width: 18, height: 18 }} />
+              Scan another product
+            </button>
+          )}
 
         </div>
       </main>

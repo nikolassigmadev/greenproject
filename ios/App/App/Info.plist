@@ -46,8 +46,8 @@
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>This app uses the camera to scan product barcodes.</string>
+	<string>This app uses the camera to scan product barcodes and food labels to look up ethical sourcing, environmental impact, and nutrition information.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>This app accesses your photo library to scan product barcodes from images.</string>
+	<string>This app accesses your photo library to scan product barcodes and food labels to look up ethical sourcing, environmental impact, and nutrition information.</string>
 </dict>
 </plist>
