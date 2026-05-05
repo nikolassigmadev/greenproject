@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { X, Send, AlertCircle, CheckCircle } from "lucide-react";
+import { getBackendUrl } from "@/config/backend";
 
 type IssueType =
   | "incorrect_flag"
@@ -67,23 +68,22 @@ export function ReportIssue({ brandName, flagId, onClose }: ReportIssueProps) {
     }
 
     const endpoint = import.meta.env.VITE_DISPUTE_ENDPOINT as string | undefined;
+    const backendEndpoint = `${getBackendUrl()}/api/disputes`;
     const disputeEmail = import.meta.env.VITE_DISPUTE_EMAIL as string | undefined;
 
-    if (endpoint) {
-      try {
-        const res = await fetch(endpoint, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        setStatus("success");
-      } catch (err) {
-        setErrorMsg("Could not reach dispute endpoint. Your report has been saved locally.");
-        setStatus("error");
-      }
-    } else {
-      // Mailto fallback
+    // Try explicit env endpoint first, then backend /api/disputes, then mailto fallback
+    const targetUrl = endpoint || backendEndpoint;
+
+    try {
+      const res = await fetch(targetUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setStatus("success");
+    } catch {
+      // Mailto fallback if backend is unreachable
       const subject = encodeURIComponent(`Brand flag dispute: ${brandName}`);
       const body = encodeURIComponent(
         `Brand: ${brandName}\nIssue type: ${ISSUE_LABELS[issueType]}\n\n${description.trim()}` +

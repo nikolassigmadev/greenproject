@@ -15,7 +15,8 @@ import fetch from 'node-fetch';
 import dns from 'dns';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { existsSync } from 'fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
+import crypto from 'crypto';
 
 console.log('🟡 server.js: imports loaded');
 
@@ -480,6 +481,112 @@ app.post('/api/openfoodfacts/search', async (req, res) => {
       success: false,
       error: error.message || 'Failed to search OpenFoodFacts',
     });
+  }
+});
+
+// =====================================================
+// DISPUTE / CORRECTION ENDPOINT
+// =====================================================
+
+const DISPUTES_FILE = join(__dirname, 'data', 'disputes.json');
+
+function loadDisputes() {
+  try {
+    if (existsSync(DISPUTES_FILE)) {
+      return JSON.parse(readFileSync(DISPUTES_FILE, 'utf-8'));
+    }
+  } catch { /* ignore */ }
+  return [];
+}
+
+function saveDisputes(disputes) {
+  const dir = join(__dirname, 'data');
+  if (!existsSync(dir)) {
+    mkdirSync(dir, { recursive: true });
+  }
+  writeFileSync(DISPUTES_FILE, JSON.stringify(disputes, null, 2));
+}
+
+/**
+ * POST /api/disputes
+ * Submit a new dispute/correction report
+ */
+app.post('/api/disputes', (req, res) => {
+  try {
+    const { flagId, brandName, issueType, description, sourceUrl, email, submittedAt } = req.body;
+
+    if (!brandName || !issueType || !description || description.trim().length < 50) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields or description too short (min 50 chars)',
+      });
+    }
+
+    const dispute = {
+      id: crypto.randomUUID(),
+      flagId: flagId || null,
+      brandName,
+      issueType,
+      description: description.trim(),
+      sourceUrl: sourceUrl?.trim() || null,
+      email: email?.trim() || null,
+      submittedAt: submittedAt || new Date().toISOString(),
+      status: 'open',
+      reviewedAt: null,
+      reviewNotes: null,
+    };
+
+    const disputes = loadDisputes();
+    disputes.push(dispute);
+    saveDisputes(disputes);
+
+    console.log(`📝 New dispute received for "${brandName}" (${issueType})`);
+
+    res.status(201).json({ success: true, id: dispute.id });
+  } catch (error) {
+    console.error('❌ Dispute submission error:', error);
+    res.status(500).json({ success: false, error: 'Failed to save dispute' });
+  }
+});
+
+/**
+ * GET /api/disputes
+ * List all disputes (admin)
+ */
+app.get('/api/disputes', (req, res) => {
+  try {
+    const disputes = loadDisputes();
+    res.json({ success: true, disputes });
+  } catch (error) {
+    console.error('❌ Dispute list error:', error);
+    res.status(500).json({ success: false, error: 'Failed to load disputes' });
+  }
+});
+
+/**
+ * PATCH /api/disputes/:id
+ * Update dispute status (admin)
+ */
+app.patch('/api/disputes/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, reviewNotes } = req.body;
+
+    const disputes = loadDisputes();
+    const idx = disputes.findIndex(d => d.id === id);
+    if (idx === -1) {
+      return res.status(404).json({ success: false, error: 'Dispute not found' });
+    }
+
+    if (status) disputes[idx].status = status;
+    if (reviewNotes !== undefined) disputes[idx].reviewNotes = reviewNotes;
+    disputes[idx].reviewedAt = new Date().toISOString();
+
+    saveDisputes(disputes);
+    res.json({ success: true, dispute: disputes[idx] });
+  } catch (error) {
+    console.error('❌ Dispute update error:', error);
+    res.status(500).json({ success: false, error: 'Failed to update dispute' });
   }
 });
 
