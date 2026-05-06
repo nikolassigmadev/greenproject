@@ -20,6 +20,9 @@ import crypto from 'crypto';
 
 console.log('🟡 server.js: imports loaded');
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 // Fix Node.js IPv6 timeout issue — OpenFoodFacts IPv6 is unreliable
 try { dns.setDefaultResultOrder('ipv4first'); } catch(e) { console.warn('dns.setDefaultResultOrder not supported:', e.message); }
 
@@ -606,8 +609,6 @@ app.get('/api/health', (req, res) => {
 // SERVE FRONTEND (React SPA)
 // =====================================================
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 const distPath = join(__dirname, 'dist');
 
 if (existsSync(distPath)) {

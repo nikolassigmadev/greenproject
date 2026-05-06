@@ -1609,7 +1609,7 @@ const Scan = () => {
                 backgroundColor: 'rgba(41,121,255,0.1)',
                 border: '1px solid rgba(41,121,255,0.25)',
                 borderRadius: 12,
-                color: '#fff', fontSize: '0.875rem',
+                color: '#fff', fontSize: '16px',
                 paddingLeft: 34, paddingRight: 12, outline: 'none',
                 caretColor: '#2979FF',
               }}

@@ -2,84 +2,29 @@ import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { BottomNav } from "@/components/BottomNav";
 import { getMostRecentVerifiedDate } from "@/services/brandFlags";
-import { Shield, FileText, AlertTriangle, MessageSquare, Info, ChevronRight } from "lucide-react";
+import { getVerifiedFlags } from "@/data/brandFlags.v2";
+import {
+  Shield, FileText, AlertTriangle, MessageSquare, Info,
+  ChevronRight, Scale, Database, ExternalLink,
+} from "lucide-react";
 
-/* ─── Shared tokens (match Index.tsx) ───────────────────────────────── */
-const D  = "'Bebas Neue', sans-serif";
-const M  = "'JetBrains Mono', monospace";
-const G  = "#00c853";
-const GR = "#84898E";
-const B  = "rgba(255,255,255,0.08)";
-const RED = "#ff4136";
-const AMB = "#ffc700";
-
-/* ─── Data ───────────────────────────────────────────────────────────── */
-
-const SEVERITY_TIERS = [
-  {
-    label: "CRITICAL",
-    color: RED,
-    desc: "Documented forced labour, child labour, or modern slavery — typically confirmed by a government body, court ruling, or corporate admission.",
-    examples: "CBP Withhold Release Order, US federal court verdict, DOL child labour investigation fine.",
-  },
-  {
-    label: "HIGH",
-    color: "#ff6b35",
-    desc: "Serious findings with credible evidence from established NGOs or investigative outlets. Not yet confirmed by a government authority, but sourced from organisations with track records of accuracy.",
-    examples: "Amnesty International report, Human Rights Watch investigation, BBC Dispatches.",
-  },
-  {
-    label: "MEDIUM",
-    color: AMB,
-    desc: "Ongoing concerns or unresolved supply-chain transparency gaps — typically sourced from campaign scorecards or multi-outlet investigative series.",
-    examples: "Oxfam Behind the Brands scorecard, Green America Chocolate Scorecard.",
-  },
-];
-
-const SOURCE_TIERS = [
-  {
-    tier: "TIER 1",
-    color: RED,
-    label: "Primary official record",
-    types: "Court filing, regulatory finding, government report, corporate admission",
-    examples: "US DOL TVPRA list, CBP Withhold Release Order, Nestlé v. Doe (US Supreme Court), DOL child labour investigation findings, OECD NCP complaint, Lindt corporate disclosure admitting 87 child workers",
-  },
-  {
-    tier: "TIER 2",
-    color: AMB,
-    label: "Independent verified NGO report",
-    types: "NGO report, academic study",
-    examples: "Amnesty International, Human Rights Watch, Oxfam, Greenpeace, BHRRC, Global Labor Justice-ILRF, KnowTheChain, Walk Free, ILO",
-  },
-  {
-    tier: "TIER 3",
-    color: GR,
-    label: "Investigative journalism",
-    types: "Investigative journalism, news report",
-    examples: "BBC, The Guardian, Washington Post, AP, Channel 4 Dispatches, NYT / Fuller Project, Swiss TV Rundschau, Reporter Brasil",
-  },
-];
-
-const SOURCING_BAR = [
-  { rule: "≥ 1 tier-1 source", detail: "Any single government report, court filing, regulatory finding, or corporate admission is sufficient." },
-  { rule: "≥ 2 independent tier-2 sources", detail: "Two NGO reports from different organisations covering the same finding. The publishers must be independent of each other." },
-  { rule: "≥ 1 tier-2 + ≥ 2 tier-3 sources", detail: "One NGO report plus at least two separate investigative journalism pieces covering the same specific allegation." },
-];
-
-const DONT_DO = [
-  "Include brand flags without at least one source that meets the tier bar above.",
-  "Describe findings as proven fact when only one tier-3 source exists — those entries are held in pending review and not shown.",
-  "Accept allegations from anonymous or unverifiable sources.",
-  "Show a flag that a brand has successfully disputed with new evidence, without updating it.",
-  "Carry a flag indefinitely — if a brand demonstrates material remediation with documentation, we archive the flag.",
-];
+const BLUE = "#2979FF";
+const TEXT = "#111827";
+const TEXT_MUTED = "#6B7280";
+const BORDER = "#E5E7EB";
+const BG = "#F5F7FA";
+const CARD = "#FFFFFF";
+const GREEN = "#00C853";
+const RED = "#E53935";
+const AMBER = "#F59E0B";
+const ORANGE = "#EA580C";
 
 export default function Methodology() {
   const lastUpdate = getMostRecentVerifiedDate();
+  const totalVerified = getVerifiedFlags().length;
 
-  // 5.4 — meta description for search-engine indexing
   useEffect(() => {
-    document.title = "Methodology — Ethical Shopper";
+    document.title = "Methodology — GoodScan";
     let meta = document.querySelector<HTMLMetaElement>('meta[name="description"]');
     if (!meta) {
       meta = document.createElement("meta");
@@ -87,249 +32,286 @@ export default function Methodology() {
       document.head.appendChild(meta);
     }
     meta.content =
-      "How Ethical Shopper sources and verifies brand labour flags: our tier system, sourcing bar, dispute process, and database limitations.";
-    return () => {
-      document.title = "Ethical Shopper";
-    };
+      "How GoodScan sources and verifies brand labour flags: our tier system, sourcing bar, dispute process, and database limitations.";
+    return () => { document.title = "GoodScan"; };
   }, []);
 
-  return (
-    <div style={{ background: "#000", minHeight: "100vh", overflowX: "hidden" }}>
-      <div className="scanlines" />
-
-      <main className="pb-nav" style={{ position: "relative", zIndex: 1 }}>
-
-        {/* ── Top bar ── */}
+  const Section = ({ icon: Icon, iconColor, number, title, children }: {
+    icon: React.ElementType; iconColor: string; number: string; title: string; children: React.ReactNode;
+  }) => (
+    <div style={{ background: CARD, borderRadius: 16, border: `1px solid ${BORDER}`, padding: "20px", marginBottom: 14 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
         <div style={{
-          display: "flex", justifyContent: "space-between", alignItems: "center",
-          padding: "max(52px, env(safe-area-inset-top)) 20px 14px",
-          borderBottom: `1px solid ${B}`,
+          width: 32, height: 32, borderRadius: 10,
+          background: `${iconColor}12`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
         }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-            <span className="terminal-cursor" style={{ width: 6, height: 6, borderRadius: "50%", background: G, display: "inline-block" }} />
-            <span style={{ fontFamily: M, fontSize: "0.44rem", color: GR, letterSpacing: "0.24em", textTransform: "uppercase" }}>
-              ETHICAL SCANNER / METHODOLOGY
-            </span>
+          <Icon style={{ width: 16, height: 16, color: iconColor }} />
+        </div>
+        <div>
+          <p style={{ fontSize: "0.65rem", fontWeight: 600, color: TEXT_MUTED, letterSpacing: "0.06em", lineHeight: 1 }}>{number}</p>
+          <p style={{ fontSize: "1rem", fontWeight: 700, color: TEXT, lineHeight: 1.3 }}>{title}</p>
+        </div>
+      </div>
+      {children}
+    </div>
+  );
+
+  return (
+    <div style={{ minHeight: "100dvh", background: BG, display: "flex", flexDirection: "column" }}>
+      <main style={{ flex: 1, maxWidth: 640, margin: "0 auto", width: "100%", padding: "32px 20px 100px" }}>
+
+        {/* Header */}
+        <div style={{ textAlign: "center", marginBottom: 28 }}>
+          <div style={{
+            width: 56, height: 56, borderRadius: 16,
+            background: `${BLUE}14`, display: "flex", alignItems: "center", justifyContent: "center",
+            margin: "0 auto 14px",
+          }}>
+            <Scale style={{ width: 28, height: 28, color: BLUE }} />
           </div>
-          {lastUpdate && (
-            <span style={{ fontFamily: M, fontSize: "0.4rem", color: "rgba(132,137,142,0.5)", letterSpacing: "0.1em" }}>
-              DB: {lastUpdate.slice(0, 10)}
-            </span>
-          )}
+          <h1 style={{ fontSize: "1.5rem", fontWeight: 800, color: TEXT, marginBottom: 6 }}>Our Methodology</h1>
+          <p style={{ fontSize: "0.85rem", color: TEXT_MUTED, lineHeight: 1.6, maxWidth: 380, margin: "0 auto" }}>
+            Every brand flag is backed by independently verifiable sources. Here's how we research, verify, and maintain our data.
+          </p>
         </div>
 
-        {/* ── Page heading ── */}
-        <div style={{ padding: "28px 20px 20px", borderBottom: `1px solid ${B}` }}>
-          <p style={{ fontFamily: M, fontSize: "0.48rem", color: G, letterSpacing: "0.26em", textTransform: "uppercase", marginBottom: 12, opacity: 0.85 }}>
-            // HOW WE WORK
-          </p>
-          <h1 style={{ fontFamily: D, fontWeight: 400, fontSize: "clamp(2.4rem, 11vw, 3.6rem)", color: "#fff", letterSpacing: "0.02em", lineHeight: 0.92, marginBottom: 14 }}>
-            OUR<br />
-            <span style={{ color: G }}>METHODOLOGY</span>
-          </h1>
-          <p style={{ fontFamily: M, fontSize: "0.7rem", color: GR, lineHeight: 1.75, letterSpacing: "0.02em", maxWidth: 480 }}>
-            Every brand flag on this app is derived from independently verifiable sources. This page explains our sourcing rules, what evidence counts, and what we won't do.
-          </p>
+        {/* Stats strip */}
+        <div style={{
+          display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 14,
+        }}>
+          {[
+            { label: "Verified Flags", value: String(totalVerified), color: GREEN },
+            { label: "Last Updated", value: lastUpdate ? lastUpdate.slice(5, 10).replace("-", "/") : "—", color: BLUE },
+            { label: "Review SLA", value: "14 days", color: AMBER },
+          ].map(({ label, value, color }) => (
+            <div key={label} style={{
+              background: CARD, borderRadius: 14, border: `1px solid ${BORDER}`, padding: "14px 12px", textAlign: "center",
+            }}>
+              <p style={{ fontSize: "1.2rem", fontWeight: 800, color, lineHeight: 1, marginBottom: 4 }}>{value}</p>
+              <p style={{ fontSize: "0.65rem", fontWeight: 600, color: TEXT_MUTED }}>{label}</p>
+            </div>
+          ))}
         </div>
 
-        {/* ═══ 1. HOW WE SCORE BRANDS ═══════════════════════════════════ */}
-        <div style={{ padding: "24px 20px", borderBottom: `1px solid ${B}` }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-            <Shield style={{ width: 13, height: 13, color: G, flexShrink: 0 }} strokeWidth={1.5} />
-            <p style={{ fontFamily: M, fontSize: "0.48rem", color: GR, letterSpacing: "0.24em", textTransform: "uppercase" }}>
-              // 01 — HOW WE SCORE BRANDS
-            </p>
+        {/* 01 — Severity Levels */}
+        <Section icon={Shield} iconColor={RED} number="01" title="Severity Levels">
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {[
+              {
+                label: "Critical", color: RED, bg: "#FFF0F0",
+                desc: "Documented forced labour, child labour, or modern slavery confirmed by a government body, court ruling, or corporate admission.",
+                examples: "CBP Withhold Release Order, US federal court verdict, DOL child labour investigation",
+              },
+              {
+                label: "High", color: ORANGE, bg: "#FFF7ED",
+                desc: "Serious findings with credible evidence from established NGOs or investigative outlets. Not yet confirmed by a government authority.",
+                examples: "Amnesty International report, Human Rights Watch investigation, BBC Dispatches",
+              },
+              {
+                label: "Medium", color: AMBER, bg: "#FFFBEB",
+                desc: "Ongoing concerns or unresolved supply-chain transparency gaps from campaign scorecards or multi-outlet investigations.",
+                examples: "Oxfam Behind the Brands scorecard, Green America Chocolate Scorecard",
+              },
+            ].map((tier) => (
+              <div key={tier.label} style={{
+                borderRadius: 12, background: tier.bg, padding: "14px 16px",
+                borderLeft: `4px solid ${tier.color}`,
+              }}>
+                <p style={{ fontSize: "0.8rem", fontWeight: 700, color: tier.color, marginBottom: 4 }}>{tier.label}</p>
+                <p style={{ fontSize: "0.8rem", color: TEXT, lineHeight: 1.6, marginBottom: 6 }}>{tier.desc}</p>
+                <p style={{ fontSize: "0.72rem", color: TEXT_MUTED, fontStyle: "italic" }}>e.g. {tier.examples}</p>
+              </div>
+            ))}
           </div>
+        </Section>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            {SEVERITY_TIERS.map((tier, i) => (
-              <div key={tier.label} style={{ borderLeft: `3px solid ${tier.color}`, background: "rgba(255,255,255,0.02)", padding: "14px 16px" }}>
+        {/* 02 — Source Tiers */}
+        <Section icon={FileText} iconColor={BLUE} number="02" title="Source Tiers">
+          <p style={{ fontSize: "0.82rem", color: TEXT_MUTED, lineHeight: 1.6, marginBottom: 14 }}>
+            Every source is classified into one of three tiers based on its institutional authority and verifiability. All source URLs are now linked directly in our database.
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {[
+              {
+                tier: "Tier 1", color: RED, bg: "#FFF0F0", label: "Primary official record",
+                types: "Court filing, regulatory finding, government report, corporate admission",
+                examples: "US DOL TVPRA list, CBP Withhold Release Order, Supreme Court opinion, OECD NCP complaint",
+              },
+              {
+                tier: "Tier 2", color: AMBER, bg: "#FFFBEB", label: "Independent NGO report",
+                types: "NGO report, academic study",
+                examples: "Amnesty International, Human Rights Watch, Oxfam, Greenpeace, BHRRC, Columbia Law School",
+              },
+              {
+                tier: "Tier 3", color: TEXT_MUTED, bg: "#F3F4F6", label: "Investigative journalism",
+                types: "Investigative journalism, news report",
+                examples: "BBC, The Guardian, Washington Post, AP, Channel 4, NYT, Reporter Brasil",
+              },
+            ].map((s) => (
+              <div key={s.tier} style={{
+                borderRadius: 12, background: s.bg, padding: "14px 16px", border: `1px solid ${BORDER}`,
+              }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                  <span style={{ fontFamily: M, fontSize: "0.44rem", color: "rgba(132,137,142,0.4)", letterSpacing: "0.1em" }}>
-                    {String(i + 1).padStart(2, "0")}
-                  </span>
-                  <span style={{ fontFamily: D, fontSize: "1.1rem", color: tier.color, letterSpacing: "0.08em" }}>
-                    {tier.label}
-                  </span>
+                  <span style={{
+                    fontSize: "0.65rem", fontWeight: 700, color: CARD, background: s.color,
+                    borderRadius: 6, padding: "2px 8px", letterSpacing: "0.04em",
+                  }}>{s.tier}</span>
+                  <span style={{ fontSize: "0.8rem", fontWeight: 600, color: TEXT }}>{s.label}</span>
                 </div>
-                <p style={{ fontFamily: M, fontSize: "0.62rem", color: "#ccc", lineHeight: 1.7, marginBottom: 6 }}>
-                  {tier.desc}
+                <p style={{ fontSize: "0.75rem", color: TEXT_MUTED, marginBottom: 2 }}>
+                  <span style={{ fontWeight: 600 }}>Types:</span> {s.types}
                 </p>
-                <p style={{ fontFamily: M, fontSize: "0.52rem", color: "rgba(132,137,142,0.6)", lineHeight: 1.5, fontStyle: "italic" }}>
-                  e.g. {tier.examples}
-                </p>
+                <p style={{ fontSize: "0.72rem", color: TEXT_MUTED, fontStyle: "italic" }}>{s.examples}</p>
               </div>
             ))}
           </div>
-        </div>
+        </Section>
 
-        {/* ═══ 2. SOURCE TIERS ═══════════════════════════════════════════ */}
-        <div style={{ padding: "24px 20px", borderBottom: `1px solid ${B}` }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-            <FileText style={{ width: 13, height: 13, color: G, flexShrink: 0 }} strokeWidth={1.5} />
-            <p style={{ fontFamily: M, fontSize: "0.48rem", color: GR, letterSpacing: "0.24em", textTransform: "uppercase" }}>
-              // 02 — SOURCE TIERS
-            </p>
-          </div>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            {SOURCE_TIERS.map((s) => (
-              <div key={s.tier} style={{ border: `1px solid rgba(255,255,255,0.06)`, padding: "14px 16px", position: "relative", overflow: "hidden" }}>
-                <div className="diagonal-stripe" style={{ position: "absolute", inset: 0, opacity: 0.3 }} />
-                <div style={{ position: "relative" }}>
-                  <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 6 }}>
-                    <span style={{ fontFamily: D, fontSize: "1rem", color: s.color, letterSpacing: "0.1em", flexShrink: 0 }}>{s.tier}</span>
-                    <span style={{ fontFamily: M, fontSize: "0.56rem", color: "#fff", letterSpacing: "0.04em" }}>{s.label}</span>
-                  </div>
-                  <p style={{ fontFamily: M, fontSize: "0.52rem", color: GR, letterSpacing: "0.04em", marginBottom: 4 }}>
-                    Types: <span style={{ color: "#ccc" }}>{s.types}</span>
-                  </p>
-                  <p style={{ fontFamily: M, fontSize: "0.5rem", color: "rgba(132,137,142,0.6)", lineHeight: 1.55 }}>
-                    {s.examples}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* ═══ 3. THE SOURCING BAR ═══════════════════════════════════════ */}
-        <div style={{ padding: "24px 20px", borderBottom: `1px solid ${B}` }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-            <AlertTriangle style={{ width: 13, height: 13, color: AMB, flexShrink: 0 }} strokeWidth={1.5} />
-            <p style={{ fontFamily: M, fontSize: "0.48rem", color: GR, letterSpacing: "0.24em", textTransform: "uppercase" }}>
-              // 03 — THE SOURCING BAR
-            </p>
-          </div>
-
-          <p style={{ fontFamily: M, fontSize: "0.64rem", color: "#ccc", lineHeight: 1.7, marginBottom: 16 }}>
-            A flag is only shown in production if it meets <span style={{ color: G }}>at least one</span> of these criteria:
+        {/* 03 — The Sourcing Bar */}
+        <Section icon={AlertTriangle} iconColor={AMBER} number="03" title="The Sourcing Bar">
+          <p style={{ fontSize: "0.82rem", color: TEXT_MUTED, lineHeight: 1.6, marginBottom: 14 }}>
+            A flag is only shown in the app if it meets <span style={{ fontWeight: 700, color: GREEN }}>at least one</span> of these criteria:
           </p>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            {SOURCING_BAR.map((rule, i) => (
-              <div key={i} style={{ display: "flex", gap: 0, borderLeft: `3px solid ${G}`, background: "rgba(0,200,83,0.03)", padding: "13px 0" }}>
-                <span style={{ fontFamily: M, fontSize: "0.46rem", color: "rgba(132,137,142,0.35)", letterSpacing: "0.1em", minWidth: "2.8rem", paddingLeft: 12, flexShrink: 0 }}>
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-                <div style={{ paddingRight: 16 }}>
-                  <p style={{ fontFamily: D, fontSize: "1.1rem", color: G, letterSpacing: "0.04em", lineHeight: 1, marginBottom: 5 }}>
-                    {rule.rule}
-                  </p>
-                  <p style={{ fontFamily: M, fontSize: "0.56rem", color: GR, lineHeight: 1.6 }}>
-                    {rule.detail}
-                  </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {[
+              { rule: "1+ tier-1 source", detail: "Any single government report, court filing, regulatory finding, or corporate admission." },
+              { rule: "2+ independent tier-2 sources", detail: "Two NGO reports from different organisations covering the same finding." },
+              { rule: "1 tier-2 + 2 tier-3 sources", detail: "One NGO report plus two separate investigative journalism pieces on the same allegation." },
+            ].map((item, i) => (
+              <div key={i} style={{
+                borderRadius: 12, background: `${GREEN}08`, border: `1px solid ${GREEN}25`,
+                padding: "14px 16px", display: "flex", gap: 12,
+              }}>
+                <div style={{
+                  width: 28, height: 28, borderRadius: 8, background: `${GREEN}18`,
+                  display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                  fontSize: "0.75rem", fontWeight: 700, color: GREEN,
+                }}>
+                  {i + 1}
+                </div>
+                <div>
+                  <p style={{ fontSize: "0.82rem", fontWeight: 700, color: TEXT, marginBottom: 2 }}>{item.rule}</p>
+                  <p style={{ fontSize: "0.75rem", color: TEXT_MUTED, lineHeight: 1.55 }}>{item.detail}</p>
                 </div>
               </div>
             ))}
           </div>
 
-          <div style={{ marginTop: 14, padding: "12px 14px", border: `1px solid rgba(255,199,0,0.2)`, background: "rgba(255,199,0,0.04)" }}>
-            <p style={{ fontFamily: M, fontSize: "0.56rem", color: AMB, lineHeight: 1.6 }}>
-              A flag with only tier-3 sources is held in <span style={{ color: "#fff" }}>pending_review</span> and not shown to users until additional sourcing is confirmed.
+          <div style={{
+            marginTop: 12, borderRadius: 10, background: `${AMBER}10`, border: `1px solid ${AMBER}30`,
+            padding: "12px 14px",
+          }}>
+            <p style={{ fontSize: "0.78rem", color: ORANGE, lineHeight: 1.6, fontWeight: 500 }}>
+              Flags with only tier-3 sources are held in <span style={{ fontWeight: 700 }}>pending review</span> and not shown to users until additional sourcing is confirmed.
             </p>
           </div>
-        </div>
+        </Section>
 
-        {/* ═══ 4. WHAT WE DON'T DO ══════════════════════════════════════ */}
-        <div style={{ padding: "24px 20px", borderBottom: `1px solid ${B}` }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-            <Info style={{ width: 13, height: 13, color: G, flexShrink: 0 }} strokeWidth={1.5} />
-            <p style={{ fontFamily: M, fontSize: "0.48rem", color: GR, letterSpacing: "0.24em", textTransform: "uppercase" }}>
-              // 04 — WHAT WE DON'T DO
-            </p>
-          </div>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
-            {DONT_DO.map((item, i) => (
-              <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 0", borderBottom: `1px solid rgba(255,255,255,0.04)` }}>
-                <span style={{ fontFamily: M, fontSize: "0.44rem", color: RED, letterSpacing: "0.1em", flexShrink: 0, marginTop: 2 }}>✕</span>
-                <p style={{ fontFamily: M, fontSize: "0.6rem", color: GR, lineHeight: 1.65 }}>{item}</p>
+        {/* 04 — What We Don't Do */}
+        <Section icon={Info} iconColor={TEXT_MUTED} number="04" title="What We Don't Do">
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {[
+              "Include brand flags without at least one source that meets the tier bar.",
+              "Describe findings as proven fact when only one tier-3 source exists.",
+              "Accept allegations from anonymous or unverifiable sources.",
+              "Show a flag that a brand has successfully disputed without updating it.",
+              "Carry a flag indefinitely — documented remediation leads to archival.",
+            ].map((item, i) => (
+              <div key={i} style={{
+                display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 12px",
+                borderRadius: 10, background: i % 2 === 0 ? "#F9FAFB" : CARD,
+              }}>
+                <span style={{ color: RED, fontWeight: 700, fontSize: "0.85rem", flexShrink: 0, lineHeight: 1.5 }}>x</span>
+                <p style={{ fontSize: "0.8rem", color: TEXT_MUTED, lineHeight: 1.6 }}>{item}</p>
               </div>
             ))}
           </div>
-        </div>
+        </Section>
 
-        {/* ═══ 5. DISPUTES & CORRECTIONS ═══════════════════════════════ */}
-        <div style={{ padding: "24px 20px", borderBottom: `1px solid ${B}` }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-            <MessageSquare style={{ width: 13, height: 13, color: G, flexShrink: 0 }} strokeWidth={1.5} />
-            <p style={{ fontFamily: M, fontSize: "0.48rem", color: GR, letterSpacing: "0.24em", textTransform: "uppercase" }}>
-              // 05 — DISPUTES &amp; CORRECTIONS
-            </p>
-          </div>
-
-          <p style={{ fontFamily: M, fontSize: "0.64rem", color: "#ccc", lineHeight: 1.75, marginBottom: 16 }}>
-            Brands, researchers, or users can report incorrect flags, outdated sources, or missing context using the report button on any brand flag. We commit to a <span style={{ color: G }}>14-day review</span> for all submissions.
+        {/* 05 — Disputes & Corrections */}
+        <Section icon={MessageSquare} iconColor={GREEN} number="05" title="Disputes & Corrections">
+          <p style={{ fontSize: "0.82rem", color: TEXT, lineHeight: 1.7, marginBottom: 12 }}>
+            Brands, researchers, or users can report incorrect flags, outdated sources, or missing context using the <span style={{ fontWeight: 600 }}>report button</span> on any brand flag. All submissions are sent to our review backend.
+          </p>
+          <p style={{ fontSize: "0.8rem", color: TEXT_MUTED, lineHeight: 1.65, marginBottom: 16 }}>
+            We commit to a <span style={{ fontWeight: 700, color: GREEN }}>14-day review</span> for all submissions.
+            If a brand provides evidence that a flag is factually incorrect or that meaningful remediation has occurred, the flag will be updated or archived. Brands may not request removal based solely on disagreement — evidence is required.
           </p>
 
-          <p style={{ fontFamily: M, fontSize: "0.6rem", color: GR, lineHeight: 1.7, marginBottom: 16 }}>
-            If a brand provides new evidence that a flag is factually incorrect or that meaningful remediation has occurred, the flag will be updated or archived accordingly. Brands may not request removal based solely on disagreement — evidence is required.
-          </p>
-
-          <Link to="/admin/disputes" style={{ textDecoration: "none", display: "flex" }}>
-            <div style={{ border: `1px solid rgba(0,200,83,0.3)`, padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", flex: 1, background: "rgba(0,200,83,0.04)" }}>
+          <Link to="/admin/disputes" style={{ textDecoration: "none", display: "block" }}>
+            <div style={{
+              borderRadius: 12, border: `1px solid ${BLUE}30`, background: `${BLUE}08`,
+              padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between",
+            }}>
               <div>
-                <p style={{ fontFamily: M, fontSize: "0.44rem", color: G, letterSpacing: "0.2em", textTransform: "uppercase", marginBottom: 3 }}>ADMIN</p>
-                <p style={{ fontFamily: D, fontSize: "1.1rem", color: "#fff", letterSpacing: "0.04em" }}>VIEW DISPUTE QUEUE</p>
+                <p style={{ fontSize: "0.65rem", fontWeight: 600, color: BLUE, letterSpacing: "0.04em", marginBottom: 2 }}>ADMIN</p>
+                <p style={{ fontSize: "0.9rem", fontWeight: 700, color: TEXT }}>View Dispute Queue</p>
               </div>
-              <ChevronRight style={{ width: 16, height: 16, color: GR }} />
+              <ChevronRight style={{ width: 18, height: 18, color: TEXT_MUTED }} />
             </div>
           </Link>
-        </div>
+        </Section>
 
-        {/* ═══ 6. LAST DATABASE UPDATE ══════════════════════════════════ */}
-        <div style={{ padding: "24px 20px", borderBottom: `1px solid ${B}` }}>
-          <p style={{ fontFamily: M, fontSize: "0.48rem", color: GR, letterSpacing: "0.24em", textTransform: "uppercase", marginBottom: 14 }}>
-            // 06 — DATABASE STATUS
-          </p>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2 }}>
-            <div style={{ border: `1px solid rgba(255,255,255,0.06)`, padding: "16px 14px" }}>
-              <p style={{ fontFamily: M, fontSize: "0.44rem", color: GR, letterSpacing: "0.16em", textTransform: "uppercase", marginBottom: 6 }}>LAST VERIFIED</p>
-              <p style={{ fontFamily: D, fontSize: "1.4rem", color: G, letterSpacing: "0.04em", lineHeight: 1 }}>
-                {lastUpdate ? lastUpdate.slice(0, 10) : "—"}
-              </p>
-            </div>
-            <div style={{ border: `1px solid rgba(255,255,255,0.06)`, padding: "16px 14px" }}>
-              <p style={{ fontFamily: M, fontSize: "0.44rem", color: GR, letterSpacing: "0.16em", textTransform: "uppercase", marginBottom: 6 }}>RESPONSE SLA</p>
-              <p style={{ fontFamily: D, fontSize: "1.4rem", color: AMB, letterSpacing: "0.04em", lineHeight: 1 }}>14 DAYS</p>
-            </div>
+        {/* 06 — Database Status */}
+        <Section icon={Database} iconColor={BLUE} number="06" title="Database Status">
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            {[
+              { label: "Last Verified", value: lastUpdate ? lastUpdate.slice(0, 10) : "—", color: GREEN },
+              { label: "Response SLA", value: "14 days", color: AMBER },
+              { label: "Total Brands", value: String(totalVerified), color: BLUE },
+              { label: "All URLs Cited", value: "Yes", color: GREEN },
+            ].map(({ label, value, color }) => (
+              <div key={label} style={{
+                borderRadius: 12, border: `1px solid ${BORDER}`, background: "#F9FAFB",
+                padding: "14px", textAlign: "center",
+              }}>
+                <p style={{ fontSize: "1.1rem", fontWeight: 800, color, lineHeight: 1, marginBottom: 4 }}>{value}</p>
+                <p style={{ fontSize: "0.68rem", fontWeight: 600, color: TEXT_MUTED }}>{label}</p>
+              </div>
+            ))}
           </div>
-        </div>
+        </Section>
 
-        {/* ═══ 7. LIMITATIONS ═══════════════════════════════════════════ */}
-        <div style={{ padding: "24px 20px 32px" }}>
-          <p style={{ fontFamily: M, fontSize: "0.48rem", color: GR, letterSpacing: "0.24em", textTransform: "uppercase", marginBottom: 14 }}>
-            // 07 — LIMITATIONS
-          </p>
-
-          <div style={{ border: `1px solid rgba(255,199,0,0.15)`, padding: "16px", background: "rgba(255,199,0,0.03)", marginBottom: 14 }}>
-            <p style={{ fontFamily: M, fontSize: "0.6rem", color: AMB, lineHeight: 1.7, marginBottom: 8 }}>
-              Be aware of what this database is and isn't:
-            </p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {[
-                "We currently flag ~50 brands. Major multinationals are prioritised; smaller or regional brands are under-represented.",
-                "We focus on consumer food and grocery goods. Fashion, electronics, and household goods are largely out of scope.",
-                "Geographic coverage skews toward supply chains that have received English-language investigative coverage. Issues in less-reported regions may be missing.",
-                "A brand not appearing in our database does not mean it has no issues — it may simply not have been researched yet.",
-                "This is not legal advice. Flags describe documented findings, not legal verdicts (unless the source is a court ruling).",
-              ].map((l, i) => (
-                <div key={i} style={{ display: "flex", gap: 10 }}>
-                  <span style={{ fontFamily: M, fontSize: "0.44rem", color: AMB, flexShrink: 0, marginTop: 2 }}>▸</span>
-                  <p style={{ fontFamily: M, fontSize: "0.58rem", color: GR, lineHeight: 1.65 }}>{l}</p>
-                </div>
-              ))}
+        {/* 07 — Limitations */}
+        <div style={{
+          background: `${AMBER}08`, borderRadius: 16, border: `1px solid ${AMBER}25`,
+          padding: "20px", marginBottom: 14,
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+            <div style={{
+              width: 32, height: 32, borderRadius: 10,
+              background: `${AMBER}18`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+            }}>
+              <AlertTriangle style={{ width: 16, height: 16, color: AMBER }} />
+            </div>
+            <div>
+              <p style={{ fontSize: "0.65rem", fontWeight: 600, color: TEXT_MUTED, letterSpacing: "0.06em", lineHeight: 1 }}>07</p>
+              <p style={{ fontSize: "1rem", fontWeight: 700, color: TEXT, lineHeight: 1.3 }}>Limitations</p>
             </div>
           </div>
 
-          <p style={{ fontFamily: M, fontSize: "0.52rem", color: "rgba(132,137,142,0.4)", letterSpacing: "0.08em", textAlign: "center" }}>
-            METHODOLOGY v1 — 2026
-          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {[
+              "We currently flag ~35 brands. Major multinationals are prioritised; smaller or regional brands may not yet be covered.",
+              "We focus on consumer food and grocery goods. Fashion, electronics, and household goods are out of scope.",
+              "Geographic coverage skews toward supply chains with English-language investigative coverage.",
+              "A brand not in our database does not mean it has no issues — it may not have been researched yet.",
+              "This is not legal advice. Flags describe documented findings, not legal verdicts (unless the source is a court ruling).",
+            ].map((l, i) => (
+              <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                <span style={{ color: AMBER, fontWeight: 700, fontSize: "0.85rem", flexShrink: 0, lineHeight: 1.5 }}>!</span>
+                <p style={{ fontSize: "0.78rem", color: TEXT_MUTED, lineHeight: 1.6 }}>{l}</p>
+              </div>
+            ))}
+          </div>
         </div>
+
+        {/* Footer */}
+        <p style={{ fontSize: "0.72rem", color: TEXT_MUTED, textAlign: "center", marginTop: 8 }}>
+          Methodology v2 — Updated May 2026
+        </p>
 
       </main>
-
       <BottomNav />
     </div>
   );
