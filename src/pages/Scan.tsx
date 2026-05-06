@@ -139,8 +139,13 @@ const filterBestProducts = (results: OpenFoodFactsResult[], query?: string): Ope
         return candidates.slice(0, 5).map(s => s.result);
       }
 
-      // Nothing matched at all — return empty so the caller can widen the search
-      return [];
+      // Nothing matched the relevance filter — the OFF search itself found these
+      // products for the query, so return the top results by eco data completeness
+      // rather than discarding everything.
+      return searchPool
+        .sort((a, b) => b.ecoScore - a.ecoScore)
+        .slice(0, 5)
+        .map(s => s.result);
     }
   }
 

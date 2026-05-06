@@ -859,7 +859,7 @@ export default function OpenFoodFactsDetail() {
                       {laborRecord.allegations.map((al, i) => (
                         <div key={i} style={{
                           background: "#FFF5F5", borderRadius: 10,
-                          border: "1px solid #FFCCCC", borderLeft: "3px solid #ef4444",
+                          border: "1px solid #FFCCCC",
                           padding: 12,
                         }}>
                           <p style={{ fontSize: "0.8rem", fontWeight: 700, color: "#ef4444", marginBottom: 4 }}>{al.issue}</p>
@@ -896,7 +896,7 @@ export default function OpenFoodFactsDetail() {
                   <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 12, marginTop: 12 }}>
                     <div style={{
                       background: "#FFF6EE", borderRadius: 10,
-                      border: "1px solid #FDDCB5", borderLeft: "3px solid #f97316",
+                      border: "1px solid #FDDCB5",
                       padding: 12,
                     }}>
                       <p style={{ fontSize: "0.8rem", fontWeight: 700, color: "#f97316", marginBottom: 4 }}>
