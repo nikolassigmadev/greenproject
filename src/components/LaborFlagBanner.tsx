@@ -1,8 +1,8 @@
-import { AlertTriangle, ShieldAlert, Info, Flag } from "lucide-react";
+import { AlertTriangle, ShieldAlert, Info } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import type { BrandFlagV2 } from "@/types/brandFlag";
-import { ReportIssue } from "@/components/ReportIssue";
+
 
 const severityStyles = {
   critical: {
@@ -47,7 +47,7 @@ interface LaborFlagBannerProps {
 
 export function LaborFlagBanner({ flag, brandName, compact = false }: LaborFlagBannerProps) {
   const [expanded, setExpanded] = useState(false);
-  const [reporting, setReporting] = useState(false);
+
   const style = severityStyles[flag.severity] ?? severityStyles.medium;
 
   if (compact) {
@@ -127,22 +127,7 @@ export function LaborFlagBanner({ flag, brandName, compact = false }: LaborFlagB
                 >
                   How we source and verify flags →
                 </Link>
-                <button
-                  onClick={() => setReporting(true)}
-                  className={`btn-aurora flex items-center gap-1 text-xs mt-2 ${style.text} opacity-60 hover:opacity-100`}
-                >
-                  <Flag className="w-3 h-3" />
-                  Report an issue with this flag
-                </button>
               </div>
-            )}
-
-            {reporting && (
-              <ReportIssue
-                brandName={brandName ?? flag.brandName}
-                flagId={flag.id}
-                onClose={() => setReporting(false)}
-              />
             )}
           </div>
         </div>

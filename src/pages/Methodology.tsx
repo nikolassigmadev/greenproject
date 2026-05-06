@@ -1,11 +1,10 @@
 import { useEffect } from "react";
-import { Link } from "react-router-dom";
 import { BottomNav } from "@/components/BottomNav";
 import { getMostRecentVerifiedDate } from "@/services/brandFlags";
 import { getVerifiedFlags } from "@/data/brandFlags.v2";
 import {
-  Shield, FileText, AlertTriangle, MessageSquare, Info,
-  ChevronRight, Scale, Database, ExternalLink,
+  Shield, FileText, AlertTriangle, Info,
+  Scale, Database, ExternalLink,
 } from "lucide-react";
 
 const BLUE = "#2979FF";
@@ -32,7 +31,7 @@ export default function Methodology() {
       document.head.appendChild(meta);
     }
     meta.content =
-      "How GoodScan sources and verifies brand labour flags: our tier system, sourcing bar, dispute process, and database limitations.";
+      "How GoodScan sources and verifies brand labour flags: our tier system, sourcing bar, and database limitations.";
     return () => { document.title = "GoodScan"; };
   }, []);
 
@@ -214,7 +213,7 @@ export default function Methodology() {
               "Include brand flags without at least one source that meets the tier bar.",
               "Describe findings as proven fact when only one tier-3 source exists.",
               "Accept allegations from anonymous or unverifiable sources.",
-              "Show a flag that a brand has successfully disputed without updating it.",
+              "Show a flag that has been proven factually incorrect without updating it.",
               "Carry a flag indefinitely — documented remediation leads to archival.",
             ].map((item, i) => (
               <div key={i} style={{
@@ -228,36 +227,12 @@ export default function Methodology() {
           </div>
         </Section>
 
-        {/* 05 — Disputes & Corrections */}
-        <Section icon={MessageSquare} iconColor={GREEN} number="05" title="Disputes & Corrections">
-          <p style={{ fontSize: "0.82rem", color: TEXT, lineHeight: 1.7, marginBottom: 12 }}>
-            Brands, researchers, or users can report incorrect flags, outdated sources, or missing context using the <span style={{ fontWeight: 600 }}>report button</span> on any brand flag. All submissions are sent to our review backend.
-          </p>
-          <p style={{ fontSize: "0.8rem", color: TEXT_MUTED, lineHeight: 1.65, marginBottom: 16 }}>
-            We commit to a <span style={{ fontWeight: 700, color: GREEN }}>14-day review</span> for all submissions.
-            If a brand provides evidence that a flag is factually incorrect or that meaningful remediation has occurred, the flag will be updated or archived. Brands may not request removal based solely on disagreement — evidence is required.
-          </p>
-
-          <Link to="/admin/disputes" style={{ textDecoration: "none", display: "block" }}>
-            <div style={{
-              borderRadius: 12, border: `1px solid ${BLUE}30`, background: `${BLUE}08`,
-              padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between",
-            }}>
-              <div>
-                <p style={{ fontSize: "0.65rem", fontWeight: 600, color: BLUE, letterSpacing: "0.04em", marginBottom: 2 }}>ADMIN</p>
-                <p style={{ fontSize: "0.9rem", fontWeight: 700, color: TEXT }}>View Dispute Queue</p>
-              </div>
-              <ChevronRight style={{ width: 18, height: 18, color: TEXT_MUTED }} />
-            </div>
-          </Link>
-        </Section>
-
-        {/* 06 — Database Status */}
-        <Section icon={Database} iconColor={BLUE} number="06" title="Database Status">
+        {/* 05 — Database Status */}
+        <Section icon={Database} iconColor={BLUE} number="05" title="Database Status">
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             {[
               { label: "Last Verified", value: lastUpdate ? lastUpdate.slice(0, 10) : "—", color: GREEN },
-              { label: "Response SLA", value: "14 days", color: AMBER },
+              { label: "Status", value: "Active", color: AMBER },
               { label: "Total Brands", value: String(totalVerified), color: BLUE },
               { label: "All URLs Cited", value: "Yes", color: GREEN },
             ].map(({ label, value, color }) => (

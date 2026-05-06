@@ -51,7 +51,7 @@ import { CalAIShowcase } from "./components/CalAIShowcase";
 // Import admin components - uncomment to enable
 import Admin from "./pages/Admin";
 import AdminLogin from "./pages/AdminLogin";
-import AdminDisputes from "./pages/AdminDisputes";
+
 
 function RootLayout() {
   const location = useLocation();
@@ -131,10 +131,6 @@ export const router = createBrowserRouter([
       {
         path: "/admin/login",
         element: <AdminLogin />,
-      },
-      {
-        path: "/admin/disputes",
-        element: <AdminDisputes />,
       },
     ],
   },
