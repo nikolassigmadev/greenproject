@@ -1,4 +1,5 @@
 import { BottomNav } from "@/components/BottomNav";
+import { AboutChatWidget } from "@/components/AboutChatWidget";
 import { Link } from "react-router-dom";
 import { Leaf, Shield, Globe, Heart } from "lucide-react";
 
@@ -74,6 +75,7 @@ export default function AboutUs() {
           </div>
         </div>
       </main>
+      <AboutChatWidget />
       <BottomNav />
     </div>
   );

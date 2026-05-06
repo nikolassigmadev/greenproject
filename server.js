@@ -14,6 +14,7 @@ import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import fetch from 'node-fetch';
 import dns from 'dns';
+import OpenAI from 'openai';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { existsSync } from 'fs';
@@ -86,7 +87,125 @@ const searchLimiter = rateLimit({
 });
 
 app.use('/api/openai', openaiLimiter);
+app.use('/api/chat', openaiLimiter);
 app.use('/api/openfoodfacts', searchLimiter);
+
+// =====================================================
+// ABOUT-US CHATBOT
+// =====================================================
+
+const openaiClient = OPENAI_API_KEY ? new OpenAI({ apiKey: OPENAI_API_KEY }) : null;
+
+const ABOUT_US_KNOWLEDGE = `
+APP NAME: GoodScan (also referred to as Scan2Source).
+
+MISSION:
+Make ethical shopping simple. Scan a product and instantly understand its impact across labour rights, environmental impact, animal welfare, and nutrition. We aggregate data so consumers can shop with confidence.
+
+CORE PILLARS:
+- Labour Rights
+- Environment
+- Animal Welfare
+- Transparency
+
+DATA SOURCES:
+- Nutritional and environmental product data: Open Food Facts (openfoodfacts.org), CC BY-SA 4.0 license.
+- Labour and sourcing flags: researched and reviewed in-house against published reports and certifications.
+
+CONTACT:
+- Email: geovanis@proton.me
+- Privacy Policy: /privacy
+- Methodology page: /methodology
+
+METHODOLOGY — SEVERITY LEVELS:
+- Critical: Documented forced labour, child labour, or modern slavery confirmed by a government body, court ruling, or corporate admission. Examples: CBP Withhold Release Order, US federal court verdict, DOL child labour investigation.
+- High: Serious findings with credible NGO/investigative evidence, not yet confirmed by a government authority. Examples: Amnesty International, Human Rights Watch, BBC Dispatches.
+- Medium: Ongoing concerns or unresolved supply-chain transparency gaps from campaign scorecards or multi-outlet investigations. Examples: Oxfam Behind the Brands, Green America Chocolate Scorecard.
+
+METHODOLOGY — SOURCE TIERS:
+- Tier 1 (Primary official record): court filing, regulatory finding, government report, corporate admission. Examples: US DOL TVPRA list, CBP Withhold Release Order, Supreme Court opinion, OECD NCP complaint.
+- Tier 2 (Independent NGO report): NGO report, academic study. Examples: Amnesty International, Human Rights Watch, Oxfam, Greenpeace, BHRRC, Columbia Law School.
+- Tier 3 (Investigative journalism): news report, investigation. Examples: BBC, The Guardian, Washington Post, AP, Channel 4, NYT, Reporter Brasil.
+
+METHODOLOGY — THE SOURCING BAR:
+A flag is only shown in the app if it meets at least ONE of:
+1. 1+ tier-1 source.
+2. 2+ independent tier-2 sources (different organisations, same finding).
+3. 1 tier-2 source + 2 tier-3 sources covering the same allegation.
+Flags with only tier-3 sources are kept in "pending review" and not shown to users.
+
+METHODOLOGY — WHAT WE DON'T DO:
+- We don't include flags that fail the sourcing bar.
+- We don't describe findings as proven fact when only one tier-3 source exists.
+- We don't accept allegations from anonymous or unverifiable sources.
+- We don't keep flags that have been proven factually incorrect.
+- We don't carry flags indefinitely — documented remediation leads to archival.
+
+DATABASE STATUS:
+- ~35 brands currently flagged.
+- 14-day SLA for dispute review.
+- All sources have URLs cited.
+
+LIMITATIONS:
+- ~35 brands. Major multinationals are prioritised; smaller or regional brands may not yet be covered.
+- Focus on consumer food and grocery goods. Fashion, electronics, and household goods are out of scope.
+- Geographic coverage skews toward supply chains with English-language investigative coverage.
+- A brand not in our database does not mean it has no issues — it may not have been researched yet.
+- Not legal advice. Flags describe documented findings, not legal verdicts (unless the source is a court ruling).
+
+DISPUTES:
+Users can report issues with any flag. Disputes are reviewed within the 14-day SLA. The dispute form is reachable from individual flag pages.
+`;
+
+/**
+ * POST /api/chat/aboutus
+ * Q&A chatbot grounded ONLY in the About Us / Methodology content.
+ */
+app.post('/api/chat/aboutus', async (req, res) => {
+  try {
+    if (!openaiClient) {
+      return res.status(500).json({
+        success: false,
+        error: 'OpenAI API key not configured on server',
+      });
+    }
+
+    const { message } = req.body || {};
+    const userMessage = typeof message === 'string' ? message.trim() : '';
+
+    if (!userMessage) {
+      return res.json({ success: true, reply: 'Please enter a question.' });
+    }
+    if (userMessage.length > 1000) {
+      return res.status(400).json({ success: false, error: 'Message too long (1000 char max).' });
+    }
+
+    console.log(`🔄 About-us chat: "${userMessage.slice(0, 80)}..."`);
+
+    const completion = await openaiClient.chat.completions.create({
+      model: 'gpt-4o-mini',
+      temperature: 0.2,
+      max_tokens: 400,
+      messages: [
+        {
+          role: 'system',
+          content: `You are GoodScan's friendly support assistant. Answer ONLY using the information below about the app, its mission, and its methodology. If the answer is not in the information, say: "I don't have that information — try the contact email geovanis@proton.me." Keep replies short, plain-English, and helpful. Do not invent facts, brands, or sources.
+
+INFORMATION:
+${ABOUT_US_KNOWLEDGE}`,
+        },
+        { role: 'user', content: userMessage },
+      ],
+    });
+
+    const reply = completion.choices?.[0]?.message?.content?.trim() || "I don't have that information.";
+    console.log('✅ About-us chat reply sent');
+    res.json({ success: true, reply });
+  } catch (error) {
+    console.error('❌ About-us chat error:', error);
+    res.status(500).json({ success: false, error: error.message || 'Chat failed' });
+  }
+});
 
 // =====================================================
 // OPENAI API PROXY ENDPOINTS
@@ -562,6 +681,7 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log('║   Endpoints:                                           ║');
   console.log('║   - POST /api/openai/analyze-image (image analysis)    ║');
   console.log('║   - POST /api/openai/chat (chat completion)           ║');
+  console.log('║   - POST /api/chat/aboutus (about-us Q&A)             ║');
   console.log('║   - GET /api/health (health check)                    ║');
   console.log('║                                                        ║');
   console.log('╚════════════════════════════════════════════════════════╝');
