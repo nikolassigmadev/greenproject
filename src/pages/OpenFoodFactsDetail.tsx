@@ -953,22 +953,16 @@ export default function OpenFoodFactsDetail() {
               <InfoCard accentColor="#ef4444">
                 <div style={{ padding: 16 }}>
                   <SectionLabel label="Threatened Species Risk" />
-                  <div style={{
-                    background: "#FFF5F5", borderRadius: 10,
-                    border: "1px solid #FFCCCC", borderLeft: "3px solid #ef4444",
-                    padding: 12, marginBottom: 10,
-                  }}>
-                    <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-                      <AlertTriangle style={{ width: 16, height: 16, color: "#ef4444", flexShrink: 0, marginTop: 2 }} />
-                      <div>
-                        <p style={{ fontSize: "0.8rem", fontWeight: 700, color: "#ef4444", marginBottom: 4 }}>
-                          Contains {ingredientRaw}
-                        </p>
-                        <p style={{ fontSize: "0.75rem", color: TEXT_MUTED, lineHeight: 1.5 }}>{explanation}</p>
-                      </div>
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+                    <AlertTriangle style={{ width: 16, height: 16, color: "#ef4444", flexShrink: 0, marginTop: 2 }} />
+                    <div>
+                      <p style={{ fontSize: "0.8rem", fontWeight: 700, color: "#ef4444", marginBottom: 4 }}>
+                        Contains {ingredientRaw}
+                      </p>
+                      <p style={{ fontSize: "0.75rem", color: TEXT, lineHeight: 1.5 }}>{explanation}</p>
                     </div>
                   </div>
-                  <p style={{ fontSize: "0.68rem", color: TEXT_MUTED }}>Source: Open Food Facts Ecoscore analysis</p>
+                  <p style={{ fontSize: "0.68rem", color: TEXT_MUTED, marginTop: 12 }}>Source: Open Food Facts Ecoscore analysis</p>
                 </div>
               </InfoCard>
             );
