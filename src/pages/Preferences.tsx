@@ -3,13 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { BottomNav } from "@/components/BottomNav";
 import { loadPriorities, savePriorities, DEFAULT_PRIORITIES, type UserPriorities } from "@/utils/userPreferences";
 import { Leaf, Users, Heart, Apple, RotateCcw, Check } from "lucide-react";
-
-const BLUE = "#2979FF";
-const BG = "#F5F7FA";
-const CARD = "#FFFFFF";
-const BORDER = "#E5E7EB";
-const TEXT = "#111827";
-const TEXT_MUTED = "#6B7280";
+import { DS } from "@/styles/design-tokens";
 
 const LEVELS = [
   { label: "None",     value: 0   },
@@ -91,27 +85,25 @@ export default function Preferences() {
   };
 
   return (
-    <div style={{ background: BG, minHeight: "100vh" }}>
-      <main style={{ paddingBottom: "5.5rem" }}>
+    <div style={{ background: DS.bg, minHeight: "100vh", fontFamily: DS.font, color: DS.ink }}>
+      <main style={{ paddingBottom: 110 }}>
 
         {/* Header */}
         <div style={{
-          background: CARD,
-          borderBottom: `1px solid ${BORDER}`,
-          padding: "max(52px, env(safe-area-inset-top)) 20px 18px",
+          padding: "max(60px, env(safe-area-inset-top)) 20px 20px",
         }}>
-          <p style={{ fontSize: "0.7rem", fontWeight: 600, color: TEXT_MUTED, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 4 }}>
+          <p style={{ fontSize: 13, fontWeight: 600, color: DS.muted, letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 4 }}>
             Preferences
           </p>
-          <h1 style={{ fontSize: "1.65rem", fontWeight: 800, color: TEXT, letterSpacing: "-0.025em", lineHeight: 1.1, marginBottom: 6 }}>
+          <h1 style={{ fontSize: "1.65rem", fontWeight: 800, color: DS.ink, letterSpacing: "-0.025em", lineHeight: 1.1, marginBottom: 6 }}>
             My Values
           </h1>
-          <p style={{ fontSize: "0.85rem", color: TEXT_MUTED, lineHeight: 1.5 }}>
+          <p style={{ fontSize: "0.85rem", color: DS.muted, lineHeight: 1.5 }}>
             Select what matters most. Every verdict will reflect your priorities.
           </p>
         </div>
 
-        <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: 10 }}>
+        <div style={{ padding: "0 16px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
 
           {/* Priority cards */}
           {priorityConfig.map((config) => {
@@ -120,9 +112,8 @@ export default function Preferences() {
 
             return (
               <div key={config.key} style={{
-                background: CARD,
-                borderRadius: 18,
-                border: `1px solid ${BORDER}`,
+                background: DS.card,
+                borderRadius: DS.radius.md,
                 padding: 16,
                 boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
               }}>
@@ -137,10 +128,10 @@ export default function Preferences() {
                     <Icon size={19} style={{ color: config.color }} strokeWidth={2} />
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontSize: "0.9rem", fontWeight: 700, color: TEXT, marginBottom: 2 }}>
+                    <p style={{ fontSize: "0.9rem", fontWeight: 700, color: DS.ink, marginBottom: 2 }}>
                       {config.label}
                     </p>
-                    <p style={{ fontSize: "0.7rem", color: TEXT_MUTED, lineHeight: 1.4 }}>
+                    <p style={{ fontSize: "0.7rem", color: DS.muted, lineHeight: 1.4 }}>
                       {config.description}
                     </p>
                   </div>
@@ -157,15 +148,16 @@ export default function Preferences() {
                         style={{
                           padding: "9px 4px",
                           borderRadius: 10,
-                          border: isSelected ? "none" : `1px solid ${BORDER}`,
-                          background: isSelected ? BLUE : "#F9FAFB",
-                          color: isSelected ? "#fff" : TEXT_MUTED,
+                          border: isSelected ? "none" : `1px solid ${DS.hair}`,
+                          background: isSelected ? DS.ink : DS.bg,
+                          color: isSelected ? "#fff" : DS.muted,
                           fontSize: "0.68rem",
                           fontWeight: isSelected ? 700 : 500,
                           cursor: "pointer",
                           textAlign: "center",
                           lineHeight: 1.2,
                           transition: "all 0.15s",
+                          fontFamily: DS.font,
                         }}
                       >
                         {level.label}
@@ -179,12 +171,11 @@ export default function Preferences() {
 
           {/* Info card */}
           <div style={{
-            background: "#EBF2FF",
-            borderRadius: 16,
+            background: DS.card,
+            borderRadius: DS.radius.md,
             padding: "14px 16px",
-            border: `1px solid #C3D6FF`,
           }}>
-            <p style={{ fontSize: "0.8rem", fontWeight: 700, color: BLUE, marginBottom: 8 }}>How priorities work</p>
+            <p style={{ fontSize: "0.8rem", fontWeight: 700, color: DS.ink, marginBottom: 8 }}>How priorities work</p>
             {[
               "Critical — even minor concerns heavily downgrade a result",
               "Medium — balanced default scoring",
@@ -192,8 +183,8 @@ export default function Preferences() {
               "Saved locally and applied to all future scans",
             ].map(t => (
               <div key={t} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 4 }}>
-                <span style={{ width: 5, height: 5, borderRadius: "50%", background: BLUE, marginTop: 6, flexShrink: 0 }} />
-                <span style={{ fontSize: "0.72rem", color: "#374151", lineHeight: 1.5 }}>{t}</span>
+                <span style={{ width: 5, height: 5, borderRadius: "50%", background: DS.muted, marginTop: 6, flexShrink: 0 }} />
+                <span style={{ fontSize: "0.72rem", color: DS.muted, lineHeight: 1.5 }}>{t}</span>
               </div>
             ))}
           </div>
@@ -204,12 +195,13 @@ export default function Preferences() {
               onClick={handleSave}
               style={{
                 width: "100%", height: 52,
-                background: saved ? "#00C853" : BLUE,
-                border: "none", borderRadius: 16,
+                background: saved ? DS.good : DS.ink,
+                border: "none", borderRadius: DS.radius.md,
                 color: "#fff", fontWeight: 800, fontSize: "0.95rem",
                 cursor: "pointer",
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
                 transition: "background 0.2s",
+                fontFamily: DS.font,
               }}
             >
               {saved ? <><Check size={18} />Saved!</> : "Save My Values"}
@@ -218,10 +210,11 @@ export default function Preferences() {
               onClick={handleReset}
               style={{
                 width: "100%", height: 44,
-                background: "#F9FAFB", border: `1px solid ${BORDER}`, borderRadius: 14,
-                color: TEXT_MUTED, fontWeight: 600, fontSize: "0.85rem",
+                background: DS.card, border: `1px solid ${DS.hair}`, borderRadius: DS.radius.sm,
+                color: DS.muted, fontWeight: 600, fontSize: "0.85rem",
                 cursor: "pointer",
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                fontFamily: DS.font,
               }}
             >
               <RotateCcw size={14} /> Reset to defaults

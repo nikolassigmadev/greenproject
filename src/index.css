@@ -7,31 +7,32 @@
 /* ── Design tokens ───────────────────────────────────────────────────────── */
 
 :root {
-  /* Brand */
-  --brand-blue:   #2979FF;
-  --brand-blue-dark: #1565C0;
-  --brand-blue-light: #E3EDFF;
+  /* Brand — GoodScan Simple */
+  --brand-ink: #1a1a1a;
+  --brand-good: #2f7d4f;
+  --brand-warn: #c97a1a;
+  --brand-bad: #c44a36;
 
-  /* Semantic color tokens (shadcn-compatible) */
-  --background: 220 20% 97%;
-  --foreground: 222 47% 11%;
+  /* Semantic color tokens (shadcn-compatible) — GoodScan Simple */
+  --background: 40 11% 96%;
+  --foreground: 0 0% 10%;
   --card: 0 0% 100%;
-  --card-foreground: 222 47% 11%;
+  --card-foreground: 0 0% 10%;
   --popover: 0 0% 100%;
-  --popover-foreground: 222 47% 11%;
-  --primary: 221 100% 58%;
+  --popover-foreground: 0 0% 10%;
+  --primary: 0 0% 10%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 220 14% 96%;
-  --secondary-foreground: 222 47% 11%;
-  --muted: 220 14% 96%;
-  --muted-foreground: 220 9% 46%;
-  --accent: 221 100% 58%;
+  --secondary: 40 11% 96%;
+  --secondary-foreground: 0 0% 10%;
+  --muted: 40 6% 94%;
+  --muted-foreground: 240 1% 45%;
+  --accent: 0 0% 10%;
   --accent-foreground: 0 0% 100%;
-  --destructive: 0 84% 60%;
+  --destructive: 7 66% 49%;
   --destructive-foreground: 0 0% 100%;
-  --border: 220 13% 91%;
-  --input: 220 13% 91%;
-  --ring: 221 100% 58%;
+  --border: 0 0% 0% / 0.08;
+  --input: 0 0% 0% / 0.08;
+  --ring: 0 0% 10%;
   --radius: 0.875rem;
 
   /* Shadows */
@@ -64,8 +65,8 @@
 /* ── Bottom nav styles ───────────────────────────────────────────────────── */
 
 .bottom-nav {
-  background: #fff;
-  border-top: 1px solid hsl(var(--border));
+  background: #ffffff;
+  border-top: 1px solid rgba(0,0,0,0.08);
   box-shadow: var(--shadow-bottom-nav);
 }
 
@@ -87,7 +88,7 @@
 }
 
 .nav-item.active {
-  color: var(--brand-blue);
+  color: var(--brand-ink);
 }
 
 .nav-item-text {

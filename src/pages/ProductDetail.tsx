@@ -9,6 +9,7 @@ import { ProductCard } from "@/components/ProductCard";
 import { calculateScore, findAlternatives } from "@/data/products";
 import { useProducts } from "@/hooks/useProducts";
 import { cn } from "@/lib/utils";
+import { DS } from "@/styles/design-tokens";
 import { ScoreBreakdownSlider } from "@/components/ScoreBreakdownSlider";
 import { lookupBarcode, isValidBarcode } from "@/services/openfoodfacts";
 import { OpenFoodFactsCard } from "@/components/OpenFoodFactsCard";
@@ -20,7 +21,7 @@ const ProductDetail = () => {
 
   if (!product) {
     return (
-      <div className="min-h-screen flex flex-col bg-background">
+      <div className="min-h-screen flex flex-col">
         <Header />
         <main className="flex-1 flex items-center justify-center px-5">
           <div className="text-center">
@@ -64,7 +65,7 @@ const ProductDetail = () => {
   const riskCfg = laborRiskConfig[product.laborRisk];
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="min-h-screen flex flex-col">
       <Header />
 
       <main className="flex-1 pb-nav">

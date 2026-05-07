@@ -1,44 +1,38 @@
-import { Leaf } from "lucide-react";
 import { Link } from "react-router-dom";
+import { DS } from "@/styles/design-tokens";
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="hidden md:block border-t border-border/50 bg-muted/30 py-8 mt-auto">
-      <div className="container">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-          {/* Brand */}
-          <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-gradient-hero flex items-center justify-center">
-              <Leaf className="w-3.5 h-3.5 text-white" />
-            </div>
-            <span className="font-display font-bold text-foreground">
-              Good<span className="text-primary">Scan</span>
-            </span>
-          </div>
-
-          {/* Links */}
-          <nav className="flex items-center gap-6" aria-label="Footer navigation">
+    <footer className="hidden md:block" style={{
+      borderTop: `1px solid ${DS.hair}`,
+      background: DS.bg,
+      padding: "32px 0",
+      marginTop: "auto",
+      fontFamily: DS.font,
+    }}>
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 24 }}>
+          <span style={{ fontWeight: 700, color: DS.ink }}>GoodScan</span>
+          <nav style={{ display: "flex", alignItems: "center", gap: 24 }} aria-label="Footer navigation">
             {[
               { to: "/", label: "Home" },
               { to: "/basket", label: "Basket" },
               { to: "/scan", label: "Scan" },
               { to: "/dashboard", label: "History" },
-              { to: "/preferences", label: "Priorities" },
+              { to: "/preferences", label: "Values" },
             ].map((link) => (
               <Link
                 key={link.to}
                 to={link.to}
-                className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                style={{ fontSize: 14, color: DS.muted, textDecoration: "none" }}
               >
                 {link.label}
               </Link>
             ))}
           </nav>
-
-          {/* Copyright */}
-          <p className="text-xs text-muted-foreground/70">
+          <p style={{ fontSize: 12, color: DS.muted, opacity: 0.7 }}>
             © {currentYear} GoodScan
           </p>
         </div>

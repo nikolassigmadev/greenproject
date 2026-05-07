@@ -1285,22 +1285,22 @@ const Scan = () => {
   };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 60, backgroundColor: '#0a1540', overflow: 'hidden', fontFamily: "'Inter', system-ui, sans-serif" }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 60, backgroundColor: '#0e0e10', overflow: 'hidden', fontFamily: '"Inter", -apple-system, system-ui, sans-serif' }}>
 
       {/* ── Priorities gate ─────────────────────────────────────────────── */}
       {isDefaultPriorities && (
         <div style={{
           position: 'absolute', inset: 0, zIndex: 100,
-          background: 'linear-gradient(160deg, #0a1540 0%, #0d1f5c 50%, #0a1540 100%)',
+          background: '#0e0e10',
           display: 'flex', flexDirection: 'column',
           padding: 'max(52px, env(safe-area-inset-top)) 24px max(32px, env(safe-area-inset-bottom))',
         }}>
           {/* Close */}
           <Link to="/" style={{ alignSelf: 'flex-start', marginBottom: 32 }}>
             <div style={{
-              width: 36, height: 36, borderRadius: 10,
-              backgroundColor: 'rgba(41,121,255,0.15)',
-              border: '1px solid rgba(41,121,255,0.3)',
+              width: 36, height: 36, borderRadius: 18,
+              backgroundColor: 'rgba(255,255,255,0.12)',
+              border: 'none',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
               <X size={15} color="#fff" />
@@ -1311,14 +1311,14 @@ const Scan = () => {
           <div style={{ marginBottom: 24 }}>
             <div style={{
               width: 72, height: 72, borderRadius: 22,
-              background: 'linear-gradient(135deg, rgba(41,121,255,0.3), rgba(124,58,237,0.3))',
-              border: '1.5px solid rgba(41,121,255,0.4)',
+              background: 'rgba(255,255,255,0.08)',
+              border: '1.5px solid rgba(255,255,255,0.15)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               marginBottom: 20,
             }}>
-              <Settings size={32} color="#2979FF" strokeWidth={1.8} />
+              <Settings size={32} color="#fff" strokeWidth={1.8} />
             </div>
-            <p style={{ fontSize: '0.7rem', fontWeight: 700, color: 'rgba(41,121,255,0.8)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
+            <p style={{ fontSize: '0.7rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
               Before you scan
             </p>
             <h2 style={{ fontSize: '1.9rem', fontWeight: 900, color: '#fff', letterSpacing: '-0.03em', lineHeight: 1.15, marginBottom: 12 }}>
@@ -1356,12 +1356,12 @@ const Scan = () => {
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                 height: 54, borderRadius: 16, textDecoration: 'none',
-                background: '#2979FF',
-                boxShadow: '0 4px 24px rgba(41,121,255,0.45)',
+                background: '#fff',
+                boxShadow: '0 4px 24px rgba(0,0,0,0.3)',
               }}
             >
-              <Settings size={18} color="#fff" strokeWidth={2} />
-              <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#fff' }}>Set my values</span>
+              <Settings size={18} color="#1a1a1a" strokeWidth={2} />
+              <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#1a1a1a' }}>Set my values</span>
             </Link>
             <p style={{ textAlign: 'center', fontSize: '0.72rem', color: 'rgba(255,255,255,0.3)', lineHeight: 1.5 }}>
               Takes 30 seconds · you can change them anytime
@@ -1386,13 +1386,13 @@ const Scan = () => {
       {!cameraActive && !cameraInitializing && (
         frozenFrame
           ? <img src={frozenFrame} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
-          : <div style={{ position: 'absolute', inset: 0, background: '#0a1540' }} />
+          : <div style={{ position: 'absolute', inset: 0, background: '#0e0e10' }} />
       )}
 
       {/* Vignette overlay — blue-tinted */}
       <div style={{
         position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 2,
-        background: 'radial-gradient(ellipse 70% 55% at 50% 42%, transparent 60%, rgba(10,21,64,0.65) 100%)',
+        background: 'radial-gradient(ellipse 70% 55% at 50% 42%, transparent 60%, rgba(14,14,16,0.65) 100%)',
       }} />
 
       {/* Scan line when loading */}
@@ -1400,8 +1400,8 @@ const Scan = () => {
         <div style={{
           position: 'absolute', top: '26%', left: '12%', right: '12%',
           height: '2px',
-          background: 'linear-gradient(90deg, transparent, #2979FF, transparent)',
-          boxShadow: '0 0 12px #2979FF, 0 0 28px rgba(41,121,255,0.6)',
+          background: 'linear-gradient(90deg, transparent, #4ade80, transparent)',
+          boxShadow: '0 0 12px #4ade80, 0 0 28px rgba(74,222,128,0.6)',
           animation: 'scanLine 1.8s ease-in-out infinite',
           zIndex: 8,
           borderRadius: 99,
@@ -1412,7 +1412,7 @@ const Scan = () => {
       {(['tl','tr','bl','br'] as const).map(corner => {
         const top = corner.startsWith('t');
         const left = corner.endsWith('l');
-        const color = offSearchLoading ? 'rgba(41,121,255,0.9)' : 'rgba(255,255,255,0.9)';
+        const color = offSearchLoading ? 'rgba(74,222,128,0.9)' : 'rgba(255,255,255,0.9)';
         return (
           <div key={corner} style={{
             position: 'absolute',
@@ -1440,28 +1440,36 @@ const Scan = () => {
         zIndex: 9, pointerEvents: 'none',
         display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
       }}>
-        {offSearchLoading && (
+        {offSearchLoading ? (
           <>
             <div style={{
               width: 48, height: 48, borderRadius: '50%',
-              background: 'rgba(41,121,255,0.15)',
-              border: '2px solid rgba(41,121,255,0.5)',
+              background: 'rgba(74,222,128,0.15)',
+              border: '2px solid rgba(74,222,128,0.5)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               backdropFilter: 'blur(4px)',
             }}>
-              <Loader2 size={22} style={{ color: '#2979FF', animation: 'spin 1s linear infinite' }} />
+              <Loader2 size={22} style={{ color: '#4ade80', animation: 'spin 1s linear infinite' }} />
             </div>
             <div style={{
-              background: 'rgba(10,21,64,0.8)', backdropFilter: 'blur(8px)',
+              background: 'rgba(14,14,16,0.8)', backdropFilter: 'blur(8px)',
               borderRadius: 20, padding: '5px 14px',
-              border: '1px solid rgba(41,121,255,0.3)',
             }}>
-              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#fff', letterSpacing: '0.01em' }}>
+              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#fff' }}>
                 Scanning {Math.round(scanProgress)}%
               </span>
             </div>
           </>
-        )}
+        ) : !cameraActive && !frozenFrame && !cameraInitializing ? (
+          <div style={{ textAlign: 'center' }}>
+            <p style={{ fontSize: '1.4rem', fontWeight: 800, color: '#fff', margin: 0, lineHeight: 1.2 }}>
+              Point at a barcode
+            </p>
+            <p style={{ fontSize: '0.9rem', fontWeight: 500, color: 'rgba(255,255,255,0.5)', margin: '6px 0 0' }}>
+              We'll do the rest
+            </p>
+          </div>
+        ) : null}
       </div>
 
       {/* Top bar */}
@@ -1471,30 +1479,27 @@ const Scan = () => {
         paddingLeft: 16, paddingRight: 16, paddingBottom: 14,
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         zIndex: 20,
-        background: 'linear-gradient(to bottom, rgba(10,21,64,0.75) 0%, rgba(10,21,64,0) 100%)',
+        background: 'linear-gradient(to bottom, rgba(14,14,16,0.75) 0%, transparent 100%)',
       }}>
         {/* Close */}
         <Link to="/" onClick={() => stopCamera()}>
           <button style={{
-            width: 36, height: 36, borderRadius: 10,
-            backgroundColor: 'rgba(41,121,255,0.15)',
+            width: 36, height: 36, borderRadius: 18,
+            backgroundColor: 'rgba(255,255,255,0.15)',
             backdropFilter: 'blur(10px)',
             WebkitBackdropFilter: 'blur(10px)',
-            border: '1px solid rgba(41,121,255,0.3)',
+            border: 'none',
             color: '#fff', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <X size={15} />
+            <X size={16} />
           </button>
         </Link>
 
         {/* Title */}
         <div style={{ textAlign: 'center' }}>
           <p style={{ fontSize: '0.85rem', fontWeight: 800, color: '#fff', letterSpacing: '-0.01em', margin: 0, lineHeight: 1.2 }}>
-            Scan2Source
-          </p>
-          <p style={{ fontSize: '0.6rem', fontWeight: 500, color: 'rgba(255,255,255,0.55)', margin: 0, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-            Ethical Scanner
+            GoodScan
           </p>
         </div>
 
@@ -1503,11 +1508,11 @@ const Scan = () => {
           <button
             onClick={() => setFlashOn(f => !f)}
             style={{
-              width: 36, height: 36, borderRadius: 10,
-              backgroundColor: flashOn ? 'rgba(251,191,36,0.25)' : 'rgba(41,121,255,0.15)',
+              width: 36, height: 36, borderRadius: 18,
+              backgroundColor: flashOn ? 'rgba(251,191,36,0.25)' : 'rgba(255,255,255,0.15)',
               backdropFilter: 'blur(10px)',
               WebkitBackdropFilter: 'blur(10px)',
-              border: `1px solid ${flashOn ? 'rgba(251,191,36,0.5)' : 'rgba(41,121,255,0.3)'}`,
+              border: 'none',
               color: flashOn ? '#FBBF24' : '#fff', cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               transition: 'all 0.15s',
@@ -1518,11 +1523,11 @@ const Scan = () => {
           <button
             onClick={() => setShowSearch(s => !s)}
             style={{
-              width: 36, height: 36, borderRadius: 10,
-              backgroundColor: showSearch ? 'rgba(41,121,255,0.8)' : 'rgba(41,121,255,0.15)',
+              width: 36, height: 36, borderRadius: 18,
+              backgroundColor: showSearch ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.15)',
               backdropFilter: 'blur(10px)',
               WebkitBackdropFilter: 'blur(10px)',
-              border: `1px solid ${showSearch ? 'rgba(41,121,255,0.5)' : 'rgba(41,121,255,0.3)'}`,
+              border: 'none',
               color: '#fff', cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               transition: 'all 0.15s',
@@ -1540,10 +1545,10 @@ const Scan = () => {
           top: 'calc(max(62px, env(safe-area-inset-top)) + 52px)',
           left: '50%', transform: 'translateX(-50%)',
           display: 'flex', alignItems: 'center', gap: 6,
-          background: 'rgba(10,21,64,0.85)',
+          background: 'rgba(14,14,16,0.85)',
           backdropFilter: 'blur(10px)',
           WebkitBackdropFilter: 'blur(10px)',
-          border: '1px solid rgba(41,121,255,0.25)',
+          border: '1px solid rgba(255,255,255,0.12)',
           borderRadius: 50,
           padding: '6px 14px',
           whiteSpace: 'nowrap', zIndex: 15,
@@ -1584,17 +1589,17 @@ const Scan = () => {
       {/* Bottom panel */}
       <div style={{
         position: 'absolute', bottom: 0, left: 0, right: 0,
-        background: 'rgba(10,21,64,0.96)',
+        background: 'rgba(14,14,16,0.92)',
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
-        borderTop: '1px solid rgba(41,121,255,0.2)',
+        borderTop: '1px solid rgba(255,255,255,0.08)',
         borderRadius: '24px 24px 0 0',
         paddingBottom: 'max(24px, env(safe-area-inset-bottom))',
         zIndex: 20,
       }}>
         {/* Handle */}
         <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 10, paddingBottom: 4 }}>
-          <div style={{ width: 32, height: 3, borderRadius: 99, background: 'rgba(41,121,255,0.3)' }} />
+          <div style={{ width: 32, height: 3, borderRadius: 99, background: 'rgba(255,255,255,0.15)' }} />
         </div>
 
         {/* Inline search */}
@@ -1611,12 +1616,12 @@ const Scan = () => {
               placeholder="Search a product name…"
               style={{
                 width: '100%', height: 42,
-                backgroundColor: 'rgba(41,121,255,0.1)',
-                border: '1px solid rgba(41,121,255,0.25)',
+                backgroundColor: 'rgba(255,255,255,0.08)',
+                border: '1px solid rgba(255,255,255,0.12)',
                 borderRadius: 12,
                 color: '#fff', fontSize: '16px',
                 paddingLeft: 34, paddingRight: 12, outline: 'none',
-                caretColor: '#2979FF',
+                caretColor: '#fff',
               }}
             />
           </div>
@@ -1625,13 +1630,12 @@ const Scan = () => {
             disabled={!inlineSearch.trim() || offLoading}
             style={{
               height: 42, borderRadius: 12, border: 'none',
-              backgroundColor: inlineSearch.trim() ? '#2979FF' : 'rgba(41,121,255,0.1)',
-              color: inlineSearch.trim() ? '#fff' : 'rgba(255,255,255,0.3)',
+              backgroundColor: inlineSearch.trim() ? '#fff' : 'rgba(255,255,255,0.08)',
+              color: inlineSearch.trim() ? '#1a1a1a' : 'rgba(255,255,255,0.3)',
               fontWeight: 700, fontSize: '0.8rem',
               padding: '0 16px', cursor: inlineSearch.trim() ? 'pointer' : 'default',
               whiteSpace: 'nowrap', flexShrink: 0,
               transition: 'background 0.15s',
-              boxShadow: inlineSearch.trim() ? '0 2px 10px rgba(41,121,255,0.4)' : 'none',
             }}
           >
             {offLoading ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : 'Search'}
@@ -1647,8 +1651,8 @@ const Scan = () => {
             disabled={isDefaultPriorities}
             style={{
               width: 52, height: 52, borderRadius: 14,
-              backgroundColor: 'rgba(41,121,255,0.12)',
-              border: '1px solid rgba(41,121,255,0.25)',
+              backgroundColor: 'rgba(255,255,255,0.08)',
+              border: '1px solid rgba(255,255,255,0.12)',
               color: 'rgba(255,255,255,0.7)',
               cursor: isDefaultPriorities ? 'not-allowed' : 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -1670,7 +1674,7 @@ const Scan = () => {
             style={{
               width: 76, height: 76, borderRadius: '50%',
               backgroundColor: 'transparent',
-              border: `3px solid ${isDefaultPriorities ? 'rgba(255,255,255,0.2)' : offSearchLoading ? 'rgba(41,121,255,0.6)' : 'rgba(255,255,255,0.85)'}`,
+              border: `3px solid ${isDefaultPriorities ? 'rgba(255,255,255,0.2)' : offSearchLoading ? 'rgba(74,222,128,0.6)' : 'rgba(255,255,255,0.85)'}`,
               cursor: (offSearchLoading || isDefaultPriorities) ? 'not-allowed' : 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               transition: 'all 0.15s',
@@ -1684,13 +1688,13 @@ const Scan = () => {
               background: isDefaultPriorities
                 ? 'rgba(255,255,255,0.2)'
                 : offSearchLoading
-                  ? 'rgba(41,121,255,0.3)'
+                  ? 'rgba(74,222,128,0.3)'
                   : '#fff',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               transition: 'all 0.15s',
             }}>
               {offSearchLoading && (
-                <Loader2 size={22} style={{ color: '#2979FF', animation: 'spin 1s linear infinite' }} />
+                <Loader2 size={22} style={{ color: '#4ade80', animation: 'spin 1s linear infinite' }} />
               )}
             </div>
           </button>
@@ -1701,8 +1705,8 @@ const Scan = () => {
             onClick={() => stopCamera()}
             style={{
               width: 52, height: 52, borderRadius: 14,
-              backgroundColor: isDefaultPriorities ? 'rgba(251,191,36,0.15)' : 'rgba(41,121,255,0.12)',
-              border: `1px solid ${isDefaultPriorities ? 'rgba(251,191,36,0.35)' : 'rgba(41,121,255,0.25)'}`,
+              backgroundColor: isDefaultPriorities ? 'rgba(251,191,36,0.15)' : 'rgba(255,255,255,0.08)',
+              border: `1px solid ${isDefaultPriorities ? 'rgba(251,191,36,0.35)' : 'rgba(255,255,255,0.12)'}`,
               color: isDefaultPriorities ? '#FBBF24' : 'rgba(255,255,255,0.7)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               textDecoration: 'none',
@@ -1715,7 +1719,7 @@ const Scan = () => {
         {/* Hint */}
         <div style={{ textAlign: 'center', paddingBottom: 4 }}>
           <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.35)', fontWeight: 500 }}>
-            {offSearchLoading ? 'Analysing…' : cameraActive ? 'Point at product · tap to capture' : 'Tap to capture · or search above'}
+            {offSearchLoading ? 'Analysing…' : cameraActive ? 'Point at a barcode · tap to capture' : 'Tap to capture · or type a barcode instead'}
           </span>
         </div>
 
@@ -1756,7 +1760,7 @@ const Scan = () => {
             onClick={() => { setProductUnknown(false); offFileInputRef.current?.click(); }}
             style={{
               width: '100%', height: 48, border: 'none', borderRadius: 14,
-              backgroundColor: '#2979FF', color: '#fff',
+              backgroundColor: '#1a1a1a', color: '#fff',
               fontWeight: 700, fontSize: '0.9rem',
               cursor: 'pointer', marginTop: 8,
             }}
@@ -1798,9 +1802,9 @@ const Scan = () => {
                 placeholder={scanMode === 'Barcode' ? 'Barcode number…' : 'e.g. Coca-Cola, Weetbix…'}
                 style={{
                   flex: 1, height: 46, width: '100%',
-                  border: '1.5px solid #2979FF',
+                  border: '1.5px solid rgba(0,0,0,0.15)',
                   borderRadius: 12,
-                  backgroundColor: '#F0F5FF',
+                  backgroundColor: '#f7f6f3',
                   fontSize: '0.875rem', padding: '0 12px 0 36px', outline: 'none',
                   color: '#111827',
                 }}
@@ -1811,7 +1815,7 @@ const Scan = () => {
               disabled={!barcodeInput.trim() || offLoading}
               style={{
                 height: 46, borderRadius: 12, border: 'none',
-                backgroundColor: barcodeInput.trim() ? '#2979FF' : '#F5F7FA',
+                backgroundColor: barcodeInput.trim() ? '#1a1a1a' : '#F5F7FA',
                 color: barcodeInput.trim() ? '#fff' : '#9CA3AF',
                 fontWeight: 700, fontSize: '0.85rem',
                 padding: '0 18px', cursor: 'pointer',

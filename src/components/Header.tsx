@@ -1,15 +1,16 @@
 import { Link, useLocation } from "react-router-dom";
-import { Leaf, Camera, Home, ShoppingCart, BarChart3, Settings } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Camera, Home, ShoppingCart, BarChart3, Settings, Info } from "lucide-react";
 import { useState, useEffect } from "react";
 import { loadBasket } from "@/utils/basketStorage";
+import { DS } from "@/styles/design-tokens";
 
 const navItems = [
   { path: "/", label: "Home", icon: Home },
   { path: "/basket", label: "Basket", icon: ShoppingCart },
   { path: "/scan", label: "Scan", icon: Camera },
   { path: "/dashboard", label: "History", icon: BarChart3 },
-  { path: "/preferences", label: "Priorities", icon: Settings },
+  { path: "/about", label: "About", icon: Info },
+  { path: "/preferences", label: "Values", icon: Settings },
 ];
 
 export function Header() {
@@ -31,47 +32,46 @@ export function Header() {
 
   return (
     <header
-      className={cn(
-        "sticky top-0 z-50 w-full transition-all duration-200",
-        isScrolled
-          ? "bg-background/94 backdrop-blur-2xl border-b border-border/40 shadow-[0_1px_12px_-2px_hsl(180_50%_20%/0.08)]"
-          : "bg-background/60 backdrop-blur-xl border-b border-transparent"
-      )}
-      style={{ WebkitBackdropFilter: "blur(20px)", paddingTop: "env(safe-area-inset-top)" }}
+      style={{
+        position: "sticky",
+        top: 0,
+        zIndex: 50,
+        width: "100%",
+        background: isScrolled ? "rgba(247,246,243,0.94)" : "rgba(247,246,243,0.6)",
+        backdropFilter: "blur(20px)",
+        WebkitBackdropFilter: "blur(20px)",
+        borderBottom: isScrolled ? `1px solid ${DS.hair}` : "1px solid transparent",
+        transition: "all 0.2s",
+        paddingTop: "env(safe-area-inset-top)",
+        fontFamily: DS.font,
+      }}
     >
-      {/* ── Mobile header ── */}
-      <div className="md:hidden flex items-center justify-between px-4 h-12">
-        {/* Logo mark */}
-        <Link to="/" className="flex items-center gap-2 group">
-          <div
-            className="w-7 h-7 rounded-lg flex items-center justify-center transition-transform duration-150 group-active:scale-90"
-            style={{
-              background: "linear-gradient(145deg, hsl(196 88% 22%) 0%, hsl(172 82% 32%) 100%)",
-              boxShadow: "0 2px 8px hsl(180 80% 28% / 0.40)",
-            }}
-          >
-            <Leaf className="w-3.5 h-3.5 text-white" strokeWidth={2.5} />
-          </div>
-          <span className="font-display font-bold text-base text-foreground">
-            Ethical<span className="text-primary">Shopper</span>
-          </span>
+      {/* Mobile header */}
+      <div className="md:hidden" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 16px", height: 48 }}>
+        <Link to="/" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none" }}>
+          <span style={{ fontWeight: 700, fontSize: 16, color: DS.ink }}>GoodScan</span>
         </Link>
-
-        {/* Right side: basket + scan */}
-        <div className="flex items-center gap-2">
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <Link
             to="/basket"
             aria-label="Shopping basket"
-            className={cn(
-              "relative flex items-center justify-center w-8 h-8 rounded-xl transition-all duration-150 active:scale-95",
-              location.pathname === "/basket"
-                ? "bg-primary/15 text-primary"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
-            )}
+            style={{
+              position: "relative",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              width: 32, height: 32, borderRadius: 10,
+              background: location.pathname === "/basket" ? DS.hair : "transparent",
+              color: location.pathname === "/basket" ? DS.ink : DS.muted,
+              textDecoration: "none",
+            }}
           >
-            <ShoppingCart className="w-4.5 h-4.5" strokeWidth={2} />
+            <ShoppingCart style={{ width: 18, height: 18 }} strokeWidth={2} />
             {basketCount > 0 && (
-              <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-primary text-primary-foreground text-[9px] font-bold flex items-center justify-center leading-none">
+              <span style={{
+                position: "absolute", top: -2, right: -2,
+                minWidth: 16, height: 16, padding: "0 4px",
+                borderRadius: 99, background: DS.ink, color: "#fff",
+                fontSize: 9, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
                 {basketCount}
               </span>
             )}
@@ -79,76 +79,55 @@ export function Header() {
           <Link
             to="/scan"
             aria-label="Scan a product"
-            className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-150 active:scale-95",
-              location.pathname === "/scan"
-                ? "bg-primary/15 text-primary"
-                : "bg-primary text-primary-foreground shadow-[0_2px_10px_hsl(172_80%_32%/0.40)]"
-            )}
+            style={{
+              display: "flex", alignItems: "center", gap: 6,
+              padding: "6px 12px", borderRadius: 10,
+              background: DS.ink, color: "#fff",
+              textDecoration: "none", fontSize: 12, fontWeight: 700,
+            }}
           >
-            <Camera className="w-3.5 h-3.5" strokeWidth={2.2} />
+            <Camera style={{ width: 14, height: 14 }} strokeWidth={2.2} />
             Scan
           </Link>
         </div>
       </div>
 
-      {/* ── Desktop header ── */}
-      <div className="hidden md:flex container items-center justify-between h-14">
-        {/* Logo */}
-        <Link to="/" className="flex items-center gap-2.5 group">
-          <div
-            className="w-8 h-8 rounded-xl flex items-center justify-center transition-transform duration-150 group-hover:scale-105"
-            style={{
-              background: "linear-gradient(145deg, hsl(196 88% 22%) 0%, hsl(172 82% 32%) 100%)",
-              boxShadow: "0 2px 12px hsl(180 80% 28% / 0.40)",
-            }}
-          >
-            <Leaf className="w-4 h-4 text-white" strokeWidth={2.5} />
-          </div>
-          <span className="font-display font-bold text-lg text-foreground group-hover:text-primary transition-colors">
-            Ethical<span className="text-primary">Shopper</span>
-          </span>
+      {/* Desktop header */}
+      <div className="hidden md:flex" style={{ maxWidth: 1200, margin: "0 auto", alignItems: "center", justifyContent: "space-between", height: 56, padding: "0 24px" }}>
+        <Link to="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
+          <span style={{ fontWeight: 700, fontSize: 18, color: DS.ink }}>GoodScan</span>
         </Link>
-
-        {/* Desktop nav */}
-        <nav className="flex items-center gap-0.5" aria-label="Main navigation">
+        <nav style={{ display: "flex", alignItems: "center", gap: 4 }} aria-label="Main navigation">
           {navItems.filter(i => i.path !== "/scan").map((item) => {
             const isActive = location.pathname === item.path;
-            const isBasket = item.path === "/basket";
             return (
               <Link
                 key={item.path}
                 to={item.path}
-                aria-current={isActive ? "page" : undefined}
-                className={cn(
-                  "relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-150",
-                  isActive
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
-                )}
+                style={{
+                  display: "flex", alignItems: "center", gap: 6,
+                  padding: "6px 12px", borderRadius: 8,
+                  fontSize: 14, fontWeight: 500, textDecoration: "none",
+                  background: isActive ? DS.hair : "transparent",
+                  color: isActive ? DS.ink : DS.muted,
+                }}
               >
-                <item.icon className="w-3.5 h-3.5" />
-                <span>{item.label}</span>
-                {isBasket && basketCount > 0 && (
-                  <span className="ml-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[9px] font-bold flex items-center justify-center leading-none">
-                    {basketCount}
-                  </span>
-                )}
+                <item.icon style={{ width: 14, height: 14 }} />
+                {item.label}
               </Link>
             );
           })}
-
-          {/* Scan CTA */}
           <Link
             to="/scan"
-            className="ml-2 flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-sm font-semibold transition-all duration-150 hover:opacity-90 active:scale-[0.97]"
             style={{
-              background: "linear-gradient(135deg, hsl(196 88% 22%) 0%, hsl(172 82% 32%) 100%)",
-              color: "#ffffff",
-              boxShadow: "0 2px 12px hsl(180 80% 28% / 0.40)",
+              marginLeft: 8,
+              display: "flex", alignItems: "center", gap: 6,
+              padding: "6px 16px", borderRadius: 10,
+              fontSize: 14, fontWeight: 600, textDecoration: "none",
+              background: DS.ink, color: "#fff",
             }}
           >
-            <Camera className="w-3.5 h-3.5" />
+            <Camera style={{ width: 14, height: 14 }} />
             Scan Now
           </Link>
         </nav>

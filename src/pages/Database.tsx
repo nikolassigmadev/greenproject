@@ -1,8 +1,8 @@
 import { useState, useCallback } from "react";
 import { Search, Filter, ChevronLeft, ChevronRight, Loader2, Globe, Tag, Leaf, Apple, X } from "lucide-react";
-import { Header } from "@/components/Header";
-import { Footer } from "@/components/Footer";
+import { BottomNav } from "@/components/BottomNav";
 import { Input } from "@/components/ui/input";
+import { DS } from "@/styles/design-tokens";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -188,18 +188,16 @@ const Database = () => {
   const totalPages = result ? Math.min(result.pageCount, 100) : 0;
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-
-      <main className="flex-1 py-8">
-        <div className="container">
+    <div style={{ minHeight: "100dvh", background: DS.bg, fontFamily: DS.font, color: DS.ink }}>
+      <main style={{ padding: "0 20px", paddingBottom: 110 }}>
+        <div style={{ maxWidth: 960, margin: "0 auto" }}>
           {/* Page Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl sm:text-4xl font-display font-bold mb-2">
-              OpenFoodFacts Database
+          <div style={{ paddingTop: "max(60px, env(safe-area-inset-top))", marginBottom: 24 }}>
+            <h1 style={{ fontSize: 28, fontWeight: 700, letterSpacing: -0.5, marginBottom: 6 }}>
+              Search Products
             </h1>
-            <p className="text-muted-foreground">
-              Browse over 3 million products from the open food database. Filter by category and country.
+            <p style={{ fontSize: 15, color: DS.muted, lineHeight: 1.4 }}>
+              Browse over 3 million products from the open food database.
             </p>
           </div>
 
@@ -414,6 +412,8 @@ const Database = () => {
         </div>
       </main>
 
+      <BottomNav />
+
       {/* Product Detail Dialog */}
       <Dialog open={!!selectedProduct} onOpenChange={(open) => { if (!open) setSelectedProduct(null); }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -432,7 +432,6 @@ const Database = () => {
         </DialogContent>
       </Dialog>
 
-      <Footer />
     </div>
   );
 };

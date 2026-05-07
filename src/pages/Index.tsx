@@ -1,577 +1,512 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import {
-  ScanLine, ShoppingCart, AlertCircle, ChevronRight,
-  Globe, Shield, Leaf, TrendingUp, Heart, Activity,
-} from "lucide-react";
+import { ChevronRight, Camera, Leaf, Shield, BarChart3, Users, Award, Zap, CheckCircle2, AlertTriangle as AlertTriangleIcon } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
-import { loadPriorities, DEFAULT_PRIORITIES } from "@/utils/userPreferences";
+import { DS, scoreTone, toneColor, toneBg } from "@/styles/design-tokens";
+import { loadScanHistory, type ScanHistoryEntry } from "@/utils/userPreferences";
 
-/* ── Design tokens ──────────────────────────────────────────────────── */
-const BLUE = "#2979FF";
-const BLUE_LIGHT = "#E3EDFF";
-const GREEN = "#00C853";
-const AMBER = "#FF8F00";
-const RED = "#E53935";
-const TEXT = "#111827";
-const TEXT_MUTED = "#6B7280";
-const BG = "#F5F7FA";
-const CARD = "#FFFFFF";
-const BORDER = "#E5E7EB";
+/* ── Animated example result card ─────────────────────────────────── */
 
-/* ── Demo card data ─────────────────────────────────────────────────── */
-const DEMO_SCORES = [
-  { label: "Labour Rights", score: 38, color: RED,   icon: Shield,   verdict: "Issues found" },
-  { label: "Carbon (CO₂)",  score: 74, color: GREEN, icon: Leaf,     verdict: "Low impact"   },
-  { label: "Animal Welfare",score: 88, color: GREEN, icon: Heart,    verdict: "Good"         },
-  { label: "Nutrition",     score: 72, color: AMBER, icon: Activity, verdict: "B Grade"      },
-  { label: "Origin",        score: 55, color: AMBER, icon: Globe,    verdict: "Mixed"        },
-];
+interface DemoProduct {
+  name: string;
+  subtitle: string;
+  score: number;
+  verdict: string;
+  verdictColor: string;
+  verdictBg: string;
+  ringColor: string;
+  description: string;
+  icon: "good" | "bad";
+  categories: { label: string; value: number; color: string }[];
+}
 
-/* ── Feature cards ──────────────────────────────────────────────────── */
-const FEATURE_CARDS = [
+const DEMO_PRODUCTS: DemoProduct[] = [
   {
-    title: "Scanner",
-    desc: "Analyze a product by photo or barcode.",
-    to: "/scan",
-    bg: "#D5EBD8",
-    accent: "#4CAF72",
-    illustration: (
-      <svg viewBox="0 0 160 120" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: "100%", height: "100%" }}>
-        {/* Hand */}
-        <path d="M58 100 Q54 85 56 70 L56 48 Q56 43 61 43 Q66 43 66 48 L66 60 Q66 55 71 55 Q76 55 76 60 L76 62 Q76 57 81 57 Q86 57 86 62 L86 65 Q86 61 91 61 Q96 61 96 66 L96 88 Q96 104 82 108 L64 108 Q58 106 58 100Z" fill="#C68B5A" />
-        {/* Tube/product */}
-        <rect x="68" y="20" width="20" height="44" rx="5" fill="#7BC47F" />
-        <rect x="68" y="20" width="20" height="12" rx="5" fill="#5AA860" />
-        {/* Heart on tube */}
-        <path d="M78 39 Q78 35 74 35 Q70 35 70 39 Q70 43 78 48 Q86 43 86 39 Q86 35 82 35 Q78 35 78 39Z" fill="white" fillOpacity="0.7" transform="scale(0.55) translate(62,26)" />
-        {/* Scan lines */}
-        <line x1="44" y1="58" x2="56" y2="58" stroke="#4CAF72" strokeWidth="2" strokeLinecap="round" />
-        <line x1="104" y1="58" x2="116" y2="58" stroke="#4CAF72" strokeWidth="2" strokeLinecap="round" />
-        <line x1="44" y1="64" x2="56" y2="64" stroke="#4CAF72" strokeWidth="2" strokeLinecap="round" strokeDasharray="4 2" />
-        <line x1="104" y1="64" x2="116" y2="64" stroke="#4CAF72" strokeWidth="2" strokeLinecap="round" strokeDasharray="4 2" />
-        {/* Corner brackets */}
-        <path d="M44 44 L44 52 M44 44 L52 44" stroke="#4CAF72" strokeWidth="2.5" strokeLinecap="round" />
-        <path d="M116 44 L116 52 M116 44 L108 44" stroke="#4CAF72" strokeWidth="2.5" strokeLinecap="round" />
-        <path d="M44 80 L44 72 M44 80 L52 80" stroke="#4CAF72" strokeWidth="2.5" strokeLinecap="round" />
-        <path d="M116 80 L116 72 M116 80 L108 80" stroke="#4CAF72" strokeWidth="2.5" strokeLinecap="round" />
-      </svg>
-    ),
+    name: "Organic Oat Milk",
+    subtitle: "Oatly · 1L",
+    score: 79,
+    verdict: "BUY",
+    verdictColor: DS.good,
+    verdictBg: DS.goodBg,
+    ringColor: DS.good,
+    description: "Low carbon footprint, fair trade certified, no labour concerns.",
+    icon: "good",
+    categories: [
+      { label: "Environment", value: 82, color: DS.good },
+      { label: "Labour", value: 91, color: DS.good },
+      { label: "Nutrition", value: 65, color: DS.warn },
+      { label: "Animal welfare", value: 78, color: DS.good },
+    ],
   },
   {
-    title: "Search",
-    desc: "Type a product and see if it's ethical.",
-    to: "/database",
-    bg: "#E5DFF5",
-    accent: "#7C3AED",
-    illustration: (
-      <svg viewBox="0 0 160 120" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: "100%", height: "100%" }}>
-        {/* Jar body */}
-        <rect x="52" y="42" width="52" height="56" rx="10" fill="#B09ED9" />
-        <rect x="52" y="42" width="52" height="14" rx="6" fill="#6D4FAF" />
-        {/* Jar lid */}
-        <rect x="48" y="34" width="60" height="14" rx="6" fill="#4A3080" />
-        {/* Leaf decoration */}
-        <ellipse cx="72" cy="76" rx="8" ry="13" fill="#5F42A8" transform="rotate(-20 72 76)" />
-        <ellipse cx="92" cy="72" rx="6" ry="10" fill="#5F42A8" transform="rotate(15 92 72)" />
-        <line x1="72" y1="88" x2="72" y2="64" stroke="#7C5ABF" strokeWidth="1.5" />
-        {/* Magnifying glass */}
-        <circle cx="104" cy="48" r="22" fill="white" fillOpacity="0.25" stroke="white" strokeWidth="3" />
-        <circle cx="104" cy="48" r="16" fill="white" fillOpacity="0.15" />
-        <line x1="120" y1="64" x2="134" y2="78" stroke="white" strokeWidth="4" strokeLinecap="round" />
-      </svg>
-    ),
-  },
-  {
-    title: "History",
-    desc: "Review your past scans and trends.",
-    to: "/dashboard",
-    bg: "#F5DAE0",
-    accent: "#E03A5A",
-    illustration: (
-      <svg viewBox="0 0 160 120" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: "100%", height: "100%" }}>
-        {/* Person silhouette */}
-        <circle cx="80" cy="38" r="18" fill="#C5687A" />
-        <path d="M52 100 Q52 72 80 72 Q108 72 108 100" fill="#C5687A" />
-        {/* Products floating around */}
-        <rect x="30" y="45" width="16" height="26" rx="4" fill="#E8A0AC" />
-        <rect x="30" y="45" width="16" height="8" rx="3" fill="#D07080" />
-        {/* Dropper bottle */}
-        <rect x="114" y="40" width="14" height="30" rx="4" fill="#E8A0AC" />
-        <rect x="117" y="34" width="8" height="8" rx="2" fill="#D07080" />
-        <line x1="121" y1="30" x2="121" y2="34" stroke="#D07080" strokeWidth="2" strokeLinecap="round" />
-        {/* Thought bubble / sparkle */}
-        <circle cx="80" cy="20" r="3" fill="#E03A5A" fillOpacity="0.5" />
-        <circle cx="90" cy="14" r="2" fill="#E03A5A" fillOpacity="0.4" />
-        <circle cx="98" cy="10" r="4" fill="#E03A5A" fillOpacity="0.3" />
-      </svg>
-    ),
-  },
-  {
-    title: "Values",
-    desc: "Set priorities that shape every result.",
-    to: "/preferences",
-    bg: "#D4E0EE",
-    accent: "#3B6EA8",
-    illustration: (
-      <svg viewBox="0 0 160 120" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: "100%", height: "100%" }}>
-        {/* Wavy lines (scent/air) */}
-        <path d="M55 80 Q65 68 75 80 Q85 92 95 80 Q105 68 115 80" stroke="#8AABCE" strokeWidth="3" fill="none" strokeLinecap="round" />
-        <path d="M60 65 Q70 53 80 65 Q90 77 100 65 Q110 53 120 65" stroke="#8AABCE" strokeWidth="3" fill="none" strokeLinecap="round" />
-        <path d="M65 50 Q73 40 81 50 Q89 60 97 50 Q105 40 113 50" stroke="#8AABCE" strokeWidth="2" fill="none" strokeLinecap="round" strokeOpacity="0.6" />
-        {/* Flower */}
-        <circle cx="88" cy="96" r="10" fill="white" fillOpacity="0.9" />
-        <circle cx="88" cy="96" r="5" fill="#F5C842" />
-        <circle cx="88" cy="82" r="7" fill="white" fillOpacity="0.8" />
-        <circle cx="100" cy="88" r="7" fill="white" fillOpacity="0.8" />
-        <circle cx="76" cy="88" r="7" fill="white" fillOpacity="0.8" />
-        <circle cx="88" cy="96" r="4" fill="#F5C842" />
-        {/* Leaf stem */}
-        <line x1="88" y1="106" x2="88" y2="116" stroke="#6A9E5A" strokeWidth="2.5" strokeLinecap="round" />
-        <ellipse cx="80" cy="113" rx="8" ry="5" fill="#6A9E5A" transform="rotate(-30 80 113)" />
-      </svg>
-    ),
+    name: "Choco Crunch Bar",
+    subtitle: "MegaCorp · 45g",
+    score: 14,
+    verdict: "AVOID",
+    verdictColor: DS.bad,
+    verdictBg: DS.badBg,
+    ringColor: DS.bad,
+    description: "High deforestation risk, child labour allegations, ultra-processed.",
+    icon: "bad",
+    categories: [
+      { label: "Environment", value: 12, color: DS.bad },
+      { label: "Labour", value: 8, color: DS.bad },
+      { label: "Nutrition", value: 18, color: DS.bad },
+      { label: "Animal welfare", value: 22, color: DS.bad },
+    ],
   },
 ];
 
-/* ── Analysis dimensions ────────────────────────────────────────────── */
-const CHECKS = [
-  { icon: Globe,      label: "Origin",       desc: "Where ingredients come from", color: BLUE  },
-  { icon: Shield,     label: "Labour",       desc: "Forced & child labour flags",  color: RED   },
-  { icon: Leaf,       label: "Carbon",       desc: "CO₂ per 100g lifecycle",       color: GREEN },
-  { icon: TrendingUp, label: "Alternatives", desc: "Greener swaps ranked for you", color: AMBER },
-  { icon: Heart,      label: "Animal",       desc: "BBFAW welfare scores",         color: "#E91E63" },
-  { icon: Activity,   label: "Nutrition",    desc: "Nutri-Score A–E grade",        color: GREEN },
-];
+function AnimatedResultDemo() {
+  const [visible, setVisible] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [fadePhase, setFadePhase] = useState<"in" | "out">("in");
+  const ref = useRef<HTMLDivElement>(null);
 
-const scoreColor = (s: number) => s >= 70 ? GREEN : s >= 45 ? AMBER : RED;
+  const product = DEMO_PRODUCTS[activeIndex];
 
-export default function Index() {
-  const [isDefaultPriorities, setIsDefaultPriorities] = useState(() => {
-    const p = loadPriorities();
-    return (
-      p.environment   === DEFAULT_PRIORITIES.environment &&
-      p.laborRights   === DEFAULT_PRIORITIES.laborRights &&
-      p.animalWelfare === DEFAULT_PRIORITIES.animalWelfare &&
-      p.nutrition     === DEFAULT_PRIORITIES.nutrition
+  // Trigger animation when scrolled into view
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setVisible(true); observer.disconnect(); } },
+      { threshold: 0.3 }
     );
-  });
-
-  const [barsVisible, setBarsVisible] = useState(false);
-  useEffect(() => {
-    const t = setTimeout(() => setBarsVisible(true), 300);
-    return () => clearTimeout(t);
+    observer.observe(el);
+    return () => observer.disconnect();
   }, []);
 
-  const [headerVisible, setHeaderVisible] = useState(false);
-  useEffect(() => {
-    const t = setTimeout(() => setHeaderVisible(true), 60);
-    return () => clearTimeout(t);
-  }, []);
+  const isFirstRender = useRef(true);
 
-  const greeting = (() => {
-    const h = new Date().getHours();
-    if (h < 5)  return { text: "Good night",    emoji: "🌙" };
-    if (h < 12) return { text: "Good morning",  emoji: "☀️" };
-    if (h < 17) return { text: "Good afternoon",emoji: "🌤️" };
-    if (h < 21) return { text: "Good evening",  emoji: "🌆" };
-    return       { text: "Good night",          emoji: "🌙" };
-  })();
-
-  const [buySignal, setBuySignal] = useState(true);
+  // Animate score counting up on first appearance; snap instantly on product switch
   useEffect(() => {
-    let intervalId: ReturnType<typeof setInterval>;
-    const timeoutId = setTimeout(() => {
-      intervalId = setInterval(() => setBuySignal(v => !v), 2400);
-    }, 3600);
-    return () => { clearTimeout(timeoutId); clearInterval(intervalId); };
-  }, []);
-
-  useEffect(() => {
-    const check = () => {
-      const p = loadPriorities();
-      setIsDefaultPriorities(
-        p.environment   === DEFAULT_PRIORITIES.environment &&
-        p.laborRights   === DEFAULT_PRIORITIES.laborRights &&
-        p.animalWelfare === DEFAULT_PRIORITIES.animalWelfare &&
-        p.nutrition     === DEFAULT_PRIORITIES.nutrition
-      );
+    if (!visible) return;
+    if (!isFirstRender.current) {
+      // Subsequent switches: snap to full immediately
+      setProgress(1);
+      return;
+    }
+    isFirstRender.current = false;
+    setProgress(0);
+    let frame: number;
+    const start = performance.now();
+    const duration = 1000;
+    const tick = (now: number) => {
+      const t = Math.min((now - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - t, 3);
+      setProgress(eased);
+      if (t < 1) frame = requestAnimationFrame(tick);
     };
-    window.addEventListener("prioritiesUpdated", check);
-    window.addEventListener("focus", check);
-    return () => {
-      window.removeEventListener("prioritiesUpdated", check);
-      window.removeEventListener("focus", check);
-    };
-  }, []);
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [visible, activeIndex]);
+
+  // Cycle between products every 2.5s
+  useEffect(() => {
+    if (!visible) return;
+    const interval = setInterval(() => {
+      setFadePhase("out");
+      setTimeout(() => {
+        setActiveIndex((i) => (i + 1) % DEMO_PRODUCTS.length);
+        setFadePhase("in");
+      }, 300);
+    }, 4700);
+    return () => clearInterval(interval);
+  }, [visible]);
+
+  const score = Math.round(progress * product.score);
+  const circumference = 2 * Math.PI * 42;
+  const strokeDash = circumference * (progress * product.score / 100);
+
+  const contentOpacity = fadePhase === "in" ? 1 : 0;
+  const contentTransform = fadePhase === "in" ? "translateY(0)" : "translateY(6px)";
 
   return (
-    <div style={{ background: BG, minHeight: "100vh", overflowX: "hidden" }}>
-      <main className="pb-nav">
-
-        {/* ── Header ── */}
+    <div ref={ref} style={{
+      background: DS.card, borderRadius: DS.radius.lg, padding: 20,
+      overflow: "hidden",
+    }}>
+      <div style={{
+        opacity: contentOpacity,
+        transform: contentTransform,
+        transition: "all 0.3s ease",
+      }}>
+        {/* Mock product header */}
         <div style={{
-          background: CARD,
-          borderBottom: `1px solid ${BORDER}`,
-          padding: "max(52px, env(safe-area-inset-top)) 20px 18px",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          opacity: headerVisible ? 1 : 0,
-          transform: headerVisible ? "translateY(0)" : "translateY(-10px)",
-          transition: "opacity 0.45s ease, transform 0.45s ease",
+          display: "flex", alignItems: "center", gap: 12, marginBottom: 18,
+          opacity: visible ? 1 : 0, transform: visible ? "translateY(0)" : "translateY(8px)",
+          transition: "all 0.4s ease 0.1s",
         }}>
-          <div>
-            {/* Greeting pill */}
-            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-              <span style={{ fontSize: "1rem" }}>{greeting.emoji}</span>
-              <span style={{
-                fontSize: "0.68rem", fontWeight: 700,
-                color: BLUE,
-                letterSpacing: "0.06em", textTransform: "uppercase",
-              }}>
-                {greeting.text}
-              </span>
-            </div>
-
-            {/* Animated gradient title */}
-            <h1 style={{
-              fontSize: "1.75rem", fontWeight: 900,
-              letterSpacing: "-0.03em", lineHeight: 1,
-              margin: 0,
-              background: "linear-gradient(90deg, #2979FF 0%, #00B4D8 35%, #7C3AED 65%, #2979FF 100%)",
-              backgroundSize: "200% auto",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              backgroundClip: "text",
-              animation: "titleShimmer 4s linear infinite",
-            }}>
-              Ethical Shopper
-            </h1>
+          <div style={{
+            width: 44, height: 44, borderRadius: 12, background: product.icon === "good" ? DS.goodBg : DS.badBg,
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            {product.icon === "good"
+              ? <Leaf style={{ width: 20, height: 20, color: DS.good }} />
+              : <AlertTriangleIcon style={{ width: 20, height: 20, color: DS.bad }} />
+            }
           </div>
-
-          <Link
-            to="/basket"
-            aria-label="View basket"
-            style={{
-              width: 40, height: 40,
-              borderRadius: 13,
-              background: `linear-gradient(135deg, ${BLUE_LIGHT}, #EDE9FE)`,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              color: BLUE,
-              border: `1px solid rgba(41,121,255,0.15)`,
-              boxShadow: "0 2px 8px rgba(41,121,255,0.12)",
-            }}
-          >
-            <ShoppingCart style={{ width: 18, height: 18 }} />
-          </Link>
+          <div>
+            <p style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>{product.name}</p>
+            <p style={{ fontSize: 12, color: DS.muted, margin: "2px 0 0" }}>{product.subtitle}</p>
+          </div>
         </div>
 
-        <style>{`
-          @keyframes titleShimmer {
-            0%   { background-position: 0% center; }
-            100% { background-position: 200% center; }
-          }
-        `}</style>
-
-        <div style={{ padding: "20px 16px", display: "flex", flexDirection: "column", gap: 16 }}>
-
-          {/* ── Hero CTA card ── */}
-          <Link to="/scan" style={{ textDecoration: "none", display: "block" }}>
+        {/* Score ring + verdict */}
+        <div style={{
+          display: "flex", alignItems: "center", gap: 20, marginBottom: 20,
+          opacity: visible ? 1 : 0, transform: visible ? "translateY(0)" : "translateY(12px)",
+          transition: "all 0.5s ease 0.3s",
+        }}>
+          {/* SVG ring */}
+          <div style={{ position: "relative", width: 96, height: 96, flexShrink: 0 }}>
+            <svg width="96" height="96" viewBox="0 0 96 96" style={{ transform: "rotate(-90deg)" }}>
+              <circle cx="48" cy="48" r="42" fill="none" stroke={DS.bg} strokeWidth="8" />
+              <circle
+                cx="48" cy="48" r="42" fill="none"
+                stroke={product.ringColor}
+                strokeWidth="8"
+                strokeLinecap="round"
+                strokeDasharray={circumference}
+                strokeDashoffset={circumference - strokeDash}
+                style={{ transition: "stroke-dashoffset 0.05s linear" }}
+              />
+            </svg>
             <div style={{
-              background: `linear-gradient(135deg, ${BLUE} 0%, #1565C0 100%)`,
-              borderRadius: 20,
-              padding: "24px 24px",
-              position: "relative",
-              overflow: "hidden",
-              boxShadow: `0 8px 32px rgba(41,121,255,0.35)`,
+              position: "absolute", inset: 0,
+              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
             }}>
-              {/* Decorative circle */}
-              <div style={{
-                position: "absolute", right: -32, top: -32,
-                width: 140, height: 140,
-                borderRadius: "50%",
-                background: "rgba(255,255,255,0.08)",
-              }} />
-              <div style={{
-                position: "absolute", right: 24, bottom: -20,
-                width: 80, height: 80,
-                borderRadius: "50%",
-                background: "rgba(255,255,255,0.06)",
-              }} />
-
-              <p style={{ fontSize: "0.72rem", fontWeight: 600, color: "rgba(255,255,255,0.7)", letterSpacing: "0.04em", textTransform: "uppercase", marginBottom: 8 }}>
-                Tap to begin
-              </p>
-              <p style={{ fontSize: "1.75rem", fontWeight: 800, color: "#fff", letterSpacing: "-0.03em", lineHeight: 1.1, marginBottom: 6 }}>
-                Scan any product
-              </p>
-              <p style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.75)", lineHeight: 1.5, maxWidth: 220 }}>
-                Instantly see labour rights, carbon footprint, animal welfare &amp; more.
-              </p>
-
-              <div style={{
-                marginTop: 20,
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 8,
-                background: "rgba(255,255,255,0.18)",
-                borderRadius: 50,
-                padding: "8px 16px",
-              }}>
-                <ScanLine style={{ width: 16, height: 16, color: "#fff" }} />
-                <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "#fff" }}>Start scanning</span>
-                <ChevronRight style={{ width: 14, height: 14, color: "rgba(255,255,255,0.7)" }} />
-              </div>
-
-              {isDefaultPriorities && (
-                <div style={{
-                  marginTop: 14,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                }}>
-                  <AlertCircle style={{ width: 13, height: 13, color: "#FFD54F", flexShrink: 0 }} />
-                  <span style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.8)", fontWeight: 500 }}>
-                    Personalise results — set your priorities
-                  </span>
-                </div>
-              )}
+              <span style={{ fontSize: 28, fontWeight: 800, color: DS.ink, lineHeight: 1 }}>{score}</span>
+              <span style={{ fontSize: 10, color: DS.muted, marginTop: 2 }}>/ 100</span>
             </div>
-          </Link>
+          </div>
 
-          {/* ── Stats row ── */}
+          {/* Verdict */}
+          <div>
+            <div style={{
+              display: "inline-flex", alignItems: "center", gap: 6,
+              padding: "5px 12px", borderRadius: 20,
+              background: product.verdictBg, marginBottom: 8,
+              opacity: progress > 0.7 ? 1 : 0,
+              transition: "opacity 0.3s",
+            }}>
+              {product.icon === "good"
+                ? <CheckCircle2 style={{ width: 14, height: 14, color: product.verdictColor }} />
+                : <AlertTriangleIcon style={{ width: 14, height: 14, color: product.verdictColor }} />
+              }
+              <span style={{ fontSize: 13, fontWeight: 700, color: product.verdictColor }}>{product.verdict}</span>
+            </div>
+            <p style={{ fontSize: 13, color: DS.muted, margin: 0, lineHeight: 1.45, maxWidth: 180 }}>
+              {product.description}
+            </p>
+          </div>
+        </div>
+
+        {/* Category breakdown bars */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {product.categories.map((cat, i) => (
+            <div key={cat.label} style={{
+              opacity: visible ? 1 : 0, transform: visible ? "translateX(0)" : "translateX(-10px)",
+              transition: `all 0.4s ease ${0.3 + i * 0.08}s`,
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: DS.ink }}>{cat.label}</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: cat.color }}>
+                  {Math.round(progress * cat.value)}
+                </span>
+              </div>
+              <div style={{ height: 6, borderRadius: 3, background: DS.bg, overflow: "hidden" }}>
+                <div style={{
+                  height: "100%", borderRadius: 3, background: cat.color,
+                  width: `${progress * cat.value}%`,
+                  transition: "width 0.05s linear",
+                }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Footer hint */}
+      <p style={{
+        fontSize: 11, color: DS.muted, textAlign: "center", margin: "16px 0 0",
+        opacity: visible ? 1 : 0, transition: "opacity 0.4s ease 1s",
+      }}>
+        This is an example — scan any product to see its real score
+      </p>
+
+      {/* Dots indicator */}
+      <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 10 }}>
+        {DEMO_PRODUCTS.map((_, i) => (
+          <div key={i} style={{
+            width: i === activeIndex ? 16 : 6, height: 6, borderRadius: 3,
+            background: i === activeIndex ? DS.ink : DS.hair,
+            transition: "all 0.3s",
+          }} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ── Score badge ──────────────────────────────────────────────────── */
+function ScoreBadge({ score }: { score: number }) {
+  const tone = scoreTone(score);
+  const c = toneColor(tone);
+  const bg = toneBg(tone);
+  return (
+    <div style={{
+      width: 40, height: 40, borderRadius: 20, background: bg,
+      display: "flex", alignItems: "center", justifyContent: "center",
+      fontSize: 15, fontWeight: 700, color: c, flexShrink: 0,
+    }}>{score}</div>
+  );
+}
+
+export default function Index() {
+  const [history, setHistory] = useState<ScanHistoryEntry[]>([]);
+
+  useEffect(() => {
+    setHistory(loadScanHistory());
+  }, []);
+
+  const recent = history.slice(0, 3);
+
+  return (
+    <div style={{ background: DS.bg, minHeight: "100dvh", fontFamily: DS.font, color: DS.ink }}>
+      <main style={{ padding: "0 20px", paddingBottom: 110, maxWidth: 640, margin: "0 auto" }}>
+
+        {/* Header */}
+        <div style={{ paddingTop: "max(60px, env(safe-area-inset-top))", marginBottom: 24 }}>
+          <p style={{ fontSize: 13, fontWeight: 600, color: DS.good, margin: "0 0 6px", letterSpacing: 0.3 }}>
+            GoodScan
+          </p>
+          <h1 style={{ fontSize: 30, fontWeight: 800, margin: 0, letterSpacing: -0.5, lineHeight: 1.15 }}>
+            Shop smarter.<br />Live better.
+          </h1>
+          <p style={{ fontSize: 15, color: DS.muted, margin: "10px 0 0", lineHeight: 1.55 }}>
+            Scan any product and instantly see its impact on the planet, people, and your health.
+          </p>
+        </div>
+
+        {/* Big scan CTA */}
+        <Link to="/scan" style={{ textDecoration: "none", display: "block", marginBottom: 28 }}>
           <div style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr 1fr",
-            gap: 10,
+            background: DS.ink, color: "#fff", borderRadius: DS.radius.lg, padding: 22,
+            display: "flex", alignItems: "center", gap: 16,
           }}>
+            <div style={{
+              width: 56, height: 56, borderRadius: 28, background: "rgba(255,255,255,0.12)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              <Camera style={{ width: 26, height: 26, color: "#fff" }} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 18, fontWeight: 700 }}>Scan a product</div>
+              <div style={{ fontSize: 13, opacity: 0.7, marginTop: 2 }}>Point your camera at any barcode</div>
+            </div>
+            <ChevronRight style={{ width: 20, height: 20, opacity: 0.7 }} />
+          </div>
+        </Link>
+
+        {/* Animated example result */}
+        <section style={{ marginBottom: 28 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 14px" }}>Example result</h2>
+          <AnimatedResultDemo />
+        </section>
+
+        {/* How it works */}
+        <section style={{ marginBottom: 28 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 14px" }}>How it works</h2>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {[
-              { value: "3M+", label: "Products" },
-              { value: "6",   label: "Checks"   },
-              { value: "Free",label: "Always"   },
-            ].map(s => (
-              <div key={s.label} style={{
-                background: CARD,
-                borderRadius: 14,
-                padding: "14px 10px",
-                textAlign: "center",
-                boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
-                border: `1px solid ${BORDER}`,
+              { step: "1", title: "Scan or search", desc: "Point your camera at a barcode, upload a photo, or type a product name." },
+              { step: "2", title: "We analyse it", desc: "We check environmental impact, labour practices, nutrition, and certifications using open data." },
+              { step: "3", title: "Get a clear score", desc: "See a simple 0–100 score plus a traffic-light verdict: Buy, Consider, or Avoid." },
+            ].map((item) => (
+              <div key={item.step} style={{
+                background: DS.card, borderRadius: DS.radius.md, padding: 16,
+                display: "flex", gap: 14, alignItems: "flex-start",
               }}>
-                <p style={{ fontSize: "1.25rem", fontWeight: 800, color: TEXT, letterSpacing: "-0.03em", marginBottom: 2 }}>
-                  {s.value}
-                </p>
-                <p style={{ fontSize: "0.65rem", fontWeight: 500, color: TEXT_MUTED }}>
-                  {s.label}
-                </p>
+                <div style={{
+                  width: 32, height: 32, borderRadius: 16, background: DS.bg,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 14, fontWeight: 800, color: DS.ink, flexShrink: 0,
+                }}>
+                  {item.step}
+                </div>
+                <div>
+                  <p style={{ fontSize: 15, fontWeight: 600, margin: "0 0 3px" }}>{item.title}</p>
+                  <p style={{ fontSize: 13, color: DS.muted, margin: 0, lineHeight: 1.45 }}>{item.desc}</p>
+                </div>
               </div>
             ))}
           </div>
+        </section>
 
-          {/* ── Demo scan result ── */}
-          <div>
-            <p style={{ fontSize: "0.72rem", fontWeight: 700, color: TEXT_MUTED, letterSpacing: "0.04em", textTransform: "uppercase", marginBottom: 10 }}>
-              Example scan result
-            </p>
-            <div style={{
-              background: CARD,
-              borderRadius: 18,
-              border: `1px solid ${BORDER}`,
-              boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
-              overflow: "hidden",
-            }}>
-              {/* Card header */}
-              <div style={{
-                padding: "16px 18px 14px",
-                borderBottom: `1px solid ${BORDER}`,
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
+        {/* What we check */}
+        <section style={{ marginBottom: 28 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 14px" }}>What we check</h2>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            {[
+              { icon: Leaf, title: "Environment", desc: "Carbon footprint, packaging, transport distance", color: DS.good },
+              { icon: Users, title: "Labour rights", desc: "Forced labour allegations, fair trade certification", color: "#c44a36" },
+              { icon: Shield, title: "Animal welfare", desc: "Factory farming, testing, cruelty-free status", color: "#7c3aed" },
+              { icon: Zap, title: "Nutrition", desc: "Nutri-Score, NOVA processing level, additives", color: DS.warn },
+            ].map((item) => (
+              <div key={item.title} style={{
+                background: DS.card, borderRadius: DS.radius.md, padding: 14,
               }}>
-                <div>
-                  <p style={{ fontSize: "0.65rem", fontWeight: 600, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>
-                    Scanned product
-                  </p>
-                  <p style={{ fontSize: "1.2rem", fontWeight: 800, color: TEXT, letterSpacing: "-0.025em", marginBottom: 2 }}>
-                    Oat Milk
-                  </p>
-                  <p style={{ fontSize: "0.75rem", color: TEXT_MUTED, fontWeight: 500 }}>
-                    Some Brand Co.
-                  </p>
-                </div>
-                <div style={{
-                  width: 56, height: 56,
-                  borderRadius: "50%",
-                  background: `${scoreColor(61)}14`,
-                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                  border: `2px solid ${scoreColor(61)}30`,
-                  flexShrink: 0,
-                }}>
-                  <span style={{ fontSize: "1.1rem", fontWeight: 900, color: scoreColor(61), lineHeight: 1 }}>61</span>
-                  <span style={{ fontSize: "0.5rem", color: TEXT_MUTED, fontWeight: 500 }}>/100</span>
-                </div>
+                <item.icon style={{ width: 20, height: 20, color: item.color, marginBottom: 8 }} />
+                <p style={{ fontSize: 14, fontWeight: 600, margin: "0 0 4px" }}>{item.title}</p>
+                <p style={{ fontSize: 12, color: DS.muted, margin: 0, lineHeight: 1.4 }}>{item.desc}</p>
               </div>
-
-              {/* Score bars */}
-              <div style={{ padding: "14px 18px", display: "flex", flexDirection: "column", gap: 11 }}>
-                {DEMO_SCORES.map((item, i) => {
-                  const Icon = item.icon;
-                  return (
-                    <div key={item.label}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-                          <div style={{
-                            width: 22, height: 22, borderRadius: 6,
-                            background: `${item.color}18`,
-                            display: "flex", alignItems: "center", justifyContent: "center",
-                            flexShrink: 0,
-                          }}>
-                            <Icon style={{ width: 11, height: 11, color: item.color }} strokeWidth={2} />
-                          </div>
-                          <span style={{ fontSize: "0.8rem", fontWeight: 600, color: TEXT }}>
-                            {item.label}
-                          </span>
-                        </div>
-                        <span style={{ fontSize: "0.72rem", fontWeight: 600, color: item.color }}>
-                          {item.verdict}
-                        </span>
-                      </div>
-                      <div style={{ height: 6, background: "#F3F4F6", borderRadius: 99, overflow: "hidden" }}>
-                        <div style={{
-                          height: "100%",
-                          borderRadius: 99,
-                          background: item.color,
-                          width: barsVisible ? `${item.score}%` : "0%",
-                          transition: `width 0.7s cubic-bezier(0.25,1,0.5,1) ${i * 80}ms`,
-                        }} />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Verdict footer */}
-              <div style={{
-                borderTop: `1px solid ${BORDER}`,
-                padding: "12px 18px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-              }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <div style={{
-                    padding: "4px 12px",
-                    borderRadius: 50,
-                    background: buySignal ? `${GREEN}18` : `${RED}14`,
-                    color: buySignal ? GREEN : RED,
-                    fontSize: "0.8rem",
-                    fontWeight: 700,
-                    transition: "all 0.3s",
-                  }}>
-                    {buySignal ? "Good choice" : "Avoid"}
-                  </div>
-                  <span style={{ fontSize: "0.72rem", color: TEXT_MUTED, transition: "color 0.3s" }}>
-                    Score: <strong style={{ color: TEXT }}>{buySignal ? "82" : "31"}/100</strong>
-                  </span>
-                </div>
-                <span style={{ fontSize: "0.65rem", color: TEXT_MUTED, fontStyle: "italic" }}>Demo</span>
-              </div>
-            </div>
+            ))}
           </div>
+        </section>
 
-          {/* ── Feature cards grid ── */}
-          <div>
-            <p style={{ fontSize: "0.72rem", fontWeight: 700, color: TEXT_MUTED, letterSpacing: "0.04em", textTransform: "uppercase", marginBottom: 10 }}>
-              Explore
-            </p>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-              {FEATURE_CARDS.map(card => (
-                <Link key={card.title} to={card.to} style={{ textDecoration: "none" }}>
-                  <div style={{
-                    background: card.bg,
-                    borderRadius: 18,
-                    overflow: "hidden",
-                    aspectRatio: "1 / 1.05",
-                    display: "flex",
-                    flexDirection: "column",
-                    padding: "12px 14px 14px",
-                  }}>
-                    <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      {card.illustration}
-                    </div>
-                    <div style={{ marginTop: 6 }}>
-                      <p style={{ fontSize: "0.92rem", fontWeight: 800, color: "#111827", marginBottom: 2, letterSpacing: "-0.02em" }}>
-                        {card.title}
-                      </p>
-                      <p style={{ fontSize: "0.68rem", color: "#4B5563", lineHeight: 1.35, fontWeight: 400 }}>
-                        {card.desc}
-                      </p>
-                    </div>
-                  </div>
-                </Link>
+        {/* Scoring example */}
+        <section style={{ marginBottom: 28 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 14px" }}>Score meanings</h2>
+          <div style={{ background: DS.card, borderRadius: DS.radius.md, overflow: "hidden" }}>
+            {[
+              { range: "70–100", label: "Looks great", tone: "good" as const, desc: "Low impact, good practices" },
+              { range: "45–69", label: "Mixed", tone: "warn" as const, desc: "Some concerns worth noting" },
+              { range: "0–44", label: "Avoid", tone: "bad" as const, desc: "Significant ethical or environmental issues" },
+            ].map((row, i) => (
+              <div key={row.range} style={{
+                display: "flex", alignItems: "center", gap: 12, padding: "14px 16px",
+                borderTop: i ? `1px solid ${DS.hair}` : "none",
+              }}>
+                <div style={{
+                  width: 36, height: 36, borderRadius: 18,
+                  background: toneColor(row.tone), color: "#fff",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 12, fontWeight: 800, flexShrink: 0,
+                }}>{row.range.split("–")[0]}</div>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontSize: 14, fontWeight: 600, margin: 0 }}>{row.label}</p>
+                  <p style={{ fontSize: 12, color: DS.muted, margin: "2px 0 0" }}>{row.desc}</p>
+                </div>
+                <span style={{ fontSize: 12, color: DS.muted, flexShrink: 0 }}>{row.range}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Data sources */}
+        <section style={{ marginBottom: 28 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 14px" }}>Our data sources</h2>
+          <div style={{ background: DS.card, borderRadius: DS.radius.md, padding: 16 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {[
+                { name: "Open Food Facts", desc: "1M+ products with eco-scores, ingredients, and nutrition data" },
+                { name: "Verified brand flags", desc: "35 manually sourced labour & ethics flags with citations" },
+                { name: "Eco-Score (EU)", desc: "Lifecycle carbon analysis from Agribalyse database" },
+                { name: "Nutri-Score", desc: "Nutritional quality grading (A–E)" },
+              ].map((src, i) => (
+                <div key={src.name} style={{
+                  paddingTop: i ? 10 : 0,
+                  borderTop: i ? `1px solid ${DS.hair}` : "none",
+                }}>
+                  <p style={{ fontSize: 14, fontWeight: 600, margin: "0 0 2px" }}>{src.name}</p>
+                  <p style={{ fontSize: 12, color: DS.muted, margin: 0, lineHeight: 1.4 }}>{src.desc}</p>
+                </div>
               ))}
             </div>
           </div>
+        </section>
 
-          {/* ── 6 Ethics checks ── */}
-          <div>
+        {/* Recent scans (if any) */}
+        {recent.length > 0 && (
+          <section style={{ marginBottom: 28 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-              <p style={{ fontSize: "0.72rem", fontWeight: 700, color: TEXT_MUTED, letterSpacing: "0.04em", textTransform: "uppercase" }}>
-                Ethics checks
-              </p>
-              <span style={{
-                fontSize: "0.65rem", fontWeight: 700, color: BLUE,
-                background: BLUE_LIGHT, borderRadius: 50, padding: "2px 8px",
-              }}>6 total</span>
+              <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>Recent scans</h2>
+              <Link to="/dashboard" style={{ fontSize: 13, color: DS.muted, fontWeight: 500, textDecoration: "none" }}>See all</Link>
             </div>
-            <div style={{
-              background: CARD,
-              borderRadius: 18,
-              border: `1px solid ${BORDER}`,
-              boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
-              overflow: "hidden",
-            }}>
-              {CHECKS.map((c, i) => {
-                const Icon = c.icon;
+            <div style={{ background: DS.card, borderRadius: DS.radius.md, overflow: "hidden" }}>
+              {recent.map((entry, i) => {
+                const score = entry.scores.ecoScore ?? 50;
                 return (
-                  <div key={c.label} style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 12,
-                    padding: "13px 16px",
-                    borderBottom: i < CHECKS.length - 1 ? `1px solid ${BORDER}` : "none",
-                  }}>
-                    <div style={{
-                      width: 34, height: 34, borderRadius: 10,
-                      background: `${c.color}15`,
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      flexShrink: 0,
-                    }}>
-                      <Icon style={{ width: 16, height: 16, color: c.color }} strokeWidth={2} />
+                  <Link
+                    key={entry.id}
+                    to={`/product-off/${entry.barcode}`}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 12, padding: 14,
+                      borderTop: i ? `1px solid ${DS.hair}` : "none",
+                      textDecoration: "none", color: DS.ink,
+                    }}
+                  >
+                    <ScoreBadge score={score} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 15, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {entry.productName || "Unknown product"}
+                      </div>
+                      <div style={{ fontSize: 13, color: DS.muted, marginTop: 2 }}>
+                        {entry.brand || "Unknown brand"}
+                      </div>
                     </div>
-                    <div style={{ flex: 1 }}>
-                      <p style={{ fontSize: "0.875rem", fontWeight: 600, color: TEXT, marginBottom: 1 }}>
-                        {c.label}
-                      </p>
-                      <p style={{ fontSize: "0.72rem", color: TEXT_MUTED }}>
-                        {c.desc}
-                      </p>
-                    </div>
-                    <div style={{
-                      width: 8, height: 8, borderRadius: "50%",
-                      background: GREEN,
-                      flexShrink: 0,
-                    }} />
-                  </div>
+                    <ChevronRight style={{ width: 16, height: 16, color: DS.muted, flexShrink: 0 }} />
+                  </Link>
                 );
               })}
             </div>
+          </section>
+        )}
+
+        {/* Features */}
+        <section style={{ marginBottom: 28 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 14px" }}>Features</h2>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {[
+              { icon: BarChart3, title: "Greener Swaps", desc: "We suggest lower-impact alternatives in the same category." },
+              { icon: Award, title: "Personalised scoring", desc: "Set your values (environment, labour, nutrition, animal welfare) and every score is weighted to you." },
+              { icon: Shield, title: "Dispute & transparency", desc: "Every flag has a citation. Disagree? Report it — we review within 14 days." },
+            ].map((feat) => (
+              <div key={feat.title} style={{
+                background: DS.card, borderRadius: DS.radius.md, padding: 16,
+                display: "flex", gap: 14, alignItems: "flex-start",
+              }}>
+                <div style={{
+                  width: 36, height: 36, borderRadius: 12, background: DS.bg,
+                  display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                }}>
+                  <feat.icon style={{ width: 18, height: 18, color: DS.ink }} />
+                </div>
+                <div>
+                  <p style={{ fontSize: 15, fontWeight: 600, margin: "0 0 3px" }}>{feat.title}</p>
+                  <p style={{ fontSize: 13, color: DS.muted, margin: 0, lineHeight: 1.45 }}>{feat.desc}</p>
+                </div>
+              </div>
+            ))}
           </div>
+        </section>
 
-        </div>
+        {/* Quick links */}
+        <section>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            {[
+              { title: "Search products", to: "/database" },
+              { title: "Scan history", to: "/dashboard" },
+              { title: "Set your values", to: "/preferences" },
+              { title: "About & methodology", to: "/about" },
+            ].map(card => (
+              <Link key={card.title} to={card.to} style={{ textDecoration: "none" }}>
+                <div style={{
+                  background: DS.card, borderRadius: DS.radius.md, padding: 16,
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                }}>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: DS.ink }}>{card.title}</span>
+                  <ChevronRight style={{ width: 16, height: 16, color: DS.muted }} />
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+
       </main>
-
       <BottomNav />
     </div>
   );

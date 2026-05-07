@@ -1,34 +1,44 @@
 import { BottomNav } from "@/components/BottomNav";
 import { Link } from "react-router-dom";
-
-const BLUE = "#2979FF";
-const TEXT = "#111827";
-const TEXT_MUTED = "#6B7280";
-const BORDER = "#E5E7EB";
+import { ChevronLeft } from "lucide-react";
+import { DS } from "@/styles/design-tokens";
 
 const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
   <div style={{ marginBottom: 28 }}>
-    <h2 style={{ fontSize: "1rem", fontWeight: 700, color: TEXT, marginBottom: 8 }}>{title}</h2>
-    <div style={{ fontSize: "0.875rem", color: TEXT_MUTED, lineHeight: 1.7 }}>{children}</div>
+    <h2 style={{ fontSize: 15, fontWeight: 600, color: DS.ink, marginBottom: 8 }}>{title}</h2>
+    <div style={{ fontSize: 14, color: DS.ink, opacity: 0.85, lineHeight: 1.5 }}>{children}</div>
   </div>
 );
 
 export default function Privacy() {
   return (
-    <div style={{ minHeight: "100dvh", background: "#F5F7FA", display: "flex", flexDirection: "column" }}>
-      <main style={{ flex: 1, maxWidth: 640, margin: "0 auto", width: "100%", padding: "24px 20px 100px" }}>
+    <div style={{ minHeight: "100dvh", background: DS.bg, fontFamily: DS.font, color: DS.ink, display: "flex", flexDirection: "column" }}>
+      <main style={{ flex: 1, maxWidth: 640, margin: "0 auto", width: "100%", padding: "0 20px 110px", paddingTop: "max(60px, env(safe-area-inset-top))" }}>
         {/* Header */}
         <div style={{ marginBottom: 28 }}>
-          <Link to="/about" style={{ fontSize: "0.8rem", color: BLUE, textDecoration: "none", fontWeight: 600, display: "inline-block", marginBottom: 16 }}>
-            ← Back
+          <Link
+            to="/about"
+            style={{
+              fontSize: 14,
+              color: DS.muted,
+              textDecoration: "none",
+              fontWeight: 500,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 2,
+              marginBottom: 16,
+            }}
+          >
+            <ChevronLeft size={16} strokeWidth={2} />
+            Back
           </Link>
-          <h1 style={{ fontSize: "1.5rem", fontWeight: 800, color: TEXT, marginBottom: 4 }}>Privacy Policy</h1>
-          <p style={{ fontSize: "0.8rem", color: TEXT_MUTED }}>Last updated: April 2026</p>
+          <h1 style={{ fontSize: 28, fontWeight: 700, color: DS.ink, letterSpacing: -0.5, marginBottom: 4 }}>Privacy Policy</h1>
+          <p style={{ fontSize: 14, color: DS.muted }}>Last updated: April 2026</p>
         </div>
 
-        <div style={{ background: "#fff", borderRadius: 16, border: `1px solid ${BORDER}`, padding: "24px 20px" }}>
+        <div style={{ background: DS.card, borderRadius: 18, padding: "24px 20px" }}>
           <Section title="Overview">
-            Scan2Source ("the app") is committed to your privacy. This policy explains what information is collected when you use the app and how it is used.
+            GoodScan ("the app") is committed to your privacy. This policy explains what information is collected when you use the app and how it is used.
           </Section>
 
           <Section title="Camera & Photo Library">
@@ -62,7 +72,7 @@ export default function Privacy() {
 
           <Section title="Contact">
             If you have any questions about this privacy policy, please contact us at{" "}
-            <a href="mailto:geovanis@proton.me" style={{ color: BLUE, textDecoration: "none", fontWeight: 600 }}>
+            <a href="mailto:geovanis@proton.me" style={{ color: DS.ink, textDecoration: "none", fontWeight: 600 }}>
               geovanis@proton.me
             </a>
             .

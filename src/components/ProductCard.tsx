@@ -7,12 +7,12 @@ interface ProductCardProps {
   product: Product;
 }
 
-const BLUE = "#2979FF";
-const BG   = "#F5F7FA";
-const CARD = "#FFFFFF";
-const BORDER = "#E5E7EB";
-const TEXT = "#111827";
-const TEXT_MUTED = "#6B7280";
+const BLUE = "#1a1a1a";
+const BG   = "#f7f6f3";
+const CARD = "#ffffff";
+const BORDER = "rgba(0,0,0,0.08)";
+const TEXT = "#1a1a1a";
+const TEXT_MUTED = "#6e6e73";
 
 const laborRiskConfig = {
   low:    { label: "Low risk",  color: "#10b981", bg: "#F0FAF6" },
@@ -128,7 +128,7 @@ export function ProductCard({ product }: ProductCardProps) {
               {product.certifications.slice(0, 2).map((cert, i) => (
                 <span key={i} style={{
                   fontSize: "0.58rem", fontWeight: 600,
-                  color: BLUE, background: "#EBF2FF",
+                  color: BLUE, background: "#f0f0ed",
                   padding: "2px 6px", borderRadius: 6,
                   display: "flex", alignItems: "center", gap: 3,
                 }}>

@@ -23,12 +23,12 @@ interface ReportIssueProps {
   onClose: () => void;
 }
 
-const BLUE = "#2979FF";
-const BG   = "#F5F7FA";
-const CARD = "#FFFFFF";
-const BORDER = "#E5E7EB";
-const TEXT = "#111827";
-const TEXT_MUTED = "#6B7280";
+const BLUE = "#1a1a1a";
+const BG   = "#f7f6f3";
+const CARD = "#ffffff";
+const BORDER = "rgba(0,0,0,0.08)";
+const TEXT = "#1a1a1a";
+const TEXT_MUTED = "#6e6e73";
 const RED = "#ef4444";
 
 export function ReportIssue({ brandName, flagId, onClose }: ReportIssueProps) {
@@ -184,7 +184,7 @@ export function ReportIssue({ brandName, flagId, onClose }: ReportIssueProps) {
                     display: "flex", alignItems: "center", gap: 10,
                     padding: "10px 12px", borderRadius: 10,
                     border: `1px solid ${issueType === val ? BLUE : BORDER}`,
-                    background: issueType === val ? "#EBF2FF" : BG,
+                    background: issueType === val ? "#f0f0ed" : BG,
                     cursor: "pointer",
                   }}>
                     <input

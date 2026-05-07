@@ -18,6 +18,7 @@ import { findLaborAllegations as findLaborAllegationsUtil, getLaborAllegationCou
 import { EnvironmentalImpactCard } from "@/components/EnvironmentalImpactCard";
 import { sendChatMessage } from "@/services/api/backend-client";
 import { cn } from "@/lib/utils";
+import { DS } from "@/styles/design-tokens";
 
 // Simple in-memory cache so we don't re-call for the same raw name
 const nameCache = new Map<string, string>();
@@ -43,12 +44,7 @@ const findLaborAllegations = (product: OpenFoodFactsResult) =>
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 
-const BLUE = "#2979FF";
-const BG   = "#F5F7FA";
-const CARD = "#FFFFFF";
-const BORDER = "#E5E7EB";
-const TEXT = "#111827";
-const TEXT_MUTED = "#6B7280";
+const BLUE = "#1a1a1a";
 
 const GRADE_BORDER: Record<string, string> = {
   a: "#10b981",
@@ -139,10 +135,9 @@ function InfoCard({ children, accentColor }: {
   return (
     <div
       style={{
-        background: CARD,
-        border: `1px solid ${BORDER}`,
+        background: DS.card,
         borderRadius: 18,
-        borderLeft: accentColor ? `4px solid ${accentColor}` : `1px solid ${BORDER}`,
+        borderLeft: accentColor ? `4px solid ${accentColor}` : undefined,
         boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
         overflow: "hidden",
       }}
@@ -154,7 +149,7 @@ function InfoCard({ children, accentColor }: {
 
 function SectionLabel({ label }: { label: string }) {
   return (
-    <p style={{ fontSize: "0.65rem", fontWeight: 800, color: TEXT_MUTED, letterSpacing: "0.07em", marginBottom: 14, textTransform: "uppercase" }}>
+    <p style={{ fontSize: "0.65rem", fontWeight: 800, color: DS.muted, letterSpacing: "0.07em", marginBottom: 14, textTransform: "uppercase" }}>
       {label}
     </p>
   );
@@ -282,20 +277,20 @@ export default function OpenFoodFactsDetail() {
 
   if (loading) {
     return (
-      <div className="min-h-dvh flex flex-col" style={{ background: BG }}>
+      <div className="min-h-dvh flex flex-col" style={{ background: DS.bg, fontFamily: DS.font, color: DS.ink }}>
         <div className="flex-1 flex flex-col items-center justify-center gap-4">
           <div
             style={{
               width: "3.5rem", height: "3.5rem",
               borderRadius: "50%",
-              border: `3px solid ${BORDER}`,
-              borderTopColor: BLUE,
+              border: `3px solid ${DS.hair}`,
+              borderTopColor: DS.ink,
               animation: "spin 0.8s linear infinite",
             }}
           />
           <div className="text-center">
-            <p style={{ fontSize: "0.85rem", fontWeight: 600, color: TEXT }}>Loading product</p>
-            <p style={{ fontSize: "0.75rem", color: TEXT_MUTED, marginTop: 4 }}>Fetching data…</p>
+            <p style={{ fontSize: "0.85rem", fontWeight: 600, color: DS.ink }}>Loading product</p>
+            <p style={{ fontSize: "0.75rem", color: DS.muted, marginTop: 4 }}>Fetching data…</p>
           </div>
         </div>
         <BottomNav />
@@ -306,12 +301,12 @@ export default function OpenFoodFactsDetail() {
 
   if (error || !product) {
     return (
-      <div className="min-h-dvh flex flex-col" style={{ background: BG }}>
+      <div className="min-h-dvh flex flex-col" style={{ background: DS.bg, fontFamily: DS.font, color: DS.ink }}>
         <div className="flex-1 px-5 pt-14 max-w-xl mx-auto w-full">
           <button
             type="button"
             onClick={() => navigate(-1)}
-            style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", color: TEXT_MUTED, fontSize: "0.85rem", cursor: "pointer", marginBottom: 24 }}
+            style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", color: DS.muted, fontSize: "0.85rem", cursor: "pointer", marginBottom: 24 }}
           >
             <ChevronLeft className="w-4 h-4" /> Back
           </button>
@@ -319,7 +314,7 @@ export default function OpenFoodFactsDetail() {
             <XCircle style={{ color: "#ef4444", width: 20, height: 20, flexShrink: 0, marginTop: 2 }} />
             <div>
               <p style={{ fontSize: "0.9rem", fontWeight: 700, color: "#ef4444", marginBottom: 4 }}>Product not found</p>
-              <p style={{ fontSize: "0.8rem", color: TEXT_MUTED }}>{error || "Unable to load product details"}</p>
+              <p style={{ fontSize: "0.8rem", color: DS.muted }}>{error || "Unable to load product details"}</p>
             </div>
           </div>
         </div>
@@ -347,7 +342,7 @@ export default function OpenFoodFactsDetail() {
   const ecoGrade = product.ecoscoreGrade?.toLowerCase();
 
   return (
-    <div className="min-h-dvh" style={{ background: BG }}>
+    <div className="min-h-dvh" style={{ background: DS.bg, fontFamily: DS.font, color: DS.ink }}>
 
       {/* ── Sticky header ─────────────────────────────────────────────────────── */}
       <div className={cn(
@@ -360,7 +355,7 @@ export default function OpenFoodFactsDetail() {
             background: "rgba(255,255,255,0.95)",
             backdropFilter: "blur(12px)",
             WebkitBackdropFilter: "blur(12px)",
-            borderBottom: `1px solid ${BORDER}`,
+            borderBottom: `1px solid ${DS.hair}`,
           }}
         >
           <button
@@ -368,9 +363,9 @@ export default function OpenFoodFactsDetail() {
             onClick={() => navigate(-1)}
             style={{
               width: "2rem", height: "2rem", borderRadius: "50%",
-              border: `1px solid ${BORDER}`,
-              background: CARD,
-              color: TEXT_MUTED,
+              border: `1px solid ${DS.hair}`,
+              background: DS.card,
+              color: DS.muted,
               display: "flex", alignItems: "center", justifyContent: "center",
               cursor: "pointer", flexShrink: 0,
             }}
@@ -379,7 +374,7 @@ export default function OpenFoodFactsDetail() {
           </button>
           <p
             className="truncate flex-1"
-            style={{ fontSize: "0.85rem", fontWeight: 700, color: TEXT }}
+            style={{ fontSize: "0.85rem", fontWeight: 700, color: DS.ink }}
           >
             {cleanName ?? product.productName ?? "Unknown product"}
           </p>
@@ -387,8 +382,8 @@ export default function OpenFoodFactsDetail() {
             <span
               style={{
                 width: "2rem", height: "2rem", borderRadius: 8,
-                background: GRADE_BG[ecoGrade] ?? "#F5F7FA",
-                color: GRADE_TEXT[ecoGrade] ?? TEXT_MUTED,
+                background: GRADE_BG[ecoGrade] ?? DS.bg,
+                color: GRADE_TEXT[ecoGrade] ?? DS.muted,
                 fontSize: "0.9rem", fontWeight: 800,
                 display: "flex", alignItems: "center", justifyContent: "center",
                 flexShrink: 0,
@@ -400,14 +395,14 @@ export default function OpenFoodFactsDetail() {
         </div>
       </div>
 
-      <main style={{ paddingBottom: "7rem", maxWidth: "36rem", margin: "0 auto" }}>
+      <main style={{ paddingBottom: 110, maxWidth: "36rem", margin: "0 auto" }}>
 
         {/* ── 1. Hero ───────────────────────────────────────────────────────── */}
         <div
           ref={heroRef}
           style={{
-            background: CARD,
-            borderBottom: `1px solid ${BORDER}`,
+            background: DS.card,
+            borderBottom: `1px solid ${DS.hair}`,
             position: "relative",
             overflow: "hidden",
           }}
@@ -421,26 +416,28 @@ export default function OpenFoodFactsDetail() {
           }} />
 
           {/* Back button row */}
-          <div style={{ padding: "max(52px, env(safe-area-inset-top)) 16px 0", position: "relative" }}>
+          <div style={{ padding: "max(52px, env(safe-area-inset-top)) 16px 0", position: "relative", display: "flex", alignItems: "center", gap: 12 }}>
             <button
               type="button"
               onClick={() => navigate(-1)}
               style={{
-                display: "inline-flex", alignItems: "center", gap: 5,
-                background: BG, border: `1px solid ${BORDER}`,
-                borderRadius: 20, padding: "5px 12px 5px 8px",
-                color: TEXT_MUTED, fontSize: "0.78rem", fontWeight: 600, cursor: "pointer",
+                display: "inline-flex", alignItems: "center", justifyContent: "center",
+                width: 32, height: 32,
+                background: DS.bg, border: `1px solid ${DS.hair}`,
+                borderRadius: 16,
+                color: DS.ink, cursor: "pointer",
               }}
             >
-              <ChevronLeft style={{ width: 14, height: 14 }} /> Back
+              <ChevronLeft style={{ width: 16, height: 16 }} />
             </button>
+            <span style={{ fontSize: "0.95rem", fontWeight: 700, color: DS.ink }}>Result</span>
           </div>
 
           <div style={{ display: "flex", gap: 16, padding: "16px 16px 20px", position: "relative" }}>
             {/* Product image */}
             <div style={{
               width: 110, height: 110, borderRadius: 18,
-              border: `1px solid ${BORDER}`, background: BG,
+              border: `1px solid ${DS.hair}`, background: DS.bg,
               flexShrink: 0, overflow: "hidden",
               display: "flex", alignItems: "center", justifyContent: "center",
               boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
@@ -452,18 +449,18 @@ export default function OpenFoodFactsDetail() {
                   style={{ width: "100%", height: "100%", objectFit: "contain" }}
                 />
               ) : (
-                <Sprout style={{ width: 40, height: 40, color: BORDER }} />
+                <Sprout style={{ width: 40, height: 40, color: DS.hair }} />
               )}
             </div>
 
             {/* Product info */}
             <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "center", gap: 6 }}>
               {product.brand && (
-                <p style={{ fontSize: "0.7rem", fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.06em", margin: 0 }}>
+                <p style={{ fontSize: "0.7rem", fontWeight: 700, color: DS.muted, textTransform: "uppercase", letterSpacing: "0.06em", margin: 0 }}>
                   {product.brand}
                 </p>
               )}
-              <h1 style={{ fontSize: "clamp(1rem, 4.5vw, 1.2rem)", fontWeight: 800, color: TEXT, lineHeight: 1.25, letterSpacing: "-0.02em", margin: 0 }}>
+              <h1 style={{ fontSize: "clamp(1rem, 4.5vw, 1.2rem)", fontWeight: 800, color: DS.ink, lineHeight: 1.25, letterSpacing: "-0.02em", margin: 0 }}>
                 {cleanName ?? product.productName ?? "Unknown product"}
               </h1>
               {/* Verdict pill in hero */}
@@ -483,10 +480,10 @@ export default function OpenFoodFactsDetail() {
                   <span style={{
                     display: "inline-flex", alignItems: "center", gap: 5,
                     padding: "4px 10px", borderRadius: 20,
-                    background: GRADE_BG[ecoGrade] ?? BG,
-                    color: GRADE_TEXT[ecoGrade] ?? TEXT_MUTED,
+                    background: GRADE_BG[ecoGrade] ?? DS.bg,
+                    color: GRADE_TEXT[ecoGrade] ?? DS.muted,
                     fontSize: "0.72rem", fontWeight: 700,
-                    border: `1px solid ${GRADE_TEXT[ecoGrade] ?? BORDER}20`,
+                    border: `1px solid ${GRADE_TEXT[ecoGrade] ?? DS.hair}20`,
                   }}>
                     <Leaf style={{ width: 11, height: 11 }} />
                     Eco {ecoGrade.toUpperCase()}
@@ -519,12 +516,12 @@ export default function OpenFoodFactsDetail() {
                   <vc.Icon style={{ width: 24, height: 24, color: vc.textColor }} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontSize: "0.65rem", fontWeight: 700, color: TEXT_MUTED, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 2 }}>Verdict</p>
+                  <p style={{ fontSize: "0.65rem", fontWeight: 700, color: DS.muted, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 2 }}>Verdict</p>
                   <p style={{ fontSize: "1.6rem", fontWeight: 900, color: vc.textColor, letterSpacing: "-0.03em", lineHeight: 1, marginBottom: 8 }}>
                     {verdict.key}
                   </p>
                   <p style={{
-                    fontSize: "0.78rem", color: TEXT_MUTED, lineHeight: 1.55,
+                    fontSize: "0.78rem", color: DS.muted, lineHeight: 1.55,
                     borderLeft: `3px solid ${vc.borderColor}60`,
                     paddingLeft: 9,
                   }}>
@@ -540,8 +537,8 @@ export default function OpenFoodFactsDetail() {
                   onClick={() => document.getElementById("breakdown")?.scrollIntoView({ behavior: "smooth" })}
                   style={{
                     flex: 1, height: 42, borderRadius: 11,
-                    border: `1px solid ${BORDER}`, background: "#fff",
-                    color: TEXT_MUTED, fontWeight: 600, fontSize: "0.78rem",
+                    border: `1px solid ${DS.hair}`, background: DS.card,
+                    color: DS.muted, fontWeight: 600, fontSize: "0.78rem",
                     cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
                     boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
                   }}
@@ -568,12 +565,12 @@ export default function OpenFoodFactsDetail() {
                   }}
                   style={{
                     flex: 1, height: 42, borderRadius: 11, border: "none",
-                    background: inBasket ? `${vc.borderColor}15` : BLUE,
+                    background: inBasket ? `${vc.borderColor}15` : DS.ink,
                     color: inBasket ? vc.textColor : "#fff",
                     fontWeight: 700, fontSize: "0.78rem",
                     cursor: inBasket ? "default" : "pointer",
                     display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                    boxShadow: inBasket ? "none" : "0 2px 8px rgba(41,121,255,0.35)",
+                    boxShadow: inBasket ? "none" : "0 2px 8px rgba(0,0,0,0.15)",
                   }}
                 >
                   <ShoppingBag style={{ width: 13, height: 13 }} />
@@ -586,14 +583,14 @@ export default function OpenFoodFactsDetail() {
           {/* ── 3. Scan confirmation ─────────────────────────────────────────── */}
           {fromScan && !confirmDismissed && !showCandidates && (
             <div style={{
-              background: "#EBF2FF", borderRadius: 16,
-              border: "1px solid #C3D6FF", padding: "14px 16px",
+              background: DS.bg, borderRadius: 16,
+              border: `1px solid ${DS.hair}`, padding: "14px 16px",
               display: "flex", alignItems: "flex-start", gap: 12,
             }}>
               <ScanLine style={{ width: 18, height: 18, color: BLUE, flexShrink: 0, marginTop: 2 }} />
               <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: "0.85rem", fontWeight: 700, color: TEXT, marginBottom: 2 }}>Is this the right product?</p>
-                <p style={{ fontSize: "0.75rem", color: TEXT_MUTED, marginBottom: 10 }}>We matched your scan automatically.</p>
+                <p style={{ fontSize: "0.85rem", fontWeight: 700, color: DS.ink, marginBottom: 2 }}>Is this the right product?</p>
+                <p style={{ fontSize: "0.75rem", color: DS.muted, marginBottom: 10 }}>We matched your scan automatically.</p>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <button
                     type="button"
@@ -628,10 +625,10 @@ export default function OpenFoodFactsDetail() {
           {/* Candidate picker */}
           {fromScan && showCandidates && (
             <InfoCard>
-              <div style={{ padding: "14px 16px 10px", borderBottom: `1px solid ${BORDER}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ padding: "14px 16px 10px", borderBottom: `1px solid ${DS.hair}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <div>
-                  <p style={{ fontSize: "0.9rem", fontWeight: 700, color: TEXT }}>Other matches</p>
-                  <p style={{ fontSize: "0.75rem", color: TEXT_MUTED }}>Select the correct product</p>
+                  <p style={{ fontSize: "0.9rem", fontWeight: 700, color: DS.ink }}>Other matches</p>
+                  <p style={{ fontSize: "0.75rem", color: DS.muted }}>Select the correct product</p>
                 </div>
                 <button
                   type="button"
@@ -652,7 +649,7 @@ export default function OpenFoodFactsDetail() {
                       style={{
                         width: "100%", display: "flex", alignItems: "center", gap: 12,
                         padding: "12px 16px", textAlign: "left", cursor: "pointer",
-                        borderBottom: ci < candidates.length - 1 ? `1px solid ${BORDER}` : "none",
+                        borderBottom: ci < candidates.length - 1 ? `1px solid ${DS.hair}` : "none",
                         background: "none", border: "none",
                       }}
                     >
@@ -660,19 +657,19 @@ export default function OpenFoodFactsDetail() {
                         <img
                           src={c.imageUrl}
                           alt=""
-                          style={{ width: 40, height: 40, borderRadius: 10, border: `1px solid ${BORDER}`, objectFit: "contain", flexShrink: 0 }}
+                          style={{ width: 40, height: 40, borderRadius: 10, border: `1px solid ${DS.hair}`, objectFit: "contain", flexShrink: 0 }}
                         />
                       ) : (
-                        <div style={{ width: 40, height: 40, borderRadius: 10, border: `1px solid ${BORDER}`, background: BG, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                          <Package style={{ width: 16, height: 16, color: TEXT_MUTED }} />
+                        <div style={{ width: 40, height: 40, borderRadius: 10, border: `1px solid ${DS.hair}`, background: DS.bg, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <Package style={{ width: 16, height: 16, color: DS.muted }} />
                         </div>
                       )}
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ fontSize: "0.85rem", fontWeight: 600, color: TEXT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <p style={{ fontSize: "0.85rem", fontWeight: 600, color: DS.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                           {c.productName || "Unknown product"}
                         </p>
                         {c.brand && (
-                          <p style={{ fontSize: "0.72rem", color: TEXT_MUTED, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          <p style={{ fontSize: "0.72rem", color: DS.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                             {c.brand}
                           </p>
                         )}
@@ -680,8 +677,8 @@ export default function OpenFoodFactsDetail() {
                       {g && (
                         <span style={{
                           width: 28, height: 28, borderRadius: 8,
-                          background: GRADE_BG[g] ?? BG,
-                          color: GRADE_TEXT[g] ?? TEXT_MUTED,
+                          background: GRADE_BG[g] ?? DS.bg,
+                          color: GRADE_TEXT[g] ?? DS.muted,
                           fontSize: "0.8rem", fontWeight: 800,
                           display: "flex", alignItems: "center", justifyContent: "center",
                           flexShrink: 0,
@@ -689,7 +686,7 @@ export default function OpenFoodFactsDetail() {
                           {g.toUpperCase()}
                         </span>
                       )}
-                      <ChevronRight style={{ width: 14, height: 14, color: TEXT_MUTED, flexShrink: 0 }} />
+                      <ChevronRight style={{ width: 14, height: 14, color: DS.muted, flexShrink: 0 }} />
                     </button>
                   );
                 })}
@@ -702,11 +699,11 @@ export default function OpenFoodFactsDetail() {
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }} id="breakdown">
               {product.ecoscoreGrade && (() => {
                 const g = product.ecoscoreGrade.toLowerCase();
-                const color = GRADE_TEXT[g] ?? TEXT_MUTED;
-                const bg = GRADE_BG[g] ?? BG;
+                const color = GRADE_TEXT[g] ?? DS.muted;
+                const bg = GRADE_BG[g] ?? DS.bg;
                 return (
                   <div style={{
-                    background: CARD, borderRadius: 16,
+                    background: DS.card, borderRadius: 16,
                     border: `1px solid ${color}25`,
                     padding: "16px 8px 12px",
                     display: "flex", flexDirection: "column", alignItems: "center",
@@ -717,9 +714,9 @@ export default function OpenFoodFactsDetail() {
                     <div style={{ width: 44, height: 44, borderRadius: 12, background: bg, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 6 }}>
                       <span style={{ fontSize: "1.6rem", fontWeight: 900, color, lineHeight: 1 }}>{g.toUpperCase()}</span>
                     </div>
-                    <span style={{ fontSize: "0.65rem", fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.04em" }}>Eco</span>
+                    <span style={{ fontSize: "0.65rem", fontWeight: 700, color: DS.muted, textTransform: "uppercase", letterSpacing: "0.04em" }}>Eco</span>
                     {product.ecoscoreScore !== null && (
-                      <span style={{ fontSize: "0.6rem", color: TEXT_MUTED, marginTop: 2 }}>{product.ecoscoreScore}/100</span>
+                      <span style={{ fontSize: "0.6rem", color: DS.muted, marginTop: 2 }}>{product.ecoscoreScore}/100</span>
                     )}
                   </div>
                 );
@@ -727,11 +724,11 @@ export default function OpenFoodFactsDetail() {
               {product.nutriscoreGrade && (() => {
                 const g = product.nutriscoreGrade.toLowerCase();
                 const isLetter = ["a", "b", "c", "d", "e"].includes(g);
-                const color = GRADE_TEXT[g] ?? TEXT_MUTED;
-                const bg = GRADE_BG[g] ?? BG;
+                const color = GRADE_TEXT[g] ?? DS.muted;
+                const bg = GRADE_BG[g] ?? DS.bg;
                 return (
                   <div style={{
-                    background: CARD, borderRadius: 16,
+                    background: DS.card, borderRadius: 16,
                     border: `1px solid ${color}25`,
                     padding: "16px 8px 12px",
                     display: "flex", flexDirection: "column", alignItems: "center",
@@ -744,16 +741,16 @@ export default function OpenFoodFactsDetail() {
                         {isLetter ? g.toUpperCase() : "—"}
                       </span>
                     </div>
-                    <span style={{ fontSize: "0.65rem", fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.04em" }}>Nutri</span>
-                    <span style={{ fontSize: "0.6rem", color: TEXT_MUTED, marginTop: 2, textAlign: "center" }}>Score</span>
+                    <span style={{ fontSize: "0.65rem", fontWeight: 700, color: DS.muted, textTransform: "uppercase", letterSpacing: "0.04em" }}>Nutri</span>
+                    <span style={{ fontSize: "0.6rem", color: DS.muted, marginTop: 2, textAlign: "center" }}>Score</span>
                   </div>
                 );
               })()}
               {product.novaGroup !== null && NOVA_LABEL[product.novaGroup!] && (() => {
-                const color = NOVA_COLOR[product.novaGroup!] ?? TEXT_MUTED;
+                const color = NOVA_COLOR[product.novaGroup!] ?? DS.muted;
                 return (
                   <div style={{
-                    background: CARD, borderRadius: 16,
+                    background: DS.card, borderRadius: 16,
                     border: `1px solid ${color}25`,
                     padding: "16px 8px 12px",
                     display: "flex", flexDirection: "column", alignItems: "center",
@@ -764,8 +761,8 @@ export default function OpenFoodFactsDetail() {
                     <div style={{ width: 44, height: 44, borderRadius: 12, background: `${color}12`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 6 }}>
                       <span style={{ fontSize: "1.6rem", fontWeight: 900, color, lineHeight: 1 }}>{product.novaGroup}</span>
                     </div>
-                    <span style={{ fontSize: "0.65rem", fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.04em" }}>Nova</span>
-                    <span style={{ fontSize: "0.6rem", color: TEXT_MUTED, marginTop: 2, textAlign: "center" }}>
+                    <span style={{ fontSize: "0.65rem", fontWeight: 700, color: DS.muted, textTransform: "uppercase", letterSpacing: "0.04em" }}>Nova</span>
+                    <span style={{ fontSize: "0.6rem", color: DS.muted, marginTop: 2, textAlign: "center" }}>
                       {NOVA_LABEL[product.novaGroup!]}
                     </span>
                   </div>
@@ -790,10 +787,10 @@ export default function OpenFoodFactsDetail() {
                       <span style={{ fontSize: "2.4rem", fontWeight: 900, color: "#10b981", lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>
                         {agri.co2_total.toFixed(2)}
                       </span>
-                      <span style={{ fontSize: "0.75rem", fontWeight: 600, color: TEXT_MUTED }}>kg CO₂/kg</span>
+                      <span style={{ fontSize: "0.75rem", fontWeight: 600, color: DS.muted }}>kg CO₂/kg</span>
                     </div>
                     {drivingKm !== null && (
-                      <p style={{ fontSize: "0.75rem", color: TEXT_MUTED, marginTop: 4 }}>
+                      <p style={{ fontSize: "0.75rem", color: DS.muted, marginTop: 4 }}>
                         ≈ driving <span style={{ color: BLUE, fontWeight: 600 }}>{drivingKm} km</span> in an average car
                       </p>
                     )}
@@ -813,11 +810,11 @@ export default function OpenFoodFactsDetail() {
                           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                               <Icon style={{ width: 12, height: 12, color }} />
-                              <span style={{ fontSize: "0.72rem", fontWeight: 500, color: TEXT_MUTED }}>{label}</span>
+                              <span style={{ fontSize: "0.72rem", fontWeight: 500, color: DS.muted }}>{label}</span>
                             </div>
-                            <span style={{ fontSize: "0.72rem", fontWeight: 600, color: TEXT }}>{val.toFixed(2)} kg</span>
+                            <span style={{ fontSize: "0.72rem", fontWeight: 600, color: DS.ink }}>{val.toFixed(2)} kg</span>
                           </div>
-                          <div style={{ height: 6, borderRadius: 3, background: BORDER, overflow: "hidden" }}>
+                          <div style={{ height: 6, borderRadius: 3, background: DS.hair, overflow: "hidden" }}>
                             <div style={{ height: "100%", width: `${pct}%`, borderRadius: 3, background: color, transition: "width 0.5s ease" }} />
                           </div>
                         </div>
@@ -844,7 +841,7 @@ export default function OpenFoodFactsDetail() {
                     <CheckCircle2 style={{ width: 16, height: 16, color: "#10b981", flexShrink: 0 }} />
                     <div>
                       <p style={{ fontSize: "0.8rem", fontWeight: 700, color: "#10b981" }}>No labor concerns</p>
-                      <p style={{ fontSize: "0.72rem", color: TEXT_MUTED }}>No allegations found in our database.</p>
+                      <p style={{ fontSize: "0.72rem", color: DS.muted }}>No allegations found in our database.</p>
                     </div>
                   </div>
                 )}
@@ -852,8 +849,8 @@ export default function OpenFoodFactsDetail() {
                 {/* Labor: concerns */}
                 {laborRecord && (
                   <div style={{ marginBottom: 14 }}>
-                    <p style={{ fontSize: "0.75rem", color: TEXT_MUTED, marginBottom: 8 }}>
-                      Parent company: <span style={{ color: TEXT, fontWeight: 600 }}>{laborRecord.parentCompany}</span>
+                    <p style={{ fontSize: "0.75rem", color: DS.muted, marginBottom: 8 }}>
+                      Parent company: <span style={{ color: DS.ink, fontWeight: 600 }}>{laborRecord.parentCompany}</span>
                     </p>
                     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                       {laborRecord.allegations.map((al, i) => (
@@ -863,7 +860,7 @@ export default function OpenFoodFactsDetail() {
                           padding: 12,
                         }}>
                           <p style={{ fontSize: "0.8rem", fontWeight: 700, color: "#ef4444", marginBottom: 4 }}>{al.issue}</p>
-                          <p style={{ fontSize: "0.75rem", color: TEXT_MUTED, lineHeight: 1.5, marginBottom: 8 }}>{al.details}</p>
+                          <p style={{ fontSize: "0.75rem", color: DS.muted, lineHeight: 1.5, marginBottom: 8 }}>{al.details}</p>
                           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                             <a
                               href={al.sourceUrl}
@@ -880,20 +877,20 @@ export default function OpenFoodFactsDetail() {
                         </div>
                       ))}
                     </div>
-                    <p style={{ fontSize: "0.68rem", color: TEXT_MUTED, fontStyle: "italic", marginTop: 8 }}>
+                    <p style={{ fontSize: "0.68rem", color: DS.muted, fontStyle: "italic", marginTop: 8 }}>
                       Based on publicly available reports. Companies may have taken corrective steps.
                     </p>
                   </div>
                 )}
 
                 {/* Animal welfare */}
-                <div style={{ borderTop: (laborRecord || boycottMatch) ? `1px solid ${BORDER}` : "none", paddingTop: (laborRecord || boycottMatch) ? 12 : 0, marginTop: (laborRecord || boycottMatch) ? 12 : 0 }}>
+                <div style={{ borderTop: (laborRecord || boycottMatch) ? `1px solid ${DS.hair}` : "none", paddingTop: (laborRecord || boycottMatch) ? 12 : 0, marginTop: (laborRecord || boycottMatch) ? 12 : 0 }}>
                   <AnimalWelfareFlagBadge brand={product.brand} showDetails={true} />
                 </div>
 
                 {/* Boycott */}
                 {boycottMatch && (
-                  <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 12, marginTop: 12 }}>
+                  <div style={{ borderTop: `1px solid ${DS.hair}`, paddingTop: 12, marginTop: 12 }}>
                     <div style={{
                       background: "#FFF6EE", borderRadius: 10,
                       border: "1px solid #FDDCB5",
@@ -902,7 +899,7 @@ export default function OpenFoodFactsDetail() {
                       <p style={{ fontSize: "0.8rem", fontWeight: 700, color: "#f97316", marginBottom: 4 }}>
                         {boycottMatch.parent} — Boycott listed
                       </p>
-                      <p style={{ fontSize: "0.75rem", color: TEXT_MUTED, lineHeight: 1.5, marginBottom: 8 }}>
+                      <p style={{ fontSize: "0.75rem", color: DS.muted, lineHeight: 1.5, marginBottom: 8 }}>
                         {boycottMatch.reason}
                       </p>
                       <a
@@ -932,7 +929,7 @@ export default function OpenFoodFactsDetail() {
               </div>
               <div>
                 <p style={{ fontSize: "0.88rem", fontWeight: 800, color: "#10b981", marginBottom: 3 }}>No ethical concerns found</p>
-                <p style={{ fontSize: "0.75rem", color: TEXT_MUTED, lineHeight: 1.5 }}>No labor, boycott, or animal welfare flags for this brand in our database.</p>
+                <p style={{ fontSize: "0.75rem", color: DS.muted, lineHeight: 1.5 }}>No labor, boycott, or animal welfare flags for this brand in our database.</p>
               </div>
             </div>
           )}
@@ -959,10 +956,10 @@ export default function OpenFoodFactsDetail() {
                       <p style={{ fontSize: "0.8rem", fontWeight: 700, color: "#ef4444", marginBottom: 4 }}>
                         Contains {ingredientRaw}
                       </p>
-                      <p style={{ fontSize: "0.75rem", color: TEXT, lineHeight: 1.5 }}>{explanation}</p>
+                      <p style={{ fontSize: "0.75rem", color: DS.ink, lineHeight: 1.5 }}>{explanation}</p>
                     </div>
                   </div>
-                  <p style={{ fontSize: "0.68rem", color: TEXT_MUTED, marginTop: 12 }}>Source: Open Food Facts Ecoscore analysis</p>
+                  <p style={{ fontSize: "0.68rem", color: DS.muted, marginTop: 12 }}>Source: Open Food Facts Ecoscore analysis</p>
                 </div>
               </InfoCard>
             );
@@ -980,9 +977,9 @@ export default function OpenFoodFactsDetail() {
                       style={{
                         display: "inline-flex", alignItems: "center", gap: 6,
                         padding: "5px 10px", borderRadius: 20,
-                        background: "#EBF2FF", color: BLUE,
+                        background: DS.bg, color: DS.ink,
                         fontSize: "0.72rem", fontWeight: 600,
-                        border: "1px solid #C3D6FF",
+                        border: `1px solid ${DS.hair}`,
                       }}
                     >
                       <BadgeCheck style={{ width: 12, height: 12 }} />
@@ -997,8 +994,8 @@ export default function OpenFoodFactsDetail() {
           {/* Barcode footer */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, paddingBottom: 8, flexWrap: "wrap" }}>
             <span style={{
-              fontSize: "0.68rem", color: TEXT_MUTED,
-              background: CARD, border: `1px solid ${BORDER}`,
+              fontSize: "0.68rem", color: DS.muted,
+              background: DS.card,
               padding: "4px 12px", borderRadius: 20,
               fontVariantNumeric: "tabular-nums",
             }}>
@@ -1013,7 +1010,7 @@ export default function OpenFoodFactsDetail() {
               onClick={() => navigate("/scan")}
               style={{
                 width: "100%", height: 50, borderRadius: 14, border: "none",
-                background: "#111827", color: "#fff",
+                background: DS.ink, color: "#fff",
                 fontWeight: 700, fontSize: "0.9rem",
                 cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
                 boxShadow: "0 2px 12px rgba(0,0,0,0.18)",

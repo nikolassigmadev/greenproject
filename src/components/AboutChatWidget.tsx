@@ -2,11 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { MessageCircle, X, Send } from "lucide-react";
 import { getBackendUrl } from "@/config/backend";
 
-const BLUE = "#2979FF";
-const TEXT = "#111827";
-const TEXT_MUTED = "#6B7280";
-const BORDER = "#E5E7EB";
-const CARD = "#FFFFFF";
+const BLUE = "#1a1a1a";
+const TEXT = "#1a1a1a";
+const TEXT_MUTED = "#6e6e73";
+const BORDER = "rgba(0,0,0,0.08)";
+const CARD = "#ffffff";
 
 type Msg = { role: "user" | "bot"; content: string };
 

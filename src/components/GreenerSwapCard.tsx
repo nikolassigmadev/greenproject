@@ -9,12 +9,12 @@ interface GreenerSwapCardProps {
   loading?: boolean;
 }
 
-const BLUE = "#2979FF";
-const BG   = "#F5F7FA";
-const CARD = "#FFFFFF";
-const BORDER = "#E5E7EB";
-const TEXT = "#111827";
-const TEXT_MUTED = "#6B7280";
+const BLUE = "#1a1a1a";
+const BG   = "#f7f6f3";
+const CARD = "#ffffff";
+const BORDER = "rgba(0,0,0,0.08)";
+const TEXT = "#1a1a1a";
+const TEXT_MUTED = "#6e6e73";
 
 const gradeColors: Record<string, { text: string; bg: string }> = {
   a: { text: "#10b981", bg: "#F0FAF6" },
@@ -57,8 +57,8 @@ function ProductChip({
         display: "flex", alignItems: "center", gap: 8,
         flex: 1, minWidth: 0,
         padding: 8, borderRadius: 10,
-        border: `1px solid ${isAlternative ? "#C3D6FF" : BORDER}`,
-        background: isAlternative ? "#EBF2FF" : BG,
+        border: `1px solid ${isAlternative ? "rgba(0,0,0,0.12)" : BORDER}`,
+        background: isAlternative ? "#f0f0ed" : BG,
         cursor: onClick ? "pointer" : "default",
       }}
     >
@@ -140,7 +140,7 @@ export function GreenerSwapCard({ original, alternatives, loading }: GreenerSwap
             <div style={{
               flexShrink: 0, display: "flex", alignItems: "center", gap: 6,
               padding: "6px 10px", borderRadius: 10,
-              background: "#EBF2FF", border: "1px solid #C3D6FF",
+              background: "#f0f0ed", border: "1px solid rgba(0,0,0,0.12)",
             }}>
               <TrendingDown style={{ width: 12, height: 12, color: BLUE, flexShrink: 0 }} />
               <div>
@@ -167,7 +167,7 @@ export function GreenerSwapCard({ original, alternatives, loading }: GreenerSwap
             <ProductChip product={original} />
             <div style={{
               flexShrink: 0, width: 28, height: 28, borderRadius: "50%",
-              background: "#EBF2FF", border: "1px solid #C3D6FF",
+              background: "#f0f0ed", border: "1px solid rgba(0,0,0,0.12)",
               display: "flex", alignItems: "center", justifyContent: "center",
             }}>
               <ArrowRight style={{ width: 12, height: 12, color: BLUE }} />

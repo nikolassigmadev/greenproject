@@ -29,16 +29,22 @@ import {
   getBasketEthicsReport,
   type BasketItem,
 } from "@/utils/basketStorage";
+import { DS } from "@/styles/design-tokens";
 
 // ── helpers ────────────────────────────────────────────────────────────────
 
 const NUTRI_COLOR: Record<string, string> = {
-  a: '#00C853', b: '#2979FF', c: '#F59E0B', d: '#F97316', e: '#EF4444',
+  a: '#00C853', b: '#84cc16', c: '#F59E0B', d: '#F97316', e: '#EF4444',
 };
 
 const ECO_COLOR: Record<string, string> = {
-  a: '#00C853', b: '#2979FF', c: '#F59E0B', d: '#F97316', e: '#EF4444',
+  a: '#00C853', b: '#84cc16', c: '#F59E0B', d: '#F97316', e: '#EF4444',
 };
+
+// Semantic color constants — represent data meaning, not structural tokens
+const RED = "#EF4444";
+const GREEN = "#00C853";
+const AMBER = "#F59E0B";
 
 function addResultToBasket(result: OpenFoodFactsResult) {
   addToBasket({
@@ -53,18 +59,6 @@ function addResultToBasket(result: OpenFoodFactsResult) {
     co2Per100g: result.carbonFootprint100g,
   });
 }
-
-// ── design tokens ──────────────────────────────────────────────────────────
-
-const BLUE = "#2979FF";
-const BG = "#F5F7FA";
-const CARD = "#FFFFFF";
-const BORDER = "#E5E7EB";
-const TEXT = "#111827";
-const TEXT_MUTED = "#6B7280";
-const RED = "#EF4444";
-const GREEN = "#00C853";
-const AMBER = "#F59E0B";
 
 export default function ShoppingList() {
   const [basket, setBasket] = useState<BasketItem[]>([]);
@@ -112,24 +106,22 @@ export default function ShoppingList() {
   const inBasket = (barcode: string) => basket.some(b => b.barcode === barcode);
 
   return (
-    <div style={{ background: BG, minHeight: "100vh" }}>
-      <main style={{ paddingBottom: "5.5rem" }}>
+    <div style={{ background: DS.bg, minHeight: "100vh", fontFamily: DS.font, color: DS.ink }}>
+      <main style={{ paddingBottom: 110 }}>
 
         {/* ── Header ── */}
         <div style={{
-          background: CARD,
-          borderBottom: `1px solid ${BORDER}`,
-          padding: "max(52px, env(safe-area-inset-top)) 20px 16px",
+          padding: "max(60px, env(safe-area-inset-top)) 20px 16px",
           display: "flex", justifyContent: "space-between", alignItems: "flex-end",
         }}>
           <div>
-            <p style={{ fontSize: "0.7rem", fontWeight: 600, color: TEXT_MUTED, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 4 }}>
+            <p style={{ fontSize: 13, fontWeight: 600, color: DS.muted, letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 4 }}>
               Shopping
             </p>
-            <h1 style={{ fontSize: "1.65rem", fontWeight: 800, color: TEXT, letterSpacing: "-0.025em", lineHeight: 1 }}>
+            <h1 style={{ fontSize: 28, fontWeight: 700, color: DS.ink, letterSpacing: -0.5, lineHeight: 1 }}>
               My Basket
               {basket.length > 0 && (
-                <span style={{ marginLeft: 10, fontSize: "1rem", fontWeight: 700, color: BLUE }}>
+                <span style={{ marginLeft: 10, fontSize: "1rem", fontWeight: 700, color: DS.muted }}>
                   {basket.length}
                 </span>
               )}
@@ -141,8 +133,8 @@ export default function ShoppingList() {
               style={{
                 display: "flex", alignItems: "center", gap: 6,
                 padding: "8px 14px", borderRadius: 10,
-                border: `1px solid ${BORDER}`,
-                background: CARD, color: TEXT_MUTED, cursor: "pointer",
+                border: "none",
+                background: DS.card, color: DS.muted, cursor: "pointer",
                 fontSize: "0.8rem", fontWeight: 600,
               }}
             >
@@ -151,7 +143,7 @@ export default function ShoppingList() {
           )}
         </div>
 
-        <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: 12 }}>
+        <div style={{ padding: "0 16px 16px", display: "flex", flexDirection: "column", gap: 12 }}>
 
           {/* ── Clear confirm ── */}
           {showClearConfirm && (
@@ -167,7 +159,7 @@ export default function ShoppingList() {
                 <button onClick={handleClear} style={{ flex: 1, height: 40, borderRadius: 10, border: "none", background: RED, color: "#fff", fontWeight: 700, fontSize: "0.85rem", cursor: "pointer" }}>
                   Yes, clear
                 </button>
-                <button onClick={() => setShowClearConfirm(false)} style={{ flex: 1, height: 40, borderRadius: 10, border: `1px solid ${BORDER}`, background: CARD, color: TEXT_MUTED, fontWeight: 600, fontSize: "0.85rem", cursor: "pointer" }}>
+                <button onClick={() => setShowClearConfirm(false)} style={{ flex: 1, height: 40, borderRadius: 10, border: "none", background: DS.card, color: DS.muted, fontWeight: 600, fontSize: "0.85rem", cursor: "pointer" }}>
                   Cancel
                 </button>
               </div>
@@ -180,10 +172,9 @@ export default function ShoppingList() {
 
               {/* Labour card */}
               <div style={{
-                background: CARD, borderRadius: 16, border: `1px solid ${BORDER}`,
+                background: DS.card, borderRadius: 18,
                 borderLeft: `4px solid ${report.laborFlagCount > 0 ? RED : GREEN}`,
                 padding: "14px 14px",
-                boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
               }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
                   <div style={{
@@ -193,7 +184,7 @@ export default function ShoppingList() {
                   }}>
                     <Users size={14} style={{ color: report.laborFlagCount > 0 ? RED : GREEN }} />
                   </div>
-                  <span style={{ fontSize: "0.68rem", fontWeight: 600, color: TEXT_MUTED }}>Labour</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: DS.muted }}>Labour</span>
                 </div>
                 <p style={{ fontSize: "1.6rem", fontWeight: 900, color: report.laborFlagCount > 0 ? RED : GREEN, lineHeight: 1, marginBottom: 2 }}>
                   {report.laborFlagCount > 0 ? report.laborFlagCount : report.cleanBrandCount}
@@ -202,9 +193,9 @@ export default function ShoppingList() {
                   {report.laborFlagCount > 0 ? `flagged brand${report.laborFlagCount !== 1 ? "s" : ""}` : "clean brands"}
                 </p>
                 {report.flaggedItems.length > 0 && (
-                  <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${BORDER}` }}>
+                  <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${DS.hair}` }}>
                     {report.flaggedItems.slice(0, 2).map(item => (
-                      <p key={item.barcode} style={{ fontSize: "0.65rem", color: TEXT_MUTED, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      <p key={item.barcode} style={{ fontSize: "0.65rem", color: DS.muted, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         · {item.brand || item.productName}
                       </p>
                     ))}
@@ -215,10 +206,9 @@ export default function ShoppingList() {
               {/* CO2 card */}
               {report.co2ScoredCount > 0 ? (
                 <div style={{
-                  background: CARD, borderRadius: 16, border: `1px solid ${BORDER}`,
+                  background: DS.card, borderRadius: 18,
                   borderLeft: `4px solid ${report.co2NetKg >= 0 ? GREEN : AMBER}`,
                   padding: "14px 14px",
-                  boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
                 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
                     <div style={{
@@ -230,7 +220,7 @@ export default function ShoppingList() {
                         ? <TrendingDown size={14} style={{ color: GREEN }} />
                         : <TrendingUp size={14} style={{ color: AMBER }} />}
                     </div>
-                    <span style={{ fontSize: "0.68rem", fontWeight: 600, color: TEXT_MUTED }}>CO₂</span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: DS.muted }}>CO₂</span>
                   </div>
                   <p style={{ fontSize: "1.6rem", fontWeight: 900, color: report.co2NetKg >= 0 ? GREEN : AMBER, lineHeight: 1, marginBottom: 2 }}>
                     {report.co2NetKg >= 0 ? "-" : "+"}{Math.abs(report.co2NetKg)}
@@ -242,13 +232,12 @@ export default function ShoppingList() {
                 </div>
               ) : (
                 <div style={{
-                  background: CARD, borderRadius: 16, border: `1px solid ${BORDER}`,
+                  background: DS.card, borderRadius: 18,
                   padding: "14px 14px",
-                  boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
                   display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center",
-                  gap: 6, color: TEXT_MUTED,
+                  gap: 6, color: DS.muted,
                 }}>
-                  <Leaf size={22} style={{ color: "#D1D5DB" }} />
+                  <Leaf size={22} style={{ color: DS.hair }} />
                   <p style={{ fontSize: "0.7rem", textAlign: "center", lineHeight: 1.4 }}>No eco data yet</p>
                 </div>
               )}
@@ -260,19 +249,18 @@ export default function ShoppingList() {
             <Link to={`/product-off/${report.weakestItem.barcode}`} style={{
               display: "flex", alignItems: "center", gap: 12,
               padding: "14px 16px",
-              background: "#FFFBEB", border: `1px solid #FDE68A`, borderRadius: 16,
+              background: "#FFFBEB", border: `1px solid #FDE68A`, borderRadius: 18,
               textDecoration: "none",
-              boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
             }}>
               <div style={{ width: 36, height: 36, borderRadius: 10, background: "#FEF3C7", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <AlertCircle size={18} style={{ color: AMBER }} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <p style={{ fontSize: "0.68rem", fontWeight: 700, color: "#92400E", marginBottom: 2 }}>Weakest link</p>
-                <p style={{ fontSize: "0.85rem", fontWeight: 700, color: TEXT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                <p style={{ fontSize: "0.85rem", fontWeight: 700, color: DS.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {report.weakestItem.productName}
                 </p>
-                <p style={{ fontSize: "0.7rem", color: TEXT_MUTED, marginTop: 1 }}>
+                <p style={{ fontSize: "0.7rem", color: DS.muted, marginTop: 1 }}>
                   Eco-{report.weakestItem.ecoscoreGrade?.toUpperCase()} · consider swapping
                 </p>
               </div>
@@ -281,17 +269,17 @@ export default function ShoppingList() {
           )}
 
           {/* ── Search / Add ── */}
-          <div style={{ background: CARD, borderRadius: 18, border: `1px solid ${BORDER}`, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
+          <div style={{ background: DS.card, borderRadius: 18, overflow: "hidden" }}>
             <div style={{ padding: "14px 16px 0" }}>
-              <p style={{ fontSize: "0.72rem", fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 10 }}>
+              <p style={{ fontSize: 13, fontWeight: 600, color: DS.muted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 10 }}>
                 Add product
               </p>
               <div style={{ position: "relative", display: "flex", alignItems: "center", marginBottom: 12 }}>
-                <Search size={15} style={{ position: "absolute", left: 12, color: "#9CA3AF", pointerEvents: "none" }} />
+                <Search size={15} style={{ position: "absolute", left: 12, color: DS.muted, pointerEvents: "none" }} />
                 {searching
-                  ? <Loader2 size={14} style={{ position: "absolute", right: 12, color: BLUE, animation: "spin 1s linear infinite" }} />
+                  ? <Loader2 size={14} style={{ position: "absolute", right: 12, color: DS.ink, animation: "spin 1s linear infinite" }} />
                   : query
-                  ? <button onClick={() => { setQuery(""); setSearchResults([]); }} style={{ position: "absolute", right: 10, background: "none", border: "none", color: TEXT_MUTED, cursor: "pointer", padding: 0 }}><X size={14} /></button>
+                  ? <button onClick={() => { setQuery(""); setSearchResults([]); }} style={{ position: "absolute", right: 10, background: "none", border: "none", color: DS.muted, cursor: "pointer", padding: 0 }}><X size={14} /></button>
                   : null
                 }
                 <input
@@ -301,9 +289,9 @@ export default function ShoppingList() {
                   placeholder="Search products to add…"
                   style={{
                     width: "100%", height: 44,
-                    background: BG,
-                    border: `1px solid ${BORDER}`, borderRadius: 12,
-                    color: TEXT, fontSize: "0.875rem",
+                    background: DS.bg,
+                    border: "none", borderRadius: 12,
+                    color: DS.ink, fontSize: "0.875rem",
                     paddingLeft: 36, paddingRight: 36, outline: "none",
                   }}
                 />
@@ -311,7 +299,7 @@ export default function ShoppingList() {
             </div>
 
             {searchResults.length > 0 && (
-              <div style={{ borderTop: `1px solid ${BORDER}` }}>
+              <div style={{ borderTop: `1px solid ${DS.hair}` }}>
                 {searchResults.map((result, i) => {
                   const grade = result.ecoscoreGrade?.toLowerCase();
                   const already = inBasket(result.barcode);
@@ -319,23 +307,23 @@ export default function ShoppingList() {
                     <div key={result.barcode} style={{
                       display: "flex", alignItems: "center", gap: 10,
                       padding: "12px 16px",
-                      borderBottom: i < searchResults.length - 1 ? `1px solid ${BORDER}` : "none",
+                      borderBottom: i < searchResults.length - 1 ? `1px solid ${DS.hair}` : "none",
                     }}>
                       {result.imageUrl
-                        ? <img src={result.imageUrl} alt="" style={{ width: 40, height: 40, objectFit: "cover", borderRadius: 10, flexShrink: 0, border: `1px solid ${BORDER}` }} />
-                        : <div style={{ width: 40, height: 40, background: BG, border: `1px solid ${BORDER}`, borderRadius: 10, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}><ShoppingBag size={16} style={{ color: "#D1D5DB" }} /></div>
+                        ? <img src={result.imageUrl} alt="" style={{ width: 40, height: 40, objectFit: "cover", borderRadius: 10, flexShrink: 0, border: `1px solid ${DS.hair}` }} />
+                        : <div style={{ width: 40, height: 40, background: DS.bg, borderRadius: 10, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}><ShoppingBag size={16} style={{ color: DS.muted }} /></div>
                       }
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ fontSize: "0.85rem", fontWeight: 700, color: TEXT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 3 }}>
+                        <p style={{ fontSize: "0.85rem", fontWeight: 700, color: DS.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 3 }}>
                           {result.productName || "Unknown"}
                         </p>
                         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                          {result.brand && <span style={{ fontSize: "0.7rem", color: TEXT_MUTED }}>{result.brand}</span>}
+                          {result.brand && <span style={{ fontSize: "0.7rem", color: DS.muted }}>{result.brand}</span>}
                           {grade && (
                             <span style={{
                               fontSize: "0.62rem", fontWeight: 700,
-                              color: ECO_COLOR[grade] || TEXT_MUTED,
-                              background: `${ECO_COLOR[grade] || TEXT_MUTED}18`,
+                              color: ECO_COLOR[grade] || DS.muted,
+                              background: `${ECO_COLOR[grade] || DS.muted}18`,
                               borderRadius: 6, padding: "1px 6px",
                             }}>
                               Eco-{grade.toUpperCase()}
@@ -349,7 +337,7 @@ export default function ShoppingList() {
                         style={{
                           width: 34, height: 34, borderRadius: 10,
                           border: "none",
-                          background: already ? "#F0FAF1" : BLUE,
+                          background: already ? "#F0FAF1" : DS.ink,
                           color: already ? GREEN : "#fff",
                           cursor: already ? "default" : "pointer",
                           display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
@@ -364,8 +352,8 @@ export default function ShoppingList() {
             )}
 
             {searchResults.length === 0 && query.trim().length >= 2 && !searching && (
-              <div style={{ padding: "14px 16px", borderTop: `1px solid ${BORDER}` }}>
-                <p style={{ fontSize: "0.8rem", color: TEXT_MUTED }}>No results found for "{query}"</p>
+              <div style={{ padding: "14px 16px", borderTop: `1px solid ${DS.hair}` }}>
+                <p style={{ fontSize: "0.8rem", color: DS.muted }}>No results found for "{query}"</p>
               </div>
             )}
           </div>
@@ -373,21 +361,20 @@ export default function ShoppingList() {
           {/* ── Basket Items ── */}
           {basket.length === 0 ? (
             <div style={{
-              background: CARD, borderRadius: 18, border: `1px solid ${BORDER}`,
+              background: DS.card, borderRadius: 18,
               padding: "36px 20px", textAlign: "center",
-              boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
             }}>
-              <div style={{ width: 56, height: 56, borderRadius: 18, background: "#EBF2FF", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
-                <ShoppingCart size={26} style={{ color: BLUE }} />
+              <div style={{ width: 56, height: 56, borderRadius: 18, background: DS.bg, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
+                <ShoppingCart size={26} style={{ color: DS.muted }} />
               </div>
-              <p style={{ fontSize: "1rem", fontWeight: 800, color: TEXT, marginBottom: 6 }}>Your basket is empty</p>
-              <p style={{ fontSize: "0.82rem", color: TEXT_MUTED, marginBottom: 22, lineHeight: 1.5 }}>
+              <p style={{ fontSize: "1rem", fontWeight: 800, color: DS.ink, marginBottom: 6 }}>Your basket is empty</p>
+              <p style={{ fontSize: "0.82rem", color: DS.muted, marginBottom: 22, lineHeight: 1.5 }}>
                 Search above or scan a product to get started
               </p>
               <Link to="/scan" style={{
                 display: "inline-flex", alignItems: "center", gap: 8,
                 padding: "12px 24px", borderRadius: 14,
-                background: BLUE, color: "#fff",
+                background: DS.ink, color: "#fff",
                 textDecoration: "none", fontWeight: 700, fontSize: "0.875rem",
               }}>
                 <ShoppingBag size={15} /> Start Scanning
@@ -395,10 +382,10 @@ export default function ShoppingList() {
             </div>
           ) : (
             <div>
-              <p style={{ fontSize: "0.72rem", fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>
+              <p style={{ fontSize: 13, fontWeight: 600, color: DS.muted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>
                 {basket.length} item{basket.length !== 1 ? "s" : ""} in basket
               </p>
-              <div style={{ background: CARD, borderRadius: 18, border: `1px solid ${BORDER}`, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
+              <div style={{ background: DS.card, borderRadius: 18, overflow: "hidden" }}>
                 {basket.map((item, i) => {
                   const ecoGrade = item.ecoscoreGrade?.toLowerCase();
                   const nutriGrade = item.nutriscoreGrade?.toLowerCase();
@@ -409,25 +396,25 @@ export default function ShoppingList() {
                     <div key={item.id} style={{
                       display: "flex", alignItems: "center", gap: 12,
                       padding: "12px 14px",
-                      borderBottom: i < basket.length - 1 ? `1px solid ${BORDER}` : "none",
+                      borderBottom: i < basket.length - 1 ? `1px solid ${DS.hair}` : "none",
                       borderLeft: `4px solid ${isFlagged ? RED : isWeakest ? AMBER : "transparent"}`,
                     }}>
                       <Link to={`/product-off/${item.barcode}`} style={{ display: "flex", alignItems: "center", gap: 12, flex: 1, minWidth: 0, textDecoration: "none" }}>
                         {item.imageUrl
-                          ? <img src={item.imageUrl} alt="" style={{ width: 46, height: 46, objectFit: "cover", borderRadius: 12, flexShrink: 0, border: `1px solid ${BORDER}` }} />
-                          : <div style={{ width: 46, height: 46, background: BG, border: `1px solid ${BORDER}`, borderRadius: 12, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}><ShoppingBag size={18} style={{ color: "#D1D5DB" }} /></div>
+                          ? <img src={item.imageUrl} alt="" style={{ width: 46, height: 46, objectFit: "cover", borderRadius: 12, flexShrink: 0, border: `1px solid ${DS.hair}` }} />
+                          : <div style={{ width: 46, height: 46, background: DS.bg, borderRadius: 12, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}><ShoppingBag size={18} style={{ color: DS.muted }} /></div>
                         }
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <p style={{ fontSize: "0.875rem", fontWeight: 700, color: TEXT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 4 }}>
+                          <p style={{ fontSize: "0.875rem", fontWeight: 700, color: DS.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 4 }}>
                             {item.productName}
                           </p>
                           <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
-                            {item.brand && <span style={{ fontSize: "0.7rem", color: TEXT_MUTED }}>{item.brand}</span>}
+                            {item.brand && <span style={{ fontSize: "0.7rem", color: DS.muted }}>{item.brand}</span>}
                             {ecoGrade
-                              ? <span style={{ fontSize: "0.62rem", fontWeight: 700, color: ECO_COLOR[ecoGrade] || TEXT_MUTED, background: `${ECO_COLOR[ecoGrade] || TEXT_MUTED}18`, borderRadius: 6, padding: "1px 6px" }}>Eco-{ecoGrade.toUpperCase()}</span>
+                              ? <span style={{ fontSize: "0.62rem", fontWeight: 700, color: ECO_COLOR[ecoGrade] || DS.muted, background: `${ECO_COLOR[ecoGrade] || DS.muted}18`, borderRadius: 6, padding: "1px 6px" }}>Eco-{ecoGrade.toUpperCase()}</span>
                               : null
                             }
-                            {nutriGrade && <span style={{ fontSize: "0.62rem", fontWeight: 700, color: NUTRI_COLOR[nutriGrade] || TEXT_MUTED, background: `${NUTRI_COLOR[nutriGrade] || TEXT_MUTED}18`, borderRadius: 6, padding: "1px 6px" }}>Nutri-{nutriGrade.toUpperCase()}</span>}
+                            {nutriGrade && <span style={{ fontSize: "0.62rem", fontWeight: 700, color: NUTRI_COLOR[nutriGrade] || DS.muted, background: `${NUTRI_COLOR[nutriGrade] || DS.muted}18`, borderRadius: 6, padding: "1px 6px" }}>Nutri-{nutriGrade.toUpperCase()}</span>}
                             {isFlagged && (
                               <span style={{ fontSize: "0.62rem", fontWeight: 700, color: RED, background: "#FEF2F2", borderRadius: 6, padding: "1px 6px", display: "inline-flex", alignItems: "center", gap: 3 }}>
                                 <Users size={9} /> Labour flag
@@ -440,8 +427,8 @@ export default function ShoppingList() {
                         onClick={() => handleRemove(item.barcode)}
                         style={{
                           width: 32, height: 32, borderRadius: 9,
-                          border: `1px solid ${BORDER}`, background: BG,
-                          color: TEXT_MUTED, cursor: "pointer",
+                          border: "none", background: DS.bg,
+                          color: DS.muted, cursor: "pointer",
                           display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
                         }}
                       >

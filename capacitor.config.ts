@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.scan2source.app',
-  appName: 'Scan2Source',
+  appName: 'GoodScan',
   webDir: 'dist',
   server: {
     allowNavigation: [

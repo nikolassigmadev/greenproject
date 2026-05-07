@@ -26,7 +26,7 @@ export function HackerTransition() {
         width: '100vw', height: '100vh',
         zIndex: 9998,
         pointerEvents: 'none',
-        background: '#2979FF',
+        background: '#1a1a1a',
         transform: 'translateX(-101%)',
         animation: active ? 'blade-sweep 0.38s cubic-bezier(0.77,0,0.18,1) forwards' : 'none',
       }}

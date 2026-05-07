@@ -1,77 +1,101 @@
 import { BottomNav } from "@/components/BottomNav";
 import { AboutChatWidget } from "@/components/AboutChatWidget";
 import { Link } from "react-router-dom";
-import { Leaf, Shield, Globe, Heart } from "lucide-react";
-
-const BLUE = "#2979FF";
-const TEXT = "#111827";
-const TEXT_MUTED = "#6B7280";
-const BORDER = "#E5E7EB";
-const GREEN = "#00C853";
+import { ChevronRight } from "lucide-react";
+import { DS } from "@/styles/design-tokens";
 
 export default function AboutUs() {
   return (
-    <div style={{ minHeight: "100dvh", background: "#F5F7FA", display: "flex", flexDirection: "column" }}>
-      <main style={{ flex: 1, maxWidth: 640, margin: "0 auto", width: "100%", padding: "32px 20px 100px" }}>
-        {/* Logo + title */}
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 32, textAlign: "center" }}>
-          <div style={{ width: 64, height: 64, borderRadius: 18, background: "#E8F5E9", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 14 }}>
-            <Leaf style={{ width: 32, height: 32, color: "#388E3C" }} />
-          </div>
-          <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: TEXT, marginBottom: 6 }}>Scan2Source</h1>
-          <p style={{ fontSize: "0.9rem", color: TEXT_MUTED, maxWidth: 300, lineHeight: 1.6 }}>
-            Making ethical shopping simple — scan a product and instantly understand its impact.
-          </p>
-        </div>
+    <div style={{ minHeight: "100dvh", background: DS.bg, fontFamily: DS.font, color: DS.ink }}>
+      <main style={{ padding: "0 20px", paddingBottom: 110 }}>
+        <div style={{ paddingTop: "max(60px, env(safe-area-inset-top))" }}>
 
-        {/* Mission */}
-        <div style={{ background: "#fff", borderRadius: 16, border: `1px solid ${BORDER}`, padding: "20px", marginBottom: 16 }}>
-          <h2 style={{ fontSize: "0.95rem", fontWeight: 700, color: TEXT, marginBottom: 10 }}>Our Mission</h2>
-          <p style={{ fontSize: "0.875rem", color: TEXT_MUTED, lineHeight: 1.7, margin: 0 }}>
-            We believe consumers deserve to know the story behind the products they buy. Scan2Source aggregates data on labour rights, environmental impact, animal welfare, and nutrition so you can shop with confidence.
-          </p>
-        </div>
-
-        {/* Pillars */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
-          {[
-            { icon: Shield, label: "Labour Rights", color: "#E53935", bg: "#FFF0F0" },
-            { icon: Leaf, label: "Environment", color: "#388E3C", bg: "#E8F5E9" },
-            { icon: Heart, label: "Animal Welfare", color: "#7B1FA2", bg: "#F9F0FF" },
-            { icon: Globe, label: "Transparency", color: BLUE, bg: "#E3EDFF" },
-          ].map(({ icon: Icon, label, color, bg }) => (
-            <div key={label} style={{ background: "#fff", borderRadius: 14, border: `1px solid ${BORDER}`, padding: "14px 16px", display: "flex", alignItems: "center", gap: 10 }}>
-              <div style={{ width: 34, height: 34, borderRadius: 10, background: bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <Icon style={{ width: 18, height: 18, color }} />
-              </div>
-              <span style={{ fontSize: "0.8rem", fontWeight: 600, color: TEXT }}>{label}</span>
+          {/* Title */}
+          <div style={{ padding: "8px 0 22px" }}>
+            <div style={{ fontSize: 30, fontWeight: 800, letterSpacing: -0.6 }}>GoodScan</div>
+            <div style={{ fontSize: 16, color: DS.muted, marginTop: 6, lineHeight: 1.4 }}>
+              Making ethical shopping simple — scan a product and instantly understand its impact.
             </div>
-          ))}
-        </div>
+          </div>
 
-        {/* Data attribution */}
-        <div style={{ background: "#fff", borderRadius: 16, border: `1px solid ${BORDER}`, padding: "20px", marginBottom: 16 }}>
-          <h2 style={{ fontSize: "0.95rem", fontWeight: 700, color: TEXT, marginBottom: 10 }}>Data Sources</h2>
-          <p style={{ fontSize: "0.875rem", color: TEXT_MUTED, lineHeight: 1.7, margin: 0 }}>
-            Nutritional and environmental product data is sourced from{" "}
-            <span style={{ fontWeight: 600, color: TEXT }}>Open Food Facts</span>{" "}
-            (openfoodfacts.org), a free, open, and collaborative food database licensed under CC BY-SA 4.0. Labour and sourcing flags are researched and reviewed by our team against published reports and certifications.
-          </p>
-        </div>
+          {/* Mission card */}
+          <div style={{ background: DS.card, borderRadius: 18, padding: 20, marginBottom: 22 }}>
+            <h2 style={{ fontSize: 17, fontWeight: 700, margin: "0 0 8px" }}>Our mission</h2>
+            <p style={{ fontSize: 15, color: DS.ink, opacity: 0.85, margin: 0, lineHeight: 1.5 }}>
+              We believe you deserve to know the story behind the products you buy. We bring together data on labour, environment, animal welfare, and nutrition — so you can shop with confidence.
+            </p>
+          </div>
 
-        {/* Contact + legal links */}
-        <div style={{ background: "#fff", borderRadius: 16, border: `1px solid ${BORDER}`, padding: "20px" }}>
-          <h2 style={{ fontSize: "0.95rem", fontWeight: 700, color: TEXT, marginBottom: 10 }}>Contact & Legal</h2>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <a href="mailto:geovanis@proton.me" style={{ fontSize: "0.875rem", color: BLUE, textDecoration: "none", fontWeight: 600 }}>
-              geovanis@proton.me
-            </a>
-            <Link to="/privacy" style={{ fontSize: "0.875rem", color: BLUE, textDecoration: "none", fontWeight: 600 }}>
-              Privacy Policy →
-            </Link>
-            <Link to="/methodology" style={{ fontSize: "0.875rem", color: BLUE, textDecoration: "none", fontWeight: 600 }}>
-              Methodology →
-            </Link>
+          {/* Values grid */}
+          <h2 style={{
+            fontSize: 13, fontWeight: 600, color: DS.muted, margin: "0 0 10px",
+            textTransform: "uppercase", letterSpacing: 0.5,
+          }}>What we look at</h2>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 22 }}>
+            {[
+              { t: "Labour", d: "Fair pay & safe working conditions", glyph: "👤" },
+              { t: "Environment", d: "Carbon, packaging, ecosystems", glyph: "🌿" },
+              { t: "Animal welfare", d: "Standards & alternatives", glyph: "◐" },
+              { t: "Transparency", d: "Public reports & audits", glyph: "◇" },
+            ].map((v) => (
+              <div key={v.t} style={{ background: DS.card, borderRadius: DS.radius.sm, padding: 14, minHeight: 110 }}>
+                <div style={{
+                  width: 32, height: 32, borderRadius: 16, background: DS.bg,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 16, marginBottom: 10,
+                }}>
+                  <span style={{ filter: "grayscale(0.2)" }}>{v.glyph}</span>
+                </div>
+                <div style={{ fontSize: 15, fontWeight: 600 }}>{v.t}</div>
+                <div style={{ fontSize: 13, color: DS.muted, marginTop: 3, lineHeight: 1.35 }}>{v.d}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Data source */}
+          <h2 style={{
+            fontSize: 13, fontWeight: 600, color: DS.muted, margin: "0 0 10px",
+            textTransform: "uppercase", letterSpacing: 0.5,
+          }}>Where the data comes from</h2>
+          <div style={{ background: DS.card, borderRadius: DS.radius.sm, padding: 16, marginBottom: 22 }}>
+            <p style={{ fontSize: 14, color: DS.ink, opacity: 0.85, margin: 0, lineHeight: 1.5 }}>
+              Nutrition and environment data come from <span style={{ fontWeight: 600 }}>Open Food Facts</span> — a free, open database. Labour and sourcing details are reviewed by our team against published reports.
+            </p>
+          </div>
+
+          {/* Contact */}
+          <h2 style={{
+            fontSize: 13, fontWeight: 600, color: DS.muted, margin: "0 0 10px",
+            textTransform: "uppercase", letterSpacing: 0.5,
+          }}>Contact</h2>
+          <div style={{ background: DS.card, borderRadius: DS.radius.sm, overflow: "hidden", marginBottom: 30 }}>
+            {[
+              { label: "Email", value: "geovanis@proton.me", href: "mailto:geovanis@proton.me" },
+              { label: "Privacy policy", value: "View", to: "/privacy" },
+              { label: "Methodology", value: "View", to: "/methodology" },
+            ].map((item, i) => {
+              const inner = (
+                <div style={{
+                  display: "flex", justifyContent: "space-between", alignItems: "center",
+                  padding: "14px 16px",
+                  borderTop: i ? `1px solid ${DS.hair}` : "none",
+                }}>
+                  <span style={{ fontSize: 15 }}>{item.label}</span>
+                  <span style={{ fontSize: 14, color: DS.muted, display: "flex", alignItems: "center", gap: 6 }}>
+                    {item.value}
+                    <ChevronRight style={{ width: 14, height: 14, color: DS.muted }} />
+                  </span>
+                </div>
+              );
+              if (item.to) {
+                return <Link key={i} to={item.to} style={{ textDecoration: "none", color: "inherit" }}>{inner}</Link>;
+              }
+              return <a key={i} href={item.href} style={{ textDecoration: "none", color: "inherit" }}>{inner}</a>;
+            })}
+          </div>
+
+          <div style={{ textAlign: "center", fontSize: 12, color: DS.muted, paddingBottom: 4 }}>
+            v1.0 · Made with care
           </div>
         </div>
       </main>
