@@ -73,17 +73,50 @@ const calculateEcoScore = (result: OpenFoodFactsResult): number => {
   return score;
 };
 
+// Simple Levenshtein distance for fuzzy matching
+const levenshtein = (a: string, b: string): number => {
+  const m = a.length, n = b.length;
+  if (m === 0) return n;
+  if (n === 0) return m;
+  let prev = Array.from({ length: n + 1 }, (_, i) => i);
+  for (let i = 1; i <= m; i++) {
+    const curr = [i];
+    for (let j = 1; j <= n; j++) {
+      curr[j] = a[i - 1] === b[j - 1]
+        ? prev[j - 1]
+        : 1 + Math.min(prev[j - 1], prev[j], curr[j - 1]);
+    }
+    prev = curr;
+  }
+  return prev[n];
+};
+
+// Check if a query word fuzzy-matches any word in the haystack
+const fuzzyWordMatch = (queryWord: string, haystackWords: string[]): boolean => {
+  // Allow up to ~25% edit distance (1 for short words, 2 for longer)
+  const maxDist = queryWord.length <= 5 ? 1 : 2;
+  return haystackWords.some(hw => {
+    if (hw.includes(queryWord) || queryWord.includes(hw)) return true;
+    if (Math.abs(hw.length - queryWord.length) > maxDist) return false;
+    return levenshtein(queryWord, hw) <= maxDist;
+  });
+};
+
 // Compute how relevant a product is to the query (0–1).
 // Weighted by word length so short noise words don't dominate.
+// Uses fuzzy matching to handle typos (e.g. "tkais" → "takis").
 const computeRelevance = (result: OpenFoodFactsResult, words: string[]): number => {
   if (words.length === 0) return 0;
   const haystack = `${(result.productName || '').toLowerCase()} ${(result.brand || '').toLowerCase()}`;
+  const haystackWords = haystack.split(/[\s\-_,/&().]+/).filter(w => w.length >= 2);
   let matchedWeight = 0;
   let totalWeight = 0;
   for (const w of words) {
-    const weight = w.length; // longer words carry more signal
+    const weight = w.length;
     totalWeight += weight;
-    if (haystack.includes(w)) matchedWeight += weight;
+    if (haystack.includes(w) || fuzzyWordMatch(w, haystackWords)) {
+      matchedWeight += weight;
+    }
   }
   return totalWeight > 0 ? matchedWeight / totalWeight : 0;
 };
@@ -140,13 +173,8 @@ const filterBestProducts = (results: OpenFoodFactsResult[], query?: string): Ope
         return candidates.slice(0, 5).map(s => s.result);
       }
 
-      // Nothing matched the relevance filter — the OFF search itself found these
-      // products for the query, so return the top results by eco data completeness
-      // rather than discarding everything.
-      return searchPool
-        .sort((a, b) => b.ecoScore - a.ecoScore)
-        .slice(0, 5)
-        .map(s => s.result);
+      // Nothing matched the relevance filter — discard unrelated results
+      return [];
     }
   }
 
@@ -1130,10 +1158,18 @@ const Scan = () => {
         return;
       }
 
-      // Step 4: Rank by eco data completeness
+      // Step 4: Rank by eco data completeness, discard unrelated results
       console.log(`Found results for query: "${fullQuery}"`);
       const topResults = filterBestProducts(results, fullQuery);
-      const candidates = topResults.length > 0 ? topResults : results;
+      if (topResults.length === 0) {
+        toast({
+          title: "No Matching Products",
+          description: `Couldn't find a product matching "${fullQuery}". Try a different search.`,
+          variant: "destructive",
+        });
+        return;
+      }
+      const candidates = topResults;
 
       // Step 4b: Confidence check — verify that the top candidate's barcode
       // actually resolves to a product matching what OCR identified. This catches
