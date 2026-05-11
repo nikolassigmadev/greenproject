@@ -22,6 +22,7 @@ import { copySingleProductCode } from "@/utils/productExporter";
 import { loadPriorities, DEFAULT_PRIORITIES, type UserPriorities } from "@/utils/userPreferences";
 import { lookupBarcode, isValidBarcode, searchProducts as searchOffProducts, searchBetterAlternatives } from "@/services/openfoodfacts";
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
+import { DS } from "@/styles/design-tokens";
 
 // Check if a product has an eco-score grade
 const hasEcoScore = (product: OpenFoodFactsResult): boolean => {
@@ -1332,10 +1333,10 @@ const Scan = () => {
           {/* Priority category pills */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 32 }}>
             {[
-              { icon: Users,  label: 'Labour Rights',  color: '#EF4444', bg: 'rgba(239,68,68,0.12)',   border: 'rgba(239,68,68,0.25)' },
-              { icon: Leaf,   label: 'Environment',    color: '#00C853', bg: 'rgba(0,200,83,0.12)',    border: 'rgba(0,200,83,0.25)' },
-              { icon: Heart,  label: 'Animal Welfare', color: '#A855F7', bg: 'rgba(168,85,247,0.12)',  border: 'rgba(168,85,247,0.25)' },
-              { icon: Apple,  label: 'Nutrition',      color: '#F97316', bg: 'rgba(249,115,22,0.12)',  border: 'rgba(249,115,22,0.25)' },
+              { icon: Users,  label: 'Labour Rights',  color: '#D46B5E', bg: 'rgba(178,58,43,0.14)',    border: 'rgba(178,58,43,0.28)' },
+              { icon: Leaf,   label: 'Environment',    color: '#5CB88A', bg: 'rgba(31,107,78,0.14)',    border: 'rgba(31,107,78,0.28)' },
+              { icon: Heart,  label: 'Animal Welfare', color: '#B08CC0', bg: 'rgba(122,90,138,0.14)',   border: 'rgba(122,90,138,0.28)' },
+              { icon: Apple,  label: 'Nutrition',      color: '#D9A654', bg: 'rgba(192,130,42,0.14)',   border: 'rgba(192,130,42,0.28)' },
             ].map(({ icon: Icon, label, color, bg, border }) => (
               <div key={label} style={{
                 background: bg, border: `1px solid ${border}`,
@@ -1659,28 +1660,28 @@ const Scan = () => {
         <div
           style={{
             position: 'absolute', bottom: 0, left: 0, right: 0,
-            background: '#fff',
-            borderTop: '1px solid #E5E7EB',
+            background: DS.card,
+            borderTop: `1px solid ${DS.hair}`,
             borderRadius: '20px 20px 0 0',
             padding: '20px 20px max(32px, env(safe-area-inset-bottom))',
             zIndex: 50,
-            boxShadow: '0 -4px 24px rgba(0,0,0,0.15)',
+            boxShadow: '0 -4px 24px rgba(26,22,20,0.15)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: '#FEF2F2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <AlertCircle size={18} style={{ color: '#EF4444' }} />
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: DS.badBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <AlertCircle size={18} style={{ color: DS.bad }} />
             </div>
             <div>
-              <p style={{ fontWeight: 800, fontSize: '0.95rem', color: '#111827', marginBottom: 2 }}>Product not found</p>
-              <p style={{ fontSize: '0.78rem', color: '#6B7280', lineHeight: 1.4 }}>Try a clearer photo of the barcode or label.</p>
+              <p style={{ fontWeight: 800, fontSize: '0.95rem', color: DS.ink, marginBottom: 2 }}>Product not found</p>
+              <p style={{ fontSize: '0.78rem', color: DS.muted, lineHeight: 1.4 }}>Try a clearer photo of the barcode or label.</p>
             </div>
           </div>
           <button
             onClick={() => { setProductUnknown(false); offFileInputRef.current?.click(); }}
             style={{
               width: '100%', height: 48, border: 'none', borderRadius: 14,
-              backgroundColor: '#1a1a1a', color: '#fff',
+              backgroundColor: DS.ink, color: DS.card,
               fontWeight: 700, fontSize: '0.9rem',
               cursor: 'pointer', marginTop: 8,
             }}
@@ -1695,25 +1696,25 @@ const Scan = () => {
         <div
           style={{
             position: 'absolute', bottom: 0, left: 0, right: 0,
-            background: '#fff',
-            borderTop: '1px solid #E5E7EB',
+            background: DS.card,
+            borderTop: `1px solid ${DS.hair}`,
             borderRadius: '20px 20px 0 0',
             padding: '16px 18px max(28px, env(safe-area-inset-bottom))',
             zIndex: 40,
-            boxShadow: '0 -4px 24px rgba(0,0,0,0.15)',
+            boxShadow: '0 -4px 24px rgba(26,22,20,0.15)',
           }}
         >
           {/* Handle */}
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>
-            <div style={{ width: 36, height: 4, borderRadius: 99, background: '#E5E7EB' }} />
+            <div style={{ width: 36, height: 4, borderRadius: 99, background: DS.hair }} />
           </div>
 
-          <p style={{ fontSize: '1rem', fontWeight: 800, color: '#111827', marginBottom: 4 }}>Search by name or barcode</p>
-          <p style={{ fontSize: '0.78rem', color: '#6B7280', marginBottom: 14 }}>Enter a product name or scan barcode number</p>
+          <p style={{ fontSize: '1rem', fontWeight: 800, color: DS.ink, marginBottom: 4 }}>Search by name or barcode</p>
+          <p style={{ fontSize: '0.78rem', color: DS.muted, marginBottom: 14 }}>Enter a product name or scan barcode number</p>
 
           <form onSubmit={(e) => { e.preventDefault(); if (barcodeInput.trim()) { handleProductSearch(barcodeInput); setShowSearch(false); } }} style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
             <div style={{ flex: 1, position: 'relative', display: 'flex', alignItems: 'center' }}>
-              <Search size={14} style={{ position: 'absolute', left: 12, color: '#9CA3AF', pointerEvents: 'none' }} />
+              <Search size={14} style={{ position: 'absolute', left: 12, color: DS.muted, pointerEvents: 'none' }} />
               <input
                 autoFocus
                 type="text"
@@ -1722,11 +1723,11 @@ const Scan = () => {
                 placeholder={scanMode === 'Barcode' ? 'Barcode number…' : 'e.g. Coca-Cola, Weetbix…'}
                 style={{
                   flex: 1, height: 46, width: '100%',
-                  border: '1.5px solid rgba(0,0,0,0.15)',
+                  border: `1.5px solid ${DS.hair}`,
                   borderRadius: 12,
-                  backgroundColor: '#f7f6f3',
+                  backgroundColor: DS.bg,
                   fontSize: '0.875rem', padding: '0 12px 0 36px', outline: 'none',
-                  color: '#111827',
+                  color: DS.ink,
                 }}
               />
             </div>
@@ -1735,8 +1736,8 @@ const Scan = () => {
               disabled={!barcodeInput.trim() || offLoading}
               style={{
                 height: 46, borderRadius: 12, border: 'none',
-                backgroundColor: barcodeInput.trim() ? '#1a1a1a' : '#F5F7FA',
-                color: barcodeInput.trim() ? '#fff' : '#9CA3AF',
+                backgroundColor: barcodeInput.trim() ? DS.ink : DS.bg,
+                color: barcodeInput.trim() ? DS.card : DS.muted,
                 fontWeight: 700, fontSize: '0.85rem',
                 padding: '0 18px', cursor: 'pointer',
                 transition: 'background 0.15s',
@@ -1754,18 +1755,18 @@ const Scan = () => {
               style={{
                 display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10,
                 padding: '10px 12px',
-                backgroundColor: '#FFFBEB',
-                border: '1px solid #FDE68A',
+                backgroundColor: DS.warnBg,
+                border: `1px solid ${DS.warn}33`,
                 borderRadius: 12,
                 textDecoration: 'none',
               }}
             >
-              <AlertCircle size={14} style={{ color: '#F59E0B', flexShrink: 0 }} />
+              <AlertCircle size={14} style={{ color: DS.warn, flexShrink: 0 }} />
               <div style={{ flex: 1 }}>
-                <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#92400E', marginBottom: 1 }}>Set your values first</p>
-                <p style={{ fontSize: '0.7rem', color: '#B45309' }}>Personalise every scan result</p>
+                <p style={{ fontSize: '0.78rem', fontWeight: 700, color: DS.ink, marginBottom: 1 }}>Set your values first</p>
+                <p style={{ fontSize: '0.7rem', color: DS.muted }}>Personalise every scan result</p>
               </div>
-              <ChevronRight size={14} style={{ color: '#F59E0B', flexShrink: 0 }} />
+              <ChevronRight size={14} style={{ color: DS.warn, flexShrink: 0 }} />
             </Link>
           )}
 
@@ -1773,10 +1774,10 @@ const Scan = () => {
             onClick={() => setShowSearch(false)}
             style={{
               width: '100%', padding: '12px',
-              border: '1px solid #E5E7EB',
+              border: `1px solid ${DS.hair}`,
               borderRadius: 12,
-              backgroundColor: '#F9FAFB',
-              color: '#6B7280', fontWeight: 600, fontSize: '0.85rem',
+              backgroundColor: DS.bg,
+              color: DS.muted, fontWeight: 600, fontSize: '0.85rem',
               cursor: 'pointer',
             }}
           >

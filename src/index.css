@@ -7,39 +7,63 @@
 /* ── Design tokens ───────────────────────────────────────────────────────── */
 
 :root {
-  /* Brand — GoodScan Simple */
-  --brand-ink: #1a1a1a;
-  --brand-good: #2f7d4f;
-  --brand-warn: #c97a1a;
-  --brand-bad: #c44a36;
+  /* Brand — editorial product-results palette */
+  --brand-ink: #1A1614;
+  --brand-good: #1F6B4E;
+  --brand-warn: #C0822A;
+  --brand-bad: #B23A2B;
 
-  /* Semantic color tokens (shadcn-compatible) — GoodScan Simple */
-  --background: 40 11% 96%;
-  --foreground: 0 0% 10%;
-  --card: 0 0% 100%;
-  --card-foreground: 0 0% 10%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 0 0% 10%;
-  --primary: 0 0% 10%;
-  --primary-foreground: 0 0% 100%;
-  --secondary: 40 11% 96%;
-  --secondary-foreground: 0 0% 10%;
-  --muted: 40 6% 94%;
-  --muted-foreground: 240 1% 45%;
-  --accent: 0 0% 10%;
-  --accent-foreground: 0 0% 100%;
-  --destructive: 7 66% 49%;
-  --destructive-foreground: 0 0% 100%;
-  --border: 0 0% 0% / 0.08;
-  --input: 0 0% 0% / 0.08;
-  --ring: 0 0% 10%;
+  /* Semantic color tokens (shadcn-compatible) */
+  --background: 45 20% 96.1%;
+  --foreground: 20 13% 9%;
+  --card: 44 65.2% 95.5%;
+  --card-foreground: 20 13% 9%;
+  --popover: 44 65.2% 95.5%;
+  --popover-foreground: 20 13% 9%;
+  --primary: 20 13% 9%;
+  --primary-foreground: 44 65.2% 95.5%;
+  --secondary: 42 33.3% 84.1%;
+  --secondary-foreground: 32 10.2% 32.7%;
+  --muted: 42 33.3% 84.1%;
+  --muted-foreground: 30 8% 51%;
+  --accent: 157 55.1% 27.1%;
+  --accent-foreground: 44 65.2% 95.5%;
+  --destructive: 7 61.1% 43.3%;
+  --destructive-foreground: 44 65.2% 95.5%;
+  --border: 42 33.3% 84.1%;
+  --input: 42 33.3% 84.1%;
+  --ring: 20 13% 9%;
   --radius: 0.875rem;
 
+  --eco-forest: 157 55.1% 27.1%;
+  --eco-leaf: 157 55.1% 27.1%;
+  --eco-sage: 129 20% 87.3%;
+  --eco-cream: 45 20% 96.1%;
+  --eco-sand: 42 33.3% 84.1%;
+  --eco-amber: 35 64.1% 45.9%;
+  --eco-terracotta: 7 61.1% 43.3%;
+  --eco-ocean: 205 45.2% 32.9%;
+
+  --score-excellent: 157 55.1% 27.1%;
+  --score-good: 157 55.1% 27.1%;
+  --score-fair: 35 64.1% 45.9%;
+  --score-poor: 14 49.2% 48%;
+  --score-critical: 7 61.1% 43.3%;
+
+  --sidebar-background: 45 20% 96.1%;
+  --sidebar-foreground: 20 13% 9%;
+  --sidebar-primary: 20 13% 9%;
+  --sidebar-primary-foreground: 44 65.2% 95.5%;
+  --sidebar-accent: 42 33.3% 84.1%;
+  --sidebar-accent-foreground: 20 13% 9%;
+  --sidebar-border: 42 33.3% 84.1%;
+  --sidebar-ring: 20 13% 9%;
+
   /* Shadows */
-  --shadow-soft: 0 1px 4px rgba(0,0,0,0.06), 0 2px 12px rgba(0,0,0,0.04);
-  --shadow-card: 0 2px 8px rgba(0,0,0,0.06), 0 4px 24px rgba(0,0,0,0.04);
-  --shadow-elevated: 0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
-  --shadow-bottom-nav: 0 -1px 0 rgba(0,0,0,0.06), 0 -4px 16px rgba(0,0,0,0.04);
+  --shadow-soft: 0 1px 4px rgba(26,22,20,0.06), 0 2px 12px rgba(26,22,20,0.04);
+  --shadow-card: 0 2px 8px rgba(26,22,20,0.06), 0 4px 24px rgba(26,22,20,0.04);
+  --shadow-elevated: 0 8px 32px rgba(26,22,20,0.12), 0 2px 8px rgba(26,22,20,0.06);
+  --shadow-bottom-nav: 0 -1px 0 rgba(26,22,20,0.06), 0 -4px 16px rgba(26,22,20,0.04);
 }
 
 /* ── Base layer ──────────────────────────────────────────────────────────── */
@@ -65,8 +89,8 @@
 /* ── Bottom nav styles ───────────────────────────────────────────────────── */
 
 .bottom-nav {
-  background: #ffffff;
-  border-top: 1px solid rgba(0,0,0,0.08);
+  background: #FBF7EC;
+  border-top: 1px solid #E4DCC9;
   box-shadow: var(--shadow-bottom-nav);
 }
 
@@ -101,6 +125,158 @@
 /* ── Utility layer ───────────────────────────────────────────────────────── */
 
 @layer utilities {
+  /* Palette compatibility for older utility-heavy components. */
+  .bg-white { background-color: #FBF7EC; }
+  .text-white { color: #FBF7EC; }
+
+  .bg-neutral-50,
+  .bg-neutral-100,
+  .bg-gray-50,
+  .bg-gray-100,
+  .bg-stone-50,
+  .bg-stone-100,
+  .bg-zinc-50,
+  .bg-zinc-100 {
+    background-color: #F7F6F3;
+  }
+
+  .bg-neutral-200,
+  .bg-gray-200,
+  .bg-stone-200,
+  .bg-zinc-200 {
+    background-color: #E4DCC9;
+  }
+
+  .text-neutral-300,
+  .text-neutral-400,
+  .text-gray-400,
+  .text-stone-400,
+  .text-zinc-400 {
+    color: #8C8278;
+  }
+
+  .text-neutral-500,
+  .text-neutral-600,
+  .text-neutral-700,
+  .text-gray-500,
+  .text-gray-600,
+  .text-gray-700,
+  .text-stone-500,
+  .text-stone-600,
+  .text-stone-700,
+  .text-zinc-500,
+  .text-zinc-600,
+  .text-zinc-700 {
+    color: #5C544B;
+  }
+
+  .text-neutral-900,
+  .text-gray-900,
+  .text-stone-900,
+  .text-zinc-900 {
+    color: #1A1614;
+  }
+
+  .border-neutral-100,
+  .border-neutral-200,
+  .border-gray-100,
+  .border-gray-200,
+  .border-stone-100,
+  .border-stone-200,
+  .border-zinc-100,
+  .border-zinc-200 {
+    border-color: #E4DCC9;
+  }
+
+  .bg-emerald-50,
+  .bg-emerald-100,
+  .bg-green-50,
+  .bg-green-100 {
+    background-color: #D8E5DA;
+  }
+
+  .bg-emerald-500,
+  .bg-green-500 {
+    background-color: #1F6B4E;
+  }
+
+  .text-emerald-300,
+  .text-emerald-400,
+  .text-emerald-500,
+  .text-emerald-600,
+  .text-emerald-700,
+  .text-green-300,
+  .text-green-400,
+  .text-green-500,
+  .text-green-600,
+  .text-green-700 {
+    color: #1F6B4E;
+  }
+
+  .border-emerald-200,
+  .border-green-200 {
+    border-color: #D8E5DA;
+  }
+
+  .bg-red-50,
+  .bg-red-100 {
+    background-color: #F0DAD3;
+  }
+
+  .bg-red-500 {
+    background-color: #B23A2B;
+  }
+
+  .text-red-300,
+  .text-red-400,
+  .text-red-500,
+  .text-red-600,
+  .text-red-700,
+  .text-red-800 {
+    color: #B23A2B;
+  }
+
+  .border-red-200 {
+    border-color: #F0DAD3;
+  }
+
+  .bg-amber-50,
+  .bg-amber-100 {
+    background-color: #F0E1C2;
+  }
+
+  .bg-amber-400,
+  .bg-amber-500,
+  .bg-orange-500 {
+    background-color: #C0822A;
+  }
+
+  .text-amber-200,
+  .text-amber-300,
+  .text-amber-400,
+  .text-amber-500,
+  .text-amber-600,
+  .text-amber-700,
+  .text-amber-800,
+  .text-orange-500,
+  .text-orange-600,
+  .text-orange-700 {
+    color: #C0822A;
+  }
+
+  .border-amber-200,
+  .border-orange-200 {
+    border-color: #F0E1C2;
+  }
+
+  .bg-blue-500 { background-color: #2E5A7A; }
+  .text-blue-300,
+  .text-blue-500,
+  .text-blue-600,
+  .text-blue-700 {
+    color: #2E5A7A;
+  }
+
   /* Safe area for bottom nav on iOS */
   .pb-safe {
     padding-bottom: max(1.25rem, env(safe-area-inset-bottom));

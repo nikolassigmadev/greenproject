@@ -69,7 +69,7 @@ export function Header() {
               <span style={{
                 position: "absolute", top: -2, right: -2,
                 minWidth: 16, height: 16, padding: "0 4px",
-                borderRadius: 99, background: DS.ink, color: "#fff",
+                borderRadius: 99, background: DS.ink, color: DS.card,
                 fontSize: 9, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center",
               }}>
                 {basketCount}
@@ -82,7 +82,7 @@ export function Header() {
             style={{
               display: "flex", alignItems: "center", gap: 6,
               padding: "6px 12px", borderRadius: 10,
-              background: DS.ink, color: "#fff",
+              background: DS.ink, color: DS.card,
               textDecoration: "none", fontSize: 12, fontWeight: 700,
             }}
           >
@@ -124,7 +124,7 @@ export function Header() {
               display: "flex", alignItems: "center", gap: 6,
               padding: "6px 16px", borderRadius: 10,
               fontSize: 14, fontWeight: 600, textDecoration: "none",
-              background: DS.ink, color: "#fff",
+              background: DS.ink, color: DS.card,
             }}
           >
             <Camera style={{ width: 14, height: 14 }} />

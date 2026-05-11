@@ -95,7 +95,7 @@ export function BottomNav() {
             marginTop: -22,
             boxShadow: "0 6px 18px rgba(0,0,0,0.18)",
           }}>
-            <ScanIcon color="#fff" />
+            <ScanIcon color={DS.card} />
           </div>
           <span style={{
             fontSize: 11,

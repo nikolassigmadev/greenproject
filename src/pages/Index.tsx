@@ -361,8 +361,8 @@ export default function Index() {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             {[
               { icon: Leaf, title: "Environment", desc: "Carbon footprint, packaging, transport distance", color: DS.good },
-              { icon: Users, title: "Labour rights", desc: "Forced labour allegations, fair trade certification", color: "#c44a36" },
-              { icon: Shield, title: "Animal welfare", desc: "Factory farming, testing, cruelty-free status", color: "#7c3aed" },
+              { icon: Users, title: "Labour rights", desc: "Forced labour allegations, fair trade certification", color: DS.bad },
+              { icon: Shield, title: "Animal welfare", desc: "Factory farming, testing, cruelty-free status", color: "#7A5A8A" },
               { icon: Zap, title: "Nutrition", desc: "Nutri-Score, NOVA processing level, additives", color: DS.warn },
             ].map((item) => (
               <div key={item.title} style={{

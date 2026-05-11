@@ -1,5 +1,6 @@
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
+import type { ReactNode } from "react";
 import {
   ChevronLeft, Loader2, Leaf, AlertTriangle, ExternalLink,
   CheckCircle2, ChevronRight, Package, ShoppingBag, XCircle, Clock,
@@ -45,12 +46,30 @@ const findLaborAllegations = (product: OpenFoodFactsResult) =>
 
 // ─── Design constants ─────────────────────────────────────────────────────────
 
+const EDITORIAL = {
+  ink: "#1A1614",
+  ink2: "#5C544B",
+  ink3: "#8C8278",
+  paper: "#F7F6F3",
+  page: "#F7F6F3",
+  card: "#FBF7EC",
+  line: "#E4DCC9",
+  green: "#1F6B4E",
+  greenSoft: "#D8E5DA",
+  red: "#B23A2B",
+  redSoft: "#F0DAD3",
+  amber: "#C0822A",
+  amberSoft: "#F0E1C2",
+  blue: "#2E5A7A",
+  purple: "#6A4A6E",
+} as const;
+
 const GRADE_COLOR: Record<string, string> = {
-  a: "#10b981", b: "#84cc16", c: "#f59e0b", d: "#f97316", e: "#ef4444",
+  a: "#1F6B4E", b: "#1F6B4E", c: "#C0822A", d: "#C26544", e: "#B23A2B",
 };
 
 const GRADE_BG: Record<string, string> = {
-  a: "#ecfdf5", b: "#f7fee7", c: "#fffbeb", d: "#fff7ed", e: "#fef2f2",
+  a: "#D8E5DA", b: "#D8E5DA", c: "#F0E1C2", d: "#FBE9E2", e: "#F0DAD3",
 };
 
 const NOVA_LABEL: Record<number, string> = {
@@ -58,24 +77,24 @@ const NOVA_LABEL: Record<number, string> = {
 };
 
 const NOVA_COLOR: Record<number, string> = {
-  1: "#10b981", 2: "#84cc16", 3: "#f59e0b", 4: "#ef4444",
+  1: "#1F6B4E", 2: "#1F6B4E", 3: "#C0822A", 4: "#B23A2B",
 };
 
 const VERDICT_CONFIG = {
-  BUY:      { color: "#10b981", bg: "#ecfdf5", Icon: CheckCircle2, label: "Buy" },
-  CONSIDER: { color: "#f59e0b", bg: "#fffbeb", Icon: Clock,        label: "Consider" },
-  CAUTION:  { color: "#f97316", bg: "#fff7ed", Icon: AlertTriangle, label: "Caution" },
-  AVOID:    { color: "#ef4444", bg: "#fef2f2", Icon: XCircle,       label: "Avoid" },
-  UNKNOWN:  { color: "#9CA3AF", bg: "#f9fafb", Icon: Clock,        label: "Unknown" },
+  BUY:      { color: EDITORIAL.green, bg: EDITORIAL.greenSoft, Icon: CheckCircle2, label: "Buy" },
+  CONSIDER: { color: EDITORIAL.amber, bg: EDITORIAL.amberSoft, Icon: Clock,        label: "Consider" },
+  CAUTION:  { color: "#C26544",       bg: "#FBE9E2",           Icon: AlertTriangle, label: "Caution" },
+  AVOID:    { color: EDITORIAL.red,   bg: EDITORIAL.redSoft,   Icon: XCircle,       label: "Avoid" },
+  UNKNOWN:  { color: EDITORIAL.ink3,  bg: "#EDE6D2",           Icon: Clock,        label: "Unknown" },
 };
 
 const CO2_BARS = [
-  { key: "co2_agriculture",    label: "Agriculture",  Icon: Wheat,           color: "#10b981" },
-  { key: "co2_processing",     label: "Processing",   Icon: Factory,         color: "#3b82f6" },
-  { key: "co2_packaging",      label: "Packaging",    Icon: Package,         color: "#f59e0b" },
-  { key: "co2_transportation", label: "Transport",    Icon: Truck,           color: "#f97316" },
-  { key: "co2_distribution",   label: "Distribution", Icon: Store,           color: "#a855f7" },
-  { key: "co2_consumption",    label: "Consumption",  Icon: UtensilsCrossed, color: "#ec4899" },
+  { key: "co2_agriculture",    label: "Agriculture",  Icon: Wheat,           color: EDITORIAL.green },
+  { key: "co2_processing",     label: "Processing",   Icon: Factory,         color: EDITORIAL.blue },
+  { key: "co2_packaging",      label: "Packaging",    Icon: Package,         color: EDITORIAL.amber },
+  { key: "co2_transportation", label: "Transport",    Icon: Truck,           color: "#C26544" },
+  { key: "co2_distribution",   label: "Distribution", Icon: Store,           color: EDITORIAL.purple },
+  { key: "co2_consumption",    label: "Consumption",  Icon: UtensilsCrossed, color: "#9B4E63" },
 ] as const;
 
 const GRADE_PERCENT: Record<string, number> = { a: 1, b: 0.8, c: 0.6, d: 0.4, e: 0.2 };
@@ -83,10 +102,22 @@ const NOVA_PERCENT: Record<number, number> = { 1: 1, 2: 0.75, 3: 0.5, 4: 0.25 };
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function ScoreGauge({ value, color, bg, percent, label, sublabel, delay = 0 }: {
+function Tag({ children, bg, color }: { children: ReactNode; bg: string; color: string }) {
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center", gap: 5,
+      background: bg, color, padding: "4px 9px", borderRadius: 999,
+      fontSize: 11, fontWeight: 700, letterSpacing: 0.2,
+      whiteSpace: "nowrap",
+    }}>
+      {children}
+    </span>
+  );
+}
+
+function ScoreGauge({ value, color, percent, label, sublabel, delay = 0 }: {
   value: string;
   color: string;
-  bg: string;
   percent: number;
   label: string;
   sublabel?: string;
@@ -99,15 +130,15 @@ function ScoreGauge({ value, color, bg, percent, label, sublabel, delay = 0 }: {
   }, [delay]);
 
   const size = 72;
-  const strokeW = 5;
+  const strokeW = 3;
   const r = (size - strokeW * 2) / 2;
   const circ = 2 * Math.PI * r;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, flex: 1 }}>
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: 1, minWidth: 0 }}>
       <div style={{ position: "relative", width: size, height: size }}>
         <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
-          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={DS.hair} strokeWidth={strokeW} />
+          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={EDITORIAL.line} strokeWidth={strokeW} />
           <circle
             cx={size / 2} cy={size / 2} r={r} fill="none"
             stroke={color}
@@ -122,30 +153,59 @@ function ScoreGauge({ value, color, bg, percent, label, sublabel, delay = 0 }: {
           position: "absolute", inset: 0,
           display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
         }}>
-          <span style={{ fontSize: "1.3rem", fontWeight: 900, color, lineHeight: 1 }}>{value}</span>
+          <span style={{ fontSize: 30, fontWeight: 500, color, lineHeight: 1 }}>{value}</span>
         </div>
       </div>
       <div style={{ textAlign: "center" }}>
-        <p style={{ fontSize: "0.68rem", fontWeight: 700, color: DS.ink, margin: 0 }}>{label}</p>
-        {sublabel && <p style={{ fontSize: "0.6rem", color: DS.muted, margin: "1px 0 0" }}>{sublabel}</p>}
+        <p style={{ fontSize: 11.5, fontWeight: 700, color: EDITORIAL.ink, margin: "8px 0 0" }}>{label}</p>
+        {sublabel && <p style={{ fontSize: 10.5, color: EDITORIAL.ink3, margin: "2px 0 0" }}>{sublabel}</p>}
       </div>
     </div>
   );
 }
 
-function SectionHead({ title }: { title: string }) {
+function SectionHead({ num, title, kicker }: { num: string; title: string; kicker?: string }) {
   return (
-    <p style={{
-      fontSize: "0.62rem", fontWeight: 800, color: DS.muted,
-      letterSpacing: "0.1em", textTransform: "uppercase", margin: "0 0 14px",
-    }}>
-      {title}
-    </p>
+    <div style={{ padding: "0 0 14px" }}>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+        <span style={{ fontStyle: "italic", fontSize: 13, color: EDITORIAL.ink3 }}>{num}</span>
+        <span style={{ fontSize: 24, color: EDITORIAL.ink, letterSpacing: -0.4, fontWeight: 600 }}>{title}</span>
+      </div>
+      {kicker && <div style={{ fontSize: 12.5, color: EDITORIAL.ink2, marginTop: 4, marginLeft: 26 }}>{kicker}</div>}
+    </div>
   );
 }
 
 function Divider() {
-  return <div style={{ height: 1, background: DS.hair, margin: "0" }} />;
+  return <div style={{ height: 1, background: EDITORIAL.line, margin: "0" }} />;
+}
+
+function shortCategory(product: OpenFoodFactsResult) {
+  const category = product.categories.find(c => c.length > 3) || product.categories[0];
+  return category ? category.replace(/^en:/, "").replace(/-/g, " ") : "Product";
+}
+
+function titleParts(name: string) {
+  const bits = name.split(/\s+/).filter(Boolean);
+  if (bits.length <= 1) return { first: name, rest: "" };
+  return { first: bits[0], rest: bits.slice(1).join(" ") };
+}
+
+function packagingSummary(product: OpenFoodFactsResult) {
+  const packages = product.ecoscoreData?.adjustments?.packaging?.packagings;
+  if (!packages?.length) return "Packaging details unavailable";
+  return packages
+    .slice(0, 2)
+    .map(pkg => [pkg.material, pkg.shape]
+      .filter(Boolean)
+      .join(" ")
+      .replace(/en:/g, "")
+      .replace(/-/g, " "))
+    .join(", ");
+}
+
+function cleanLabel(label: string) {
+  return label.replace(/^en:/, "").replace(/-/g, " ");
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -333,249 +393,169 @@ export default function OpenFoodFactsDetail() {
 
   const hasScores = !!(ecoGrade || nutriGrade || product.novaGroup);
   const hasEthicsConcerns = !!(laborRecord || boycottMatch || welfare.isFlagged);
+  const title = titleParts(displayName);
+  const category = shortCategory(product);
+  const primaryAlert = laborRecord
+    ? `${laborRecord.allegations.length} labour allegation${laborRecord.allegations.length > 1 ? "s" : ""} against ${laborRecord.parentCompany}`
+    : welfare.isFlagged
+    ? `${welfare.company?.companyName || product.brand || "This brand"} has animal welfare concerns`
+    : boycottMatch
+    ? `${boycottMatch.parent} is boycott listed`
+    : verdict.reason;
+  const productMeta = [product.brand, category].filter(Boolean).join(" · ");
 
   // ── Render ──
 
   return (
-    <div style={{ background: DS.bg, fontFamily: DS.font, color: DS.ink, minHeight: "100dvh" }}>
+    <div style={{ background: EDITORIAL.page, fontFamily: DS.font, color: EDITORIAL.ink, minHeight: "100dvh" }}>
 
-      {/* ── Sticky compact header ─────────────────────────────────── */}
       <div className={cn(
         "fixed top-0 left-0 right-0 z-50 transition-all duration-200",
         stickyVisible ? "translate-y-0 opacity-100" : "-translate-y-full opacity-0"
       )}>
-        <div
-          style={{
-            maxWidth: 560, margin: "0 auto", padding: "10px 16px",
-            display: "flex", alignItems: "center", gap: 10,
-            background: "rgba(247,246,243,0.92)",
-            backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)",
-            borderBottom: `1px solid ${DS.hair}`,
-          }}
-        >
-          <p style={{ flex: 1, fontSize: "0.82rem", fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", margin: 0 }}>
+        <div style={{
+          maxWidth: 560, margin: "0 auto", padding: "10px 16px",
+          display: "flex", alignItems: "center", gap: 10,
+          background: "rgba(241,235,221,0.94)",
+          backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)",
+          borderBottom: `1px solid ${EDITORIAL.line}`,
+        }}>
+          <p style={{ flex: 1, fontSize: 13, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", margin: 0 }}>
             {displayName}
           </p>
           <div style={{
-            display: "inline-flex", alignItems: "center", gap: 4,
-            padding: "3px 10px", borderRadius: 20,
-            background: vc.bg, color: vc.color,
-            fontSize: "0.68rem", fontWeight: 800, flexShrink: 0,
+            display: "inline-flex", alignItems: "center", gap: 6,
+            padding: "5px 11px", borderRadius: 999,
+            background: EDITORIAL.ink, color: EDITORIAL.card,
+            fontSize: 11, fontWeight: 800, flexShrink: 0,
           }}>
-            <vc.Icon style={{ width: 10, height: 10 }} />
+            <span style={{ width: 7, height: 7, borderRadius: 99, background: vc.color }} />
             {verdict.key}
           </div>
         </div>
       </div>
 
-      <main style={{ paddingBottom: 110, maxWidth: 560, margin: "0 auto" }}>
+      <main style={{ paddingBottom: fromScan ? 190 : 96, maxWidth: 560, margin: "0 auto", background: EDITORIAL.paper, minHeight: "100dvh" }}>
 
-        {/* ── HERO ────────────────────────────────────────────────── */}
-        <div
-          ref={heroRef}
-          style={{
-            position: "relative", overflow: "hidden",
-            paddingTop: "env(safe-area-inset-top)",
-          }}
-        >
-          {/* Product card */}
+        <div ref={heroRef} style={{ position: "relative", height: 280, overflow: "hidden", background: "radial-gradient(ellipse at 50% 35%, #F4DCB8 0%, #E8C58A 45%, #D9A86A 100%)" }}>
+          <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(rgba(0,0,0,0.04) 1px, transparent 1px)", backgroundSize: "3px 3px", opacity: 0.55 }} />
+          <button
+            type="button"
+            onClick={() => {
+              if (fromScan) navigate("/scan");
+              else navigate(-1);
+            }}
+            aria-label="Go back"
+            style={{
+              position: "absolute", top: "max(18px, env(safe-area-inset-top))", left: 16,
+              width: 34, height: 34, borderRadius: 999, border: "none",
+              background: "rgba(26,22,20,0.55)", color: EDITORIAL.card,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              backdropFilter: "blur(10px)", cursor: "pointer", zIndex: 2,
+            }}
+          >
+            <ChevronLeft style={{ width: 18, height: 18 }} />
+          </button>
           <div style={{
-            margin: "0 16px", borderRadius: 24,
-            background: DS.card,
-            boxShadow: "0 2px 20px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.03)",
-            overflow: "hidden",
+            position: "absolute", top: "max(20px, env(safe-area-inset-top))", right: 16,
+            background: EDITORIAL.ink, color: EDITORIAL.card, padding: "8px 13px 8px 11px",
+            borderRadius: 999, display: "inline-flex", alignItems: "center", gap: 7,
+            fontSize: 12, fontWeight: 800, letterSpacing: 0.3,
+            boxShadow: "0 6px 16px rgba(0,0,0,0.18)", zIndex: 2,
+          }}>
+            <span style={{ width: 7, height: 7, borderRadius: 99, background: vc.color, boxShadow: `0 0 0 3px ${vc.color}33` }} />
+            {verdict.key}
+          </div>
+          <div style={{
+            position: "absolute", left: "50%", top: "50%",
+            transform: mounted ? "translate(-50%, -50%) rotate(-5deg)" : "translate(-50%, -46%) rotate(-5deg)",
+            width: 178, height: 218, borderRadius: 22,
+            background: "rgba(255,255,255,0.18)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            boxShadow: "0 30px 50px rgba(120,40,15,0.28), inset 0 1px 0 rgba(255,255,255,0.35)",
             opacity: mounted ? 1 : 0,
-            transform: mounted ? "translateY(0)" : "translateY(12px)",
             transition: "opacity 0.5s ease, transform 0.5s ease",
           }}>
-            {/* Verdict accent stripe */}
-            <div style={{ height: 4, background: `linear-gradient(90deg, ${vc.color}, ${vc.color}88)` }} />
+            {product.imageUrl ? (
+              <img src={product.imageUrl} alt={displayName} style={{ maxWidth: "88%", maxHeight: "88%", objectFit: "contain", filter: "drop-shadow(0 18px 24px rgba(70,31,10,0.28))" }} />
+            ) : (
+              <Sprout style={{ width: 72, height: 72, color: "rgba(26,22,20,0.35)" }} />
+            )}
+          </div>
+          <div style={{ position: "absolute", bottom: 12, left: 16, fontFamily: "ui-monospace, monospace", fontSize: 9, color: "rgba(26,22,20,0.42)", letterSpacing: 1 }}>
+            {product.barcode}
+          </div>
+        </div>
 
-            <div style={{ padding: "20px 20px 18px" }}>
-              {/* Product row */}
-              <div style={{ display: "flex", gap: 16, marginBottom: 18 }}>
-                {/* Image */}
-                <div style={{
-                  width: 88, height: 88, borderRadius: 16, flexShrink: 0,
-                  background: DS.bg, border: `1px solid ${DS.hair}`,
-                  overflow: "hidden",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                }}>
-                  {product.imageUrl ? (
-                    <img src={product.imageUrl} alt={displayName} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
-                  ) : (
-                    <Sprout style={{ width: 32, height: 32, color: DS.hair }} />
-                  )}
-                </div>
+        <div style={{ padding: "24px 22px 18px" }}>
+          <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: 1.4, textTransform: "uppercase", color: EDITORIAL.ink2 }}>
+            {productMeta || "Product scan"}
+          </div>
+          <h1 style={{ fontSize: "clamp(2.45rem, 11vw, 3.05rem)", lineHeight: 1, margin: "8px 0 0", letterSpacing: -1.5, color: EDITORIAL.ink, fontWeight: 700 }}>
+            {title.first}
+            {title.rest && <><br /><span style={{ fontStyle: "italic", color: EDITORIAL.ink2, fontWeight: 500 }}>{title.rest}.</span></>}
+          </h1>
+          <div style={{ display: "flex", gap: 6, marginTop: 14, flexWrap: "wrap" }}>
+            <Tag bg={vc.bg} color={vc.color}>{verdict.key[0] + verdict.key.slice(1).toLowerCase()}</Tag>
+            {ecoGrade && <Tag bg={GRADE_BG[ecoGrade]} color={GRADE_COLOR[ecoGrade]}>Eco-Score {ecoGrade.toUpperCase()}</Tag>}
+            {product.novaGroup !== null && <Tag bg="#EDE6D2" color={EDITORIAL.ink2}>{NOVA_LABEL[product.novaGroup] || `NOVA ${product.novaGroup}`}</Tag>}
+          </div>
+        </div>
 
-                {/* Info */}
-                <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "center" }}>
-                  {product.brand && (
-                    <p style={{
-                      fontSize: "0.65rem", fontWeight: 700, color: DS.muted,
-                      textTransform: "uppercase", letterSpacing: "0.08em",
-                      margin: "0 0 4px", lineHeight: 1,
-                    }}>
-                      {product.brand}
-                    </p>
-                  )}
-                  <h1 style={{
-                    fontSize: "clamp(1.05rem, 4.5vw, 1.25rem)", fontWeight: 800,
-                    lineHeight: 1.2, letterSpacing: "-0.02em", margin: "0 0 10px",
-                    overflow: "hidden", display: "-webkit-box",
-                    WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
-                  }}>
-                    {displayName}
-                  </h1>
-
-                  {/* Verdict + eco pills */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                    <span style={{
-                      display: "inline-flex", alignItems: "center", gap: 4,
-                      padding: "4px 10px", borderRadius: 20,
-                      background: vc.bg, color: vc.color,
-                      fontSize: "0.7rem", fontWeight: 800, letterSpacing: "0.02em",
-                    }}>
-                      <vc.Icon style={{ width: 11, height: 11 }} />
-                      {verdict.key}
-                    </span>
-                    {ecoGrade && (
-                      <span style={{
-                        display: "inline-flex", alignItems: "center", gap: 4,
-                        padding: "4px 10px", borderRadius: 20,
-                        background: GRADE_BG[ecoGrade],
-                        color: GRADE_COLOR[ecoGrade],
-                        fontSize: "0.7rem", fontWeight: 700,
-                      }}>
-                        <Leaf style={{ width: 10, height: 10 }} />
-                        Eco {ecoGrade.toUpperCase()}
-                      </span>
-                    )}
-                  </div>
-                </div>
+        <div style={{ padding: "0 22px 18px" }}>
+          <div style={{
+            background: "#FBE9E2", borderRadius: 14, padding: "14px 16px",
+            display: "flex", gap: 12, alignItems: "flex-start",
+            border: `1px solid ${EDITORIAL.redSoft}`,
+          }}>
+            <div style={{
+              width: 22, height: 22, borderRadius: 99, background: vc.color, color: EDITORIAL.card,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontStyle: "italic", fontSize: 16, flexShrink: 0, marginTop: 1,
+            }}>!</div>
+            <div>
+              <div style={{ fontSize: 13.5, fontWeight: 800, color: EDITORIAL.ink, lineHeight: 1.3 }}>
+                {primaryAlert}
               </div>
-
-              {/* Verdict reason */}
-              <div style={{
-                background: vc.bg, borderRadius: 14, padding: "12px 14px",
-                border: `1px solid ${DS.hair}`,
-                borderLeft: `4px solid ${vc.color}`,
-                marginBottom: 16,
-              }}>
-                <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-                  <vc.Icon style={{ width: 16, height: 16, color: vc.color, marginTop: 1, flexShrink: 0 }} />
-                  <p style={{ fontSize: "0.82rem", color: DS.ink, fontWeight: 700, lineHeight: 1.45, margin: 0 }}>
-                    {verdict.reason}
-                  </p>
-                </div>
-              </div>
-
-              {/* Action buttons */}
-              <div style={{ display: "flex", gap: 8 }}>
-                <button
-                  type="button"
-                  onClick={() => document.getElementById("breakdown")?.scrollIntoView({ behavior: "smooth" })}
-                  style={{
-                    flex: 1, height: 42, borderRadius: 12,
-                    border: `1px solid ${DS.hair}`, background: DS.card,
-                    color: DS.muted, fontWeight: 600, fontSize: "0.78rem",
-                    cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                  }}
-                >
-                  <BarChart2 style={{ width: 13, height: 13 }} />
-                  Details
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (inBasket) return;
-                    addToBasket({
-                      barcode: product.barcode,
-                      productName: product.productName || "Unknown Product",
-                      brand: product.brand,
-                      imageUrl: product.imageUrl,
-                      ecoscoreGrade: product.ecoscoreGrade,
-                      ecoscoreScore: product.ecoscoreScore,
-                      nutriscoreGrade: product.nutriscoreGrade,
-                      laborAllegations: getLaborAllegationCount(product.brand, product.productName),
-                      co2Per100g: product.carbonFootprint100g,
-                    });
-                    setInBasket(true);
-                  }}
-                  style={{
-                    flex: 1, height: 42, borderRadius: 12, border: "none",
-                    background: inBasket ? vc.bg : DS.ink,
-                    color: inBasket ? vc.color : "#fff",
-                    fontWeight: 700, fontSize: "0.78rem",
-                    cursor: inBasket ? "default" : "pointer",
-                    display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                    boxShadow: inBasket ? "none" : "0 2px 8px rgba(0,0,0,0.12)",
-                  }}
-                >
-                  <ShoppingBag style={{ width: 13, height: 13 }} />
-                  {inBasket ? "In basket" : "Add to basket"}
-                </button>
+              <div style={{ fontSize: 12, color: EDITORIAL.ink2, marginTop: 3, lineHeight: 1.4 }}>
+                {verdict.reason}
               </div>
             </div>
           </div>
         </div>
 
-        {/* ── Content ─────────────────────────────────────────────── */}
-        <div style={{ padding: "16px 16px 0", display: "flex", flexDirection: "column", gap: 14 }}>
+        {fromScan && (
+          <div style={{ padding: "0 22px 22px", display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ fontSize: 12, color: EDITORIAL.ink3 }}>Matched automatically.</div>
+            <div style={{ flex: 1 }} />
+            <button
+              type="button"
+              onClick={() => candidates.length > 0 ? setShowCandidates(true) : setConfirmDismissed(true)}
+              style={{
+                fontSize: 12, fontWeight: 600, color: EDITORIAL.ink2,
+                background: "transparent", border: `1px solid ${EDITORIAL.line}`, borderRadius: 999,
+                padding: "5px 11px", cursor: "pointer",
+              }}
+            >
+              Wrong product?
+            </button>
+          </div>
+        )}
 
-          {/* ── Scan confirmation ───────────────────────────────── */}
-          {fromScan && !confirmDismissed && !showCandidates && (
-            <div style={{
-              background: DS.card, borderRadius: 16, padding: "14px 16px",
-              boxShadow: "0 1px 6px rgba(0,0,0,0.04)",
-              display: "flex", alignItems: "flex-start", gap: 12,
-              opacity: mounted ? 1 : 0, transform: mounted ? "translateY(0)" : "translateY(8px)",
-              transition: "all 0.4s ease 0.15s",
-            }}>
-              <ScanLine style={{ width: 18, height: 18, color: DS.ink, flexShrink: 0, marginTop: 1 }} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: "0.82rem", fontWeight: 700, marginBottom: 2, margin: 0 }}>Is this the right product?</p>
-                <p style={{ fontSize: "0.72rem", color: DS.muted, marginBottom: 10, margin: "2px 0 10px" }}>We matched your scan automatically.</p>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <button
-                    type="button" onClick={() => setConfirmDismissed(true)}
-                    style={{
-                      display: "flex", alignItems: "center", gap: 5,
-                      padding: "6px 14px", borderRadius: 20, border: "none",
-                      background: DS.ink, color: "#fff",
-                      fontSize: "0.72rem", fontWeight: 600, cursor: "pointer",
-                    }}
-                  >
-                    <Check style={{ width: 11, height: 11 }} /> Yes
-                  </button>
-                  {candidates.length > 0 && (
-                    <button
-                      type="button" onClick={() => setShowCandidates(true)}
-                      style={{
-                        display: "flex", alignItems: "center", gap: 3,
-                        background: "none", border: "none", padding: 0,
-                        color: DS.ink, fontSize: "0.72rem", fontWeight: 600, cursor: "pointer",
-                      }}
-                    >
-                      Other matches <ChevronRight style={{ width: 13, height: 13 }} />
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
+        <Divider />
 
-          {/* Candidate picker */}
+        <div style={{ padding: "22px 22px 0", display: "flex", flexDirection: "column", gap: 28 }}>
+
           {fromScan && showCandidates && (
-            <div style={{ background: DS.card, borderRadius: 16, overflow: "hidden", boxShadow: "0 1px 6px rgba(0,0,0,0.04)" }}>
-              <div style={{ padding: "14px 16px", borderBottom: `1px solid ${DS.hair}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ background: EDITORIAL.card, borderRadius: 18, overflow: "hidden", border: `1px solid ${EDITORIAL.line}` }}>
+              <div style={{ padding: "14px 16px", borderBottom: `1px solid ${EDITORIAL.line}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <div>
-                  <p style={{ fontSize: "0.85rem", fontWeight: 700, margin: 0 }}>Other matches</p>
-                  <p style={{ fontSize: "0.72rem", color: DS.muted, margin: "2px 0 0" }}>Select the correct product</p>
+                  <p style={{ fontSize: 14, fontWeight: 800, margin: 0 }}>Other matches</p>
+                  <p style={{ fontSize: 12, color: EDITORIAL.ink2, margin: "2px 0 0" }}>Select the correct product</p>
                 </div>
                 <button
                   type="button" onClick={() => setShowCandidates(false)}
-                  style={{ background: "none", border: "none", color: DS.ink, fontSize: "0.78rem", fontWeight: 600, cursor: "pointer" }}
+                  style={{ background: "none", border: "none", color: EDITORIAL.ink, fontSize: 12, fontWeight: 700, cursor: "pointer" }}
                 >Cancel</button>
               </div>
               {candidates.map((c, ci) => {
@@ -587,22 +567,22 @@ export default function OpenFoodFactsDetail() {
                     style={{
                       width: "100%", display: "flex", alignItems: "center", gap: 12,
                       padding: "12px 16px", textAlign: "left", cursor: "pointer",
-                      borderBottom: ci < candidates.length - 1 ? `1px solid ${DS.hair}` : "none",
-                      background: "none", border: "none", color: DS.ink,
+                      borderBottom: ci < candidates.length - 1 ? `1px solid ${EDITORIAL.line}` : "none",
+                      background: "none", border: "none", color: EDITORIAL.ink,
                     }}
                   >
                     {c.imageUrl ? (
-                      <img src={c.imageUrl} alt="" style={{ width: 40, height: 40, borderRadius: 10, border: `1px solid ${DS.hair}`, objectFit: "contain", flexShrink: 0 }} />
+                      <img src={c.imageUrl} alt="" style={{ width: 40, height: 40, borderRadius: 10, border: `1px solid ${EDITORIAL.line}`, objectFit: "contain", flexShrink: 0 }} />
                     ) : (
-                      <div style={{ width: 40, height: 40, borderRadius: 10, border: `1px solid ${DS.hair}`, background: DS.bg, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <Package style={{ width: 16, height: 16, color: DS.muted }} />
+                      <div style={{ width: 40, height: 40, borderRadius: 10, border: `1px solid ${EDITORIAL.line}`, background: EDITORIAL.paper, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <Package style={{ width: 16, height: 16, color: EDITORIAL.ink3 }} />
                       </div>
                     )}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ fontSize: "0.82rem", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", margin: 0 }}>
                         {c.productName || "Unknown product"}
                       </p>
-                      {c.brand && <p style={{ fontSize: "0.7rem", color: DS.muted, margin: "2px 0 0" }}>{c.brand}</p>}
+                      {c.brand && <p style={{ fontSize: "0.7rem", color: EDITORIAL.ink2, margin: "2px 0 0" }}>{c.brand}</p>}
                     </div>
                     {g && (
                       <span style={{
@@ -612,20 +592,19 @@ export default function OpenFoodFactsDetail() {
                         display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
                       }}>{g.toUpperCase()}</span>
                     )}
-                    <ChevronRight style={{ width: 14, height: 14, color: DS.muted, flexShrink: 0 }} />
+                    <ChevronRight style={{ width: 14, height: 14, color: EDITORIAL.ink3, flexShrink: 0 }} />
                   </button>
                 );
               })}
             </div>
           )}
 
-          {/* ── Score Gauges ─────────────────────────────────────── */}
           {hasScores && (
             <div
               id="breakdown"
               style={{
-                background: DS.card, borderRadius: 20, padding: "22px 12px 18px",
-                boxShadow: "0 1px 6px rgba(0,0,0,0.04)",
+                background: EDITORIAL.card, borderRadius: 22, padding: "20px 12px",
+                border: `1px solid ${EDITORIAL.line}`,
                 display: "flex", alignItems: "flex-start", justifyContent: "center", gap: 8,
                 opacity: mounted ? 1 : 0, transform: mounted ? "translateY(0)" : "translateY(10px)",
                 transition: "all 0.5s ease 0.2s",
@@ -634,8 +613,7 @@ export default function OpenFoodFactsDetail() {
               {ecoGrade && (
                 <ScoreGauge
                   value={ecoGrade.toUpperCase()}
-                  color={GRADE_COLOR[ecoGrade] ?? DS.muted}
-                  bg={GRADE_BG[ecoGrade] ?? DS.bg}
+                  color={GRADE_COLOR[ecoGrade] ?? EDITORIAL.ink3}
                   percent={GRADE_PERCENT[ecoGrade] ?? 0.5}
                   label="Eco-Score"
                   sublabel={product.ecoscoreScore !== null ? `${product.ecoscoreScore}/100` : undefined}
@@ -645,8 +623,7 @@ export default function OpenFoodFactsDetail() {
               {nutriGrade && ["a", "b", "c", "d", "e"].includes(nutriGrade) && (
                 <ScoreGauge
                   value={nutriGrade.toUpperCase()}
-                  color={GRADE_COLOR[nutriGrade] ?? DS.muted}
-                  bg={GRADE_BG[nutriGrade] ?? DS.bg}
+                  color={GRADE_COLOR[nutriGrade] ?? EDITORIAL.ink3}
                   percent={GRADE_PERCENT[nutriGrade] ?? 0.5}
                   label="Nutri-Score"
                   delay={150}
@@ -655,8 +632,7 @@ export default function OpenFoodFactsDetail() {
               {product.novaGroup !== null && NOVA_LABEL[product.novaGroup!] && (
                 <ScoreGauge
                   value={String(product.novaGroup)}
-                  color={NOVA_COLOR[product.novaGroup!] ?? DS.muted}
-                  bg={`${NOVA_COLOR[product.novaGroup!] ?? DS.muted}12`}
+                  color={NOVA_COLOR[product.novaGroup!] ?? EDITORIAL.ink3}
                   percent={NOVA_PERCENT[product.novaGroup!] ?? 0.5}
                   label="NOVA"
                   sublabel={NOVA_LABEL[product.novaGroup!]}
@@ -666,206 +642,102 @@ export default function OpenFoodFactsDetail() {
             </div>
           )}
 
-          {/* ── CO₂ Footprint ───────────────────────────────────── */}
           {agri?.co2_total !== undefined && (
-            <div style={{
-              background: DS.card, borderRadius: 20, overflow: "hidden",
-              boxShadow: "0 1px 6px rgba(0,0,0,0.04)",
+            <section style={{
               opacity: mounted ? 1 : 0, transform: mounted ? "translateY(0)" : "translateY(10px)",
               transition: "all 0.5s ease 0.3s",
             }}>
-              <div style={{ padding: "18px 18px 16px" }}>
-                <SectionHead title="Carbon Footprint" />
-
-                {/* Total readout */}
-                <div style={{
-                  display: "flex", alignItems: "center", justifyContent: "space-between",
-                  background: "#ecfdf5", borderRadius: 14, padding: "14px 16px",
-                  marginBottom: 18,
-                }}>
-                  <div>
-                    <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
-                      <span style={{
-                        fontSize: "2rem", fontWeight: 900, color: "#10b981",
-                        lineHeight: 1, fontVariantNumeric: "tabular-nums",
-                      }}>
-                        {agri.co2_total.toFixed(2)}
-                      </span>
-                      <span style={{ fontSize: "0.72rem", fontWeight: 600, color: DS.muted }}>kg CO₂/kg</span>
-                    </div>
-                    {drivingKm !== null && (
-                      <p style={{ fontSize: "0.72rem", color: DS.muted, marginTop: 5, margin: "5px 0 0" }}>
-                        Same as driving <span style={{ fontWeight: 700, color: DS.ink }}>{drivingKm} km</span>
-                      </p>
-                    )}
+              <SectionHead num="01" title="Carbon footprint" kicker="Cradle-to-shelf, per kilogram." />
+              <div style={{ background: EDITORIAL.card, border: `1px solid ${EDITORIAL.line}`, borderRadius: 22, padding: "22px 20px" }}>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+                  <div style={{ fontSize: 64, lineHeight: 0.9, color: EDITORIAL.ink, letterSpacing: -2, fontWeight: 700 }}>
+                    {(() => {
+                      const [whole, decimal] = agri.co2_total.toFixed(2).split(".");
+                      return <>{whole}<span style={{ color: EDITORIAL.ink3 }}>.</span>{decimal}</>;
+                    })()}
                   </div>
-                  <Leaf style={{ width: 28, height: 28, color: "#10b981", opacity: 0.2 }} />
+                  <div style={{ fontSize: 12, color: EDITORIAL.ink2, lineHeight: 1.35 }}>
+                    kg CO2e<br />per kg
+                  </div>
                 </div>
-
-                {/* Lifecycle bars */}
+                {drivingKm !== null && (
+                  <div style={{ fontSize: 12.5, color: EDITORIAL.ink2, marginTop: 10, paddingBottom: 18, borderBottom: `1px dashed ${EDITORIAL.line}` }}>
+                    Same as driving <span style={{ color: EDITORIAL.ink, fontWeight: 700 }}>{drivingKm} km</span> in an average car.
+                  </div>
+                )}
                 {co2Values.length > 0 && (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  <>
+                    <div style={{ marginTop: 18, display: "flex", height: 10, borderRadius: 99, overflow: "hidden", background: EDITORIAL.line }}>
+                      {CO2_BARS.map(({ key, color }) => {
+                        const val = agri[key as keyof typeof agri] as number | undefined;
+                        if (typeof val !== "number" || val <= 0) return null;
+                        return <div key={key} style={{ flex: val, background: color, borderRight: `2px solid ${EDITORIAL.card}` }} />;
+                      })}
+                    </div>
+                    <div style={{ marginTop: 16, display: "grid", gap: 11 }}>
                     {CO2_BARS.map(({ key, label, Icon, color }, i) => {
                       const val = agri[key as keyof typeof agri] as number | undefined;
                       if (typeof val !== "number" || val <= 0) return null;
-                      const pct = Math.round((val / maxCo2) * 100);
+                      const pct = agri.co2_total ? Math.round((val / agri.co2_total) * 100) : Math.round((val / maxCo2) * 100);
                       return (
-                        <div key={key}>
-                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 5 }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-                              <div style={{
-                                width: 24, height: 24, borderRadius: 7,
-                                background: `${color}12`,
-                                display: "flex", alignItems: "center", justifyContent: "center",
-                              }}>
-                                <Icon style={{ width: 12, height: 12, color }} />
-                              </div>
-                              <span style={{ fontSize: "0.75rem", fontWeight: 600, color: DS.ink }}>{label}</span>
-                            </div>
-                            <span style={{ fontSize: "0.72rem", fontWeight: 700, color, fontVariantNumeric: "tabular-nums" }}>
-                              {val.toFixed(2)}
-                            </span>
-                          </div>
-                          <div style={{ height: 6, borderRadius: 3, background: DS.bg, overflow: "hidden" }}>
-                            <div style={{
-                              height: "100%", borderRadius: 3,
-                              background: `linear-gradient(90deg, ${color}, ${color}bb)`,
-                              width: mounted ? `${pct}%` : "0%",
-                              transition: `width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) ${0.4 + i * 0.1}s`,
-                            }} />
-                          </div>
+                        <div key={key} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <Icon style={{ width: 14, height: 14, color, flexShrink: 0 }} />
+                          <div style={{ flex: 1, fontSize: 13, color: EDITORIAL.ink }}>{label}</div>
+                          <div style={{ fontFamily: "ui-monospace, monospace", fontSize: 12, color: EDITORIAL.ink2, letterSpacing: 0.2 }}>{val.toFixed(2)} <span style={{ color: EDITORIAL.ink3 }}>kg</span></div>
+                          <div style={{ fontSize: 11, color: EDITORIAL.ink3, width: 36, textAlign: "right" }}>{pct}%</div>
                         </div>
                       );
                     })}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* ── Ethics ──────────────────────────────────────────── */}
-          {hasEthicsConcerns ? (
-            <div style={{
-              background: DS.card, borderRadius: 20, overflow: "hidden",
-              boxShadow: "0 1px 6px rgba(0,0,0,0.04)",
-              opacity: mounted ? 1 : 0, transform: mounted ? "translateY(0)" : "translateY(10px)",
-              transition: "all 0.5s ease 0.4s",
-            }}>
-              <div style={{ padding: "18px 18px 16px" }}>
-                <SectionHead title="Ethics & Labour" />
-
-                {/* Labor clean */}
-                {!laborRecord && (
-                  <div style={{
-                    display: "flex", alignItems: "center", gap: 10,
-                    background: "#ecfdf5", borderRadius: 12, padding: "10px 14px", marginBottom: 14,
-                  }}>
-                    <CheckCircle2 style={{ width: 15, height: 15, color: "#10b981", flexShrink: 0 }} />
-                    <p style={{ fontSize: "0.78rem", fontWeight: 600, color: "#10b981", margin: 0 }}>No labour concerns found</p>
-                  </div>
-                )}
-
-                {/* Labor concerns */}
-                {laborRecord && (
-                  <div style={{ marginBottom: 14 }}>
-                    <p style={{ fontSize: "0.72rem", color: DS.muted, marginBottom: 10, margin: "0 0 10px" }}>
-                      Parent company: <span style={{ color: DS.ink, fontWeight: 700 }}>{laborRecord.parentCompany}</span>
-                    </p>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                      {laborRecord.allegations.map((al, i) => (
-                        <div key={i} style={{
-                          background: "#fef2f2", borderRadius: 14, padding: "14px 14px 12px",
-                          borderLeft: "3px solid #ef4444",
-                        }}>
-                          <p style={{ fontSize: "0.8rem", fontWeight: 700, color: "#ef4444", marginBottom: 4, margin: "0 0 4px" }}>{al.issue}</p>
-                          <p style={{ fontSize: "0.75rem", color: DS.muted, lineHeight: 1.5, marginBottom: 10, margin: "0 0 10px" }}>{al.details}</p>
-                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                            <a
-                              href={al.sourceUrl} target="_blank" rel="noopener noreferrer"
-                              style={{ display: "flex", alignItems: "center", gap: 4, fontSize: "0.68rem", color: "#ef4444", textDecoration: "none", fontWeight: 600 }}
-                            >
-                              <ExternalLink style={{ width: 10, height: 10 }} />{al.source}
-                            </a>
-                            <span style={{
-                              fontSize: "0.65rem", fontWeight: 700, color: "#ef4444",
-                              background: "#fecaca", padding: "2px 8px", borderRadius: 6,
-                            }}>{al.year}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    <p style={{ fontSize: "0.65rem", color: DS.muted, fontStyle: "italic", marginTop: 10, margin: "10px 0 0" }}>
-                      Based on publicly available reports. Companies may have taken corrective steps.
-                    </p>
-                  </div>
-                )}
-
-                {/* Animal welfare */}
-                {(laborRecord || boycottMatch) && <Divider />}
-                <div style={{ paddingTop: (laborRecord || boycottMatch) ? 14 : 0 }}>
-                  <AnimalWelfareFlagBadge brand={product.brand} showDetails={true} />
-                </div>
-
-                {/* Boycott */}
-                {boycottMatch && (
-                  <>
-                    <Divider />
-                    <div style={{ paddingTop: 14 }}>
-                      <div style={{
-                        background: "#fff7ed", borderRadius: 14, padding: "14px",
-                        borderLeft: "3px solid #f97316",
-                      }}>
-                        <p style={{ fontSize: "0.8rem", fontWeight: 700, color: "#f97316", margin: "0 0 4px" }}>
-                          {boycottMatch.parent} — Boycott listed
-                        </p>
-                        <p style={{ fontSize: "0.75rem", color: DS.muted, lineHeight: 1.5, margin: "0 0 8px" }}>
-                          {boycottMatch.reason}
-                        </p>
-                        <a
-                          href="https://boycott-israel.org/boycott.html" target="_blank" rel="noopener noreferrer"
-                          style={{ display: "flex", alignItems: "center", gap: 4, fontSize: "0.68rem", color: "#f97316", textDecoration: "none", fontWeight: 600 }}
-                        >
-                          <ExternalLink style={{ width: 10, height: 10 }} /> BDS Boycott List
-                        </a>
-                      </div>
                     </div>
                   </>
                 )}
               </div>
-            </div>
-          ) : (
-            <div style={{
-              background: DS.card, borderRadius: 20, padding: "18px",
-              boxShadow: "0 1px 6px rgba(0,0,0,0.04)",
-              display: "flex", alignItems: "center", gap: 14,
-              opacity: mounted ? 1 : 0, transform: mounted ? "translateY(0)" : "translateY(10px)",
-              transition: "all 0.5s ease 0.4s",
-            }}>
-              <div style={{
-                width: 44, height: 44, borderRadius: 14,
-                background: "#ecfdf5",
-                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-              }}>
-                <CheckCircle2 style={{ width: 22, height: 22, color: "#10b981" }} />
-              </div>
-              <div>
-                <p style={{ fontSize: "0.85rem", fontWeight: 800, color: "#10b981", margin: "0 0 3px" }}>No ethical concerns</p>
-                <p style={{ fontSize: "0.72rem", color: DS.muted, lineHeight: 1.5, margin: 0 }}>
-                  No labour, boycott, or animal welfare flags in our database.
-                </p>
-              </div>
-            </div>
+            </section>
           )}
 
-          {/* ── Environmental adjustments ────────────────────── */}
-          <div style={{
-            opacity: mounted ? 1 : 0, transform: mounted ? "translateY(0)" : "translateY(10px)",
-            transition: "all 0.5s ease 0.5s",
-          }}>
-            <EnvironmentalImpactCard result={product} />
-          </div>
+          <section style={{ opacity: mounted ? 1 : 0, transform: mounted ? "translateY(0)" : "translateY(10px)", transition: "all 0.5s ease 0.4s" }}>
+            <SectionHead num="02" title="Ethics & labour" kicker={laborRecord ? `Parent company: ${laborRecord.parentCompany}.` : undefined} />
+            <div style={{ background: EDITORIAL.card, border: `1px solid ${EDITORIAL.line}`, borderRadius: 22, padding: "8px 20px 22px" }}>
+              {laborRecord ? laborRecord.allegations.map((al, i) => (
+                <div key={i} style={{ display: "grid", gridTemplateColumns: "46px 1fr", gap: 14, padding: "18px 0", borderTop: `1px solid ${EDITORIAL.line}` }}>
+                  <div>
+                    <div style={{ fontStyle: "italic", fontSize: 22, color: EDITORIAL.ink, lineHeight: 1, letterSpacing: -0.5 }}>'{String(al.year).slice(2)}</div>
+                    <div style={{ fontSize: 9.5, color: EDITORIAL.ink3, letterSpacing: 0.6, marginTop: 4 }}>{al.year}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 19, lineHeight: 1.15, color: EDITORIAL.ink, letterSpacing: -0.3, fontWeight: 700 }}>{al.issue}</div>
+                    <div style={{ fontSize: 12.5, color: EDITORIAL.ink2, marginTop: 6, lineHeight: 1.45 }}>{al.details}</div>
+                    <a href={al.sourceUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: EDITORIAL.red, marginTop: 8, display: "flex", alignItems: "center", gap: 4, fontWeight: 700, textDecoration: "none" }}>
+                      <ExternalLink style={{ width: 10, height: 10 }} /> {al.source}
+                    </a>
+                  </div>
+                </div>
+              )) : (
+                <div style={{ padding: "18px 0 0", display: "flex", gap: 10, alignItems: "center" }}>
+                  <CheckCircle2 style={{ width: 18, height: 18, color: EDITORIAL.green }} />
+                  <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: EDITORIAL.green }}>No labour concerns found.</p>
+                </div>
+              )}
+              <div style={{ fontStyle: "italic", fontSize: 12, color: EDITORIAL.ink3, marginTop: 16, lineHeight: 1.4, borderTop: `1px solid ${EDITORIAL.line}`, paddingTop: 14 }}>
+                Based on publicly available reports. Companies may have taken corrective steps since publication.
+              </div>
+            </div>
+            <div style={{ marginTop: 14, display: "grid", gap: 10 }}>
+              {boycottMatch && (
+                <div style={{ padding: "14px 16px", background: "#FFFFFF", border: `1px solid ${EDITORIAL.amberSoft}`, borderLeft: `4px solid ${EDITORIAL.amber}`, borderRadius: 14, display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: EDITORIAL.ink }}>{boycottMatch.parent} - Boycott listed</div>
+                    <div style={{ fontSize: 11.5, color: EDITORIAL.ink2, marginTop: 2 }}>{boycottMatch.reason}</div>
+                  </div>
+                  <a href="https://boycott-israel.org/boycott.html" target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: EDITORIAL.amber, fontWeight: 800, display: "flex", alignItems: "center", gap: 4, textDecoration: "none" }}>
+                    Read <span>→</span>
+                  </a>
+                </div>
+              )}
+              {welfare.isFlagged && <AnimalWelfareFlagBadge brand={product.brand} showDetails={true} />}
+            </div>
+          </section>
 
-          {/* ── Threatened Species ───────────────────────────── */}
           {(() => {
             const threatened = product.ecoscoreData?.adjustments?.threatened_species;
             if (!threatened?.ingredient) return null;
@@ -876,95 +748,100 @@ export default function OpenFoodFactsDetail() {
               : `${ingredientRaw} production is linked to habitat destruction in biodiversity hotspots.`;
             return (
               <div style={{
-                background: DS.card, borderRadius: 20, overflow: "hidden",
-                boxShadow: "0 1px 6px rgba(0,0,0,0.04)",
+                background: EDITORIAL.card, borderRadius: 20, overflow: "hidden", border: `1px solid ${EDITORIAL.line}`,
                 opacity: mounted ? 1 : 0, transform: mounted ? "translateY(0)" : "translateY(10px)",
                 transition: "all 0.5s ease 0.55s",
               }}>
                 <div style={{ padding: "18px" }}>
-                  <SectionHead title="Threatened Species" />
+                  <SectionHead num="03" title="Threatened species" />
                   <div style={{
                     background: "#fef2f2", borderRadius: 14, padding: 14,
-                    borderLeft: "3px solid #ef4444",
+                    borderLeft: `3px solid ${EDITORIAL.red}`,
                     display: "flex", alignItems: "flex-start", gap: 10,
                   }}>
-                    <AlertTriangle style={{ width: 16, height: 16, color: "#ef4444", flexShrink: 0, marginTop: 1 }} />
+                    <AlertTriangle style={{ width: 16, height: 16, color: EDITORIAL.red, flexShrink: 0, marginTop: 1 }} />
                     <div>
-                      <p style={{ fontSize: "0.8rem", fontWeight: 700, color: "#ef4444", margin: "0 0 4px" }}>
+                      <p style={{ fontSize: "0.8rem", fontWeight: 700, color: EDITORIAL.red, margin: "0 0 4px" }}>
                         Contains {ingredientRaw}
                       </p>
-                      <p style={{ fontSize: "0.75rem", color: DS.ink, lineHeight: 1.55, margin: 0 }}>{explanation}</p>
+                      <p style={{ fontSize: "0.75rem", color: EDITORIAL.ink, lineHeight: 1.55, margin: 0 }}>{explanation}</p>
                     </div>
                   </div>
-                  <p style={{ fontSize: "0.62rem", color: DS.muted, marginTop: 10, margin: "10px 0 0" }}>Source: Open Food Facts Ecoscore</p>
+                  <p style={{ fontSize: "0.62rem", color: EDITORIAL.ink3, marginTop: 10, margin: "10px 0 0" }}>Source: Open Food Facts Ecoscore</p>
                 </div>
               </div>
             );
           })()}
 
-          {/* ── Certifications ───────────────────────────────── */}
-          {product.labels.length > 0 && (
-            <div style={{
-              background: DS.card, borderRadius: 20, padding: "18px",
-              boxShadow: "0 1px 6px rgba(0,0,0,0.04)",
-              opacity: mounted ? 1 : 0, transform: mounted ? "translateY(0)" : "translateY(10px)",
-              transition: "all 0.5s ease 0.6s",
-            }}>
-              <SectionHead title="Certifications" />
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                {product.labels.map(label => (
-                  <span
-                    key={label}
-                    style={{
-                      display: "inline-flex", alignItems: "center", gap: 5,
-                      padding: "5px 10px", borderRadius: 20,
-                      background: DS.bg, color: DS.ink,
-                      fontSize: "0.7rem", fontWeight: 600,
-                    }}
-                  >
-                    <BadgeCheck style={{ width: 11, height: 11, color: "#10b981" }} />
-                    {label}
-                  </span>
-                ))}
-              </div>
+          <section style={{ opacity: mounted ? 1 : 0, transform: mounted ? "translateY(0)" : "translateY(10px)", transition: "all 0.5s ease 0.6s" }}>
+            <SectionHead num="04" title="Materials & logistics" />
+            <div style={{ display: "grid", gap: 10 }}>
+              {[
+                { icon: <Package style={{ width: 17, height: 17 }} />, label: "Packaging", value: packagingSummary(product), impact: product.ecoscoreData?.adjustments?.packaging?.value != null ? `${product.ecoscoreData.adjustments.packaging.value} pts` : "Unknown", bad: (product.ecoscoreData?.adjustments?.packaging?.value ?? 0) < 0 },
+                { icon: <Truck style={{ width: 17, height: 17 }} />, label: "Transport origin", value: product.origins || "Manufacturer undisclosed", impact: product.ecoscoreData?.adjustments?.origins_of_ingredients?.value != null ? `${product.ecoscoreData.adjustments.origins_of_ingredients.value} pts` : "Unknown", bad: (product.ecoscoreData?.adjustments?.origins_of_ingredients?.value ?? 0) < 0 },
+                { icon: <BadgeCheck style={{ width: 17, height: 17 }} />, label: "Certifications", value: product.labels.length ? product.labels.slice(0, 3).map(cleanLabel).join(", ") : "None found", impact: product.labels.length ? `${product.labels.length} mark${product.labels.length > 1 ? "s" : ""}` : "None", bad: false },
+              ].map(item => (
+                <div key={item.label} style={{ padding: "16px 18px", background: EDITORIAL.card, border: `1px solid ${EDITORIAL.line}`, borderRadius: 18, display: "flex", alignItems: "center", gap: 14 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: EDITORIAL.paper, display: "flex", alignItems: "center", justifyContent: "center", color: EDITORIAL.ink }}>
+                    {item.icon}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: EDITORIAL.ink }}>{item.label}</div>
+                    <div style={{ fontSize: 12, color: EDITORIAL.ink2, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.value}</div>
+                  </div>
+                  <Tag bg={item.bad ? EDITORIAL.redSoft : item.impact === "Unknown" || item.impact === "None" ? "#EDE6D2" : EDITORIAL.greenSoft} color={item.bad ? EDITORIAL.red : item.impact === "Unknown" || item.impact === "None" ? EDITORIAL.ink2 : EDITORIAL.green}>{item.impact}</Tag>
+                </div>
+              ))}
             </div>
-          )}
+          </section>
 
-          {/* ── Footer ──────────────────────────────────────── */}
-          <div style={{
-            display: "flex", alignItems: "center", justifyContent: "center", padding: "4px 0",
-            opacity: mounted ? 1 : 0, transition: "opacity 0.5s ease 0.7s",
-          }}>
-            <span style={{
-              fontSize: "0.65rem", color: DS.muted,
-              background: DS.card, padding: "4px 14px", borderRadius: 20,
-              fontVariantNumeric: "tabular-nums",
-            }}>
-              {product.barcode}
-            </span>
+          <div style={{ padding: "0 0 24px", textAlign: "center" }}>
+            <Divider />
+            <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: 1.4, textTransform: "uppercase", color: EDITORIAL.ink3, marginTop: 20 }}>
+              Barcode {product.barcode}
+            </div>
+            <div style={{ fontStyle: "italic", fontSize: 16, color: EDITORIAL.ink2, marginTop: 10, lineHeight: 1.35 }}>
+              Read fewer labels.<br />Eat with more intent.
+            </div>
           </div>
-
-          {/* Scan again */}
-          {fromScan && (
-            <button
-              type="button"
-              onClick={() => navigate("/scan")}
-              style={{
-                width: "100%", height: 50, borderRadius: 14, border: "none",
-                background: DS.ink, color: "#fff",
-                fontWeight: 700, fontSize: "0.88rem",
-                cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                boxShadow: "0 2px 12px rgba(0,0,0,0.15)",
-                opacity: mounted ? 1 : 0, transform: mounted ? "translateY(0)" : "translateY(6px)",
-                transition: "all 0.5s ease 0.75s",
-              }}
-            >
-              <ScanLine style={{ width: 17, height: 17 }} />
-              Scan another product
-            </button>
-          )}
         </div>
       </main>
+
+      {fromScan && (
+        <div style={{
+          position: "fixed", bottom: "64px", left: 0, right: 0, zIndex: 40,
+          padding: "14px 18px 10px",
+          background: "linear-gradient(to bottom, rgba(241,235,221,0) 0%, rgba(241,235,221,0.85) 30%, rgba(241,235,221,0.98) 60%)",
+          display: "flex", gap: 10, maxWidth: 560, margin: "0 auto",
+        }}>
+          <button
+            type="button"
+            onClick={() => document.getElementById("breakdown")?.scrollIntoView({ behavior: "smooth" })}
+            style={{
+              flex: "0 0 auto", padding: "14px 16px",
+              background: "#FFFFFF", border: `1px solid ${EDITORIAL.line}`, borderRadius: 999,
+              fontSize: 13.5, fontWeight: 700, color: EDITORIAL.ink, cursor: "pointer",
+              display: "flex", alignItems: "center", gap: 6,
+            }}
+          >
+            <BarChart2 style={{ width: 14, height: 14 }} />
+            Details
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate("/scan")}
+            style={{
+              flex: 1, padding: "14px 18px",
+              background: EDITORIAL.ink, border: "none", borderRadius: 999,
+              fontSize: 13.5, fontWeight: 800, color: EDITORIAL.card, cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+              boxShadow: "0 10px 24px rgba(26,22,20,0.25)",
+            }}
+          >
+            Scan another <span style={{ opacity: 0.6 }}>→</span>
+          </button>
+        </div>
+      )}
 
       <BottomNav />
 
