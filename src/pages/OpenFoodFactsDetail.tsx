@@ -809,7 +809,7 @@ export default function OpenFoodFactsDetail() {
 
       {fromScan && (
         <div style={{
-          position: "fixed", bottom: "64px", left: 0, right: 0, zIndex: 40,
+          position: "fixed", bottom: "calc(60px + env(safe-area-inset-bottom))", left: 0, right: 0, zIndex: 45,
           padding: "14px 18px 10px",
           background: "linear-gradient(to bottom, rgba(241,235,221,0) 0%, rgba(241,235,221,0.85) 30%, rgba(241,235,221,0.98) 60%)",
           display: "flex", gap: 10, maxWidth: 560, margin: "0 auto",

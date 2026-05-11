@@ -1695,7 +1695,7 @@ const Scan = () => {
       {showSearch && (
         <div
           style={{
-            position: 'absolute', bottom: 0, left: 0, right: 0,
+            position: 'fixed', bottom: 0, left: 0, right: 0,
             background: DS.card,
             borderTop: `1px solid ${DS.hair}`,
             borderRadius: '20px 20px 0 0',
@@ -1790,7 +1790,7 @@ const Scan = () => {
       {showSearch && (
         <div
           onClick={() => setShowSearch(false)}
-          style={{ position: 'absolute', inset: 0, zIndex: 35 }}
+          style={{ position: 'fixed', inset: 0, zIndex: 35 }}
         />
       )}
 
