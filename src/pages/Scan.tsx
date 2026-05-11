@@ -1691,17 +1691,25 @@ const Scan = () => {
         </div>
       )}
 
+      {/* Tap-outside to close search */}
+      {showSearch && (
+        <div
+          onClick={() => setShowSearch(false)}
+          style={{ position: 'absolute', inset: 0, zIndex: 35, background: 'rgba(0,0,0,0.3)' }}
+        />
+      )}
+
       {/* Search / manual input overlay */}
       {showSearch && (
         <div
           style={{
-            position: 'fixed', bottom: 0, left: 0, right: 0,
+            position: 'absolute', bottom: 0, left: 0, right: 0, width: '100%',
             background: DS.card,
-            borderTop: `1px solid ${DS.hair}`,
             borderRadius: '20px 20px 0 0',
             padding: '16px 18px max(28px, env(safe-area-inset-bottom))',
             zIndex: 40,
             boxShadow: '0 -4px 24px rgba(26,22,20,0.15)',
+            boxSizing: 'border-box',
           }}
         >
           {/* Handle */}
@@ -1712,8 +1720,8 @@ const Scan = () => {
           <p style={{ fontSize: '1rem', fontWeight: 800, color: DS.ink, marginBottom: 4 }}>Search by name or barcode</p>
           <p style={{ fontSize: '0.78rem', color: DS.muted, marginBottom: 14 }}>Enter a product name or scan barcode number</p>
 
-          <form onSubmit={(e) => { e.preventDefault(); if (barcodeInput.trim()) { handleProductSearch(barcodeInput); setShowSearch(false); } }} style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-            <div style={{ flex: 1, position: 'relative', display: 'flex', alignItems: 'center' }}>
+          <form onSubmit={(e) => { e.preventDefault(); if (barcodeInput.trim()) { handleProductSearch(barcodeInput); setShowSearch(false); } }} style={{ display: 'flex', gap: 8, marginBottom: 10, width: '100%', boxSizing: 'border-box' }}>
+            <div style={{ flex: 1, minWidth: 0, position: 'relative', display: 'flex', alignItems: 'center' }}>
               <Search size={14} style={{ position: 'absolute', left: 12, color: DS.muted, pointerEvents: 'none' }} />
               <input
                 autoFocus
@@ -1722,12 +1730,13 @@ const Scan = () => {
                 onChange={e => setBarcodeInput(e.target.value)}
                 placeholder={scanMode === 'Barcode' ? 'Barcode number…' : 'e.g. Coca-Cola, Weetbix…'}
                 style={{
-                  flex: 1, height: 46, width: '100%',
+                  width: '100%', height: 46,
                   border: `1.5px solid ${DS.hair}`,
                   borderRadius: 12,
                   backgroundColor: DS.bg,
                   fontSize: '0.875rem', padding: '0 12px 0 36px', outline: 'none',
                   color: DS.ink,
+                  boxSizing: 'border-box',
                 }}
               />
             </div>
@@ -1741,6 +1750,7 @@ const Scan = () => {
                 fontWeight: 700, fontSize: '0.85rem',
                 padding: '0 18px', cursor: 'pointer',
                 transition: 'background 0.15s',
+                flexShrink: 0,
               }}
             >
               {offLoading ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : 'Go'}
@@ -1771,7 +1781,7 @@ const Scan = () => {
           )}
 
           <button
-            onClick={() => setShowSearch(false)}
+            onClick={() => { setShowSearch(false); window.scrollTo(0, 0); }}
             style={{
               width: '100%', padding: '12px',
               border: `1px solid ${DS.hair}`,
@@ -1784,14 +1794,6 @@ const Scan = () => {
             Cancel
           </button>
         </div>
-      )}
-
-      {/* Tap-outside to close search */}
-      {showSearch && (
-        <div
-          onClick={() => setShowSearch(false)}
-          style={{ position: 'fixed', inset: 0, zIndex: 35 }}
-        />
       )}
 
       {/* Hidden file input */}

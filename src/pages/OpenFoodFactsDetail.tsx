@@ -5,7 +5,7 @@ import {
   ChevronLeft, Loader2, Leaf, AlertTriangle, ExternalLink,
   CheckCircle2, ChevronRight, Package, ShoppingBag, XCircle, Clock,
   BadgeCheck, Wheat, Factory, Truck, Store, UtensilsCrossed,
-  ScanLine, Check, BarChart2, Sprout, PawPrint,
+  ScanLine, Check, Sprout, PawPrint,
 } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { lookupBarcode } from "@/services/openfoodfacts";
@@ -435,7 +435,7 @@ export default function OpenFoodFactsDetail() {
         </div>
       </div>
 
-      <main style={{ paddingBottom: fromScan ? 190 : 96, maxWidth: 560, margin: "0 auto", background: EDITORIAL.paper, minHeight: "100dvh" }}>
+      <main style={{ paddingBottom: 96, maxWidth: 560, margin: "0 auto", background: EDITORIAL.paper, minHeight: "100dvh" }}>
 
         <div ref={heroRef} style={{ position: "relative", height: 280, overflow: "hidden", background: "radial-gradient(ellipse at 50% 35%, #F4DCB8 0%, #E8C58A 45%, #D9A86A 100%)" }}>
           <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(rgba(0,0,0,0.04) 1px, transparent 1px)", backgroundSize: "3px 3px", opacity: 0.55 }} />
@@ -807,41 +807,6 @@ export default function OpenFoodFactsDetail() {
         </div>
       </main>
 
-      {fromScan && (
-        <div style={{
-          position: "fixed", bottom: "calc(60px + env(safe-area-inset-bottom))", left: 0, right: 0, zIndex: 45,
-          padding: "14px 18px 10px",
-          background: "linear-gradient(to bottom, rgba(241,235,221,0) 0%, rgba(241,235,221,0.85) 30%, rgba(241,235,221,0.98) 60%)",
-          display: "flex", gap: 10, maxWidth: 560, margin: "0 auto",
-        }}>
-          <button
-            type="button"
-            onClick={() => document.getElementById("breakdown")?.scrollIntoView({ behavior: "smooth" })}
-            style={{
-              flex: "0 0 auto", padding: "14px 16px",
-              background: "#FFFFFF", border: `1px solid ${EDITORIAL.line}`, borderRadius: 999,
-              fontSize: 13.5, fontWeight: 700, color: EDITORIAL.ink, cursor: "pointer",
-              display: "flex", alignItems: "center", gap: 6,
-            }}
-          >
-            <BarChart2 style={{ width: 14, height: 14 }} />
-            Details
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate("/scan")}
-            style={{
-              flex: 1, padding: "14px 18px",
-              background: EDITORIAL.ink, border: "none", borderRadius: 999,
-              fontSize: 13.5, fontWeight: 800, color: EDITORIAL.card, cursor: "pointer",
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-              boxShadow: "0 10px 24px rgba(26,22,20,0.25)",
-            }}
-          >
-            Scan another <span style={{ opacity: 0.6 }}>→</span>
-          </button>
-        </div>
-      )}
 
       <BottomNav />
 
