@@ -1691,38 +1691,23 @@ const Scan = () => {
         </div>
       )}
 
-      {/* Tap-outside to close search */}
-      {showSearch && (
-        <div
-          onClick={() => setShowSearch(false)}
-          style={{ position: 'absolute', inset: 0, zIndex: 35, background: 'rgba(0,0,0,0.3)' }}
-        />
-      )}
-
-      {/* Search / manual input overlay */}
+      {/* Search full-screen overlay */}
       {showSearch && (
         <div
           style={{
-            position: 'absolute', bottom: 0, left: 0, right: 0, width: '100%',
+            position: 'absolute', inset: 0, zIndex: 40,
             background: DS.card,
-            borderRadius: '20px 20px 0 0',
-            padding: '16px 18px max(28px, env(safe-area-inset-bottom))',
-            zIndex: 40,
-            boxShadow: '0 -4px 24px rgba(26,22,20,0.15)',
+            display: 'flex', flexDirection: 'column',
+            padding: 'max(52px, env(safe-area-inset-top)) 20px max(28px, env(safe-area-inset-bottom))',
             boxSizing: 'border-box',
           }}
         >
-          {/* Handle */}
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>
-            <div style={{ width: 36, height: 4, borderRadius: 99, background: DS.hair }} />
-          </div>
+          <p style={{ fontSize: '1.25rem', fontWeight: 800, color: DS.ink, marginBottom: 4 }}>Search by name or barcode</p>
+          <p style={{ fontSize: '0.82rem', color: DS.muted, marginBottom: 18 }}>Enter a product name or scan barcode number</p>
 
-          <p style={{ fontSize: '1rem', fontWeight: 800, color: DS.ink, marginBottom: 4 }}>Search by name or barcode</p>
-          <p style={{ fontSize: '0.78rem', color: DS.muted, marginBottom: 14 }}>Enter a product name or scan barcode number</p>
-
-          <form onSubmit={(e) => { e.preventDefault(); if (barcodeInput.trim()) { handleProductSearch(barcodeInput); setShowSearch(false); } }} style={{ display: 'flex', gap: 8, marginBottom: 10, width: '100%', boxSizing: 'border-box' }}>
+          <form onSubmit={(e) => { e.preventDefault(); if (barcodeInput.trim()) { handleProductSearch(barcodeInput); setShowSearch(false); } }} style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
             <div style={{ flex: 1, minWidth: 0, position: 'relative', display: 'flex', alignItems: 'center' }}>
-              <Search size={14} style={{ position: 'absolute', left: 12, color: DS.muted, pointerEvents: 'none' }} />
+              <Search size={16} style={{ position: 'absolute', left: 14, color: DS.muted, pointerEvents: 'none' }} />
               <input
                 autoFocus
                 type="text"
@@ -1730,11 +1715,11 @@ const Scan = () => {
                 onChange={e => setBarcodeInput(e.target.value)}
                 placeholder={scanMode === 'Barcode' ? 'Barcode number…' : 'e.g. Coca-Cola, Weetbix…'}
                 style={{
-                  width: '100%', height: 46,
+                  width: '100%', height: 50,
                   border: `1.5px solid ${DS.hair}`,
-                  borderRadius: 12,
+                  borderRadius: 14,
                   backgroundColor: DS.bg,
-                  fontSize: '0.875rem', padding: '0 12px 0 36px', outline: 'none',
+                  fontSize: '1rem', padding: '0 14px 0 42px', outline: 'none',
                   color: DS.ink,
                   boxSizing: 'border-box',
                 }}
@@ -1744,16 +1729,16 @@ const Scan = () => {
               type="submit"
               disabled={!barcodeInput.trim() || offLoading}
               style={{
-                height: 46, borderRadius: 12, border: 'none',
+                height: 50, borderRadius: 14, border: 'none',
                 backgroundColor: barcodeInput.trim() ? DS.ink : DS.bg,
                 color: barcodeInput.trim() ? DS.card : DS.muted,
-                fontWeight: 700, fontSize: '0.85rem',
-                padding: '0 18px', cursor: 'pointer',
+                fontWeight: 700, fontSize: '0.9rem',
+                padding: '0 20px', cursor: 'pointer',
                 transition: 'background 0.15s',
                 flexShrink: 0,
               }}
             >
-              {offLoading ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : 'Go'}
+              {offLoading ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> : 'Go'}
             </button>
           </form>
 
@@ -1763,31 +1748,33 @@ const Scan = () => {
               to="/preferences"
               onClick={() => { setShowSearch(false); stopCamera(); }}
               style={{
-                display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10,
-                padding: '10px 12px',
+                display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14,
+                padding: '12px 14px',
                 backgroundColor: DS.warnBg,
                 border: `1px solid ${DS.warn}33`,
-                borderRadius: 12,
+                borderRadius: 14,
                 textDecoration: 'none',
               }}
             >
               <AlertCircle size={14} style={{ color: DS.warn, flexShrink: 0 }} />
               <div style={{ flex: 1 }}>
-                <p style={{ fontSize: '0.78rem', fontWeight: 700, color: DS.ink, marginBottom: 1 }}>Set your values first</p>
-                <p style={{ fontSize: '0.7rem', color: DS.muted }}>Personalise every scan result</p>
+                <p style={{ fontSize: '0.82rem', fontWeight: 700, color: DS.ink, marginBottom: 1 }}>Set your values first</p>
+                <p style={{ fontSize: '0.72rem', color: DS.muted }}>Personalise every scan result</p>
               </div>
               <ChevronRight size={14} style={{ color: DS.warn, flexShrink: 0 }} />
             </Link>
           )}
 
+          <div style={{ flex: 1 }} />
+
           <button
-            onClick={() => { setShowSearch(false); window.scrollTo(0, 0); }}
+            onClick={() => setShowSearch(false)}
             style={{
-              width: '100%', padding: '12px',
-              border: `1px solid ${DS.hair}`,
-              borderRadius: 12,
+              width: '100%', padding: '14px',
+              border: `1.5px solid ${DS.hair}`,
+              borderRadius: 14,
               backgroundColor: DS.bg,
-              color: DS.muted, fontWeight: 600, fontSize: '0.85rem',
+              color: DS.muted, fontWeight: 600, fontSize: '0.9rem',
               cursor: 'pointer',
             }}
           >
