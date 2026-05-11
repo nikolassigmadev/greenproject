@@ -1,10 +1,14 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Home, Clock, Info } from "lucide-react";
+import { Home, Clock, Info, SlidersHorizontal } from "lucide-react";
 import { DS } from "@/styles/design-tokens";
 
-const NAV_ITEMS = [
+const NAV_LEFT = [
   { path: "/",            label: "Home",    icon: Home    },
   { path: "/dashboard",   label: "History", icon: Clock   },
+];
+
+const NAV_RIGHT = [
+  { path: "/preferences", label: "Values",  icon: SlidersHorizontal },
   { path: "/about",       label: "About",   icon: Info    },
 ];
 
@@ -36,11 +40,11 @@ export function BottomNav() {
     >
       <div style={{
         display: "grid",
-        gridTemplateColumns: "1fr 1fr 1.3fr 1fr",
+        gridTemplateColumns: "1fr 1fr 1.3fr 1fr 1fr",
         padding: "10px 12px 0",
       }}>
         {/* Left items */}
-        {NAV_ITEMS.slice(0, 2).map((item) => {
+        {NAV_LEFT.map((item) => {
           const Icon = item.icon;
           const active = pathname === item.path;
           const c = active ? DS.ink : DS.muted;
@@ -102,7 +106,7 @@ export function BottomNav() {
         </button>
 
         {/* Right items */}
-        {NAV_ITEMS.slice(2).map((item) => {
+        {NAV_RIGHT.map((item) => {
           const Icon = item.icon;
           const active = pathname === item.path;
           const c = active ? DS.ink : DS.muted;

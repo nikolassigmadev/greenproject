@@ -1389,10 +1389,10 @@ const Scan = () => {
           : <div style={{ position: 'absolute', inset: 0, background: '#0e0e10' }} />
       )}
 
-      {/* Vignette overlay — blue-tinted */}
+      {/* Subtle edge vignette */}
       <div style={{
         position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 2,
-        background: 'radial-gradient(ellipse 70% 55% at 50% 42%, transparent 60%, rgba(14,14,16,0.65) 100%)',
+        background: 'radial-gradient(ellipse 80% 70% at 50% 45%, transparent 70%, rgba(14,14,16,0.4) 100%)',
       }} />
 
       {/* Scan line when loading */}
@@ -1412,20 +1412,20 @@ const Scan = () => {
       {(['tl','tr','bl','br'] as const).map(corner => {
         const top = corner.startsWith('t');
         const left = corner.endsWith('l');
-        const color = offSearchLoading ? 'rgba(74,222,128,0.9)' : 'rgba(255,255,255,0.9)';
+        const color = offSearchLoading ? 'rgba(74,222,128,0.7)' : 'rgba(255,255,255,0.4)';
         return (
           <div key={corner} style={{
             position: 'absolute',
-            top: top ? '20%' : undefined,
-            bottom: !top ? '34%' : undefined,
-            left: left ? '12%' : undefined,
-            right: !left ? '12%' : undefined,
-            width: 28, height: 28,
-            borderTop: top ? `2.5px solid ${color}` : undefined,
-            borderBottom: !top ? `2.5px solid ${color}` : undefined,
-            borderLeft: left ? `2.5px solid ${color}` : undefined,
-            borderRight: !left ? `2.5px solid ${color}` : undefined,
-            borderRadius: top && left ? '8px 0 0 0' : top && !left ? '0 8px 0 0' : !top && left ? '0 0 0 8px' : '0 0 8px 0',
+            top: top ? '22%' : undefined,
+            bottom: !top ? '28%' : undefined,
+            left: left ? '10%' : undefined,
+            right: !left ? '10%' : undefined,
+            width: 24, height: 24,
+            borderTop: top ? `2px solid ${color}` : undefined,
+            borderBottom: !top ? `2px solid ${color}` : undefined,
+            borderLeft: left ? `2px solid ${color}` : undefined,
+            borderRight: !left ? `2px solid ${color}` : undefined,
+            borderRadius: top && left ? '6px 0 0 0' : top && !left ? '0 6px 0 0' : !top && left ? '0 0 0 6px' : '0 0 6px 0',
             zIndex: 8,
             transition: 'border-color 0.3s',
           }} />
@@ -1461,12 +1461,18 @@ const Scan = () => {
             </div>
           </>
         ) : !cameraActive && !frozenFrame && !cameraInitializing ? (
-          <div style={{ textAlign: 'center' }}>
-            <p style={{ fontSize: '1.4rem', fontWeight: 800, color: '#fff', margin: 0, lineHeight: 1.2 }}>
-              Point at a barcode
+          <div style={{
+            textAlign: 'center',
+            background: 'rgba(14,14,16,0.6)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            borderRadius: 16, padding: '12px 20px',
+          }}>
+            <p style={{ fontSize: '0.9rem', fontWeight: 700, color: '#fff', margin: 0 }}>
+              Point at a product
             </p>
-            <p style={{ fontSize: '0.9rem', fontWeight: 500, color: 'rgba(255,255,255,0.5)', margin: '6px 0 0' }}>
-              We'll do the rest
+            <p style={{ fontSize: '0.75rem', fontWeight: 500, color: 'rgba(255,255,255,0.5)', margin: '4px 0 0' }}>
+              or tap search below
             </p>
           </div>
         ) : null}
@@ -1479,13 +1485,12 @@ const Scan = () => {
         paddingLeft: 16, paddingRight: 16, paddingBottom: 14,
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         zIndex: 20,
-        background: 'linear-gradient(to bottom, rgba(14,14,16,0.75) 0%, transparent 100%)',
       }}>
         {/* Close */}
         <Link to="/" onClick={() => stopCamera()}>
           <button style={{
             width: 36, height: 36, borderRadius: 18,
-            backgroundColor: 'rgba(255,255,255,0.15)',
+            backgroundColor: 'rgba(255,255,255,0.12)',
             backdropFilter: 'blur(10px)',
             WebkitBackdropFilter: 'blur(10px)',
             border: 'none',
@@ -1496,20 +1501,13 @@ const Scan = () => {
           </button>
         </Link>
 
-        {/* Title */}
-        <div style={{ textAlign: 'center' }}>
-          <p style={{ fontSize: '0.85rem', fontWeight: 800, color: '#fff', letterSpacing: '-0.01em', margin: 0, lineHeight: 1.2 }}>
-            GoodScan
-          </p>
-        </div>
-
         {/* Right actions */}
         <div style={{ display: 'flex', gap: 6 }}>
           <button
             onClick={() => setFlashOn(f => !f)}
             style={{
               width: 36, height: 36, borderRadius: 18,
-              backgroundColor: flashOn ? 'rgba(251,191,36,0.25)' : 'rgba(255,255,255,0.15)',
+              backgroundColor: flashOn ? 'rgba(251,191,36,0.25)' : 'rgba(255,255,255,0.12)',
               backdropFilter: 'blur(10px)',
               WebkitBackdropFilter: 'blur(10px)',
               border: 'none',
@@ -1519,21 +1517,6 @@ const Scan = () => {
             }}
           >
             <Zap size={15} strokeWidth={flashOn ? 2.5 : 1.8} />
-          </button>
-          <button
-            onClick={() => setShowSearch(s => !s)}
-            style={{
-              width: 36, height: 36, borderRadius: 18,
-              backgroundColor: showSearch ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.15)',
-              backdropFilter: 'blur(10px)',
-              WebkitBackdropFilter: 'blur(10px)',
-              border: 'none',
-              color: '#fff', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              transition: 'all 0.15s',
-            }}
-          >
-            <Search size={15} />
           </button>
         </div>
       </div>
@@ -1589,71 +1572,24 @@ const Scan = () => {
       {/* Bottom panel */}
       <div style={{
         position: 'absolute', bottom: 0, left: 0, right: 0,
-        background: 'rgba(14,14,16,0.92)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
-        borderTop: '1px solid rgba(255,255,255,0.08)',
-        borderRadius: '24px 24px 0 0',
-        paddingBottom: 'max(24px, env(safe-area-inset-bottom))',
+        paddingBottom: 'max(20px, env(safe-area-inset-bottom))',
         zIndex: 20,
+        pointerEvents: 'none',
       }}>
-        {/* Handle */}
-        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 10, paddingBottom: 4 }}>
-          <div style={{ width: 32, height: 3, borderRadius: 99, background: 'rgba(255,255,255,0.15)' }} />
-        </div>
-
-        {/* Inline search */}
-        <form
-          onSubmit={e => { e.preventDefault(); if (inlineSearch.trim()) { handleProductSearch(inlineSearch); setInlineSearch(""); } }}
-          style={{ display: 'flex', gap: 8, padding: '6px 16px 14px' }}
-        >
-          <div style={{ flex: 1, position: 'relative', display: 'flex', alignItems: 'center' }}>
-            <Search size={14} style={{ position: 'absolute', left: 12, color: 'rgba(255,255,255,0.3)', pointerEvents: 'none' }} />
-            <input
-              type="text"
-              value={inlineSearch}
-              onChange={e => setInlineSearch(e.target.value)}
-              placeholder="Search a product name…"
-              style={{
-                width: '100%', height: 42,
-                backgroundColor: 'rgba(255,255,255,0.08)',
-                border: '1px solid rgba(255,255,255,0.12)',
-                borderRadius: 12,
-                color: '#fff', fontSize: '16px',
-                paddingLeft: 34, paddingRight: 12, outline: 'none',
-                caretColor: '#fff',
-              }}
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={!inlineSearch.trim() || offLoading}
-            style={{
-              height: 42, borderRadius: 12, border: 'none',
-              backgroundColor: inlineSearch.trim() ? '#fff' : 'rgba(255,255,255,0.08)',
-              color: inlineSearch.trim() ? '#1a1a1a' : 'rgba(255,255,255,0.3)',
-              fontWeight: 700, fontSize: '0.8rem',
-              padding: '0 16px', cursor: inlineSearch.trim() ? 'pointer' : 'default',
-              whiteSpace: 'nowrap', flexShrink: 0,
-              transition: 'background 0.15s',
-            }}
-          >
-            {offLoading ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : 'Search'}
-          </button>
-        </form>
-
         {/* Camera controls */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 36, padding: '0 40px 14px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 32, padding: '0 40px 16px', pointerEvents: 'auto' }}>
 
           {/* Gallery */}
           <button
             onClick={() => { if (!isDefaultPriorities) offFileInputRef.current?.click(); }}
             disabled={isDefaultPriorities}
             style={{
-              width: 52, height: 52, borderRadius: 14,
-              backgroundColor: 'rgba(255,255,255,0.08)',
-              border: '1px solid rgba(255,255,255,0.12)',
-              color: 'rgba(255,255,255,0.7)',
+              width: 48, height: 48, borderRadius: 14,
+              backgroundColor: 'rgba(255,255,255,0.12)',
+              backdropFilter: 'blur(10px)',
+              WebkitBackdropFilter: 'blur(10px)',
+              border: 'none',
+              color: 'rgba(255,255,255,0.8)',
               cursor: isDefaultPriorities ? 'not-allowed' : 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               overflow: 'hidden',
@@ -1672,9 +1608,9 @@ const Scan = () => {
             onClick={handleShutter}
             disabled={offSearchLoading || isDefaultPriorities}
             style={{
-              width: 76, height: 76, borderRadius: '50%',
+              width: 72, height: 72, borderRadius: '50%',
               backgroundColor: 'transparent',
-              border: `3px solid ${isDefaultPriorities ? 'rgba(255,255,255,0.2)' : offSearchLoading ? 'rgba(74,222,128,0.6)' : 'rgba(255,255,255,0.85)'}`,
+              border: `3px solid ${isDefaultPriorities ? 'rgba(255,255,255,0.2)' : offSearchLoading ? 'rgba(74,222,128,0.6)' : 'rgba(255,255,255,0.9)'}`,
               cursor: (offSearchLoading || isDefaultPriorities) ? 'not-allowed' : 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               transition: 'all 0.15s',
@@ -1684,7 +1620,7 @@ const Scan = () => {
             onTouchEnd={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)'; }}
           >
             <div style={{
-              width: 60, height: 60, borderRadius: '50%',
+              width: 58, height: 58, borderRadius: '50%',
               background: isDefaultPriorities
                 ? 'rgba(255,255,255,0.2)'
                 : offSearchLoading
@@ -1699,38 +1635,22 @@ const Scan = () => {
             </div>
           </button>
 
-          {/* Values shortcut */}
-          <Link
-            to="/preferences"
-            onClick={() => stopCamera()}
+          {/* Search */}
+          <button
+            onClick={() => setShowSearch(s => !s)}
             style={{
-              width: 52, height: 52, borderRadius: 14,
-              backgroundColor: isDefaultPriorities ? 'rgba(251,191,36,0.15)' : 'rgba(255,255,255,0.08)',
-              border: `1px solid ${isDefaultPriorities ? 'rgba(251,191,36,0.35)' : 'rgba(255,255,255,0.12)'}`,
-              color: isDefaultPriorities ? '#FBBF24' : 'rgba(255,255,255,0.7)',
+              width: 48, height: 48, borderRadius: 14,
+              backgroundColor: 'rgba(255,255,255,0.12)',
+              backdropFilter: 'blur(10px)',
+              WebkitBackdropFilter: 'blur(10px)',
+              border: 'none',
+              color: 'rgba(255,255,255,0.8)',
+              cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              textDecoration: 'none',
             }}
           >
-            <Settings size={20} strokeWidth={1.6} />
-          </Link>
-        </div>
-
-        {/* Hint */}
-        <div style={{ textAlign: 'center', paddingBottom: 4 }}>
-          <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.35)', fontWeight: 500 }}>
-            {offSearchLoading ? 'Analysing…' : cameraActive ? 'Point at a barcode · tap to capture' : 'Tap to capture · or type a barcode instead'}
-          </span>
-        </div>
-
-        {/* Privacy notice */}
-        <div style={{ textAlign: 'center', paddingBottom: 2 }}>
-          <span style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.2)', fontWeight: 400 }}>
-            Images analysed by OpenAI · not stored.{' '}
-          </span>
-          <Link to="/privacy" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.3)', fontWeight: 500, textDecoration: 'underline' }}>
-            Privacy
-          </Link>
+            <Search size={20} strokeWidth={1.5} />
+          </button>
         </div>
       </div>
 

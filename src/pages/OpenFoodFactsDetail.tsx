@@ -1,10 +1,10 @@
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import {
-  ChevronLeft, Loader2, Leaf, AlertTriangle, Flag, ExternalLink,
+  ChevronLeft, Loader2, Leaf, AlertTriangle, ExternalLink,
   CheckCircle2, ChevronRight, Package, ShoppingBag, XCircle, Clock,
-  BadgeCheck, Wheat, Factory, Truck, Store, UtensilsCrossed, Scale,
-  ScanLine, Check, Megaphone, BarChart2, Sprout, PawPrint,
+  BadgeCheck, Wheat, Factory, Truck, Store, UtensilsCrossed,
+  ScanLine, Check, BarChart2, Sprout, PawPrint,
 } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { lookupBarcode } from "@/services/openfoodfacts";
@@ -20,7 +20,8 @@ import { sendChatMessage } from "@/services/api/backend-client";
 import { cn } from "@/lib/utils";
 import { DS } from "@/styles/design-tokens";
 
-// Simple in-memory cache so we don't re-call for the same raw name
+// ─── Helpers (logic) ──────────────────────────────────────────────────────────
+
 const nameCache = new Map<string, string>();
 
 async function fetchCleanName(rawName: string): Promise<string> {
@@ -42,117 +43,109 @@ async function fetchCleanName(rawName: string): Promise<string> {
 const findLaborAllegations = (product: OpenFoodFactsResult) =>
   findLaborAllegationsUtil(product.brand, product.productName);
 
-// ─── Design tokens ────────────────────────────────────────────────────────────
+// ─── Design constants ─────────────────────────────────────────────────────────
 
-const BLUE = "#1a1a1a";
-
-const GRADE_BORDER: Record<string, string> = {
-  a: "#10b981",
-  b: "#84cc16",
-  c: "#f59e0b",
-  d: "#f97316",
-  e: "#ef4444",
-};
-
-const GRADE_TEXT: Record<string, string> = {
-  a: "#10b981",
-  b: "#84cc16",
-  c: "#f59e0b",
-  d: "#f97316",
-  e: "#ef4444",
+const GRADE_COLOR: Record<string, string> = {
+  a: "#10b981", b: "#84cc16", c: "#f59e0b", d: "#f97316", e: "#ef4444",
 };
 
 const GRADE_BG: Record<string, string> = {
-  a: "#F0FAF6",
-  b: "#F7FAF0",
-  c: "#FFFBEB",
-  d: "#FFF5EE",
-  e: "#FFF0F0",
+  a: "#ecfdf5", b: "#f7fee7", c: "#fffbeb", d: "#fff7ed", e: "#fef2f2",
 };
 
 const NOVA_LABEL: Record<number, string> = {
-  1: "Unprocessed",
-  2: "Culinary",
-  3: "Processed",
-  4: "Ultra-proc.",
+  1: "Unprocessed", 2: "Culinary", 3: "Processed", 4: "Ultra-processed",
 };
 
 const NOVA_COLOR: Record<number, string> = {
-  1: "#10b981",
-  2: "#84cc16",
-  3: "#f59e0b",
-  4: "#ef4444",
+  1: "#10b981", 2: "#84cc16", 3: "#f59e0b", 4: "#ef4444",
 };
 
 const VERDICT_CONFIG = {
-  BUY: {
-    borderColor: "#10b981",
-    textColor: "#10b981",
-    Icon: CheckCircle2,
-    label: "BUY",
-  },
-  CONSIDER: {
-    borderColor: "#f59e0b",
-    textColor: "#f59e0b",
-    Icon: Clock,
-    label: "CONSIDER",
-  },
-  CAUTION: {
-    borderColor: "#f97316",
-    textColor: "#f97316",
-    Icon: AlertTriangle,
-    label: "CAUTION",
-  },
-  AVOID: {
-    borderColor: "#ef4444",
-    textColor: "#ef4444",
-    Icon: XCircle,
-    label: "AVOID",
-  },
-  UNKNOWN: {
-    borderColor: "#9CA3AF",
-    textColor: "#9CA3AF",
-    Icon: Clock,
-    label: "UNKNOWN",
-  },
+  BUY:      { color: "#10b981", bg: "#ecfdf5", Icon: CheckCircle2, label: "Buy" },
+  CONSIDER: { color: "#f59e0b", bg: "#fffbeb", Icon: Clock,        label: "Consider" },
+  CAUTION:  { color: "#f97316", bg: "#fff7ed", Icon: AlertTriangle, label: "Caution" },
+  AVOID:    { color: "#ef4444", bg: "#fef2f2", Icon: XCircle,       label: "Avoid" },
+  UNKNOWN:  { color: "#9CA3AF", bg: "#f9fafb", Icon: Clock,        label: "Unknown" },
 };
 
 const CO2_BARS = [
   { key: "co2_agriculture",    label: "Agriculture",  Icon: Wheat,           color: "#10b981" },
-  { key: "co2_processing",     label: "Processing",   Icon: Factory,         color: "#40aaff" },
+  { key: "co2_processing",     label: "Processing",   Icon: Factory,         color: "#3b82f6" },
   { key: "co2_packaging",      label: "Packaging",    Icon: Package,         color: "#f59e0b" },
   { key: "co2_transportation", label: "Transport",    Icon: Truck,           color: "#f97316" },
   { key: "co2_distribution",   label: "Distribution", Icon: Store,           color: "#a855f7" },
   { key: "co2_consumption",    label: "Consumption",  Icon: UtensilsCrossed, color: "#ec4899" },
 ] as const;
 
-// ─── Shared components ────────────────────────────────────────────────────────
+const GRADE_PERCENT: Record<string, number> = { a: 1, b: 0.8, c: 0.6, d: 0.4, e: 0.2 };
+const NOVA_PERCENT: Record<number, number> = { 1: 1, 2: 0.75, 3: 0.5, 4: 0.25 };
 
-function InfoCard({ children, accentColor }: {
-  children: React.ReactNode;
-  accentColor?: string;
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function ScoreGauge({ value, color, bg, percent, label, sublabel, delay = 0 }: {
+  value: string;
+  color: string;
+  bg: string;
+  percent: number;
+  label: string;
+  sublabel?: string;
+  delay?: number;
 }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setMounted(true), 200 + delay);
+    return () => clearTimeout(t);
+  }, [delay]);
+
+  const size = 72;
+  const strokeW = 5;
+  const r = (size - strokeW * 2) / 2;
+  const circ = 2 * Math.PI * r;
+
   return (
-    <div
-      style={{
-        background: DS.card,
-        borderRadius: 18,
-        borderLeft: accentColor ? `4px solid ${accentColor}` : undefined,
-        boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
-        overflow: "hidden",
-      }}
-    >
-      {children}
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, flex: 1 }}>
+      <div style={{ position: "relative", width: size, height: size }}>
+        <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
+          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={DS.hair} strokeWidth={strokeW} />
+          <circle
+            cx={size / 2} cy={size / 2} r={r} fill="none"
+            stroke={color}
+            strokeWidth={strokeW}
+            strokeLinecap="round"
+            strokeDasharray={circ}
+            strokeDashoffset={mounted ? circ * (1 - percent) : circ}
+            style={{ transition: `stroke-dashoffset 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) ${delay}ms` }}
+          />
+        </svg>
+        <div style={{
+          position: "absolute", inset: 0,
+          display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+        }}>
+          <span style={{ fontSize: "1.3rem", fontWeight: 900, color, lineHeight: 1 }}>{value}</span>
+        </div>
+      </div>
+      <div style={{ textAlign: "center" }}>
+        <p style={{ fontSize: "0.68rem", fontWeight: 700, color: DS.ink, margin: 0 }}>{label}</p>
+        {sublabel && <p style={{ fontSize: "0.6rem", color: DS.muted, margin: "1px 0 0" }}>{sublabel}</p>}
+      </div>
     </div>
   );
 }
 
-function SectionLabel({ label }: { label: string }) {
+function SectionHead({ title }: { title: string }) {
   return (
-    <p style={{ fontSize: "0.65rem", fontWeight: 800, color: DS.muted, letterSpacing: "0.07em", marginBottom: 14, textTransform: "uppercase" }}>
-      {label}
+    <p style={{
+      fontSize: "0.62rem", fontWeight: 800, color: DS.muted,
+      letterSpacing: "0.1em", textTransform: "uppercase", margin: "0 0 14px",
+    }}>
+      {title}
     </p>
   );
+}
+
+function Divider() {
+  return <div style={{ height: 1, background: DS.hair, margin: "0" }} />;
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -173,6 +166,7 @@ export default function OpenFoodFactsDetail() {
   const [inBasket, setInBasket]             = useState(false);
   const [stickyVisible, setStickyVisible]   = useState(false);
   const [cleanName, setCleanName]           = useState<string | null>(null);
+  const [mounted, setMounted]               = useState(false);
   const heroRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { if (barcode) loadProduct(barcode); }, [barcode]);
@@ -210,7 +204,7 @@ export default function OpenFoodFactsDetail() {
     const laborCount = laborRecord?.allegations.length || 0;
     const verdictKey = getVerdictKey(product, priorities);
     const colorMap: Record<string, string> = {
-      BUY: "#10b981", CONSIDER: "#f59e0b", CAUTION: "#f97316", AVOID: "#ef4444", UNKNOWN: "#9CA3AF",
+      BUY: "#10b981", CONSIDER: "#f59e0b", CAUTION: "#f97316", AVOID: "#ef4444", UNKNOWN: "#6B7280",
     };
     saveScanToHistory({
       id: `${product.barcode}-${Date.now()}`,
@@ -232,14 +226,12 @@ export default function OpenFoodFactsDetail() {
     });
   }, [product?.barcode]);
 
-  // Clean product name via OpenAI
   useEffect(() => {
     if (!product?.productName) return;
     setCleanName(null);
     fetchCleanName(product.productName).then(setCleanName);
   }, [product?.productName]);
 
-  // Sticky header on scroll
   useEffect(() => {
     const onScroll = () => {
       if (!heroRef.current) return;
@@ -250,19 +242,25 @@ export default function OpenFoodFactsDetail() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // Trigger mount animations after product loads
+  useEffect(() => {
+    if (product) {
+      const t = setTimeout(() => setMounted(true), 50);
+      return () => clearTimeout(t);
+    }
+  }, [product]);
+
   const loadProduct = async (code: string) => {
     setLoading(true);
+    setMounted(false);
     try {
       const result = await lookupBarcode(code);
       if (result.found) {
         setProduct(result);
       } else {
         const cached = loadScanHistory().find(h => h.barcode === code);
-        if (cached) {
-          setProduct(buildFromCache(cached));
-        } else {
-          setError("Product not found in OpenFoodFacts database");
-        }
+        if (cached) setProduct(buildFromCache(cached));
+        else setError("Product not found in OpenFoodFacts database");
       }
     } catch {
       const cached = loadScanHistory().find(h => h.barcode === code);
@@ -273,48 +271,36 @@ export default function OpenFoodFactsDetail() {
     }
   };
 
-  // ─── Loading state ──────────────────────────────────────────────────────────
+  // ── Loading ──
 
   if (loading) {
     return (
-      <div className="min-h-dvh flex flex-col" style={{ background: DS.bg, fontFamily: DS.font, color: DS.ink }}>
-        <div className="flex-1 flex flex-col items-center justify-center gap-4">
-          <div
-            style={{
-              width: "3.5rem", height: "3.5rem",
-              borderRadius: "50%",
-              border: `3px solid ${DS.hair}`,
-              borderTopColor: DS.ink,
-              animation: "spin 0.8s linear infinite",
-            }}
-          />
-          <div className="text-center">
-            <p style={{ fontSize: "0.85rem", fontWeight: 600, color: DS.ink }}>Loading product</p>
-            <p style={{ fontSize: "0.75rem", color: DS.muted, marginTop: 4 }}>Fetching data…</p>
-          </div>
+      <div style={{ background: DS.bg, fontFamily: DS.font, color: DS.ink, minHeight: "100dvh", display: "flex", flexDirection: "column" }}>
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16 }}>
+          <div style={{
+            width: 56, height: 56, borderRadius: "50%",
+            border: `3px solid ${DS.hair}`, borderTopColor: DS.ink,
+            animation: "off-spin 0.7s linear infinite",
+          }} />
+          <p style={{ fontSize: "0.82rem", fontWeight: 600 }}>Loading product</p>
         </div>
         <BottomNav />
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        <style>{`@keyframes off-spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
 
+  // ── Error ──
+
   if (error || !product) {
     return (
-      <div className="min-h-dvh flex flex-col" style={{ background: DS.bg, fontFamily: DS.font, color: DS.ink }}>
-        <div className="flex-1 px-5 pt-14 max-w-xl mx-auto w-full">
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", color: DS.muted, fontSize: "0.85rem", cursor: "pointer", marginBottom: 24 }}
-          >
-            <ChevronLeft className="w-4 h-4" /> Back
-          </button>
-          <div style={{ background: "#FFF0F0", borderRadius: 16, border: "1px solid #FFCCCC", padding: "16px", display: "flex", alignItems: "flex-start", gap: 12 }}>
+      <div style={{ background: DS.bg, fontFamily: DS.font, color: DS.ink, minHeight: "100dvh", display: "flex", flexDirection: "column" }}>
+        <div style={{ flex: 1, padding: "0 20px", paddingTop: "max(24px, env(safe-area-inset-top))", maxWidth: 560, margin: "0 auto", width: "100%" }}>
+          <div style={{ background: "#fef2f2", borderRadius: 16, border: "1px solid #fecaca", padding: 18, display: "flex", alignItems: "flex-start", gap: 14 }}>
             <XCircle style={{ color: "#ef4444", width: 20, height: 20, flexShrink: 0, marginTop: 2 }} />
             <div>
-              <p style={{ fontSize: "0.9rem", fontWeight: 700, color: "#ef4444", marginBottom: 4 }}>Product not found</p>
-              <p style={{ fontSize: "0.8rem", color: DS.muted }}>{error || "Unable to load product details"}</p>
+              <p style={{ fontSize: "0.88rem", fontWeight: 700, color: "#ef4444", marginBottom: 4 }}>Product not found</p>
+              <p style={{ fontSize: "0.78rem", color: DS.muted }}>{error || "Unable to load product details"}</p>
             </div>
           </div>
         </div>
@@ -323,12 +309,16 @@ export default function OpenFoodFactsDetail() {
     );
   }
 
-  const verdict      = getVerdict(product, priorities);
-  const vc           = VERDICT_CONFIG[verdict.key as keyof typeof VERDICT_CONFIG] ?? VERDICT_CONFIG.UNKNOWN;
-  const agri         = product.ecoscoreData?.agribalyse;
+  // ── Derived data ──
+
+  const verdict    = getVerdict(product, priorities);
+  const vc         = VERDICT_CONFIG[verdict.key as keyof typeof VERDICT_CONFIG] ?? VERDICT_CONFIG.UNKNOWN;
+  const agri       = product.ecoscoreData?.agribalyse;
   const laborRecord  = findLaborAllegations(product);
   const boycottMatch = checkBoycott(product.brand);
   const welfare      = checkAnimalWelfareFlag(product.brand);
+  const ecoGrade     = product.ecoscoreGrade?.toLowerCase();
+  const nutriGrade   = product.nutriscoreGrade?.toLowerCase();
 
   const co2Values = CO2_BARS
     .map(b => agri?.[b.key as keyof typeof agri] as number | undefined)
@@ -339,212 +329,161 @@ export default function OpenFoodFactsDetail() {
     ? Math.round((agri.co2_total / 0.21) * 10) / 10
     : null;
 
-  const ecoGrade = product.ecoscoreGrade?.toLowerCase();
+  const displayName = cleanName ?? product.productName ?? "Unknown product";
+
+  const hasScores = !!(ecoGrade || nutriGrade || product.novaGroup);
+  const hasEthicsConcerns = !!(laborRecord || boycottMatch || welfare.isFlagged);
+
+  // ── Render ──
 
   return (
-    <div className="min-h-dvh" style={{ background: DS.bg, fontFamily: DS.font, color: DS.ink }}>
+    <div style={{ background: DS.bg, fontFamily: DS.font, color: DS.ink, minHeight: "100dvh" }}>
 
-      {/* ── Sticky header ─────────────────────────────────────────────────────── */}
+      {/* ── Sticky compact header ─────────────────────────────────── */}
       <div className={cn(
         "fixed top-0 left-0 right-0 z-50 transition-all duration-200",
         stickyVisible ? "translate-y-0 opacity-100" : "-translate-y-full opacity-0"
       )}>
         <div
-          className="max-w-xl mx-auto px-4 py-2.5 flex items-center gap-3"
           style={{
-            background: "rgba(255,255,255,0.95)",
-            backdropFilter: "blur(12px)",
-            WebkitBackdropFilter: "blur(12px)",
+            maxWidth: 560, margin: "0 auto", padding: "10px 16px",
+            display: "flex", alignItems: "center", gap: 10,
+            background: "rgba(247,246,243,0.92)",
+            backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)",
             borderBottom: `1px solid ${DS.hair}`,
           }}
         >
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            style={{
-              width: "2rem", height: "2rem", borderRadius: "50%",
-              border: `1px solid ${DS.hair}`,
-              background: DS.card,
-              color: DS.muted,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              cursor: "pointer", flexShrink: 0,
-            }}
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-          <p
-            className="truncate flex-1"
-            style={{ fontSize: "0.85rem", fontWeight: 700, color: DS.ink }}
-          >
-            {cleanName ?? product.productName ?? "Unknown product"}
+          <p style={{ flex: 1, fontSize: "0.82rem", fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", margin: 0 }}>
+            {displayName}
           </p>
-          {ecoGrade && (
-            <span
-              style={{
-                width: "2rem", height: "2rem", borderRadius: 8,
-                background: GRADE_BG[ecoGrade] ?? DS.bg,
-                color: GRADE_TEXT[ecoGrade] ?? DS.muted,
-                fontSize: "0.9rem", fontWeight: 800,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                flexShrink: 0,
-              }}
-            >
-              {ecoGrade.toUpperCase()}
-            </span>
-          )}
+          <div style={{
+            display: "inline-flex", alignItems: "center", gap: 4,
+            padding: "3px 10px", borderRadius: 20,
+            background: vc.bg, color: vc.color,
+            fontSize: "0.68rem", fontWeight: 800, flexShrink: 0,
+          }}>
+            <vc.Icon style={{ width: 10, height: 10 }} />
+            {verdict.key}
+          </div>
         </div>
       </div>
 
-      <main style={{ paddingBottom: 110, maxWidth: "36rem", margin: "0 auto" }}>
+      <main style={{ paddingBottom: 110, maxWidth: 560, margin: "0 auto" }}>
 
-        {/* ── 1. Hero ───────────────────────────────────────────────────────── */}
+        {/* ── HERO ────────────────────────────────────────────────── */}
         <div
           ref={heroRef}
           style={{
-            background: DS.card,
-            borderBottom: `1px solid ${DS.hair}`,
-            position: "relative",
-            overflow: "hidden",
+            position: "relative", overflow: "hidden",
+            paddingTop: "env(safe-area-inset-top)",
           }}
         >
-          {/* Subtle verdict color tint in top-right */}
+          {/* Product card */}
           <div style={{
-            position: "absolute", top: -40, right: -40,
-            width: 160, height: 160, borderRadius: "50%",
-            background: `${vc.borderColor}10`,
-            pointerEvents: "none",
-          }} />
-
-          {/* Back button row */}
-          <div style={{ padding: "max(52px, env(safe-area-inset-top)) 16px 0", position: "relative", display: "flex", alignItems: "center", gap: 12 }}>
-            <button
-              type="button"
-              onClick={() => navigate(-1)}
-              style={{
-                display: "inline-flex", alignItems: "center", justifyContent: "center",
-                width: 32, height: 32,
-                background: DS.bg, border: `1px solid ${DS.hair}`,
-                borderRadius: 16,
-                color: DS.ink, cursor: "pointer",
-              }}
-            >
-              <ChevronLeft style={{ width: 16, height: 16 }} />
-            </button>
-            <span style={{ fontSize: "0.95rem", fontWeight: 700, color: DS.ink }}>Result</span>
-          </div>
-
-          <div style={{ display: "flex", gap: 16, padding: "16px 16px 20px", position: "relative" }}>
-            {/* Product image */}
-            <div style={{
-              width: 110, height: 110, borderRadius: 18,
-              border: `1px solid ${DS.hair}`, background: DS.bg,
-              flexShrink: 0, overflow: "hidden",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
-            }}>
-              {product.imageUrl ? (
-                <img
-                  src={product.imageUrl}
-                  alt={product.productName || "Product"}
-                  style={{ width: "100%", height: "100%", objectFit: "contain" }}
-                />
-              ) : (
-                <Sprout style={{ width: 40, height: 40, color: DS.hair }} />
-              )}
-            </div>
-
-            {/* Product info */}
-            <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "center", gap: 6 }}>
-              {product.brand && (
-                <p style={{ fontSize: "0.7rem", fontWeight: 700, color: DS.muted, textTransform: "uppercase", letterSpacing: "0.06em", margin: 0 }}>
-                  {product.brand}
-                </p>
-              )}
-              <h1 style={{ fontSize: "clamp(1rem, 4.5vw, 1.2rem)", fontWeight: 800, color: DS.ink, lineHeight: 1.25, letterSpacing: "-0.02em", margin: 0 }}>
-                {cleanName ?? product.productName ?? "Unknown product"}
-              </h1>
-              {/* Verdict pill in hero */}
-              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                <span style={{
-                  display: "inline-flex", alignItems: "center", gap: 5,
-                  padding: "4px 10px", borderRadius: 20,
-                  background: `${vc.borderColor}15`,
-                  color: vc.textColor,
-                  fontSize: "0.72rem", fontWeight: 800, letterSpacing: "0.03em",
-                  border: `1px solid ${vc.borderColor}30`,
-                }}>
-                  <vc.Icon style={{ width: 11, height: 11 }} />
-                  {verdict.key}
-                </span>
-                {ecoGrade && (
-                  <span style={{
-                    display: "inline-flex", alignItems: "center", gap: 5,
-                    padding: "4px 10px", borderRadius: 20,
-                    background: GRADE_BG[ecoGrade] ?? DS.bg,
-                    color: GRADE_TEXT[ecoGrade] ?? DS.muted,
-                    fontSize: "0.72rem", fontWeight: 700,
-                    border: `1px solid ${GRADE_TEXT[ecoGrade] ?? DS.hair}20`,
-                  }}>
-                    <Leaf style={{ width: 11, height: 11 }} />
-                    Eco {ecoGrade.toUpperCase()}
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div style={{ padding: "14px 16px", display: "flex", flexDirection: "column", gap: 12 }}>
-
-          {/* ── 2. Verdict card ─────────────────────────────────────────────── */}
-          <div style={{
-            borderRadius: 18,
-            border: `1px solid ${vc.borderColor}40`,
-            background: `linear-gradient(135deg, ${vc.borderColor}08 0%, ${vc.borderColor}03 100%)`,
+            margin: "0 16px", borderRadius: 24,
+            background: DS.card,
+            boxShadow: "0 2px 20px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.03)",
             overflow: "hidden",
-            boxShadow: `0 2px 12px ${vc.borderColor}15`,
+            opacity: mounted ? 1 : 0,
+            transform: mounted ? "translateY(0)" : "translateY(12px)",
+            transition: "opacity 0.5s ease, transform 0.5s ease",
           }}>
-            <div style={{ padding: "18px 18px 14px" }}>
-              {/* Top row: icon + verdict + reason */}
-              <div style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 14 }}>
+            {/* Verdict accent stripe */}
+            <div style={{ height: 4, background: `linear-gradient(90deg, ${vc.color}, ${vc.color}88)` }} />
+
+            <div style={{ padding: "20px 20px 18px" }}>
+              {/* Product row */}
+              <div style={{ display: "flex", gap: 16, marginBottom: 18 }}>
+                {/* Image */}
                 <div style={{
-                  width: 52, height: 52, borderRadius: 16, flexShrink: 0,
-                  background: `${vc.borderColor}15`,
-                  border: `1.5px solid ${vc.borderColor}30`,
+                  width: 88, height: 88, borderRadius: 16, flexShrink: 0,
+                  background: DS.bg, border: `1px solid ${DS.hair}`,
+                  overflow: "hidden",
                   display: "flex", alignItems: "center", justifyContent: "center",
                 }}>
-                  <vc.Icon style={{ width: 24, height: 24, color: vc.textColor }} />
+                  {product.imageUrl ? (
+                    <img src={product.imageUrl} alt={displayName} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                  ) : (
+                    <Sprout style={{ width: 32, height: 32, color: DS.hair }} />
+                  )}
                 </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontSize: "0.65rem", fontWeight: 700, color: DS.muted, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 2 }}>Verdict</p>
-                  <p style={{ fontSize: "1.6rem", fontWeight: 900, color: vc.textColor, letterSpacing: "-0.03em", lineHeight: 1, marginBottom: 8 }}>
-                    {verdict.key}
-                  </p>
-                  <p style={{
-                    fontSize: "0.78rem", color: DS.muted, lineHeight: 1.55,
-                    borderLeft: `3px solid ${vc.borderColor}60`,
-                    paddingLeft: 9,
+
+                {/* Info */}
+                <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                  {product.brand && (
+                    <p style={{
+                      fontSize: "0.65rem", fontWeight: 700, color: DS.muted,
+                      textTransform: "uppercase", letterSpacing: "0.08em",
+                      margin: "0 0 4px", lineHeight: 1,
+                    }}>
+                      {product.brand}
+                    </p>
+                  )}
+                  <h1 style={{
+                    fontSize: "clamp(1.05rem, 4.5vw, 1.25rem)", fontWeight: 800,
+                    lineHeight: 1.2, letterSpacing: "-0.02em", margin: "0 0 10px",
+                    overflow: "hidden", display: "-webkit-box",
+                    WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
                   }}>
+                    {displayName}
+                  </h1>
+
+                  {/* Verdict + eco pills */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                    <span style={{
+                      display: "inline-flex", alignItems: "center", gap: 4,
+                      padding: "4px 10px", borderRadius: 20,
+                      background: vc.bg, color: vc.color,
+                      fontSize: "0.7rem", fontWeight: 800, letterSpacing: "0.02em",
+                    }}>
+                      <vc.Icon style={{ width: 11, height: 11 }} />
+                      {verdict.key}
+                    </span>
+                    {ecoGrade && (
+                      <span style={{
+                        display: "inline-flex", alignItems: "center", gap: 4,
+                        padding: "4px 10px", borderRadius: 20,
+                        background: GRADE_BG[ecoGrade],
+                        color: GRADE_COLOR[ecoGrade],
+                        fontSize: "0.7rem", fontWeight: 700,
+                      }}>
+                        <Leaf style={{ width: 10, height: 10 }} />
+                        Eco {ecoGrade.toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Verdict reason */}
+              <div style={{
+                background: vc.bg, borderRadius: 14, padding: "12px 14px",
+                border: `1px solid ${DS.hair}`,
+                borderLeft: `4px solid ${vc.color}`,
+                marginBottom: 16,
+              }}>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+                  <vc.Icon style={{ width: 16, height: 16, color: vc.color, marginTop: 1, flexShrink: 0 }} />
+                  <p style={{ fontSize: "0.82rem", color: DS.ink, fontWeight: 700, lineHeight: 1.45, margin: 0 }}>
                     {verdict.reason}
                   </p>
                 </div>
               </div>
 
-              {/* Action row */}
+              {/* Action buttons */}
               <div style={{ display: "flex", gap: 8 }}>
                 <button
                   type="button"
                   onClick={() => document.getElementById("breakdown")?.scrollIntoView({ behavior: "smooth" })}
                   style={{
-                    flex: 1, height: 42, borderRadius: 11,
+                    flex: 1, height: 42, borderRadius: 12,
                     border: `1px solid ${DS.hair}`, background: DS.card,
                     color: DS.muted, fontWeight: 600, fontSize: "0.78rem",
                     cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
                   }}
                 >
                   <BarChart2 style={{ width: 13, height: 13 }} />
-                  See breakdown
+                  Details
                 </button>
                 <button
                   type="button"
@@ -564,57 +503,61 @@ export default function OpenFoodFactsDetail() {
                     setInBasket(true);
                   }}
                   style={{
-                    flex: 1, height: 42, borderRadius: 11, border: "none",
-                    background: inBasket ? `${vc.borderColor}15` : DS.ink,
-                    color: inBasket ? vc.textColor : "#fff",
+                    flex: 1, height: 42, borderRadius: 12, border: "none",
+                    background: inBasket ? vc.bg : DS.ink,
+                    color: inBasket ? vc.color : "#fff",
                     fontWeight: 700, fontSize: "0.78rem",
                     cursor: inBasket ? "default" : "pointer",
                     display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                    boxShadow: inBasket ? "none" : "0 2px 8px rgba(0,0,0,0.15)",
+                    boxShadow: inBasket ? "none" : "0 2px 8px rgba(0,0,0,0.12)",
                   }}
                 >
                   <ShoppingBag style={{ width: 13, height: 13 }} />
-                  {inBasket ? "In basket ✓" : "Add to basket"}
+                  {inBasket ? "In basket" : "Add to basket"}
                 </button>
               </div>
             </div>
           </div>
+        </div>
 
-          {/* ── 3. Scan confirmation ─────────────────────────────────────────── */}
+        {/* ── Content ─────────────────────────────────────────────── */}
+        <div style={{ padding: "16px 16px 0", display: "flex", flexDirection: "column", gap: 14 }}>
+
+          {/* ── Scan confirmation ───────────────────────────────── */}
           {fromScan && !confirmDismissed && !showCandidates && (
             <div style={{
-              background: DS.bg, borderRadius: 16,
-              border: `1px solid ${DS.hair}`, padding: "14px 16px",
+              background: DS.card, borderRadius: 16, padding: "14px 16px",
+              boxShadow: "0 1px 6px rgba(0,0,0,0.04)",
               display: "flex", alignItems: "flex-start", gap: 12,
+              opacity: mounted ? 1 : 0, transform: mounted ? "translateY(0)" : "translateY(8px)",
+              transition: "all 0.4s ease 0.15s",
             }}>
-              <ScanLine style={{ width: 18, height: 18, color: BLUE, flexShrink: 0, marginTop: 2 }} />
+              <ScanLine style={{ width: 18, height: 18, color: DS.ink, flexShrink: 0, marginTop: 1 }} />
               <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: "0.85rem", fontWeight: 700, color: DS.ink, marginBottom: 2 }}>Is this the right product?</p>
-                <p style={{ fontSize: "0.75rem", color: DS.muted, marginBottom: 10 }}>We matched your scan automatically.</p>
+                <p style={{ fontSize: "0.82rem", fontWeight: 700, marginBottom: 2, margin: 0 }}>Is this the right product?</p>
+                <p style={{ fontSize: "0.72rem", color: DS.muted, marginBottom: 10, margin: "2px 0 10px" }}>We matched your scan automatically.</p>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <button
-                    type="button"
-                    onClick={() => setConfirmDismissed(true)}
+                    type="button" onClick={() => setConfirmDismissed(true)}
                     style={{
-                      display: "flex", alignItems: "center", gap: 6,
+                      display: "flex", alignItems: "center", gap: 5,
                       padding: "6px 14px", borderRadius: 20, border: "none",
-                      background: BLUE, color: "#fff",
-                      fontSize: "0.75rem", fontWeight: 600, cursor: "pointer",
+                      background: DS.ink, color: "#fff",
+                      fontSize: "0.72rem", fontWeight: 600, cursor: "pointer",
                     }}
                   >
-                    <Check style={{ width: 12, height: 12 }} /> Yes, correct
+                    <Check style={{ width: 11, height: 11 }} /> Yes
                   </button>
                   {candidates.length > 0 && (
                     <button
-                      type="button"
-                      onClick={() => setShowCandidates(true)}
+                      type="button" onClick={() => setShowCandidates(true)}
                       style={{
-                        display: "flex", alignItems: "center", gap: 4,
-                        background: "none", border: "none",
-                        color: BLUE, fontSize: "0.75rem", fontWeight: 600, cursor: "pointer",
+                        display: "flex", alignItems: "center", gap: 3,
+                        background: "none", border: "none", padding: 0,
+                        color: DS.ink, fontSize: "0.72rem", fontWeight: 600, cursor: "pointer",
                       }}
                     >
-                      Other matches <ChevronRight style={{ width: 14, height: 14 }} />
+                      Other matches <ChevronRight style={{ width: 13, height: 13 }} />
                     </button>
                   )}
                 </div>
@@ -624,198 +567,172 @@ export default function OpenFoodFactsDetail() {
 
           {/* Candidate picker */}
           {fromScan && showCandidates && (
-            <InfoCard>
-              <div style={{ padding: "14px 16px 10px", borderBottom: `1px solid ${DS.hair}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ background: DS.card, borderRadius: 16, overflow: "hidden", boxShadow: "0 1px 6px rgba(0,0,0,0.04)" }}>
+              <div style={{ padding: "14px 16px", borderBottom: `1px solid ${DS.hair}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <div>
-                  <p style={{ fontSize: "0.9rem", fontWeight: 700, color: DS.ink }}>Other matches</p>
-                  <p style={{ fontSize: "0.75rem", color: DS.muted }}>Select the correct product</p>
+                  <p style={{ fontSize: "0.85rem", fontWeight: 700, margin: 0 }}>Other matches</p>
+                  <p style={{ fontSize: "0.72rem", color: DS.muted, margin: "2px 0 0" }}>Select the correct product</p>
                 </div>
                 <button
-                  type="button"
-                  onClick={() => setShowCandidates(false)}
-                  style={{ background: "none", border: "none", color: BLUE, fontSize: "0.8rem", fontWeight: 600, cursor: "pointer" }}
-                >
-                  Cancel
-                </button>
+                  type="button" onClick={() => setShowCandidates(false)}
+                  style={{ background: "none", border: "none", color: DS.ink, fontSize: "0.78rem", fontWeight: 600, cursor: "pointer" }}
+                >Cancel</button>
               </div>
-              <div>
-                {candidates.map((c, ci) => {
-                  const g = c.ecoscoreGrade?.toLowerCase();
-                  return (
-                    <button
-                      key={c.barcode}
-                      type="button"
-                      onClick={() => { sessionStorage.removeItem("scan_candidates"); navigate(`/product-off/${c.barcode}`); }}
-                      style={{
-                        width: "100%", display: "flex", alignItems: "center", gap: 12,
-                        padding: "12px 16px", textAlign: "left", cursor: "pointer",
-                        borderBottom: ci < candidates.length - 1 ? `1px solid ${DS.hair}` : "none",
-                        background: "none", border: "none",
-                      }}
-                    >
-                      {c.imageUrl ? (
-                        <img
-                          src={c.imageUrl}
-                          alt=""
-                          style={{ width: 40, height: 40, borderRadius: 10, border: `1px solid ${DS.hair}`, objectFit: "contain", flexShrink: 0 }}
-                        />
-                      ) : (
-                        <div style={{ width: 40, height: 40, borderRadius: 10, border: `1px solid ${DS.hair}`, background: DS.bg, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                          <Package style={{ width: 16, height: 16, color: DS.muted }} />
-                        </div>
-                      )}
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ fontSize: "0.85rem", fontWeight: 600, color: DS.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {c.productName || "Unknown product"}
-                        </p>
-                        {c.brand && (
-                          <p style={{ fontSize: "0.72rem", color: DS.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            {c.brand}
-                          </p>
-                        )}
+              {candidates.map((c, ci) => {
+                const g = c.ecoscoreGrade?.toLowerCase();
+                return (
+                  <button
+                    key={c.barcode} type="button"
+                    onClick={() => { sessionStorage.removeItem("scan_candidates"); navigate(`/product-off/${c.barcode}`); }}
+                    style={{
+                      width: "100%", display: "flex", alignItems: "center", gap: 12,
+                      padding: "12px 16px", textAlign: "left", cursor: "pointer",
+                      borderBottom: ci < candidates.length - 1 ? `1px solid ${DS.hair}` : "none",
+                      background: "none", border: "none", color: DS.ink,
+                    }}
+                  >
+                    {c.imageUrl ? (
+                      <img src={c.imageUrl} alt="" style={{ width: 40, height: 40, borderRadius: 10, border: `1px solid ${DS.hair}`, objectFit: "contain", flexShrink: 0 }} />
+                    ) : (
+                      <div style={{ width: 40, height: 40, borderRadius: 10, border: `1px solid ${DS.hair}`, background: DS.bg, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <Package style={{ width: 16, height: 16, color: DS.muted }} />
                       </div>
-                      {g && (
-                        <span style={{
-                          width: 28, height: 28, borderRadius: 8,
-                          background: GRADE_BG[g] ?? DS.bg,
-                          color: GRADE_TEXT[g] ?? DS.muted,
-                          fontSize: "0.8rem", fontWeight: 800,
-                          display: "flex", alignItems: "center", justifyContent: "center",
-                          flexShrink: 0,
-                        }}>
-                          {g.toUpperCase()}
-                        </span>
-                      )}
-                      <ChevronRight style={{ width: 14, height: 14, color: DS.muted, flexShrink: 0 }} />
-                    </button>
-                  );
-                })}
-              </div>
-            </InfoCard>
-          )}
-
-          {/* ── 4. Score tiles ──────────────────────────────────────────────── */}
-          {(product.ecoscoreGrade || product.nutriscoreGrade || product.novaGroup) && (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }} id="breakdown">
-              {product.ecoscoreGrade && (() => {
-                const g = product.ecoscoreGrade.toLowerCase();
-                const color = GRADE_TEXT[g] ?? DS.muted;
-                const bg = GRADE_BG[g] ?? DS.bg;
-                return (
-                  <div style={{
-                    background: DS.card, borderRadius: 16,
-                    border: `1px solid ${color}25`,
-                    padding: "16px 8px 12px",
-                    display: "flex", flexDirection: "column", alignItems: "center",
-                    boxShadow: `0 2px 8px ${color}12`,
-                    position: "relative", overflow: "hidden",
-                  }}>
-                    <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: color, borderRadius: "16px 16px 0 0" }} />
-                    <div style={{ width: 44, height: 44, borderRadius: 12, background: bg, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 6 }}>
-                      <span style={{ fontSize: "1.6rem", fontWeight: 900, color, lineHeight: 1 }}>{g.toUpperCase()}</span>
-                    </div>
-                    <span style={{ fontSize: "0.65rem", fontWeight: 700, color: DS.muted, textTransform: "uppercase", letterSpacing: "0.04em" }}>Eco</span>
-                    {product.ecoscoreScore !== null && (
-                      <span style={{ fontSize: "0.6rem", color: DS.muted, marginTop: 2 }}>{product.ecoscoreScore}/100</span>
                     )}
-                  </div>
-                );
-              })()}
-              {product.nutriscoreGrade && (() => {
-                const g = product.nutriscoreGrade.toLowerCase();
-                const isLetter = ["a", "b", "c", "d", "e"].includes(g);
-                const color = GRADE_TEXT[g] ?? DS.muted;
-                const bg = GRADE_BG[g] ?? DS.bg;
-                return (
-                  <div style={{
-                    background: DS.card, borderRadius: 16,
-                    border: `1px solid ${color}25`,
-                    padding: "16px 8px 12px",
-                    display: "flex", flexDirection: "column", alignItems: "center",
-                    boxShadow: `0 2px 8px ${color}12`,
-                    position: "relative", overflow: "hidden",
-                  }}>
-                    <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: color, borderRadius: "16px 16px 0 0" }} />
-                    <div style={{ width: 44, height: 44, borderRadius: 12, background: bg, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 6 }}>
-                      <span style={{ fontSize: isLetter ? "1.6rem" : "1.1rem", fontWeight: 900, color, lineHeight: 1 }}>
-                        {isLetter ? g.toUpperCase() : "—"}
-                      </span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: "0.82rem", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", margin: 0 }}>
+                        {c.productName || "Unknown product"}
+                      </p>
+                      {c.brand && <p style={{ fontSize: "0.7rem", color: DS.muted, margin: "2px 0 0" }}>{c.brand}</p>}
                     </div>
-                    <span style={{ fontSize: "0.65rem", fontWeight: 700, color: DS.muted, textTransform: "uppercase", letterSpacing: "0.04em" }}>Nutri</span>
-                    <span style={{ fontSize: "0.6rem", color: DS.muted, marginTop: 2, textAlign: "center" }}>Score</span>
-                  </div>
+                    {g && (
+                      <span style={{
+                        width: 28, height: 28, borderRadius: 8,
+                        background: GRADE_BG[g], color: GRADE_COLOR[g],
+                        fontSize: "0.78rem", fontWeight: 800,
+                        display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                      }}>{g.toUpperCase()}</span>
+                    )}
+                    <ChevronRight style={{ width: 14, height: 14, color: DS.muted, flexShrink: 0 }} />
+                  </button>
                 );
-              })()}
-              {product.novaGroup !== null && NOVA_LABEL[product.novaGroup!] && (() => {
-                const color = NOVA_COLOR[product.novaGroup!] ?? DS.muted;
-                return (
-                  <div style={{
-                    background: DS.card, borderRadius: 16,
-                    border: `1px solid ${color}25`,
-                    padding: "16px 8px 12px",
-                    display: "flex", flexDirection: "column", alignItems: "center",
-                    boxShadow: `0 2px 8px ${color}12`,
-                    position: "relative", overflow: "hidden",
-                  }}>
-                    <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: color, borderRadius: "16px 16px 0 0" }} />
-                    <div style={{ width: 44, height: 44, borderRadius: 12, background: `${color}12`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 6 }}>
-                      <span style={{ fontSize: "1.6rem", fontWeight: 900, color, lineHeight: 1 }}>{product.novaGroup}</span>
-                    </div>
-                    <span style={{ fontSize: "0.65rem", fontWeight: 700, color: DS.muted, textTransform: "uppercase", letterSpacing: "0.04em" }}>Nova</span>
-                    <span style={{ fontSize: "0.6rem", color: DS.muted, marginTop: 2, textAlign: "center" }}>
-                      {NOVA_LABEL[product.novaGroup!]}
-                    </span>
-                  </div>
-                );
-              })()}
+              })}
             </div>
           )}
 
-          {/* ── 5. CO₂ Footprint ────────────────────────────────────────────── */}
+          {/* ── Score Gauges ─────────────────────────────────────── */}
+          {hasScores && (
+            <div
+              id="breakdown"
+              style={{
+                background: DS.card, borderRadius: 20, padding: "22px 12px 18px",
+                boxShadow: "0 1px 6px rgba(0,0,0,0.04)",
+                display: "flex", alignItems: "flex-start", justifyContent: "center", gap: 8,
+                opacity: mounted ? 1 : 0, transform: mounted ? "translateY(0)" : "translateY(10px)",
+                transition: "all 0.5s ease 0.2s",
+              }}
+            >
+              {ecoGrade && (
+                <ScoreGauge
+                  value={ecoGrade.toUpperCase()}
+                  color={GRADE_COLOR[ecoGrade] ?? DS.muted}
+                  bg={GRADE_BG[ecoGrade] ?? DS.bg}
+                  percent={GRADE_PERCENT[ecoGrade] ?? 0.5}
+                  label="Eco-Score"
+                  sublabel={product.ecoscoreScore !== null ? `${product.ecoscoreScore}/100` : undefined}
+                  delay={0}
+                />
+              )}
+              {nutriGrade && ["a", "b", "c", "d", "e"].includes(nutriGrade) && (
+                <ScoreGauge
+                  value={nutriGrade.toUpperCase()}
+                  color={GRADE_COLOR[nutriGrade] ?? DS.muted}
+                  bg={GRADE_BG[nutriGrade] ?? DS.bg}
+                  percent={GRADE_PERCENT[nutriGrade] ?? 0.5}
+                  label="Nutri-Score"
+                  delay={150}
+                />
+              )}
+              {product.novaGroup !== null && NOVA_LABEL[product.novaGroup!] && (
+                <ScoreGauge
+                  value={String(product.novaGroup)}
+                  color={NOVA_COLOR[product.novaGroup!] ?? DS.muted}
+                  bg={`${NOVA_COLOR[product.novaGroup!] ?? DS.muted}12`}
+                  percent={NOVA_PERCENT[product.novaGroup!] ?? 0.5}
+                  label="NOVA"
+                  sublabel={NOVA_LABEL[product.novaGroup!]}
+                  delay={300}
+                />
+              )}
+            </div>
+          )}
+
+          {/* ── CO₂ Footprint ───────────────────────────────────── */}
           {agri?.co2_total !== undefined && (
-            <InfoCard accentColor="#10b981">
-              <div style={{ padding: 16 }}>
-                <SectionLabel label="CO₂ Footprint" />
+            <div style={{
+              background: DS.card, borderRadius: 20, overflow: "hidden",
+              boxShadow: "0 1px 6px rgba(0,0,0,0.04)",
+              opacity: mounted ? 1 : 0, transform: mounted ? "translateY(0)" : "translateY(10px)",
+              transition: "all 0.5s ease 0.3s",
+            }}>
+              <div style={{ padding: "18px 18px 16px" }}>
+                <SectionHead title="Carbon Footprint" />
 
                 {/* Total readout */}
                 <div style={{
-                  background: "#F0FAF6", borderRadius: 12, padding: "12px 14px", marginBottom: 16,
                   display: "flex", alignItems: "center", justifyContent: "space-between",
+                  background: "#ecfdf5", borderRadius: 14, padding: "14px 16px",
+                  marginBottom: 18,
                 }}>
                   <div>
                     <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
-                      <span style={{ fontSize: "2.4rem", fontWeight: 900, color: "#10b981", lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>
+                      <span style={{
+                        fontSize: "2rem", fontWeight: 900, color: "#10b981",
+                        lineHeight: 1, fontVariantNumeric: "tabular-nums",
+                      }}>
                         {agri.co2_total.toFixed(2)}
                       </span>
-                      <span style={{ fontSize: "0.75rem", fontWeight: 600, color: DS.muted }}>kg CO₂/kg</span>
+                      <span style={{ fontSize: "0.72rem", fontWeight: 600, color: DS.muted }}>kg CO₂/kg</span>
                     </div>
                     {drivingKm !== null && (
-                      <p style={{ fontSize: "0.75rem", color: DS.muted, marginTop: 4 }}>
-                        ≈ driving <span style={{ color: BLUE, fontWeight: 600 }}>{drivingKm} km</span> in an average car
+                      <p style={{ fontSize: "0.72rem", color: DS.muted, marginTop: 5, margin: "5px 0 0" }}>
+                        Same as driving <span style={{ fontWeight: 700, color: DS.ink }}>{drivingKm} km</span>
                       </p>
                     )}
                   </div>
-                  <Leaf style={{ width: 32, height: 32, color: "#10b981", opacity: 0.3 }} />
+                  <Leaf style={{ width: 28, height: 28, color: "#10b981", opacity: 0.2 }} />
                 </div>
 
-                {/* Lifecycle breakdown — clean progress bars */}
+                {/* Lifecycle bars */}
                 {co2Values.length > 0 && (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                    {CO2_BARS.map(({ key, label, Icon, color }) => {
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    {CO2_BARS.map(({ key, label, Icon, color }, i) => {
                       const val = agri[key as keyof typeof agri] as number | undefined;
                       if (typeof val !== "number" || val <= 0) return null;
                       const pct = Math.round((val / maxCo2) * 100);
                       return (
                         <div key={key}>
-                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                              <Icon style={{ width: 12, height: 12, color }} />
-                              <span style={{ fontSize: "0.72rem", fontWeight: 500, color: DS.muted }}>{label}</span>
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 5 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                              <div style={{
+                                width: 24, height: 24, borderRadius: 7,
+                                background: `${color}12`,
+                                display: "flex", alignItems: "center", justifyContent: "center",
+                              }}>
+                                <Icon style={{ width: 12, height: 12, color }} />
+                              </div>
+                              <span style={{ fontSize: "0.75rem", fontWeight: 600, color: DS.ink }}>{label}</span>
                             </div>
-                            <span style={{ fontSize: "0.72rem", fontWeight: 600, color: DS.ink }}>{val.toFixed(2)} kg</span>
+                            <span style={{ fontSize: "0.72rem", fontWeight: 700, color, fontVariantNumeric: "tabular-nums" }}>
+                              {val.toFixed(2)}
+                            </span>
                           </div>
-                          <div style={{ height: 6, borderRadius: 3, background: DS.hair, overflow: "hidden" }}>
-                            <div style={{ height: "100%", width: `${pct}%`, borderRadius: 3, background: color, transition: "width 0.5s ease" }} />
+                          <div style={{ height: 6, borderRadius: 3, background: DS.bg, overflow: "hidden" }}>
+                            <div style={{
+                              height: "100%", borderRadius: 3,
+                              background: `linear-gradient(90deg, ${color}, ${color}bb)`,
+                              width: mounted ? `${pct}%` : "0%",
+                              transition: `width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) ${0.4 + i * 0.1}s`,
+                            }} />
                           </div>
                         </div>
                       );
@@ -823,187 +740,211 @@ export default function OpenFoodFactsDetail() {
                   </div>
                 )}
               </div>
-            </InfoCard>
+            </div>
           )}
 
-          {/* ── 6. Ethics ───────────────────────────────────────────────────── */}
-          {(laborRecord || boycottMatch || welfare.isFlagged) ? (
-            <InfoCard accentColor={laborRecord ? "#ef4444" : boycottMatch ? "#f97316" : "#a855f7"}>
-              <div style={{ padding: 16 }}>
-                <SectionLabel label="Ethics Analysis" />
+          {/* ── Ethics ──────────────────────────────────────────── */}
+          {hasEthicsConcerns ? (
+            <div style={{
+              background: DS.card, borderRadius: 20, overflow: "hidden",
+              boxShadow: "0 1px 6px rgba(0,0,0,0.04)",
+              opacity: mounted ? 1 : 0, transform: mounted ? "translateY(0)" : "translateY(10px)",
+              transition: "all 0.5s ease 0.4s",
+            }}>
+              <div style={{ padding: "18px 18px 16px" }}>
+                <SectionHead title="Ethics & Labour" />
 
-                {/* Labor: clean */}
+                {/* Labor clean */}
                 {!laborRecord && (
                   <div style={{
                     display: "flex", alignItems: "center", gap: 10,
-                    background: "#F0FAF6", borderRadius: 10, padding: "10px 12px", marginBottom: 12,
+                    background: "#ecfdf5", borderRadius: 12, padding: "10px 14px", marginBottom: 14,
                   }}>
-                    <CheckCircle2 style={{ width: 16, height: 16, color: "#10b981", flexShrink: 0 }} />
-                    <div>
-                      <p style={{ fontSize: "0.8rem", fontWeight: 700, color: "#10b981" }}>No labor concerns</p>
-                      <p style={{ fontSize: "0.72rem", color: DS.muted }}>No allegations found in our database.</p>
-                    </div>
+                    <CheckCircle2 style={{ width: 15, height: 15, color: "#10b981", flexShrink: 0 }} />
+                    <p style={{ fontSize: "0.78rem", fontWeight: 600, color: "#10b981", margin: 0 }}>No labour concerns found</p>
                   </div>
                 )}
 
-                {/* Labor: concerns */}
+                {/* Labor concerns */}
                 {laborRecord && (
                   <div style={{ marginBottom: 14 }}>
-                    <p style={{ fontSize: "0.75rem", color: DS.muted, marginBottom: 8 }}>
-                      Parent company: <span style={{ color: DS.ink, fontWeight: 600 }}>{laborRecord.parentCompany}</span>
+                    <p style={{ fontSize: "0.72rem", color: DS.muted, marginBottom: 10, margin: "0 0 10px" }}>
+                      Parent company: <span style={{ color: DS.ink, fontWeight: 700 }}>{laborRecord.parentCompany}</span>
                     </p>
                     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                       {laborRecord.allegations.map((al, i) => (
                         <div key={i} style={{
-                          background: "#FFF5F5", borderRadius: 10,
-                          border: "1px solid #FFCCCC",
-                          padding: 12,
+                          background: "#fef2f2", borderRadius: 14, padding: "14px 14px 12px",
+                          borderLeft: "3px solid #ef4444",
                         }}>
-                          <p style={{ fontSize: "0.8rem", fontWeight: 700, color: "#ef4444", marginBottom: 4 }}>{al.issue}</p>
-                          <p style={{ fontSize: "0.75rem", color: DS.muted, lineHeight: 1.5, marginBottom: 8 }}>{al.details}</p>
+                          <p style={{ fontSize: "0.8rem", fontWeight: 700, color: "#ef4444", marginBottom: 4, margin: "0 0 4px" }}>{al.issue}</p>
+                          <p style={{ fontSize: "0.75rem", color: DS.muted, lineHeight: 1.5, marginBottom: 10, margin: "0 0 10px" }}>{al.details}</p>
                           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                             <a
-                              href={al.sourceUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              style={{ display: "flex", alignItems: "center", gap: 4, fontSize: "0.7rem", color: "#ef4444", textDecoration: "none", fontWeight: 500 }}
+                              href={al.sourceUrl} target="_blank" rel="noopener noreferrer"
+                              style={{ display: "flex", alignItems: "center", gap: 4, fontSize: "0.68rem", color: "#ef4444", textDecoration: "none", fontWeight: 600 }}
                             >
                               <ExternalLink style={{ width: 10, height: 10 }} />{al.source}
                             </a>
-                            <span style={{ fontSize: "0.7rem", fontWeight: 600, color: "#ef4444", background: "#FFCCCC", padding: "2px 8px", borderRadius: 6 }}>
-                              {al.year}
-                            </span>
+                            <span style={{
+                              fontSize: "0.65rem", fontWeight: 700, color: "#ef4444",
+                              background: "#fecaca", padding: "2px 8px", borderRadius: 6,
+                            }}>{al.year}</span>
                           </div>
                         </div>
                       ))}
                     </div>
-                    <p style={{ fontSize: "0.68rem", color: DS.muted, fontStyle: "italic", marginTop: 8 }}>
+                    <p style={{ fontSize: "0.65rem", color: DS.muted, fontStyle: "italic", marginTop: 10, margin: "10px 0 0" }}>
                       Based on publicly available reports. Companies may have taken corrective steps.
                     </p>
                   </div>
                 )}
 
                 {/* Animal welfare */}
-                <div style={{ borderTop: (laborRecord || boycottMatch) ? `1px solid ${DS.hair}` : "none", paddingTop: (laborRecord || boycottMatch) ? 12 : 0, marginTop: (laborRecord || boycottMatch) ? 12 : 0 }}>
+                {(laborRecord || boycottMatch) && <Divider />}
+                <div style={{ paddingTop: (laborRecord || boycottMatch) ? 14 : 0 }}>
                   <AnimalWelfareFlagBadge brand={product.brand} showDetails={true} />
                 </div>
 
                 {/* Boycott */}
                 {boycottMatch && (
-                  <div style={{ borderTop: `1px solid ${DS.hair}`, paddingTop: 12, marginTop: 12 }}>
-                    <div style={{
-                      background: "#FFF6EE", borderRadius: 10,
-                      border: "1px solid #FDDCB5",
-                      padding: 12,
-                    }}>
-                      <p style={{ fontSize: "0.8rem", fontWeight: 700, color: "#f97316", marginBottom: 4 }}>
-                        {boycottMatch.parent} — Boycott listed
-                      </p>
-                      <p style={{ fontSize: "0.75rem", color: DS.muted, lineHeight: 1.5, marginBottom: 8 }}>
-                        {boycottMatch.reason}
-                      </p>
-                      <a
-                        href="https://boycott-israel.org/boycott.html"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ display: "flex", alignItems: "center", gap: 4, fontSize: "0.72rem", color: "#f97316", textDecoration: "none", fontWeight: 500 }}
-                      >
-                        <ExternalLink style={{ width: 10, height: 10 }} /> BDS Boycott List
-                      </a>
+                  <>
+                    <Divider />
+                    <div style={{ paddingTop: 14 }}>
+                      <div style={{
+                        background: "#fff7ed", borderRadius: 14, padding: "14px",
+                        borderLeft: "3px solid #f97316",
+                      }}>
+                        <p style={{ fontSize: "0.8rem", fontWeight: 700, color: "#f97316", margin: "0 0 4px" }}>
+                          {boycottMatch.parent} — Boycott listed
+                        </p>
+                        <p style={{ fontSize: "0.75rem", color: DS.muted, lineHeight: 1.5, margin: "0 0 8px" }}>
+                          {boycottMatch.reason}
+                        </p>
+                        <a
+                          href="https://boycott-israel.org/boycott.html" target="_blank" rel="noopener noreferrer"
+                          style={{ display: "flex", alignItems: "center", gap: 4, fontSize: "0.68rem", color: "#f97316", textDecoration: "none", fontWeight: 600 }}
+                        >
+                          <ExternalLink style={{ width: 10, height: 10 }} /> BDS Boycott List
+                        </a>
+                      </div>
                     </div>
-                  </div>
+                  </>
                 )}
               </div>
-            </InfoCard>
+            </div>
           ) : (
             <div style={{
-              background: "linear-gradient(135deg, #F0FAF6 0%, #E8F8F0 100%)",
-              borderRadius: 16,
-              border: "1px solid #BBE8D4",
-              padding: "16px",
+              background: DS.card, borderRadius: 20, padding: "18px",
+              boxShadow: "0 1px 6px rgba(0,0,0,0.04)",
               display: "flex", alignItems: "center", gap: 14,
-              boxShadow: "0 2px 8px rgba(16,185,129,0.08)",
+              opacity: mounted ? 1 : 0, transform: mounted ? "translateY(0)" : "translateY(10px)",
+              transition: "all 0.5s ease 0.4s",
             }}>
-              <div style={{ width: 44, height: 44, borderRadius: 12, background: "#10b98118", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <div style={{
+                width: 44, height: 44, borderRadius: 14,
+                background: "#ecfdf5",
+                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+              }}>
                 <CheckCircle2 style={{ width: 22, height: 22, color: "#10b981" }} />
               </div>
               <div>
-                <p style={{ fontSize: "0.88rem", fontWeight: 800, color: "#10b981", marginBottom: 3 }}>No ethical concerns found</p>
-                <p style={{ fontSize: "0.75rem", color: DS.muted, lineHeight: 1.5 }}>No labor, boycott, or animal welfare flags for this brand in our database.</p>
+                <p style={{ fontSize: "0.85rem", fontWeight: 800, color: "#10b981", margin: "0 0 3px" }}>No ethical concerns</p>
+                <p style={{ fontSize: "0.72rem", color: DS.muted, lineHeight: 1.5, margin: 0 }}>
+                  No labour, boycott, or animal welfare flags in our database.
+                </p>
               </div>
             </div>
           )}
 
-          {/* ── 7. Environmental adjustments ────────────────────────────────── */}
-          <EnvironmentalImpactCard result={product} />
+          {/* ── Environmental adjustments ────────────────────── */}
+          <div style={{
+            opacity: mounted ? 1 : 0, transform: mounted ? "translateY(0)" : "translateY(10px)",
+            transition: "all 0.5s ease 0.5s",
+          }}>
+            <EnvironmentalImpactCard result={product} />
+          </div>
 
-          {/* ── 7b. Threatened Species ───────────────────────────────────────── */}
+          {/* ── Threatened Species ───────────────────────────── */}
           {(() => {
             const threatened = product.ecoscoreData?.adjustments?.threatened_species;
             if (!threatened?.ingredient) return null;
             const ingredientRaw = threatened.ingredient.replace(/^en:/, "").replace(/-/g, " ");
             const isPalmOil = ingredientRaw.toLowerCase().includes("palm");
             const explanation = isPalmOil
-              ? "Palm oil is the #1 driver of tropical deforestation. Its cultivation destroys critical habitat for orangutans, pygmy elephants, and Sumatran tigers — all critically endangered. An estimated 3.5 million hectares of forest are cleared for palm plantations every year."
-              : `${ingredientRaw} production is linked to habitat destruction in biodiversity hotspots. Sourcing from high-risk regions accelerates species loss and ecosystem collapse at a scale that cannot be reversed.`;
+              ? "Palm oil is the #1 driver of tropical deforestation. Its cultivation destroys critical habitat for orangutans, pygmy elephants, and Sumatran tigers."
+              : `${ingredientRaw} production is linked to habitat destruction in biodiversity hotspots.`;
             return (
-              <InfoCard accentColor="#ef4444">
-                <div style={{ padding: 16 }}>
-                  <SectionLabel label="Threatened Species Risk" />
-                  <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-                    <AlertTriangle style={{ width: 16, height: 16, color: "#ef4444", flexShrink: 0, marginTop: 2 }} />
+              <div style={{
+                background: DS.card, borderRadius: 20, overflow: "hidden",
+                boxShadow: "0 1px 6px rgba(0,0,0,0.04)",
+                opacity: mounted ? 1 : 0, transform: mounted ? "translateY(0)" : "translateY(10px)",
+                transition: "all 0.5s ease 0.55s",
+              }}>
+                <div style={{ padding: "18px" }}>
+                  <SectionHead title="Threatened Species" />
+                  <div style={{
+                    background: "#fef2f2", borderRadius: 14, padding: 14,
+                    borderLeft: "3px solid #ef4444",
+                    display: "flex", alignItems: "flex-start", gap: 10,
+                  }}>
+                    <AlertTriangle style={{ width: 16, height: 16, color: "#ef4444", flexShrink: 0, marginTop: 1 }} />
                     <div>
-                      <p style={{ fontSize: "0.8rem", fontWeight: 700, color: "#ef4444", marginBottom: 4 }}>
+                      <p style={{ fontSize: "0.8rem", fontWeight: 700, color: "#ef4444", margin: "0 0 4px" }}>
                         Contains {ingredientRaw}
                       </p>
-                      <p style={{ fontSize: "0.75rem", color: DS.ink, lineHeight: 1.5 }}>{explanation}</p>
+                      <p style={{ fontSize: "0.75rem", color: DS.ink, lineHeight: 1.55, margin: 0 }}>{explanation}</p>
                     </div>
                   </div>
-                  <p style={{ fontSize: "0.68rem", color: DS.muted, marginTop: 12 }}>Source: Open Food Facts Ecoscore analysis</p>
+                  <p style={{ fontSize: "0.62rem", color: DS.muted, marginTop: 10, margin: "10px 0 0" }}>Source: Open Food Facts Ecoscore</p>
                 </div>
-              </InfoCard>
+              </div>
             );
           })()}
 
-          {/* ── 8. Certifications ───────────────────────────────────────────── */}
+          {/* ── Certifications ───────────────────────────────── */}
           {product.labels.length > 0 && (
-            <InfoCard accentColor={BLUE}>
-              <div style={{ padding: 16 }}>
-                <SectionLabel label="Certifications & Labels" />
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                  {product.labels.map(label => (
-                    <span
-                      key={label}
-                      style={{
-                        display: "inline-flex", alignItems: "center", gap: 6,
-                        padding: "5px 10px", borderRadius: 20,
-                        background: DS.bg, color: DS.ink,
-                        fontSize: "0.72rem", fontWeight: 600,
-                        border: `1px solid ${DS.hair}`,
-                      }}
-                    >
-                      <BadgeCheck style={{ width: 12, height: 12 }} />
-                      {label}
-                    </span>
-                  ))}
-                </div>
+            <div style={{
+              background: DS.card, borderRadius: 20, padding: "18px",
+              boxShadow: "0 1px 6px rgba(0,0,0,0.04)",
+              opacity: mounted ? 1 : 0, transform: mounted ? "translateY(0)" : "translateY(10px)",
+              transition: "all 0.5s ease 0.6s",
+            }}>
+              <SectionHead title="Certifications" />
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {product.labels.map(label => (
+                  <span
+                    key={label}
+                    style={{
+                      display: "inline-flex", alignItems: "center", gap: 5,
+                      padding: "5px 10px", borderRadius: 20,
+                      background: DS.bg, color: DS.ink,
+                      fontSize: "0.7rem", fontWeight: 600,
+                    }}
+                  >
+                    <BadgeCheck style={{ width: 11, height: 11, color: "#10b981" }} />
+                    {label}
+                  </span>
+                ))}
               </div>
-            </InfoCard>
+            </div>
           )}
 
-          {/* Barcode footer */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, paddingBottom: 8, flexWrap: "wrap" }}>
+          {/* ── Footer ──────────────────────────────────────── */}
+          <div style={{
+            display: "flex", alignItems: "center", justifyContent: "center", padding: "4px 0",
+            opacity: mounted ? 1 : 0, transition: "opacity 0.5s ease 0.7s",
+          }}>
             <span style={{
-              fontSize: "0.68rem", color: DS.muted,
-              background: DS.card,
-              padding: "4px 12px", borderRadius: 20,
+              fontSize: "0.65rem", color: DS.muted,
+              background: DS.card, padding: "4px 14px", borderRadius: 20,
               fontVariantNumeric: "tabular-nums",
             }}>
-              Barcode: {product.barcode}
+              {product.barcode}
             </span>
           </div>
 
-          {/* Scan again CTA */}
+          {/* Scan again */}
           {fromScan && (
             <button
               type="button"
@@ -1011,26 +952,30 @@ export default function OpenFoodFactsDetail() {
               style={{
                 width: "100%", height: 50, borderRadius: 14, border: "none",
                 background: DS.ink, color: "#fff",
-                fontWeight: 700, fontSize: "0.9rem",
+                fontWeight: 700, fontSize: "0.88rem",
                 cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                boxShadow: "0 2px 12px rgba(0,0,0,0.18)",
-                marginBottom: 8,
+                boxShadow: "0 2px 12px rgba(0,0,0,0.15)",
+                opacity: mounted ? 1 : 0, transform: mounted ? "translateY(0)" : "translateY(6px)",
+                transition: "all 0.5s ease 0.75s",
               }}
             >
-              <ScanLine style={{ width: 18, height: 18 }} />
+              <ScanLine style={{ width: 17, height: 17 }} />
               Scan another product
             </button>
           )}
-
         </div>
       </main>
 
       <BottomNav />
+
+      <style>{`
+        @keyframes off-spin { to { transform: rotate(360deg); } }
+      `}</style>
     </div>
   );
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Verdict logic ────────────────────────────────────────────────────────────
 
 function buildFromCache(cached: ReturnType<typeof loadScanHistory>[number]): OpenFoodFactsResult {
   return {

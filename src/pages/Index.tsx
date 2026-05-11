@@ -61,10 +61,12 @@ function AnimatedResultDemo() {
   const [visible, setVisible] = useState(false);
   const [progress, setProgress] = useState(0);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [displayedIndex, setDisplayedIndex] = useState(0);
   const [fadePhase, setFadePhase] = useState<"in" | "out">("in");
   const ref = useRef<HTMLDivElement>(null);
 
-  const product = DEMO_PRODUCTS[activeIndex];
+  // displayedIndex only updates after fade-out completes, so old product stays visible during exit
+  const product = DEMO_PRODUCTS[displayedIndex];
 
   // Trigger animation when scrolled into view
   useEffect(() => {
@@ -80,14 +82,10 @@ function AnimatedResultDemo() {
 
   const isFirstRender = useRef(true);
 
-  // Animate score counting up on first appearance; snap instantly on product switch
+  // Animate score counting up on first appearance
   useEffect(() => {
     if (!visible) return;
-    if (!isFirstRender.current) {
-      // Subsequent switches: snap to full immediately
-      setProgress(1);
-      return;
-    }
+    if (!isFirstRender.current) return;
     isFirstRender.current = false;
     setProgress(0);
     let frame: number;
@@ -101,27 +99,38 @@ function AnimatedResultDemo() {
     };
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [visible, activeIndex]);
+  }, [visible]);
 
-  // Cycle between products every 2.5s
+  // Cycle between products
   useEffect(() => {
     if (!visible) return;
+    const DISPLAY_TIME = 4700;
+    const FADE_OUT_TIME = 400;
     const interval = setInterval(() => {
       setFadePhase("out");
       setTimeout(() => {
         setActiveIndex((i) => (i + 1) % DEMO_PRODUCTS.length);
-        setFadePhase("in");
-      }, 300);
-    }, 4700);
+      }, FADE_OUT_TIME);
+    }, DISPLAY_TIME);
     return () => clearInterval(interval);
   }, [visible]);
+
+  // When activeIndex changes, swap displayed product and fade back in
+  useEffect(() => {
+    setDisplayedIndex(activeIndex);
+    setProgress(1);
+    // Small delay so the DOM updates with new product data before fading in
+    requestAnimationFrame(() => {
+      setFadePhase("in");
+    });
+  }, [activeIndex]);
 
   const score = Math.round(progress * product.score);
   const circumference = 2 * Math.PI * 42;
   const strokeDash = circumference * (progress * product.score / 100);
 
   const contentOpacity = fadePhase === "in" ? 1 : 0;
-  const contentTransform = fadePhase === "in" ? "translateY(0)" : "translateY(6px)";
+  const contentTransform = fadePhase === "in" ? "translateY(0)" : "translateY(8px)";
 
   return (
     <div ref={ref} style={{
@@ -131,7 +140,7 @@ function AnimatedResultDemo() {
       <div style={{
         opacity: contentOpacity,
         transform: contentTransform,
-        transition: "all 0.3s ease",
+        transition: "opacity 0.4s ease, transform 0.4s ease",
       }}>
         {/* Mock product header */}
         <div style={{
@@ -171,7 +180,7 @@ function AnimatedResultDemo() {
                 strokeLinecap="round"
                 strokeDasharray={circumference}
                 strokeDashoffset={circumference - strokeDash}
-                style={{ transition: "stroke-dashoffset 0.05s linear" }}
+                style={{ transition: "none" }}
               />
             </svg>
             <div style={{
@@ -221,7 +230,7 @@ function AnimatedResultDemo() {
                 <div style={{
                   height: "100%", borderRadius: 3, background: cat.color,
                   width: `${progress * cat.value}%`,
-                  transition: "width 0.05s linear",
+                  transition: "none",
                 }} />
               </div>
             </div>
@@ -241,9 +250,9 @@ function AnimatedResultDemo() {
       <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 10 }}>
         {DEMO_PRODUCTS.map((_, i) => (
           <div key={i} style={{
-            width: i === activeIndex ? 16 : 6, height: 6, borderRadius: 3,
-            background: i === activeIndex ? DS.ink : DS.hair,
-            transition: "all 0.3s",
+            width: i === displayedIndex ? 16 : 6, height: 6, borderRadius: 3,
+            background: i === displayedIndex ? DS.ink : DS.hair,
+            transition: "all 0.4s ease",
           }} />
         ))}
       </div>
