@@ -390,6 +390,7 @@ export default function OpenFoodFactsDetail() {
               onClick={() => {
                 localStorage.setItem("goodscan_disclaimer_accepted", "true");
                 setDisclaimerAccepted(true);
+                window.scrollTo(0, 0);
               }}
               style={{
                 width: "100%", height: 52, border: "none", borderRadius: DS.radius.md,
@@ -494,7 +495,7 @@ export default function OpenFoodFactsDetail() {
   // ── Render ──
 
   return (
-    <div style={{ background: EDITORIAL.page, fontFamily: DS.font, color: EDITORIAL.ink, minHeight: "100dvh" }}>
+    <div style={{ background: EDITORIAL.page, fontFamily: DS.font, color: EDITORIAL.ink, minHeight: "100dvh", overflowX: "hidden" }}>
 
       <div className={cn(
         "fixed top-0 left-0 right-0 z-50 transition-all duration-200",
