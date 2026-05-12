@@ -326,92 +326,6 @@ export default function Index() {
           </p>
         </div>
 
-        {/* Add to home screen prompt */}
-        {showInstall && (
-          <div style={{
-            background: DS.card, borderRadius: DS.radius.md, padding: 16, marginBottom: 20,
-            boxShadow: "0 2px 6px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)",
-            position: "relative",
-          }}>
-            <button
-              onClick={dismissInstall}
-              aria-label="Dismiss"
-              style={{
-                position: "absolute", top: 12, right: 12,
-                background: "none", border: "none", cursor: "pointer", padding: 4,
-                color: DS.muted, lineHeight: 0,
-              }}
-            >
-              <X style={{ width: 16, height: 16 }} />
-            </button>
-
-            <p style={{ fontSize: 15, fontWeight: 700, margin: "0 0 8px", paddingRight: 24 }}>
-              Add to Home Screen
-            </p>
-            <p style={{ fontSize: 13, color: DS.muted, margin: "0 0 12px", lineHeight: 1.5 }}>
-              Install GoodScan for a faster, full-screen experience — no app store needed.
-            </p>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {platform === "ios" ? (
-                <>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <div style={{
-                      width: 28, height: 28, borderRadius: 8, background: DS.bg,
-                      display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-                    }}>
-                      <span style={{ fontSize: 13, fontWeight: 800 }}>1</span>
-                    </div>
-                    <p style={{ fontSize: 13, color: DS.ink, margin: 0 }}>
-                      Tap the <Share style={{ width: 13, height: 13, verticalAlign: "middle", color: DS.muted }} /> <strong>Share</strong> button in Safari
-                    </p>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <div style={{
-                      width: 28, height: 28, borderRadius: 8, background: DS.bg,
-                      display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-                    }}>
-                      <span style={{ fontSize: 13, fontWeight: 800 }}>2</span>
-                    </div>
-                    <p style={{ fontSize: 13, color: DS.ink, margin: 0 }}>
-                      Scroll down and tap <Plus style={{ width: 13, height: 13, verticalAlign: "middle", color: DS.muted }} /> <strong>Add to Home Screen</strong>
-                    </p>
-                  </div>
-                </>
-              ) : platform === "android" ? (
-                <>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <div style={{
-                      width: 28, height: 28, borderRadius: 8, background: DS.bg,
-                      display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-                    }}>
-                      <span style={{ fontSize: 13, fontWeight: 800 }}>1</span>
-                    </div>
-                    <p style={{ fontSize: 13, color: DS.ink, margin: 0 }}>
-                      Tap the <MoreVertical style={{ width: 13, height: 13, verticalAlign: "middle", color: DS.muted }} /> <strong>menu</strong> in your browser
-                    </p>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <div style={{
-                      width: 28, height: 28, borderRadius: 8, background: DS.bg,
-                      display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-                    }}>
-                      <span style={{ fontSize: 13, fontWeight: 800 }}>2</span>
-                    </div>
-                    <p style={{ fontSize: 13, color: DS.ink, margin: 0 }}>
-                      Tap <strong>Add to Home screen</strong> or <strong>Install app</strong>
-                    </p>
-                  </div>
-                </>
-              ) : (
-                <p style={{ fontSize: 13, color: DS.ink, margin: 0 }}>
-                  Use your browser's menu to add this page to your home screen or install as an app.
-                </p>
-              )}
-            </div>
-          </div>
-        )}
-
         {/* Big scan CTA */}
         <Link to="/scan" style={{ textDecoration: "none", display: "block", marginBottom: 28 }}>
           <div style={{
@@ -632,6 +546,185 @@ export default function Index() {
         </section>
 
       </main>
+
+      {/* ── Add to Home Screen modal ──────────────────────────────── */}
+      {showInstall && (
+        <div
+          onClick={dismissInstall}
+          style={{
+            position: "fixed", inset: 0, zIndex: 9999,
+            background: "rgba(0,0,0,0.65)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            padding: 20,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: DS.card, borderRadius: 22, padding: 28,
+              width: "100%", maxWidth: 360,
+              boxShadow: "0 20px 60px rgba(0,0,0,0.35), 0 0 0 1px rgba(0,0,0,0.08)",
+            }}
+          >
+            {/* Icon */}
+            <div style={{
+              width: 56, height: 56, borderRadius: 16, background: DS.goodBg,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              margin: "0 auto 16px",
+            }}>
+              <Plus style={{ width: 26, height: 26, color: DS.good }} />
+            </div>
+
+            <h2 style={{ fontSize: 20, fontWeight: 800, textAlign: "center", margin: "0 0 6px", letterSpacing: -0.3 }}>
+              Add to Home Screen
+            </h2>
+            <p style={{ fontSize: 14, color: DS.muted, textAlign: "center", margin: "0 0 20px", lineHeight: 1.5 }}>
+              Get the full app experience — faster loading, full screen, and easy access from your home screen.
+            </p>
+
+            {/* Steps */}
+            <div style={{
+              background: DS.bg, borderRadius: DS.radius.md, padding: 16,
+              display: "flex", flexDirection: "column", gap: 14, marginBottom: 20,
+            }}>
+              {platform === "ios" ? (
+                <>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{
+                      width: 36, height: 36, borderRadius: 12, background: DS.card,
+                      display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+                    }}>
+                      <Share style={{ width: 17, height: 17, color: DS.ink }} />
+                    </div>
+                    <div>
+                      <p style={{ fontSize: 14, fontWeight: 700, margin: "0 0 2px" }}>Tap Share</p>
+                      <p style={{ fontSize: 12, color: DS.muted, margin: 0 }}>The share icon at the bottom of Safari</p>
+                    </div>
+                  </div>
+                  <div style={{ height: 1, background: DS.hair, margin: "0 0 0 48px" }} />
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{
+                      width: 36, height: 36, borderRadius: 12, background: DS.card,
+                      display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+                    }}>
+                      <Plus style={{ width: 17, height: 17, color: DS.ink }} />
+                    </div>
+                    <div>
+                      <p style={{ fontSize: 14, fontWeight: 700, margin: "0 0 2px" }}>Add to Home Screen</p>
+                      <p style={{ fontSize: 12, color: DS.muted, margin: 0 }}>Scroll down in the share menu and tap it</p>
+                    </div>
+                  </div>
+                  <div style={{ height: 1, background: DS.hair, margin: "0 0 0 48px" }} />
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{
+                      width: 36, height: 36, borderRadius: 12, background: DS.card,
+                      display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+                    }}>
+                      <CheckCircle2 style={{ width: 17, height: 17, color: DS.good }} />
+                    </div>
+                    <div>
+                      <p style={{ fontSize: 14, fontWeight: 700, margin: "0 0 2px" }}>Tap Add</p>
+                      <p style={{ fontSize: 12, color: DS.muted, margin: 0 }}>GoodScan will appear on your home screen</p>
+                    </div>
+                  </div>
+                </>
+              ) : platform === "android" ? (
+                <>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{
+                      width: 36, height: 36, borderRadius: 12, background: DS.card,
+                      display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+                    }}>
+                      <MoreVertical style={{ width: 17, height: 17, color: DS.ink }} />
+                    </div>
+                    <div>
+                      <p style={{ fontSize: 14, fontWeight: 700, margin: "0 0 2px" }}>Open browser menu</p>
+                      <p style={{ fontSize: 12, color: DS.muted, margin: 0 }}>Tap the three dots at the top right</p>
+                    </div>
+                  </div>
+                  <div style={{ height: 1, background: DS.hair, margin: "0 0 0 48px" }} />
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{
+                      width: 36, height: 36, borderRadius: 12, background: DS.card,
+                      display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+                    }}>
+                      <Plus style={{ width: 17, height: 17, color: DS.ink }} />
+                    </div>
+                    <div>
+                      <p style={{ fontSize: 14, fontWeight: 700, margin: "0 0 2px" }}>Install app</p>
+                      <p style={{ fontSize: 12, color: DS.muted, margin: 0 }}>Tap "Add to Home screen" or "Install app"</p>
+                    </div>
+                  </div>
+                  <div style={{ height: 1, background: DS.hair, margin: "0 0 0 48px" }} />
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{
+                      width: 36, height: 36, borderRadius: 12, background: DS.card,
+                      display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+                    }}>
+                      <CheckCircle2 style={{ width: 17, height: 17, color: DS.good }} />
+                    </div>
+                    <div>
+                      <p style={{ fontSize: 14, fontWeight: 700, margin: "0 0 2px" }}>Confirm</p>
+                      <p style={{ fontSize: 12, color: DS.muted, margin: 0 }}>GoodScan will appear on your home screen</p>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{
+                      width: 36, height: 36, borderRadius: 12, background: DS.card,
+                      display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.08)", gap: 4,
+                    }}>
+                      <Share style={{ width: 14, height: 14, color: DS.ink }} />
+                      <MoreVertical style={{ width: 14, height: 14, color: DS.ink }} />
+                    </div>
+                    <div>
+                      <p style={{ fontSize: 14, fontWeight: 700, margin: "0 0 2px" }}>Open browser menu</p>
+                      <p style={{ fontSize: 12, color: DS.muted, margin: 0 }}>Tap the share or three-dot menu icon</p>
+                    </div>
+                  </div>
+                  <div style={{ height: 1, background: DS.hair, margin: "0 0 0 48px" }} />
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{
+                      width: 36, height: 36, borderRadius: 12, background: DS.card,
+                      display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+                    }}>
+                      <Plus style={{ width: 17, height: 17, color: DS.ink }} />
+                    </div>
+                    <div>
+                      <p style={{ fontSize: 14, fontWeight: 700, margin: "0 0 2px" }}>Add to Home Screen</p>
+                      <p style={{ fontSize: 12, color: DS.muted, margin: 0 }}>Look for "Install" or "Add to Home Screen"</p>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Actions */}
+            <button
+              onClick={dismissInstall}
+              style={{
+                width: "100%", height: 48, border: "none", borderRadius: DS.radius.sm,
+                background: DS.ink, color: "#fff",
+                fontSize: 15, fontWeight: 700, cursor: "pointer",
+                fontFamily: DS.font,
+              }}
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
+
       <BottomNav />
     </div>
   );
