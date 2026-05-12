@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { ChevronRight, Camera, Leaf, Shield, BarChart3, Users, Award, Zap, CheckCircle2, AlertTriangle as AlertTriangleIcon, Share, Plus, MoreVertical, X } from "lucide-react";
+import { ChevronRight, Camera, Leaf, Shield, BarChart3, Users, Award, Zap, CheckCircle2, AlertTriangle as AlertTriangleIcon, Share, Plus, MoreVertical } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { DS, scoreTone, toneColor, toneBg } from "@/styles/design-tokens";
 import { loadScanHistory, type ScanHistoryEntry } from "@/utils/userPreferences";
@@ -295,16 +295,11 @@ export default function Index() {
 
   useEffect(() => {
     setHistory(loadScanHistory());
-    // Show install prompt only in browser, not standalone, and if not dismissed
-    if (!isStandalone() && !localStorage.getItem("goodscan_install_dismissed")) {
+    // Show install prompt only in browser, not standalone
+    if (!isStandalone()) {
       setShowInstall(true);
     }
   }, []);
-
-  const dismissInstall = () => {
-    setShowInstall(false);
-    localStorage.setItem("goodscan_install_dismissed", "true");
-  };
 
   const platform = getInstallPlatform();
   const recent = history.slice(0, 3);
@@ -550,7 +545,6 @@ export default function Index() {
       {/* ── Add to Home Screen modal ──────────────────────────────── */}
       {showInstall && (
         <div
-          onClick={dismissInstall}
           style={{
             position: "fixed", inset: 0, zIndex: 9999,
             background: "rgba(0,0,0,0.65)",
@@ -559,7 +553,6 @@ export default function Index() {
           }}
         >
           <div
-            onClick={(e) => e.stopPropagation()}
             style={{
               background: DS.card, borderRadius: 22, padding: 28,
               width: "100%", maxWidth: 360,
@@ -709,18 +702,9 @@ export default function Index() {
               )}
             </div>
 
-            {/* Actions */}
-            <button
-              onClick={dismissInstall}
-              style={{
-                width: "100%", height: 48, border: "none", borderRadius: DS.radius.sm,
-                background: DS.ink, color: "#fff",
-                fontSize: 15, fontWeight: 700, cursor: "pointer",
-                fontFamily: DS.font,
-              }}
-            >
-              Got it
-            </button>
+            <p style={{ fontSize: 12, color: DS.muted, textAlign: "center", margin: 0, lineHeight: 1.45 }}>
+              You need to add GoodScan to your home screen for the app to work properly.
+            </p>
           </div>
         </div>
       )}
