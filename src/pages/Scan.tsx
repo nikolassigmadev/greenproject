@@ -173,8 +173,24 @@ const filterBestProducts = (results: OpenFoodFactsResult[], query?: string): Ope
         return candidates.slice(0, 5).map(s => s.result);
       }
 
-      // Nothing matched the relevance filter — discard unrelated results
-      return [];
+      // Nothing matched the strict relevance filter — relax: return any result
+      // where the query appears in product name, brand, or categories
+      const q = query.trim().toLowerCase();
+      const loose = scored
+        .filter(s => {
+          const name = (s.result.productName || '').toLowerCase();
+          const brand = (s.result.brand || '').toLowerCase();
+          const cats = s.result.categories.join(' ').toLowerCase();
+          return name.includes(q) || brand.includes(q) || cats.includes(q);
+        })
+        .sort((a, b) => b.ecoScore - a.ecoScore);
+      if (loose.length > 0) return loose.slice(0, 5).map(s => s.result);
+
+      // Absolute fallback: return the API results as-is (sorted by eco score)
+      return scored
+        .sort((a, b) => b.ecoScore - a.ecoScore)
+        .slice(0, 5)
+        .map(s => s.result);
     }
   }
 
@@ -1062,6 +1078,7 @@ const Scan = () => {
 
       if (topResults.length > 0) {
         sessionStorage.setItem('scan_candidates', JSON.stringify(topResults));
+        setShowSearch(false);
         navigate(`/product-off/${topResults[0].barcode}?from=scan`);
       } else {
         toast({
@@ -1741,7 +1758,7 @@ const Scan = () => {
           <p style={{ fontSize: '1.25rem', fontWeight: 800, color: DS.ink, marginBottom: 4 }}>Search by name or barcode</p>
           <p style={{ fontSize: '0.82rem', color: DS.muted, marginBottom: 18 }}>Enter a product name or scan barcode number</p>
 
-          <form onSubmit={(e) => { e.preventDefault(); if (barcodeInput.trim()) { handleProductSearch(barcodeInput); setShowSearch(false); } }} style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+          <form onSubmit={(e) => { e.preventDefault(); if (barcodeInput.trim()) { handleProductSearch(barcodeInput); } }} style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
             <div style={{ flex: 1, minWidth: 0, position: 'relative', display: 'flex', alignItems: 'center' }}>
               <Search size={16} style={{ position: 'absolute', left: 14, color: DS.muted, pointerEvents: 'none' }} />
               <input
@@ -1777,6 +1794,17 @@ const Scan = () => {
               {offLoading ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> : 'Go'}
             </button>
           </form>
+
+          {/* Loading indicator */}
+          {offLoading && (
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+              padding: '20px 0',
+            }}>
+              <Loader2 size={20} style={{ color: DS.ink, animation: 'spin 1s linear infinite' }} />
+              <span style={{ fontSize: '0.9rem', color: DS.muted, fontWeight: 500 }}>Searching for results…</span>
+            </div>
+          )}
 
           {/* Priorities prompt if not set */}
           {isDefaultPriorities && (

@@ -115,7 +115,7 @@ export default function Preferences() {
                 background: DS.card,
                 borderRadius: DS.radius.md,
                 padding: 16,
-                boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
+                boxShadow: "0 2px 6px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)",
               }}>
                 {/* Icon + title row */}
                 <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
@@ -174,6 +174,7 @@ export default function Preferences() {
             background: DS.card,
             borderRadius: DS.radius.md,
             padding: "14px 16px",
+            boxShadow: "0 2px 6px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)",
           }}>
             <p style={{ fontSize: "0.8rem", fontWeight: 700, color: DS.ink, marginBottom: 8 }}>How priorities work</p>
             {[

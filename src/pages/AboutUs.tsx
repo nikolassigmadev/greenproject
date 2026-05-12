@@ -19,7 +19,7 @@ export default function AboutUs() {
           </div>
 
           {/* Mission card */}
-          <div style={{ background: DS.card, borderRadius: 18, padding: 20, marginBottom: 22 }}>
+          <div style={{ background: DS.card, borderRadius: 18, padding: 20, marginBottom: 22, boxShadow: "0 2px 6px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)" }}>
             <h2 style={{ fontSize: 17, fontWeight: 700, margin: "0 0 8px" }}>Our mission</h2>
             <p style={{ fontSize: 15, color: DS.ink, opacity: 0.85, margin: 0, lineHeight: 1.5 }}>
               We believe you deserve to know the story behind the products you buy. We bring together data on labour, environment, animal welfare, and nutrition — so you can shop with confidence.
@@ -38,7 +38,7 @@ export default function AboutUs() {
               { t: "Animal welfare", d: "Standards & alternatives", glyph: "◐" },
               { t: "Transparency", d: "Public reports & audits", glyph: "◇" },
             ].map((v) => (
-              <div key={v.t} style={{ background: DS.card, borderRadius: DS.radius.sm, padding: 14, minHeight: 110 }}>
+              <div key={v.t} style={{ background: DS.card, borderRadius: DS.radius.sm, padding: 14, minHeight: 110, boxShadow: "0 2px 6px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)" }}>
                 <div style={{
                   width: 32, height: 32, borderRadius: 16, background: DS.bg,
                   display: "flex", alignItems: "center", justifyContent: "center",
@@ -57,7 +57,7 @@ export default function AboutUs() {
             fontSize: 13, fontWeight: 600, color: DS.muted, margin: "0 0 10px",
             textTransform: "uppercase", letterSpacing: 0.5,
           }}>Where the data comes from</h2>
-          <div style={{ background: DS.card, borderRadius: DS.radius.sm, padding: 16, marginBottom: 22 }}>
+          <div style={{ background: DS.card, borderRadius: DS.radius.sm, padding: 16, marginBottom: 22, boxShadow: "0 2px 6px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)" }}>
             <p style={{ fontSize: 14, color: DS.ink, opacity: 0.85, margin: 0, lineHeight: 1.5 }}>
               Nutrition and environment data come from <span style={{ fontWeight: 600 }}>Open Food Facts</span> — a free, open database. Labour and sourcing details are reviewed by our team against published reports.
             </p>
@@ -68,7 +68,7 @@ export default function AboutUs() {
             fontSize: 13, fontWeight: 600, color: DS.muted, margin: "0 0 10px",
             textTransform: "uppercase", letterSpacing: 0.5,
           }}>Contact</h2>
-          <div style={{ background: DS.card, borderRadius: DS.radius.sm, overflow: "hidden", marginBottom: 30 }}>
+          <div style={{ background: DS.card, borderRadius: DS.radius.sm, overflow: "hidden", marginBottom: 30, boxShadow: "0 2px 6px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)" }}>
             {[
               { label: "Email", value: "geovanis@proton.me", href: "mailto:geovanis@proton.me" },
               { label: "Privacy policy", value: "View", to: "/privacy" },
@@ -92,6 +92,20 @@ export default function AboutUs() {
               }
               return <a key={i} href={item.href} style={{ textDecoration: "none", color: "inherit" }}>{inner}</a>;
             })}
+          </div>
+
+          {/* Disclaimer */}
+          <div style={{
+            background: DS.card, borderRadius: DS.radius.sm, padding: 16, marginBottom: 22,
+            boxShadow: "0 2px 6px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)",
+          }}>
+            <h2 style={{
+              fontSize: 13, fontWeight: 600, color: DS.muted, margin: "0 0 10px",
+              textTransform: "uppercase", letterSpacing: 0.5,
+            }}>Disclaimer</h2>
+            <p style={{ fontSize: 13, color: DS.muted, margin: 0, lineHeight: 1.55 }}>
+              GoodScan is provided for <strong style={{ color: DS.ink }}>informational purposes only</strong> and does not constitute legal, financial, dietary, or professional advice. Scores, ratings, and flags are derived from publicly available data sources and may be incomplete, outdated, or inaccurate. We make no guarantees regarding the accuracy or completeness of any information displayed. A product's absence from our database does not imply it is free of ethical or environmental concerns. Users should independently verify any claims before making purchasing decisions. GoodScan is not affiliated with, endorsed by, or sponsored by any brand or company mentioned within the app. If you believe any information is incorrect, please contact us via the email above.
+            </p>
           </div>
 
           <div style={{ textAlign: "center", fontSize: 12, color: DS.muted, paddingBottom: 4 }}>

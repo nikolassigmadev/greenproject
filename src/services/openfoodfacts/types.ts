@@ -78,6 +78,9 @@ export interface OpenFoodFactsProduct {
   code: string;
   product_name?: string;
   product_name_en?: string;
+  generic_name?: string;
+  generic_name_en?: string;
+  abbreviated_product_name?: string;
   brands?: string;
   categories?: string;
   categories_tags?: string[];

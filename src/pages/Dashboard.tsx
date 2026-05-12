@@ -181,6 +181,7 @@ export default function Dashboard() {
             /* Empty state */
             <div style={{
               background: DS.card, borderRadius: 18, padding: "48px 24px", textAlign: "center",
+              boxShadow: "0 2px 6px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)",
             }}>
               <div style={{
                 width: 56, height: 56, borderRadius: 16, background: DS.bg,
@@ -220,6 +221,7 @@ export default function Dashboard() {
                     borderRadius: 14, border: "none",
                     background: DS.card, color: DS.ink,
                     fontSize: 15, outline: "none",
+                    boxShadow: "0 2px 6px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)",
                     fontFamily: DS.font,
                   }}
                 />
@@ -276,6 +278,7 @@ export default function Dashboard() {
                             padding: "12px 14px", borderRadius: 16,
                             background: DS.card, textDecoration: "none", color: DS.ink,
                             marginBottom: 6,
+                            boxShadow: "0 2px 6px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)",
                           }}
                         >
                           <ScoreCircle entry={entry} />

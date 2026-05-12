@@ -216,6 +216,7 @@ export default function OpenFoodFactsDetail() {
   const [searchParams] = useSearchParams();
   const fromScan = searchParams.get("from") === "scan";
 
+  const [disclaimerAccepted, setDisclaimerAccepted] = useState(() => localStorage.getItem("goodscan_disclaimer_accepted") === "true");
   const [product, setProduct]               = useState<OpenFoodFactsResult | null>(null);
   const [loading, setLoading]               = useState(true);
   const [error, setError]                   = useState<string | null>(null);
@@ -330,6 +331,92 @@ export default function OpenFoodFactsDetail() {
       setLoading(false);
     }
   };
+
+  // ── Disclaimer gate (shown once, persisted) ──
+
+  if (!disclaimerAccepted) {
+    return (
+      <div style={{ background: DS.bg, minHeight: "100dvh", fontFamily: DS.font, color: DS.ink }}>
+        <main style={{ padding: "0 20px", paddingBottom: 40 }}>
+          <div style={{ maxWidth: 520, margin: "0 auto" }}>
+
+            {/* Header */}
+            <div style={{ paddingTop: "max(60px, env(safe-area-inset-top))", marginBottom: 24 }}>
+              <p style={{ fontSize: 13, fontWeight: 600, color: DS.good, margin: "0 0 6px", letterSpacing: 0.3 }}>
+                GoodScan
+              </p>
+              <h1 style={{ fontSize: 26, fontWeight: 800, margin: "0 0 8px", letterSpacing: -0.5, lineHeight: 1.15 }}>
+                Before you continue
+              </h1>
+              <p style={{ fontSize: 15, color: DS.muted, margin: 0, lineHeight: 1.5 }}>
+                Please read and accept the following to view product results.
+              </p>
+            </div>
+
+            {/* Key message */}
+            <div style={{
+              background: DS.warnBg, borderRadius: DS.radius.md, padding: 16, marginBottom: 16,
+              boxShadow: "0 2px 6px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)",
+            }}>
+              <p style={{ fontSize: 14, fontWeight: 700, color: DS.warn, margin: "0 0 6px" }}>
+                Always verify information yourself
+              </p>
+              <p style={{ fontSize: 13, color: DS.ink, margin: 0, lineHeight: 1.55, opacity: 0.85 }}>
+                GoodScan is a tool to help you explore — not a source of truth. Our data comes from third-party databases and public reports. <strong>It may be wrong, incomplete, or outdated.</strong> You should always do your own research and verify any claims before making decisions based on what you see here.
+              </p>
+            </div>
+
+            {/* Detail cards */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
+              {[
+                { title: "We may be wrong", text: "Scores, flags, and verdicts are generated automatically from imperfect data. They can contain errors. A product rated highly may still have issues we missed, and a flagged product may have resolved its concerns. Treat everything as a starting point, not a conclusion." },
+                { title: "Not professional advice", text: "Nothing in GoodScan constitutes legal, medical, dietary, financial, or any other form of professional advice. Do not rely solely on this app for health or purchasing decisions." },
+                { title: "Flags are based on public reports", text: "Labour, environmental, and animal welfare flags reflect publicly available allegations and reports. A flag does not mean a company is guilty of wrongdoing. The absence of a flag does not mean a brand is ethical — it may simply not have been researched yet." },
+                { title: "No brand affiliation", text: "GoodScan is fully independent. We are not affiliated with, endorsed by, or sponsored by any brand, company, or product displayed in the app." },
+                { title: "Help us improve", text: "If you spot something wrong, you can reach us via email on the About page. We review all reports and aim to correct errors within 14 days." },
+              ].map((item, i) => (
+                <div key={i} style={{
+                  background: DS.card, borderRadius: DS.radius.md, padding: 16,
+                  boxShadow: "0 2px 6px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)",
+                }}>
+                  <p style={{ fontSize: 14, fontWeight: 700, margin: "0 0 4px" }}>{item.title}</p>
+                  <p style={{ fontSize: 13, color: DS.muted, margin: 0, lineHeight: 1.5 }}>{item.text}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Actions */}
+            <button
+              onClick={() => {
+                localStorage.setItem("goodscan_disclaimer_accepted", "true");
+                setDisclaimerAccepted(true);
+              }}
+              style={{
+                width: "100%", height: 52, border: "none", borderRadius: DS.radius.md,
+                background: DS.ink, color: "#fff",
+                fontSize: 15, fontWeight: 800, cursor: "pointer",
+                fontFamily: DS.font, marginBottom: 10,
+              }}
+            >
+              I Understand — Show Results
+            </button>
+
+            <button
+              onClick={() => navigate(-1)}
+              style={{
+                width: "100%", height: 44, borderRadius: DS.radius.sm,
+                border: `1px solid ${DS.hair}`, background: DS.card,
+                color: DS.muted, fontSize: 14, fontWeight: 600,
+                cursor: "pointer", fontFamily: DS.font,
+              }}
+            >
+              Go Back
+            </button>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   // ── Loading ──
 
@@ -803,6 +890,17 @@ export default function OpenFoodFactsDetail() {
             <div style={{ fontStyle: "italic", fontSize: 16, color: EDITORIAL.ink2, marginTop: 10, lineHeight: 1.35 }}>
               Read fewer labels.<br />Eat with more intent.
             </div>
+          </div>
+
+          {/* Disclaimer */}
+          <div style={{
+            padding: "14px 16px", margin: "0 0 16px",
+            background: EDITORIAL.card, borderRadius: 14,
+            border: `1px solid ${EDITORIAL.line}`,
+          }}>
+            <p style={{ fontSize: 11, color: EDITORIAL.ink3, margin: 0, lineHeight: 1.55 }}>
+              <strong style={{ color: EDITORIAL.ink2 }}>Disclaimer:</strong> This information is for informational purposes only and does not constitute professional advice. Scores and flags are derived from publicly available data and may be incomplete or inaccurate. GoodScan is not affiliated with any brand shown. Please verify claims independently before making purchasing decisions.
+            </p>
           </div>
         </div>
       </main>

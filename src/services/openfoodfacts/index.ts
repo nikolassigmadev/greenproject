@@ -96,6 +96,32 @@ const emptyResult = (barcode: string, error?: string): OpenFoodFactsResult => ({
   error,
 });
 
+/** Returns true if the string is mostly non-Latin (Arabic, CJK, Cyrillic, etc.) */
+const isNonLatin = (s: string): boolean => {
+  const latinChars = s.replace(/[^a-zA-Z]/g, '').length;
+  const totalChars = s.replace(/[\s\d\-_.,!?()]/g, '').length;
+  return totalChars > 0 && latinChars / totalChars < 0.5;
+};
+
+/** Pick the best available English product name */
+const pickEnglishName = (p: OpenFoodFactsProduct): string | null => {
+  const candidates = [
+    p.product_name_en,
+    p.abbreviated_product_name,
+    p.generic_name_en,
+    p.product_name,
+    p.generic_name,
+  ];
+  // First pass: pick the first candidate that has Latin characters
+  for (const c of candidates) {
+    if (c && c.trim() && !isNonLatin(c)) return c.trim();
+  }
+  // If everything is non-Latin, use brand as fallback
+  if (p.brands && !isNonLatin(p.brands)) return p.brands.trim();
+  // Last resort: return whatever product_name we have
+  return p.product_name?.trim() || null;
+};
+
 const normalizeProduct = (p: OpenFoodFactsProduct): OpenFoodFactsResult => {
   const carbonFootprint100g =
     p.nutriments?.['carbon-footprint-from-known-ingredients_100g'] ?? null;
@@ -119,7 +145,7 @@ const normalizeProduct = (p: OpenFoodFactsProduct): OpenFoodFactsResult => {
   return {
     found: true,
     barcode: p.code,
-    productName: p.product_name_en || p.product_name || null,
+    productName: pickEnglishName(p),
     brand: p.brands || null,
     ecoscoreGrade:
       p.ecoscore_grade && p.ecoscore_grade !== 'unknown' && p.ecoscore_grade !== 'not-applicable'
@@ -252,7 +278,7 @@ const lookupBarcodeInternal = async (barcode: string): Promise<OpenFoodFactsResu
   }
 
   // Fallback: direct API call with field filtering to reduce response size
-  const fields = 'code,product_name,product_name_en,brands,ecoscore_grade,ecoscore_score,ecoscore_data,nutriscore_grade,nutriscore_score,nova_group,nutriments,labels_tags,labels,categories_tags,categories,origins,ingredients_text,ingredients_text_en,image_front_url,image_url,countries_tags';
+  const fields = 'code,product_name,product_name_en,generic_name,generic_name_en,abbreviated_product_name,brands,ecoscore_grade,ecoscore_score,ecoscore_data,nutriscore_grade,nutriscore_score,nova_group,nutriments,labels_tags,labels,categories_tags,categories,origins,ingredients_text,ingredients_text_en,image_front_url,image_url,countries_tags';
 
   const endpoints = [
     `${OFF_API_BASE}/api/v2/product/${barcode}?fields=${fields}`,
@@ -528,7 +554,7 @@ const searchProductsGlobal = async (
         page_size: String(Math.min(limit * 3, 50)),
         sort_by: 'unique_scans_n',
         fields: [
-          'code', 'product_name', 'product_name_en', 'brands',
+          'code', 'product_name', 'product_name_en', 'generic_name', 'generic_name_en', 'abbreviated_product_name', 'brands',
           'ecoscore_grade', 'ecoscore_score', 'ecoscore_data',
           'nutriscore_grade', 'nutriscore_score', 'nova_group',
           'nutriments', 'labels_tags', 'labels', 'categories_tags', 'categories',
@@ -603,7 +629,7 @@ export const searchBetterAlternatives = async (
       tag_contains_0: 'contains',
       tag_0: category,
       fields: [
-        'code', 'product_name', 'product_name_en', 'brands',
+        'code', 'product_name', 'product_name_en', 'generic_name', 'generic_name_en', 'abbreviated_product_name', 'brands',
         'ecoscore_grade', 'ecoscore_score', 'ecoscore_data',
         'nutriscore_grade', 'nutriscore_score', 'nova_group',
         'nutriments', 'labels_tags', 'labels', 'categories_tags', 'categories',
@@ -662,7 +688,7 @@ export const browseProducts = async (options: BrowseOptions = {}): Promise<Brows
       sort_by: 'unique_scans_n',
       // Only fetch the fields we actually use — cuts response size dramatically
       fields: [
-        'code', 'product_name', 'product_name_en', 'brands',
+        'code', 'product_name', 'product_name_en', 'generic_name', 'generic_name_en', 'abbreviated_product_name', 'brands',
         'ecoscore_grade', 'ecoscore_score', 'ecoscore_data',
         'nutriscore_grade', 'nutriscore_score', 'nova_group',
         'nutriments', 'labels_tags', 'labels', 'categories_tags', 'categories',

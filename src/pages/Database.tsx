@@ -270,8 +270,14 @@ const Database = () => {
           {!hasSearched && !loading && (
             <div className="text-center py-20">
               <Apple className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
-              <p className="text-muted-foreground text-lg mb-2">Select filters and click Search to browse products</p>
-              <p className="text-muted-foreground text-sm">You can search by name, filter by category, country, or any combination</p>
+              {search.trim() ? (
+                <p className="text-muted-foreground text-lg mb-2">Press <strong>Search</strong> to find results</p>
+              ) : (
+                <>
+                  <p className="text-muted-foreground text-lg mb-2">Select filters and click Search to browse products</p>
+                  <p className="text-muted-foreground text-sm">You can search by name, filter by category, country, or any combination</p>
+                </>
+              )}
             </div>
           )}
 

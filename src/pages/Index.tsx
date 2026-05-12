@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { ChevronRight, Camera, Leaf, Shield, BarChart3, Users, Award, Zap, CheckCircle2, AlertTriangle as AlertTriangleIcon } from "lucide-react";
+import { ChevronRight, Camera, Leaf, Shield, BarChart3, Users, Award, Zap, CheckCircle2, AlertTriangle as AlertTriangleIcon, Share, Plus, MoreVertical, X } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { DS, scoreTone, toneColor, toneBg } from "@/styles/design-tokens";
 import { loadScanHistory, type ScanHistoryEntry } from "@/utils/userPreferences";
@@ -136,6 +136,7 @@ function AnimatedResultDemo() {
     <div ref={ref} style={{
       background: DS.card, borderRadius: DS.radius.lg, padding: 20,
       overflow: "hidden",
+      boxShadow: "0 2px 6px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)",
     }}>
       <div style={{
         opacity: contentOpacity,
@@ -274,13 +275,38 @@ function ScoreBadge({ score }: { score: number }) {
   );
 }
 
+function isStandalone(): boolean {
+  if ((navigator as any).standalone) return true; // iOS Safari
+  if (window.matchMedia("(display-mode: standalone)").matches) return true;
+  if (window.matchMedia("(display-mode: fullscreen)").matches) return true;
+  return false;
+}
+
+function getInstallPlatform(): "ios" | "android" | null {
+  const ua = navigator.userAgent;
+  if (/iPad|iPhone|iPod/.test(ua)) return "ios";
+  if (/Android/i.test(ua)) return "android";
+  return null;
+}
+
 export default function Index() {
   const [history, setHistory] = useState<ScanHistoryEntry[]>([]);
+  const [showInstall, setShowInstall] = useState(false);
 
   useEffect(() => {
     setHistory(loadScanHistory());
+    // Show install prompt only in browser, not standalone, and if not dismissed
+    if (!isStandalone() && !localStorage.getItem("goodscan_install_dismissed")) {
+      setShowInstall(true);
+    }
   }, []);
 
+  const dismissInstall = () => {
+    setShowInstall(false);
+    localStorage.setItem("goodscan_install_dismissed", "true");
+  };
+
+  const platform = getInstallPlatform();
   const recent = history.slice(0, 3);
 
   return (
@@ -299,6 +325,92 @@ export default function Index() {
             Scan any product and instantly see its impact on the planet, people, and your health.
           </p>
         </div>
+
+        {/* Add to home screen prompt */}
+        {showInstall && (
+          <div style={{
+            background: DS.card, borderRadius: DS.radius.md, padding: 16, marginBottom: 20,
+            boxShadow: "0 2px 6px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)",
+            position: "relative",
+          }}>
+            <button
+              onClick={dismissInstall}
+              aria-label="Dismiss"
+              style={{
+                position: "absolute", top: 12, right: 12,
+                background: "none", border: "none", cursor: "pointer", padding: 4,
+                color: DS.muted, lineHeight: 0,
+              }}
+            >
+              <X style={{ width: 16, height: 16 }} />
+            </button>
+
+            <p style={{ fontSize: 15, fontWeight: 700, margin: "0 0 8px", paddingRight: 24 }}>
+              Add to Home Screen
+            </p>
+            <p style={{ fontSize: 13, color: DS.muted, margin: "0 0 12px", lineHeight: 1.5 }}>
+              Install GoodScan for a faster, full-screen experience — no app store needed.
+            </p>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {platform === "ios" ? (
+                <>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div style={{
+                      width: 28, height: 28, borderRadius: 8, background: DS.bg,
+                      display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                    }}>
+                      <span style={{ fontSize: 13, fontWeight: 800 }}>1</span>
+                    </div>
+                    <p style={{ fontSize: 13, color: DS.ink, margin: 0 }}>
+                      Tap the <Share style={{ width: 13, height: 13, verticalAlign: "middle", color: DS.muted }} /> <strong>Share</strong> button in Safari
+                    </p>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div style={{
+                      width: 28, height: 28, borderRadius: 8, background: DS.bg,
+                      display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                    }}>
+                      <span style={{ fontSize: 13, fontWeight: 800 }}>2</span>
+                    </div>
+                    <p style={{ fontSize: 13, color: DS.ink, margin: 0 }}>
+                      Scroll down and tap <Plus style={{ width: 13, height: 13, verticalAlign: "middle", color: DS.muted }} /> <strong>Add to Home Screen</strong>
+                    </p>
+                  </div>
+                </>
+              ) : platform === "android" ? (
+                <>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div style={{
+                      width: 28, height: 28, borderRadius: 8, background: DS.bg,
+                      display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                    }}>
+                      <span style={{ fontSize: 13, fontWeight: 800 }}>1</span>
+                    </div>
+                    <p style={{ fontSize: 13, color: DS.ink, margin: 0 }}>
+                      Tap the <MoreVertical style={{ width: 13, height: 13, verticalAlign: "middle", color: DS.muted }} /> <strong>menu</strong> in your browser
+                    </p>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div style={{
+                      width: 28, height: 28, borderRadius: 8, background: DS.bg,
+                      display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                    }}>
+                      <span style={{ fontSize: 13, fontWeight: 800 }}>2</span>
+                    </div>
+                    <p style={{ fontSize: 13, color: DS.ink, margin: 0 }}>
+                      Tap <strong>Add to Home screen</strong> or <strong>Install app</strong>
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <p style={{ fontSize: 13, color: DS.ink, margin: 0 }}>
+                  Use your browser's menu to add this page to your home screen or install as an app.
+                </p>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Big scan CTA */}
         <Link to="/scan" style={{ textDecoration: "none", display: "block", marginBottom: 28 }}>
@@ -338,6 +450,7 @@ export default function Index() {
               <div key={item.step} style={{
                 background: DS.card, borderRadius: DS.radius.md, padding: 16,
                 display: "flex", gap: 14, alignItems: "flex-start",
+                boxShadow: "0 2px 6px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)",
               }}>
                 <div style={{
                   width: 32, height: 32, borderRadius: 16, background: DS.bg,
@@ -367,6 +480,7 @@ export default function Index() {
             ].map((item) => (
               <div key={item.title} style={{
                 background: DS.card, borderRadius: DS.radius.md, padding: 14,
+                boxShadow: "0 2px 6px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)",
               }}>
                 <item.icon style={{ width: 20, height: 20, color: item.color, marginBottom: 8 }} />
                 <p style={{ fontSize: 14, fontWeight: 600, margin: "0 0 4px" }}>{item.title}</p>
@@ -379,7 +493,7 @@ export default function Index() {
         {/* Scoring example */}
         <section style={{ marginBottom: 28 }}>
           <h2 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 14px" }}>Score meanings</h2>
-          <div style={{ background: DS.card, borderRadius: DS.radius.md, overflow: "hidden" }}>
+          <div style={{ background: DS.card, borderRadius: DS.radius.md, overflow: "hidden", boxShadow: "0 2px 6px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)" }}>
             {[
               { range: "70–100", label: "Looks great", tone: "good" as const, desc: "Low impact, good practices" },
               { range: "45–69", label: "Mixed", tone: "warn" as const, desc: "Some concerns worth noting" },
@@ -408,7 +522,7 @@ export default function Index() {
         {/* Data sources */}
         <section style={{ marginBottom: 28 }}>
           <h2 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 14px" }}>Our data sources</h2>
-          <div style={{ background: DS.card, borderRadius: DS.radius.md, padding: 16 }}>
+          <div style={{ background: DS.card, borderRadius: DS.radius.md, padding: 16, boxShadow: "0 2px 6px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)" }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {[
                 { name: "Open Food Facts", desc: "1M+ products with eco-scores, ingredients, and nutrition data" },
@@ -435,7 +549,7 @@ export default function Index() {
               <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>Recent scans</h2>
               <Link to="/dashboard" style={{ fontSize: 13, color: DS.muted, fontWeight: 500, textDecoration: "none" }}>See all</Link>
             </div>
-            <div style={{ background: DS.card, borderRadius: DS.radius.md, overflow: "hidden" }}>
+            <div style={{ background: DS.card, borderRadius: DS.radius.md, overflow: "hidden", boxShadow: "0 2px 6px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)" }}>
               {recent.map((entry, i) => {
                 const score = entry.scores.ecoScore ?? 50;
                 return (
@@ -477,6 +591,7 @@ export default function Index() {
               <div key={feat.title} style={{
                 background: DS.card, borderRadius: DS.radius.md, padding: 16,
                 display: "flex", gap: 14, alignItems: "flex-start",
+                boxShadow: "0 2px 6px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)",
               }}>
                 <div style={{
                   width: 36, height: 36, borderRadius: 12, background: DS.bg,
@@ -506,6 +621,7 @@ export default function Index() {
                 <div style={{
                   background: DS.card, borderRadius: DS.radius.md, padding: 16,
                   display: "flex", alignItems: "center", justifyContent: "space-between",
+                  boxShadow: "0 2px 6px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)",
                 }}>
                   <span style={{ fontSize: 14, fontWeight: 600, color: DS.ink }}>{card.title}</span>
                   <ChevronRight style={{ width: 16, height: 16, color: DS.muted }} />
