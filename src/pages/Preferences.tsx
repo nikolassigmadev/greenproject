@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { BottomNav } from "@/components/BottomNav";
 import { loadPriorities, savePriorities, DEFAULT_PRIORITIES, type UserPriorities } from "@/utils/userPreferences";
-import { Leaf, Users, Heart, Apple, RotateCcw } from "lucide-react";
+import { Leaf, Users, Heart, Apple } from "lucide-react";
 import { DS } from "@/styles/design-tokens";
 
 const LEVELS = [
@@ -57,7 +56,6 @@ const priorityConfig = [
 ];
 
 export default function Preferences() {
-  const navigate = useNavigate();
   const [priorities, setPriorities] = useState<UserPriorities>(DEFAULT_PRIORITIES);
 
   useEffect(() => {
@@ -73,15 +71,9 @@ export default function Preferences() {
     savePriorities(updated);
   };
 
-  const handleReset = () => {
-    const reset = { ...DEFAULT_PRIORITIES };
-    setPriorities(reset);
-    savePriorities(reset);
-  };
-
   return (
     <div style={{ background: DS.bg, minHeight: "100vh", fontFamily: DS.font, color: DS.ink }}>
-      <main style={{ paddingBottom: 180 }}>
+      <main style={{ paddingBottom: 100 }}>
 
         {/* Header */}
         <div style={{
@@ -189,44 +181,6 @@ export default function Preferences() {
       </main>
 
       <BottomNav />
-
-      {/* Sticky footer — sits just above BottomNav */}
-      <div style={{
-        position: "fixed", bottom: 72, left: 0, right: 0, zIndex: 40,
-        background: DS.bg,
-        borderTop: `1px solid ${DS.hair}`,
-        padding: "12px 16px 12px",
-      }}>
-        <div style={{ display: "flex", gap: 10, maxWidth: 640, margin: "0 auto" }}>
-          <button
-            onClick={handleReset}
-            style={{
-              height: 48, padding: "0 14px",
-              background: DS.card, border: `1px solid ${DS.hair}`, borderRadius: DS.radius.sm,
-              color: DS.muted, fontWeight: 600, fontSize: "0.85rem",
-              cursor: "pointer",
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-              fontFamily: DS.font, flexShrink: 0,
-            }}
-          >
-            <RotateCcw size={14} /> Reset
-          </button>
-          <button
-            onClick={() => navigate("/scan")}
-            style={{
-              flex: 1, height: 48,
-              background: DS.ink,
-              border: "none", borderRadius: DS.radius.md,
-              color: "#fff", fontWeight: 800, fontSize: "0.95rem",
-              cursor: "pointer",
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-              fontFamily: DS.font,
-            }}
-          >
-            Start Scanning
-          </button>
-        </div>
-      </div>
     </div>
   );
 }
