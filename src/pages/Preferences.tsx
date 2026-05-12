@@ -86,7 +86,7 @@ export default function Preferences() {
 
   return (
     <div style={{ background: DS.bg, minHeight: "100vh", fontFamily: DS.font, color: DS.ink }}>
-      <main style={{ paddingBottom: 110 }}>
+      <main style={{ paddingBottom: 180 }}>
 
         {/* Header */}
         <div style={{
@@ -190,40 +190,48 @@ export default function Preferences() {
             ))}
           </div>
 
-          {/* Actions */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingTop: 4 }}>
-            <button
-              onClick={handleSave}
-              style={{
-                width: "100%", height: 52,
-                background: saved ? DS.good : DS.ink,
-                border: "none", borderRadius: DS.radius.md,
-                color: "#fff", fontWeight: 800, fontSize: "0.95rem",
-                cursor: "pointer",
-                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                transition: "background 0.2s",
-                fontFamily: DS.font,
-              }}
-            >
-              {saved ? <><Check size={18} />Saved!</> : "Save My Values"}
-            </button>
-            <button
-              onClick={handleReset}
-              style={{
-                width: "100%", height: 44,
-                background: DS.card, border: `1px solid ${DS.hair}`, borderRadius: DS.radius.sm,
-                color: DS.muted, fontWeight: 600, fontSize: "0.85rem",
-                cursor: "pointer",
-                display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                fontFamily: DS.font,
-              }}
-            >
-              <RotateCcw size={14} /> Reset to defaults
-            </button>
-          </div>
-
         </div>
       </main>
+
+      {/* Sticky save footer */}
+      <div style={{
+        position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 40,
+        background: DS.bg,
+        borderTop: `1px solid ${DS.hair}`,
+        padding: "12px 16px calc(env(safe-area-inset-bottom) + 12px)",
+      }}>
+        <div style={{ display: "flex", gap: 10, maxWidth: 640, margin: "0 auto" }}>
+          <button
+            onClick={handleReset}
+            style={{
+              height: 48, padding: "0 14px",
+              background: DS.card, border: `1px solid ${DS.hair}`, borderRadius: DS.radius.sm,
+              color: DS.muted, fontWeight: 600, fontSize: "0.85rem",
+              cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+              fontFamily: DS.font, flexShrink: 0,
+            }}
+          >
+            <RotateCcw size={14} />
+          </button>
+          <button
+            onClick={handleSave}
+            style={{
+              flex: 1, height: 48,
+              background: saved ? DS.good : DS.ink,
+              border: "none", borderRadius: DS.radius.md,
+              color: "#fff", fontWeight: 800, fontSize: "0.95rem",
+              cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+              transition: "background 0.2s",
+              fontFamily: DS.font,
+            }}
+          >
+            {saved ? <><Check size={18} />Saved!</> : "Save My Values"}
+          </button>
+        </div>
+      </div>
+
       <BottomNav />
     </div>
   );
