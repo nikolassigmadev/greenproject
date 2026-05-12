@@ -586,13 +586,14 @@ export default function Index() {
                     <div style={{
                       width: 36, height: 36, borderRadius: 12, background: DS.card,
                       display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-                      boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.08)", gap: 4,
                     }}>
-                      <Share style={{ width: 17, height: 17, color: DS.ink }} />
+                      <MoreVertical style={{ width: 14, height: 14, color: DS.ink }} />
+                      <Share style={{ width: 14, height: 14, color: DS.ink }} />
                     </div>
                     <div>
-                      <p style={{ fontSize: 14, fontWeight: 700, margin: "0 0 2px" }}>Tap Share</p>
-                      <p style={{ fontSize: 12, color: DS.muted, margin: 0 }}>The share icon at the bottom of Safari</p>
+                      <p style={{ fontSize: 14, fontWeight: 700, margin: "0 0 2px" }}>Find the Share button</p>
+                      <p style={{ fontSize: 12, color: DS.muted, margin: 0 }}>You may need to tap the <strong>···</strong> menu first, then tap the share icon</p>
                     </div>
                   </div>
                   <div style={{ height: 1, background: DS.hair, margin: "0 0 0 48px" }} />

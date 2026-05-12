@@ -3,6 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#1A1614" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="GoodScan" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>GoodScan - Shop with Your Values</title>
     <meta name="description" content="Scan any product to reveal its environmental impact, labor practices, and discover more ethical alternatives. Make informed sustainable shopping choices." />
@@ -15,11 +20,49 @@
     <meta property="og:title" content="GoodScan - Shop with Your Values" />
     <meta property="og:description" content="Scan products to reveal environmental impact, labor practices, and discover ethical alternatives." />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
 
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@GoodScan" />
-    <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+
+    <!-- Generate apple-touch-icon dynamically from canvas -->
+    <script>
+      (function() {
+        var c = document.createElement('canvas');
+        c.width = 180; c.height = 180;
+        var ctx = c.getContext('2d');
+        // Background
+        ctx.fillStyle = '#1A1614';
+        ctx.beginPath();
+        ctx.roundRect(0, 0, 180, 180, 32);
+        ctx.fill();
+        // Circle
+        ctx.strokeStyle = '#F7F6F3';
+        ctx.lineWidth = 9;
+        ctx.beginPath();
+        ctx.arc(90, 72, 35, 0, Math.PI * 2);
+        ctx.stroke();
+        // Checkmark
+        ctx.strokeStyle = '#1F6B4E';
+        ctx.lineWidth = 9;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        ctx.moveTo(76, 72);
+        ctx.lineTo(85, 81);
+        ctx.lineTo(104, 62);
+        ctx.stroke();
+        // Text
+        ctx.fillStyle = '#F7F6F3';
+        ctx.font = '800 24px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('GoodScan', 90, 140);
+        // Set as apple-touch-icon
+        var link = document.createElement('link');
+        link.rel = 'apple-touch-icon';
+        link.href = c.toDataURL('image/png');
+        document.head.appendChild(link);
+      })();
+    </script>
   </head>
 
   <body>
@@ -27,4 +70,3 @@
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
-<!--dddei3ie32ieu23ieu32-->
