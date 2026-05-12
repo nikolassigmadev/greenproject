@@ -19,7 +19,7 @@ import { calculateScore, findLowCO2Alternative } from "@/data/products";
 import { recognizeImageWithOpenAI } from "@/services/ocr/openai-service";
 import { advancedProductOCR } from "@/services/ocr/advanced-openai-ocr";
 import { copySingleProductCode } from "@/utils/productExporter";
-import { loadPriorities, DEFAULT_PRIORITIES, type UserPriorities } from "@/utils/userPreferences";
+import { loadPriorities, hasPrioritiesBeenSaved, type UserPriorities } from "@/utils/userPreferences";
 import { lookupBarcode, isValidBarcode, searchProducts as searchOffProducts, searchBetterAlternatives } from "@/services/openfoodfacts";
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
 import { DS } from "@/styles/design-tokens";
@@ -404,11 +404,7 @@ const Scan = () => {
     };
   }, []);
 
-  const isDefaultPriorities =
-    priorities.environment === DEFAULT_PRIORITIES.environment &&
-    priorities.laborRights === DEFAULT_PRIORITIES.laborRights &&
-    priorities.animalWelfare === DEFAULT_PRIORITIES.animalWelfare &&
-    priorities.nutrition === DEFAULT_PRIORITIES.nutrition;
+  const isDefaultPriorities = !hasPrioritiesBeenSaved();
 
   // Auto-start camera only when priorities are set
   useEffect(() => {

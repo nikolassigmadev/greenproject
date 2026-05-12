@@ -14,10 +14,16 @@ export const DEFAULT_PRIORITIES: UserPriorities = {
 };
 
 const PRIORITIES_KEY = 'ethical-shopper-priorities';
+const PRIORITIES_SAVED_KEY = 'ethical-shopper-priorities-saved';
+
+export const hasPrioritiesBeenSaved = (): boolean => {
+  return localStorage.getItem(PRIORITIES_SAVED_KEY) === 'true';
+};
 
 export const savePriorities = (priorities: UserPriorities): void => {
   try {
     localStorage.setItem(PRIORITIES_KEY, JSON.stringify(priorities));
+    localStorage.setItem(PRIORITIES_SAVED_KEY, 'true');
     window.dispatchEvent(new Event('prioritiesUpdated'));
   } catch (error) {
     console.error('Failed to save priorities:', error);
