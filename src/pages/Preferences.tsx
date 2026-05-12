@@ -188,12 +188,14 @@ export default function Preferences() {
         </div>
       </main>
 
-      {/* Sticky footer */}
+      <BottomNav />
+
+      {/* Sticky footer — sits just above BottomNav */}
       <div style={{
-        position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 40,
+        position: "fixed", bottom: 72, left: 0, right: 0, zIndex: 40,
         background: DS.bg,
         borderTop: `1px solid ${DS.hair}`,
-        padding: "12px 16px calc(env(safe-area-inset-bottom) + 12px)",
+        padding: "12px 16px 12px",
       }}>
         <div style={{ display: "flex", gap: 10, maxWidth: 640, margin: "0 auto" }}>
           <button
@@ -225,8 +227,6 @@ export default function Preferences() {
           </button>
         </div>
       </div>
-
-      <BottomNav />
     </div>
   );
 }
