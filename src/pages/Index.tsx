@@ -314,7 +314,7 @@ export default function Index() {
             GoodScan
           </p>
           <h1 style={{ fontSize: 30, fontWeight: 800, margin: 0, letterSpacing: -0.5, lineHeight: 1.15 }}>
-            Shop with purpose.
+            Shop with your <span style={{ color: DS.good }}>Values</span>.
           </h1>
           <p style={{ fontSize: 15, color: DS.muted, margin: "10px 0 0", lineHeight: 1.55 }}>
             Scan any product and instantly see its impact on the planet, people, and your health.
