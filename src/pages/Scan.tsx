@@ -1341,19 +1341,21 @@ const Scan = () => {
       {isDefaultPriorities && (
         <div style={{
           position: 'absolute', inset: 0, zIndex: 100,
-          background: '#0e0e10',
+          background: DS.bg,
           display: 'flex', flexDirection: 'column',
           padding: 'max(52px, env(safe-area-inset-top)) 24px max(32px, env(safe-area-inset-bottom))',
+          fontFamily: DS.font,
         }}>
           {/* Close */}
           <Link to="/" style={{ alignSelf: 'flex-start', marginBottom: 32 }}>
             <div style={{
               width: 36, height: 36, borderRadius: 18,
-              backgroundColor: 'rgba(255,255,255,0.12)',
-              border: 'none',
+              backgroundColor: DS.card,
+              border: `1px solid ${DS.hair}`,
+              boxShadow: '0 2px 6px rgba(0,0,0,0.07)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
-              <X size={15} color="#fff" />
+              <X size={15} color={DS.ink} />
             </div>
           </Link>
 
@@ -1361,20 +1363,21 @@ const Scan = () => {
           <div style={{ marginBottom: 24 }}>
             <div style={{
               width: 72, height: 72, borderRadius: 22,
-              background: 'rgba(255,255,255,0.08)',
-              border: '1.5px solid rgba(255,255,255,0.15)',
+              background: DS.card,
+              border: `1.5px solid ${DS.hair}`,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               marginBottom: 20,
             }}>
-              <Settings size={32} color="#fff" strokeWidth={1.8} />
+              <Settings size={32} color={DS.ink} strokeWidth={1.8} />
             </div>
-            <p style={{ fontSize: '0.7rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
+            <p style={{ fontSize: '0.7rem', fontWeight: 700, color: DS.muted, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
               Before you scan
             </p>
-            <h2 style={{ fontSize: '1.9rem', fontWeight: 900, color: '#fff', letterSpacing: '-0.03em', lineHeight: 1.15, marginBottom: 12 }}>
+            <h2 style={{ fontSize: '1.9rem', fontWeight: 900, color: DS.ink, letterSpacing: '-0.03em', lineHeight: 1.15, marginBottom: 12 }}>
               Set your<br />values first
             </h2>
-            <p style={{ fontSize: '0.88rem', color: 'rgba(255,255,255,0.5)', lineHeight: 1.6 }}>
+            <p style={{ fontSize: '0.88rem', color: DS.muted, lineHeight: 1.6 }}>
               Tell us what matters to you — labour rights, environment, animal welfare, or nutrition. Every scan result is personalised to your priorities.
             </p>
           </div>
@@ -1382,18 +1385,19 @@ const Scan = () => {
           {/* Priority category pills */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 32 }}>
             {[
-              { icon: Users,  label: 'Labour Rights',  color: '#D46B5E', bg: 'rgba(178,58,43,0.14)',    border: 'rgba(178,58,43,0.28)' },
-              { icon: Leaf,   label: 'Environment',    color: '#5CB88A', bg: 'rgba(31,107,78,0.14)',    border: 'rgba(31,107,78,0.28)' },
-              { icon: Heart,  label: 'Animal Welfare', color: '#B08CC0', bg: 'rgba(122,90,138,0.14)',   border: 'rgba(122,90,138,0.28)' },
-              { icon: Apple,  label: 'Nutrition',      color: '#D9A654', bg: 'rgba(192,130,42,0.14)',   border: 'rgba(192,130,42,0.28)' },
+              { icon: Users,  label: 'Labour Rights',  color: DS.bad,            bg: DS.badBg,   border: 'rgba(178,58,43,0.2)' },
+              { icon: Leaf,   label: 'Environment',    color: DS.good,           bg: DS.goodBg,  border: 'rgba(31,107,78,0.2)' },
+              { icon: Heart,  label: 'Animal Welfare', color: '#7A5A8A',         bg: '#EAE0EF',  border: 'rgba(122,90,138,0.2)' },
+              { icon: Apple,  label: 'Nutrition',      color: DS.warn,           bg: DS.warnBg,  border: 'rgba(192,130,42,0.2)' },
             ].map(({ icon: Icon, label, color, bg, border }) => (
               <div key={label} style={{
                 background: bg, border: `1px solid ${border}`,
                 borderRadius: 14, padding: '12px 14px',
                 display: 'flex', alignItems: 'center', gap: 10,
+                boxShadow: '0 2px 6px rgba(0,0,0,0.05)',
               }}>
                 <Icon size={18} color={color} strokeWidth={2} />
-                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#fff' }}>{label}</span>
+                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: DS.ink }}>{label}</span>
               </div>
             ))}
           </div>
@@ -1406,14 +1410,14 @@ const Scan = () => {
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                 height: 54, borderRadius: 16, textDecoration: 'none',
-                background: '#fff',
-                boxShadow: '0 4px 24px rgba(0,0,0,0.3)',
+                background: DS.ink,
+                boxShadow: '0 4px 16px rgba(26,22,20,0.2)',
               }}
             >
-              <Settings size={18} color="#1a1a1a" strokeWidth={2} />
-              <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#1a1a1a' }}>Set my values</span>
+              <Settings size={18} color="#fff" strokeWidth={2} />
+              <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#fff' }}>Set my values</span>
             </Link>
-            <p style={{ textAlign: 'center', fontSize: '0.72rem', color: 'rgba(255,255,255,0.3)', lineHeight: 1.5 }}>
+            <p style={{ textAlign: 'center', fontSize: '0.72rem', color: DS.muted, lineHeight: 1.5 }}>
               Takes 30 seconds · you can change them anytime
             </p>
           </div>
@@ -1604,18 +1608,18 @@ const Scan = () => {
             top: 'calc(max(62px, env(safe-area-inset-top)) + 52px)',
             left: '50%', transform: 'translateX(-50%)',
             display: 'flex', alignItems: 'center', gap: 8,
-            background: 'rgba(10,21,64,0.85)',
-            backdropFilter: 'blur(10px)',
-            WebkitBackdropFilter: 'blur(10px)',
-            border: '1px solid rgba(251,191,36,0.4)',
+            background: DS.card,
+            boxShadow: '0 2px 10px rgba(0,0,0,0.1), 0 0 0 1px rgba(0,0,0,0.04)',
             borderRadius: 50,
-            color: '#FBBF24', padding: '7px 16px',
+            border: `1px solid ${DS.hair}`,
+            color: DS.warn, padding: '7px 16px',
             whiteSpace: 'nowrap', zIndex: 15, textDecoration: 'none',
+            fontFamily: DS.font,
           }}
         >
-          <AlertCircle size={13} style={{ color: '#FBBF24', flexShrink: 0 }} />
-          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#fff' }}>Set your values to scan</span>
-          <ChevronRight size={13} style={{ color: 'rgba(255,255,255,0.5)' }} />
+          <AlertCircle size={13} style={{ color: DS.warn, flexShrink: 0 }} />
+          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: DS.ink }}>Set your values to scan</span>
+          <ChevronRight size={13} style={{ color: DS.muted }} />
         </Link>
       )}
 
