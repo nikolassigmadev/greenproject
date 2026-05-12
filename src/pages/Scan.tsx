@@ -1340,10 +1340,10 @@ const Scan = () => {
       {/* ── Priorities gate ─────────────────────────────────────────────── */}
       {isDefaultPriorities && (
         <div style={{
-          position: 'absolute', inset: 0, zIndex: 100,
+          position: 'fixed', inset: 0, zIndex: 100,
           background: '#0e0e10',
           display: 'flex', flexDirection: 'column',
-          padding: 'max(52px, env(safe-area-inset-top)) 24px max(32px, env(safe-area-inset-bottom))',
+          padding: 'max(52px, env(safe-area-inset-top)) 24px max(40px, env(safe-area-inset-bottom))',
         }}>
           {/* Close */}
           <Link to="/" style={{ alignSelf: 'flex-start', marginBottom: 32 }}>

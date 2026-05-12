@@ -526,7 +526,9 @@ export default function OpenFoodFactsDetail() {
         stickyVisible ? "translate-y-0 opacity-100" : "-translate-y-full opacity-0"
       )}>
         <div style={{
-          maxWidth: 560, margin: "0 auto", padding: "10px 16px",
+          maxWidth: 560, margin: "0 auto",
+          paddingTop: "max(10px, env(safe-area-inset-top))",
+          paddingBottom: 10, paddingLeft: 16, paddingRight: 16,
           display: "flex", alignItems: "center", gap: 10,
           background: "rgba(241,235,221,0.94)",
           backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)",
