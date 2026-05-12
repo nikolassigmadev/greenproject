@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { BottomNav } from "@/components/BottomNav";
 import { loadPriorities, savePriorities, DEFAULT_PRIORITIES, type UserPriorities } from "@/utils/userPreferences";
-import { Leaf, Users, Heart, Apple, RotateCcw, Check } from "lucide-react";
+import { Leaf, Users, Heart, Apple, RotateCcw } from "lucide-react";
 import { DS } from "@/styles/design-tokens";
 
 const LEVELS = [
@@ -59,7 +59,6 @@ const priorityConfig = [
 export default function Preferences() {
   const navigate = useNavigate();
   const [priorities, setPriorities] = useState<UserPriorities>(DEFAULT_PRIORITIES);
-  const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     setPriorities(loadPriorities());
@@ -69,19 +68,15 @@ export default function Preferences() {
   }, []);
 
   const handleChange = (key: keyof UserPriorities, value: number) => {
-    setPriorities((prev) => ({ ...prev, [key]: value }));
-    setSaved(false);
-  };
-
-  const handleSave = () => {
-    savePriorities(priorities);
-    setSaved(true);
-    setTimeout(() => navigate("/scan", { state: { prioritiesJustSaved: true } }), 700);
+    const updated = { ...priorities, [key]: value };
+    setPriorities(updated);
+    savePriorities(updated);
   };
 
   const handleReset = () => {
-    setPriorities({ ...DEFAULT_PRIORITIES });
-    setSaved(false);
+    const reset = { ...DEFAULT_PRIORITIES };
+    setPriorities(reset);
+    savePriorities(reset);
   };
 
   return (
@@ -181,7 +176,7 @@ export default function Preferences() {
               "Critical — even minor concerns heavily downgrade a result",
               "Medium — balanced default scoring",
               "None — no influence on verdict",
-              "Saved locally and applied to all future scans",
+              "Changes are saved automatically and applied to all future scans",
             ].map(t => (
               <div key={t} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 4 }}>
                 <span style={{ width: 5, height: 5, borderRadius: "50%", background: DS.muted, marginTop: 6, flexShrink: 0 }} />
@@ -193,7 +188,7 @@ export default function Preferences() {
         </div>
       </main>
 
-      {/* Sticky save footer */}
+      {/* Sticky footer */}
       <div style={{
         position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 40,
         background: DS.bg,
@@ -212,22 +207,21 @@ export default function Preferences() {
               fontFamily: DS.font, flexShrink: 0,
             }}
           >
-            <RotateCcw size={14} />
+            <RotateCcw size={14} /> Reset
           </button>
           <button
-            onClick={handleSave}
+            onClick={() => navigate("/scan")}
             style={{
               flex: 1, height: 48,
-              background: saved ? DS.good : DS.ink,
+              background: DS.ink,
               border: "none", borderRadius: DS.radius.md,
               color: "#fff", fontWeight: 800, fontSize: "0.95rem",
               cursor: "pointer",
               display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-              transition: "background 0.2s",
               fontFamily: DS.font,
             }}
           >
-            {saved ? <><Check size={18} />Saved!</> : "Save My Values"}
+            Start Scanning
           </button>
         </div>
       </div>
