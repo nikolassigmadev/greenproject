@@ -73,10 +73,19 @@
     @apply border-border;
   }
 
+  html, body {
+    height: 100%;
+    height: -webkit-fill-available;
+    overflow: hidden;
+    overflow: auto;
+  }
+
   body {
     @apply bg-background text-foreground antialiased;
     font-family: 'Inter', system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
+    min-height: 100dvh;
+    min-height: -webkit-fill-available;
   }
 
   h1, h2, h3, h4, h5, h6 {

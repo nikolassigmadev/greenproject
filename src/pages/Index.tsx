@@ -703,9 +703,20 @@ export default function Index() {
               )}
             </div>
 
-            <p style={{ fontSize: 12, color: DS.muted, textAlign: "center", margin: 0, lineHeight: 1.45 }}>
+            <p style={{ fontSize: 12, color: DS.muted, textAlign: "center", margin: "0 0 12px", lineHeight: 1.45 }}>
               You need to add GoodScan to your home screen for the app to work properly.
             </p>
+            <button
+              onClick={() => setShowInstall(false)}
+              style={{
+                background: "none", border: "none", cursor: "pointer",
+                fontSize: 11, color: DS.muted, opacity: 0.6,
+                fontFamily: DS.font, padding: 0,
+                textDecoration: "underline",
+              }}
+            >
+              Continue to website
+            </button>
           </div>
         </div>
       )}

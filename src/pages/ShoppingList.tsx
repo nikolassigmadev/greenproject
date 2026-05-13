@@ -106,7 +106,7 @@ export default function ShoppingList() {
   const inBasket = (barcode: string) => basket.some(b => b.barcode === barcode);
 
   return (
-    <div style={{ background: DS.bg, minHeight: "100vh", fontFamily: DS.font, color: DS.ink }}>
+    <div style={{ background: DS.bg, minHeight: "100dvh", fontFamily: DS.font, color: DS.ink }}>
       <main style={{ paddingBottom: 110 }}>
 
         {/* ── Header ── */}

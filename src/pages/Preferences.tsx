@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { BottomNav } from "@/components/BottomNav";
 import { loadPriorities, savePriorities, DEFAULT_PRIORITIES, type UserPriorities } from "@/utils/userPreferences";
 import { Leaf, Users, Heart, Apple } from "lucide-react";
@@ -56,6 +57,7 @@ const priorityConfig = [
 ];
 
 export default function Preferences() {
+  const navigate = useNavigate();
   const [priorities, setPriorities] = useState<UserPriorities>(DEFAULT_PRIORITIES);
 
   useEffect(() => {
@@ -72,7 +74,7 @@ export default function Preferences() {
   };
 
   return (
-    <div style={{ background: DS.bg, minHeight: "100vh", fontFamily: DS.font, color: DS.ink }}>
+    <div style={{ background: DS.bg, minHeight: "100dvh", fontFamily: DS.font, color: DS.ink }}>
       <main style={{ paddingBottom: 100 }}>
 
         {/* Header */}
@@ -82,9 +84,25 @@ export default function Preferences() {
           <p style={{ fontSize: 13, fontWeight: 600, color: DS.muted, letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 4 }}>
             Preferences
           </p>
-          <h1 style={{ fontSize: "1.65rem", fontWeight: 800, color: DS.ink, letterSpacing: "-0.025em", lineHeight: 1.1, marginBottom: 6 }}>
-            My Values
-          </h1>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+            <h1 style={{ fontSize: "1.65rem", fontWeight: 800, color: DS.ink, letterSpacing: "-0.025em", lineHeight: 1.1, margin: 0 }}>
+              My Values
+            </h1>
+            <button
+              onClick={() => navigate("/scan")}
+              style={{
+                background: DS.ink,
+                border: "none", borderRadius: DS.radius.sm,
+                color: "#fff", fontWeight: 700, fontSize: "0.75rem",
+                padding: "8px 14px",
+                cursor: "pointer",
+                fontFamily: DS.font,
+                flexShrink: 0,
+              }}
+            >
+              Continue to scan
+            </button>
+          </div>
           <p style={{ fontSize: "0.85rem", color: DS.muted, lineHeight: 1.5 }}>
             Select what matters most. Every verdict will reflect your priorities.
           </p>
