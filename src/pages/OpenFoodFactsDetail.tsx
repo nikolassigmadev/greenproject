@@ -16,6 +16,7 @@ import { checkAnimalWelfareFlag } from "@/utils/animalWelfareFlags";
 import { AnimalWelfareFlagBadge } from "@/components/AnimalWelfareFlagBadge";
 import { addToBasket, loadBasket } from "@/utils/basketStorage";
 import { findLaborAllegations as findLaborAllegationsUtil, getLaborAllegationCount } from "@/utils/laborCheck";
+import { findVerifiedEthics } from "@/utils/verifiedEthics";
 import { EnvironmentalImpactCard } from "@/components/EnvironmentalImpactCard";
 import { sendChatMessage } from "@/services/api/backend-client";
 import { cn } from "@/lib/utils";
@@ -486,9 +487,10 @@ export default function OpenFoodFactsDetail() {
   const verdict    = getVerdict(product, priorities);
   const vc         = VERDICT_CONFIG[verdict.key as keyof typeof VERDICT_CONFIG] ?? VERDICT_CONFIG.UNKNOWN;
   const agri       = product.ecoscoreData?.agribalyse;
-  const laborRecord  = findLaborAllegations(product);
-  const boycottMatch = checkBoycott(product.brand);
-  const welfare      = checkAnimalWelfareFlag(product.brand);
+  const laborRecord     = findLaborAllegations(product);
+  const boycottMatch    = checkBoycott(product.brand);
+  const welfare         = checkAnimalWelfareFlag(product.brand);
+  const verifiedEthics  = findVerifiedEthics(product.brand, product.productName);
   const ecoGrade     = product.ecoscoreGrade?.toLowerCase();
   const nutriGrade   = product.nutriscoreGrade?.toLowerCase();
 
@@ -611,10 +613,11 @@ export default function OpenFoodFactsDetail() {
             <Tag bg={vc.bg} color={vc.color}>{verdict.key[0] + verdict.key.slice(1).toLowerCase()}</Tag>
             {ecoGrade && <Tag bg={GRADE_BG[ecoGrade]} color={GRADE_COLOR[ecoGrade]}>Eco-Score {ecoGrade.toUpperCase()}</Tag>}
             {product.novaGroup !== null && <Tag bg="#EDE6D2" color={EDITORIAL.ink2}>{NOVA_LABEL[product.novaGroup] || `NOVA ${product.novaGroup}`}</Tag>}
+            {verifiedEthics && <Tag bg="#D8E5DA" color={EDITORIAL.green}>Verified Ethics</Tag>}
           </div>
         </div>
 
-        <div style={{ padding: "0 22px 18px" }}>
+        <div style={{ padding: "0 22px 18px", display: "flex", flexDirection: "column", gap: 10 }}>
           <div style={{
             background: "#FBE9E2", borderRadius: 14, padding: "14px 16px",
             display: "flex", gap: 12, alignItems: "flex-start",
@@ -634,6 +637,23 @@ export default function OpenFoodFactsDetail() {
               </div>
             </div>
           </div>
+          {verifiedEthics && (
+            <div style={{
+              background: "#D8E5DA", borderRadius: 14, padding: "14px 16px",
+              display: "flex", gap: 12, alignItems: "flex-start",
+              border: `1px solid rgba(31,107,78,0.2)`,
+            }}>
+              <BadgeCheck style={{ width: 20, height: 20, color: EDITORIAL.green, flexShrink: 0, marginTop: 1 }} />
+              <div>
+                <div style={{ fontSize: 13.5, fontWeight: 800, color: EDITORIAL.ink, lineHeight: 1.3 }}>
+                  Verified Ethics — {verifiedEthics.brandName}
+                </div>
+                <div style={{ fontSize: 12, color: EDITORIAL.ink2, marginTop: 3, lineHeight: 1.4 }}>
+                  This brand has verified ethical sourcing and fair trade practices.
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {fromScan && (
@@ -834,6 +854,23 @@ export default function OpenFoodFactsDetail() {
                 Based on publicly available reports. Companies may have taken corrective steps since publication.
               </div>
             </div>
+            {verifiedEthics && (
+              <div style={{ marginTop: 14, background: EDITORIAL.card, border: `1px solid ${EDITORIAL.line}`, borderLeft: `4px solid ${EDITORIAL.green}`, borderRadius: 14, padding: "16px 18px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                  <BadgeCheck style={{ width: 18, height: 18, color: EDITORIAL.green, flexShrink: 0 }} />
+                  <span style={{ fontSize: 14, fontWeight: 800, color: EDITORIAL.green }}>Verified Ethics — {verifiedEthics.brandName}</span>
+                </div>
+                {verifiedEthics.highlights.map((h, i) => (
+                  <div key={i} style={{ padding: "10px 0", borderTop: i > 0 ? `1px solid ${EDITORIAL.line}` : "none" }}>
+                    <p style={{ fontSize: 13, fontWeight: 700, color: EDITORIAL.ink, margin: "0 0 3px" }}>{h.label}</p>
+                    <p style={{ fontSize: 12, color: EDITORIAL.ink2, lineHeight: 1.5, margin: "0 0 6px" }}>{h.detail}</p>
+                    <a href={h.sourceUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: EDITORIAL.green, fontWeight: 700, textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}>
+                      <ExternalLink style={{ width: 10, height: 10 }} /> {h.source}
+                    </a>
+                  </div>
+                ))}
+              </div>
+            )}
             <div style={{ marginTop: 14, display: "grid", gap: 10 }}>
               {boycottMatch && (
                 <div style={{ padding: "14px 16px", background: "#FFFFFF", border: `1px solid ${EDITORIAL.amberSoft}`, borderLeft: `4px solid ${EDITORIAL.amber}`, borderRadius: 14, display: "flex", alignItems: "center", gap: 12 }}>
