@@ -79,7 +79,7 @@ export default function Preferences() {
 
         {/* Header */}
         <div style={{
-          padding: "max(60px, env(safe-area-inset-top)) 20px 20px",
+          padding: "max(60px, calc(env(safe-area-inset-top, 0px) + 16px)) 20px 20px",
         }}>
           <p style={{ fontSize: 13, fontWeight: 600, color: DS.muted, letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 4 }}>
             Preferences

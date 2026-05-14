@@ -111,7 +111,7 @@ export default function ShoppingList() {
 
         {/* ── Header ── */}
         <div style={{
-          padding: "max(60px, env(safe-area-inset-top)) 20px 16px",
+          padding: "max(60px, calc(env(safe-area-inset-top, 0px) + 16px)) 20px 16px",
           display: "flex", justifyContent: "space-between", alignItems: "flex-end",
         }}>
           <div>

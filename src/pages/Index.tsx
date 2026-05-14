@@ -309,7 +309,7 @@ export default function Index() {
       <main style={{ padding: "0 20px", paddingBottom: 110, maxWidth: 640, margin: "0 auto" }}>
 
         {/* Header */}
-        <div style={{ paddingTop: "max(60px, env(safe-area-inset-top))", marginBottom: 24 }}>
+        <div style={{ paddingTop: "max(60px, calc(env(safe-area-inset-top, 0px) + 16px))", marginBottom: 24 }}>
           <p style={{ fontSize: 13, fontWeight: 600, color: DS.good, margin: "0 0 6px", letterSpacing: 0.3 }}>
             GoodScan
           </p>

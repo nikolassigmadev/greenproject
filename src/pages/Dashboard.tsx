@@ -132,7 +132,7 @@ export default function Dashboard() {
   return (
     <div style={{ minHeight: "100dvh", background: DS.bg, fontFamily: DS.font, color: DS.ink }}>
       {/* Header */}
-      <div style={{ padding: "0 20px", paddingTop: "max(60px, env(safe-area-inset-top))" }}>
+      <div style={{ padding: "0 20px", paddingTop: "max(60px, calc(env(safe-area-inset-top, 0px) + 16px))" }}>
         <div style={{ maxWidth: 640, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
           <h1 style={{ fontSize: 28, fontWeight: 700, margin: 0, letterSpacing: -0.5 }}>History</h1>
           {history.length > 0 && (

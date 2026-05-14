@@ -192,7 +192,7 @@ const Database = () => {
       <main style={{ padding: "0 20px", paddingBottom: 110 }}>
         <div style={{ maxWidth: 960, margin: "0 auto" }}>
           {/* Page Header */}
-          <div style={{ paddingTop: "max(60px, env(safe-area-inset-top))", marginBottom: 24 }}>
+          <div style={{ paddingTop: "max(60px, calc(env(safe-area-inset-top, 0px) + 16px))", marginBottom: 24 }}>
             <h1 style={{ fontSize: 28, fontWeight: 700, letterSpacing: -0.5, marginBottom: 6 }}>
               Search Products
             </h1>

@@ -379,6 +379,14 @@ const Scan = () => {
   const [scanMode, setScanMode] = useState<'Scan Food' | 'Barcode' | 'Food label'>('Scan Food');
 
   // When arriving from Preferences save, scroll to viewfinder and show message
+  // Set html background to dark while Scan is mounted
+  useEffect(() => {
+    const html = document.documentElement;
+    const prev = html.style.background;
+    html.style.background = '#0e0e10';
+    return () => { html.style.background = prev; };
+  }, []);
+
   useEffect(() => {
     if ((location.state as any)?.prioritiesJustSaved) {
       setPrioritiesJustSaved(true);

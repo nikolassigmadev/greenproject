@@ -73,15 +73,18 @@
     @apply border-border;
   }
 
-  html, body {
+  html {
     height: 100%;
-    height: -webkit-fill-available;
-    overflow: hidden;
-    overflow: auto;
+    background: #F7F6F3;
   }
 
-  html {
-    background: #0e0e10;
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100%;
+    min-height: 100dvh;
+    min-height: -webkit-fill-available;
   }
 
   #root {
@@ -90,18 +93,18 @@
     min-height: -webkit-fill-available;
   }
 
-  body {
-    @apply bg-background text-foreground antialiased;
-    font-family: 'Inter', system-ui, sans-serif;
-    -webkit-font-smoothing: antialiased;
-    min-height: 100dvh;
-    min-height: -webkit-fill-available;
-  }
-
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Inter', system-ui, sans-serif;
     font-weight: 700;
     letter-spacing: -0.025em;
+  }
+}
+
+/* ── Standalone PWA safe-area fill ────────────────────────────────────────── */
+
+@media all and (display-mode: standalone) {
+  html {
+    background: #F7F6F3;
   }
 }
 

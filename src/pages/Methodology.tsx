@@ -53,7 +53,7 @@ export default function Methodology() {
 
   return (
     <div style={{ minHeight: "100dvh", background: DS.bg, fontFamily: DS.font, color: DS.ink, display: "flex", flexDirection: "column" }}>
-      <main style={{ flex: 1, maxWidth: 640, margin: "0 auto", width: "100%", padding: `max(60px, env(safe-area-inset-top)) 20px 110px` }}>
+      <main style={{ flex: 1, maxWidth: 640, margin: "0 auto", width: "100%", padding: `max(60px, calc(env(safe-area-inset-top, 0px) + 16px)) 20px 110px` }}>
 
         {/* Header */}
         <div style={{ textAlign: "center", marginBottom: 28 }}>

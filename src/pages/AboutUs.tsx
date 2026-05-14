@@ -8,7 +8,7 @@ export default function AboutUs() {
   return (
     <div style={{ minHeight: "100dvh", background: DS.bg, fontFamily: DS.font, color: DS.ink }}>
       <main style={{ padding: "0 20px", paddingBottom: 110 }}>
-        <div style={{ paddingTop: "max(60px, env(safe-area-inset-top))" }}>
+        <div style={{ paddingTop: "max(60px, calc(env(safe-area-inset-top, 0px) + 16px))" }}>
 
           {/* Title */}
           <div style={{ padding: "8px 0 22px" }}>

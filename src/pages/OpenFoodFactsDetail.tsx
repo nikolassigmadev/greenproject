@@ -352,7 +352,7 @@ export default function OpenFoodFactsDetail() {
           <div style={{ maxWidth: 520, margin: "0 auto" }}>
 
             {/* Header */}
-            <div style={{ paddingTop: "max(60px, env(safe-area-inset-top))", marginBottom: 24 }}>
+            <div style={{ paddingTop: "max(60px, calc(env(safe-area-inset-top, 0px) + 16px))", marginBottom: 24 }}>
               <p style={{ fontSize: 13, fontWeight: 600, color: DS.good, margin: "0 0 6px", letterSpacing: 0.3 }}>
                 GoodScan
               </p>
@@ -468,7 +468,7 @@ export default function OpenFoodFactsDetail() {
   if (error || !product) {
     return (
       <div style={{ background: DS.bg, fontFamily: DS.font, color: DS.ink, minHeight: "100dvh", display: "flex", flexDirection: "column" }}>
-        <div style={{ flex: 1, padding: "0 20px", paddingTop: "max(24px, env(safe-area-inset-top))", maxWidth: 560, margin: "0 auto", width: "100%" }}>
+        <div style={{ flex: 1, padding: "0 20px", paddingTop: "max(24px, calc(env(safe-area-inset-top, 0px) + 16px))", maxWidth: 560, margin: "0 auto", width: "100%" }}>
           <div style={{ background: "#fef2f2", borderRadius: 16, border: "1px solid #fecaca", padding: 18, display: "flex", alignItems: "flex-start", gap: 14 }}>
             <XCircle style={{ color: "#ef4444", width: 20, height: 20, flexShrink: 0, marginTop: 2 }} />
             <div>
