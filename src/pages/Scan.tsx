@@ -1335,7 +1335,7 @@ const Scan = () => {
   };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 60, backgroundColor: '#0e0e10', overflow: 'hidden', fontFamily: '"Inter", -apple-system, system-ui, sans-serif' }}>
+    <div style={{ position: 'fixed', top: 'calc(-1 * env(safe-area-inset-top, 0px))', left: 0, right: 0, bottom: 'calc(-1 * env(safe-area-inset-bottom, 0px))', zIndex: 60, backgroundColor: '#0e0e10', overflow: 'hidden', fontFamily: '"Inter", -apple-system, system-ui, sans-serif' }}>
 
       {/* ── Priorities gate ─────────────────────────────────────────────── */}
       {isDefaultPriorities && (
