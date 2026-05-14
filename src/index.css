@@ -80,6 +80,10 @@
     overflow: auto;
   }
 
+  html {
+    background: #0e0e10;
+  }
+
   body {
     @apply bg-background text-foreground antialiased;
     font-family: 'Inter', system-ui, sans-serif;
