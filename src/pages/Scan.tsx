@@ -1633,10 +1633,12 @@ const Scan = () => {
 
       {/* Bottom panel */}
       <div style={{
-        position: 'absolute', bottom: 0, left: 0, right: 0,
-        paddingBottom: 'max(20px, env(safe-area-inset-bottom))',
+        position: 'absolute', bottom: 'calc(-1 * env(safe-area-inset-bottom, 0px))', left: 0, right: 0,
+        paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)',
         zIndex: 20,
         pointerEvents: 'none',
+        background: 'linear-gradient(to bottom, transparent 0%, rgba(14,14,16,0.55) 30%, rgba(14,14,16,0.92) 65%, #0e0e10 100%)',
+        paddingTop: 40,
       }}>
         {/* Camera controls */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 32, padding: '0 40px 16px', pointerEvents: 'auto' }}>
