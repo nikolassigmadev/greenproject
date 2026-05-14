@@ -383,7 +383,7 @@ const Scan = () => {
   useEffect(() => {
     const html = document.documentElement;
     const prev = html.style.background;
-    html.style.background = '#F2F1ED';
+    html.style.background = '#F7F6F3';
     return () => { html.style.background = prev; };
   }, []);
 
@@ -1442,7 +1442,7 @@ const Scan = () => {
       {/* ════════════════════ WHITE TOP BAR ════════════════════ */}
       <div style={{
         flexShrink: 0,
-        background: '#F2F1ED',
+        background: '#F7F6F3',
         paddingTop: 'env(safe-area-inset-top, 0px)',
         zIndex: 20,
       }}>
@@ -1629,7 +1629,7 @@ const Scan = () => {
       {/* ════════════════════ WHITE BOTTOM BAR ════════════════════ */}
       <div style={{
         flexShrink: 0,
-        background: '#F2F1ED',
+        background: '#F7F6F3',
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
         zIndex: 20,
       }}>
@@ -1716,7 +1716,7 @@ const Scan = () => {
         <div
           style={{
             position: 'absolute', bottom: 0, left: 0, right: 0,
-            background: '#F2F1ED',
+            background: '#F7F6F3',
             borderRadius: '20px 20px 0 0',
             padding: '20px 20px calc(env(safe-area-inset-bottom, 0px) + 24px)',
             zIndex: 50,
@@ -1751,7 +1751,7 @@ const Scan = () => {
         <div
           style={{
             position: 'absolute', inset: 0, zIndex: 40,
-            background: '#F2F1ED',
+            background: '#F7F6F3',
             display: 'flex', flexDirection: 'column',
             padding: 'calc(env(safe-area-inset-top, 0px) + 52px) 20px calc(env(safe-area-inset-bottom, 0px) + 28px)',
             boxSizing: 'border-box',
