@@ -383,7 +383,7 @@ const Scan = () => {
   useEffect(() => {
     const html = document.documentElement;
     const prev = html.style.background;
-    html.style.background = '#fff';
+    html.style.background = '#F2F1ED';
     return () => { html.style.background = prev; };
   }, []);
 
@@ -1442,7 +1442,7 @@ const Scan = () => {
       {/* ════════════════════ WHITE TOP BAR ════════════════════ */}
       <div style={{
         flexShrink: 0,
-        background: '#fff',
+        background: '#F2F1ED',
         paddingTop: 'env(safe-area-inset-top, 0px)',
         zIndex: 20,
       }}>
@@ -1454,7 +1454,7 @@ const Scan = () => {
           <Link to="/" onClick={() => stopCamera()} style={{ textDecoration: 'none' }}>
             <div style={{
               width: 36, height: 36, borderRadius: 18,
-              backgroundColor: '#f2f2f7',
+              backgroundColor: '#E8E6E1',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
               <X size={16} color="#1A1614" />
@@ -1471,7 +1471,7 @@ const Scan = () => {
             onClick={() => setFlashOn(f => !f)}
             style={{
               width: 36, height: 36, borderRadius: 18,
-              backgroundColor: flashOn ? '#FFF8E1' : '#f2f2f7',
+              backgroundColor: flashOn ? '#FFF8E1' : '#E8E6E1',
               border: 'none', cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               transition: 'all 0.15s',
@@ -1488,7 +1488,7 @@ const Scan = () => {
           }}>
             <div style={{
               display: 'flex', alignItems: 'center', gap: 6,
-              background: '#f2f2f7',
+              background: '#E8E6E1',
               borderRadius: 50,
               padding: '5px 14px',
             }}>
@@ -1629,7 +1629,7 @@ const Scan = () => {
       {/* ════════════════════ WHITE BOTTOM BAR ════════════════════ */}
       <div style={{
         flexShrink: 0,
-        background: '#fff',
+        background: '#F2F1ED',
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
         zIndex: 20,
       }}>
@@ -1643,7 +1643,7 @@ const Scan = () => {
             disabled={isDefaultPriorities}
             style={{
               width: 48, height: 48, borderRadius: 14,
-              backgroundColor: '#f2f2f7',
+              backgroundColor: '#E8E6E1',
               border: 'none',
               color: '#1A1614',
               cursor: isDefaultPriorities ? 'not-allowed' : 'pointer',
@@ -1699,7 +1699,7 @@ const Scan = () => {
             onClick={() => setShowSearch(s => !s)}
             style={{
               width: 48, height: 48, borderRadius: 14,
-              backgroundColor: '#f2f2f7',
+              backgroundColor: '#E8E6E1',
               border: 'none',
               color: '#1A1614',
               cursor: 'pointer',
@@ -1716,7 +1716,7 @@ const Scan = () => {
         <div
           style={{
             position: 'absolute', bottom: 0, left: 0, right: 0,
-            background: '#fff',
+            background: '#F2F1ED',
             borderRadius: '20px 20px 0 0',
             padding: '20px 20px calc(env(safe-area-inset-bottom, 0px) + 24px)',
             zIndex: 50,
@@ -1751,7 +1751,7 @@ const Scan = () => {
         <div
           style={{
             position: 'absolute', inset: 0, zIndex: 40,
-            background: '#fff',
+            background: '#F2F1ED',
             display: 'flex', flexDirection: 'column',
             padding: 'calc(env(safe-area-inset-top, 0px) + 52px) 20px calc(env(safe-area-inset-bottom, 0px) + 28px)',
             boxSizing: 'border-box',
@@ -1771,9 +1771,9 @@ const Scan = () => {
                 placeholder={scanMode === 'Barcode' ? 'Barcode number…' : 'e.g. Coca-Cola, Weetbix…'}
                 style={{
                   width: '100%', height: 50,
-                  border: '1.5px solid #e5e5ea',
+                  border: '1.5px solid #DDD9D2',
                   borderRadius: 14,
-                  backgroundColor: '#f2f2f7',
+                  backgroundColor: '#E8E6E1',
                   fontSize: '1rem', padding: '0 14px 0 42px', outline: 'none',
                   color: '#1A1614',
                   boxSizing: 'border-box',
@@ -1785,7 +1785,7 @@ const Scan = () => {
               disabled={!barcodeInput.trim() || offLoading}
               style={{
                 height: 50, borderRadius: 14, border: 'none',
-                backgroundColor: barcodeInput.trim() ? '#1A1614' : '#f2f2f7',
+                backgroundColor: barcodeInput.trim() ? '#1A1614' : '#E8E6E1',
                 color: barcodeInput.trim() ? '#fff' : '#8C8278',
                 fontWeight: 700, fontSize: '0.9rem',
                 padding: '0 20px', cursor: 'pointer',
@@ -1837,9 +1837,9 @@ const Scan = () => {
             onClick={() => setShowSearch(false)}
             style={{
               width: '100%', padding: '14px',
-              border: '1.5px solid #e5e5ea',
+              border: '1.5px solid #DDD9D2',
               borderRadius: 14,
-              backgroundColor: '#f2f2f7',
+              backgroundColor: '#E8E6E1',
               color: '#8C8278', fontWeight: 600, fontSize: '0.9rem',
               cursor: 'pointer',
             }}
