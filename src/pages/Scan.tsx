@@ -379,11 +379,11 @@ const Scan = () => {
   const [scanMode, setScanMode] = useState<'Scan Food' | 'Barcode' | 'Food label'>('Scan Food');
 
   // When arriving from Preferences save, scroll to viewfinder and show message
-  // Set html background to dark while Scan is mounted
+  // Set html background to white while Scan is mounted (matches white chrome)
   useEffect(() => {
     const html = document.documentElement;
     const prev = html.style.background;
-    html.style.background = '#0e0e10';
+    html.style.background = '#fff';
     return () => { html.style.background = prev; };
   }, []);
 
@@ -1342,8 +1342,12 @@ const Scan = () => {
     }
   };
 
+  // ── Shared chrome heights ──
+  const TOP_BAR_H = 96;   // white top bar (includes safe area)
+  const BOT_BAR_H = 160;  // white bottom bar (includes safe area)
+
   return (
-    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 'calc(-1 * env(safe-area-inset-bottom, 0px))', zIndex: 60, backgroundColor: '#0e0e10', overflow: 'hidden', fontFamily: '"Inter", -apple-system, system-ui, sans-serif' }}>
+    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 'calc(-1 * env(safe-area-inset-bottom, 0px))', zIndex: 60, backgroundColor: '#000', overflow: 'hidden', fontFamily: '"Inter", -apple-system, system-ui, sans-serif', display: 'flex', flexDirection: 'column' }}>
 
       {/* ── Priorities gate ─────────────────────────────────────────────── */}
       {isDefaultPriorities && (
@@ -1435,236 +1439,218 @@ const Scan = () => {
       {/* Hidden canvas for photo capture */}
       <canvas ref={canvasRef} style={{ display: 'none' }} />
 
-      {/* Full-screen camera video */}
-      <video
-        ref={videoRef}
-        autoPlay
-        playsInline
-        muted
-        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
-      />
-
-      {/* Frozen frame after capture, or dark background when camera not yet active */}
-      {!cameraActive && !cameraInitializing && (
-        frozenFrame
-          ? <img src={frozenFrame} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
-          : <div style={{ position: 'absolute', inset: 0, background: '#0e0e10' }} />
-      )}
-
-      {/* Subtle edge vignette */}
+      {/* ════════════════════ WHITE TOP BAR ════════════════════ */}
       <div style={{
-        position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 2,
-        background: 'radial-gradient(ellipse 80% 70% at 50% 45%, transparent 70%, rgba(14,14,16,0.4) 100%)',
-      }} />
-
-      {/* Scan line when loading */}
-      {offSearchLoading && (
-        <div style={{
-          position: 'absolute', top: '26%', left: '12%', right: '12%',
-          height: '2px',
-          background: 'linear-gradient(90deg, transparent, #4ade80, transparent)',
-          boxShadow: '0 0 12px #4ade80, 0 0 28px rgba(74,222,128,0.6)',
-          animation: 'scanLine 1.8s ease-in-out infinite',
-          zIndex: 8,
-          borderRadius: 99,
-        }} />
-      )}
-
-      {/* Scanning bracket corners */}
-      {(['tl','tr','bl','br'] as const).map(corner => {
-        const top = corner.startsWith('t');
-        const left = corner.endsWith('l');
-        const color = offSearchLoading ? 'rgba(74,222,128,0.7)' : 'rgba(255,255,255,0.4)';
-        return (
-          <div key={corner} style={{
-            position: 'absolute',
-            top: top ? '22%' : undefined,
-            bottom: !top ? '28%' : undefined,
-            left: left ? '10%' : undefined,
-            right: !left ? '10%' : undefined,
-            width: 24, height: 24,
-            borderTop: top ? `2px solid ${color}` : undefined,
-            borderBottom: !top ? `2px solid ${color}` : undefined,
-            borderLeft: left ? `2px solid ${color}` : undefined,
-            borderRight: !left ? `2px solid ${color}` : undefined,
-            borderRadius: top && left ? '6px 0 0 0' : top && !left ? '0 6px 0 0' : !top && left ? '0 0 0 6px' : '0 0 6px 0',
-            zIndex: 8,
-            transition: 'border-color 0.3s',
-          }} />
-        );
-      })}
-
-      {/* Viewfinder centre label */}
-      <div style={{
-        position: 'absolute',
-        top: '50%', left: '50%',
-        transform: 'translate(-50%, -50%)',
-        zIndex: 9, pointerEvents: 'none',
-        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
-      }}>
-        {offSearchLoading ? (
-          <>
-            <div style={{
-              width: 48, height: 48, borderRadius: '50%',
-              background: 'rgba(74,222,128,0.15)',
-              border: '2px solid rgba(74,222,128,0.5)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              backdropFilter: 'blur(4px)',
-            }}>
-              <Loader2 size={22} style={{ color: '#4ade80', animation: 'spin 1s linear infinite' }} />
-            </div>
-            <div style={{
-              background: 'rgba(14,14,16,0.8)', backdropFilter: 'blur(8px)',
-              borderRadius: 20, padding: '5px 14px',
-            }}>
-              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#fff' }}>
-                Scanning {Math.round(scanProgress)}%
-              </span>
-            </div>
-          </>
-        ) : !cameraActive && !frozenFrame && !cameraInitializing ? (
-          <div style={{
-            textAlign: 'center',
-            background: 'rgba(14,14,16,0.6)',
-            backdropFilter: 'blur(8px)',
-            WebkitBackdropFilter: 'blur(8px)',
-            borderRadius: 16, padding: '12px 20px',
-          }}>
-            <p style={{ fontSize: '0.9rem', fontWeight: 700, color: '#fff', margin: 0 }}>
-              Point at a product
-            </p>
-            <p style={{ fontSize: '0.75rem', fontWeight: 500, color: 'rgba(255,255,255,0.5)', margin: '4px 0 0' }}>
-              or tap search below
-            </p>
-          </div>
-        ) : null}
-      </div>
-
-      {/* Top bar */}
-      <div style={{
-        position: 'absolute', top: 0, left: 0, right: 0,
-        paddingTop: 'calc(env(safe-area-inset-top, 0px) + 14px)',
-        paddingLeft: 16, paddingRight: 16, paddingBottom: 14,
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        flexShrink: 0,
+        background: '#fff',
+        paddingTop: 'env(safe-area-inset-top, 0px)',
         zIndex: 20,
       }}>
-        {/* Close */}
-        <Link to="/" onClick={() => stopCamera()}>
-          <button style={{
-            width: 36, height: 36, borderRadius: 18,
-            backgroundColor: 'rgba(255,255,255,0.12)',
-            backdropFilter: 'blur(10px)',
-            WebkitBackdropFilter: 'blur(10px)',
-            border: 'none',
-            color: '#fff', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <X size={16} />
-          </button>
-        </Link>
+        <div style={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          padding: '12px 16px 14px',
+        }}>
+          {/* Close */}
+          <Link to="/" onClick={() => stopCamera()} style={{ textDecoration: 'none' }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: 18,
+              backgroundColor: '#f2f2f7',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <X size={16} color="#1A1614" />
+            </div>
+          </Link>
 
-        {/* Right actions */}
-        <div style={{ display: 'flex', gap: 6 }}>
+          {/* Centre label */}
+          <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#1A1614', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+            GoodScan
+          </span>
+
+          {/* Flash */}
           <button
             onClick={() => setFlashOn(f => !f)}
             style={{
               width: 36, height: 36, borderRadius: 18,
-              backgroundColor: flashOn ? 'rgba(251,191,36,0.25)' : 'rgba(255,255,255,0.12)',
-              backdropFilter: 'blur(10px)',
-              WebkitBackdropFilter: 'blur(10px)',
-              border: 'none',
-              color: flashOn ? '#FBBF24' : '#fff', cursor: 'pointer',
+              backgroundColor: flashOn ? '#FFF8E1' : '#f2f2f7',
+              border: 'none', cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               transition: 'all 0.15s',
             }}
           >
-            <Zap size={15} strokeWidth={flashOn ? 2.5 : 1.8} />
+            <Zap size={16} strokeWidth={flashOn ? 2.5 : 1.8} color={flashOn ? '#F59E0B' : '#8C8278'} />
           </button>
+        </div>
+
+        {/* Status pills inside top bar */}
+        {(cameraInitializing || prioritiesJustSaved) && (
+          <div style={{
+            display: 'flex', justifyContent: 'center', paddingBottom: 10,
+          }}>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              background: '#f2f2f7',
+              borderRadius: 50,
+              padding: '5px 14px',
+            }}>
+              {prioritiesJustSaved ? (
+                <><Check size={12} style={{ color: '#1F6B4E' }} /><span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#1A1614' }}>Values saved — ready!</span></>
+              ) : (
+                <><Loader2 size={12} style={{ animation: 'spin 1s linear infinite', color: '#8C8278' }} /><span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#8C8278' }}>Starting camera…</span></>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Priorities CTA pill inside top bar */}
+        {isDefaultPriorities && !cameraInitializing && (
+          <div style={{ display: 'flex', justifyContent: 'center', paddingBottom: 10 }}>
+            <Link
+              to="/preferences"
+              onClick={() => stopCamera()}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                background: DS.warnBg,
+                borderRadius: 50,
+                border: `1px solid ${DS.warn}33`,
+                padding: '6px 14px',
+                textDecoration: 'none',
+              }}
+            >
+              <AlertCircle size={12} style={{ color: DS.warn, flexShrink: 0 }} />
+              <span style={{ fontSize: '0.72rem', fontWeight: 700, color: DS.ink }}>Set your values to scan</span>
+              <ChevronRight size={12} style={{ color: DS.muted }} />
+            </Link>
+          </div>
+        )}
+      </div>
+
+      {/* ════════════════════ CAMERA VIEWFINDER ════════════════════ */}
+      <div style={{ flex: 1, position: 'relative', overflow: 'hidden', borderRadius: '18px', margin: '0 4px' }}>
+        {/* Camera video */}
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+        />
+
+        {/* Frozen frame / dark placeholder */}
+        {!cameraActive && !cameraInitializing && (
+          frozenFrame
+            ? <img src={frozenFrame} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
+            : <div style={{ position: 'absolute', inset: 0, background: '#111' }} />
+        )}
+
+        {/* Scan line when loading */}
+        {offSearchLoading && (
+          <div style={{
+            position: 'absolute', top: '30%', left: '14%', right: '14%',
+            height: '2px',
+            background: 'linear-gradient(90deg, transparent, #4ade80, transparent)',
+            boxShadow: '0 0 12px #4ade80, 0 0 28px rgba(74,222,128,0.6)',
+            animation: 'scanLine 1.8s ease-in-out infinite',
+            zIndex: 8,
+            borderRadius: 99,
+          }} />
+        )}
+
+        {/* Scanning bracket corners */}
+        {(['tl','tr','bl','br'] as const).map(corner => {
+          const isTop = corner.startsWith('t');
+          const isLeft = corner.endsWith('l');
+          const clr = offSearchLoading ? 'rgba(74,222,128,0.8)' : 'rgba(255,255,255,0.35)';
+          return (
+            <div key={corner} style={{
+              position: 'absolute',
+              top: isTop ? '12%' : undefined,
+              bottom: !isTop ? '12%' : undefined,
+              left: isLeft ? '10%' : undefined,
+              right: !isLeft ? '10%' : undefined,
+              width: 28, height: 28,
+              borderTop: isTop ? `2.5px solid ${clr}` : undefined,
+              borderBottom: !isTop ? `2.5px solid ${clr}` : undefined,
+              borderLeft: isLeft ? `2.5px solid ${clr}` : undefined,
+              borderRight: !isLeft ? `2.5px solid ${clr}` : undefined,
+              borderRadius: isTop && isLeft ? '8px 0 0 0' : isTop && !isLeft ? '0 8px 0 0' : !isTop && isLeft ? '0 0 0 8px' : '0 0 8px 0',
+              zIndex: 8,
+              transition: 'border-color 0.3s',
+            }} />
+          );
+        })}
+
+        {/* Centre label */}
+        <div style={{
+          position: 'absolute',
+          top: '50%', left: '50%',
+          transform: 'translate(-50%, -50%)',
+          zIndex: 9, pointerEvents: 'none',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+        }}>
+          {offSearchLoading ? (
+            <>
+              <div style={{
+                width: 48, height: 48, borderRadius: '50%',
+                background: 'rgba(74,222,128,0.15)',
+                border: '2px solid rgba(74,222,128,0.5)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                backdropFilter: 'blur(4px)',
+              }}>
+                <Loader2 size={22} style={{ color: '#4ade80', animation: 'spin 1s linear infinite' }} />
+              </div>
+              <div style={{
+                background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(8px)',
+                borderRadius: 20, padding: '5px 14px',
+              }}>
+                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#fff' }}>
+                  Scanning {Math.round(scanProgress)}%
+                </span>
+              </div>
+            </>
+          ) : !cameraActive && !frozenFrame && !cameraInitializing ? (
+            <div style={{
+              textAlign: 'center',
+              background: 'rgba(0,0,0,0.5)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+              borderRadius: 14, padding: '10px 18px',
+            }}>
+              <p style={{ fontSize: '0.88rem', fontWeight: 700, color: '#fff', margin: 0 }}>
+                Point at a product
+              </p>
+              <p style={{ fontSize: '0.72rem', fontWeight: 500, color: 'rgba(255,255,255,0.55)', margin: '3px 0 0' }}>
+                or tap search below
+              </p>
+            </div>
+          ) : null}
         </div>
       </div>
 
-      {/* Status pills */}
-      {(cameraInitializing || prioritiesJustSaved) && (
-        <div style={{
-          position: 'absolute',
-          top: 'calc(env(safe-area-inset-top, 0px) + 62px + 52px)',
-          left: '50%', transform: 'translateX(-50%)',
-          display: 'flex', alignItems: 'center', gap: 6,
-          background: 'rgba(14,14,16,0.85)',
-          backdropFilter: 'blur(10px)',
-          WebkitBackdropFilter: 'blur(10px)',
-          border: '1px solid rgba(255,255,255,0.12)',
-          borderRadius: 50,
-          padding: '6px 14px',
-          whiteSpace: 'nowrap', zIndex: 15,
-        }}>
-          {prioritiesJustSaved ? (
-            <><Check size={12} style={{ color: '#00C853' }} /><span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#fff' }}>Values saved — ready!</span></>
-          ) : (
-            <><Loader2 size={12} style={{ animation: 'spin 1s linear infinite', color: '#fff' }} /><span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'rgba(255,255,255,0.8)' }}>Starting camera…</span></>
-          )}
-        </div>
-      )}
-
-      {/* Priorities CTA */}
-      {isDefaultPriorities && (
-        <Link
-          to="/preferences"
-          onClick={() => stopCamera()}
-          style={{
-            position: 'absolute',
-            top: 'calc(env(safe-area-inset-top, 0px) + 62px + 52px)',
-            left: '50%', transform: 'translateX(-50%)',
-            display: 'flex', alignItems: 'center', gap: 8,
-            background: DS.card,
-            boxShadow: '0 2px 10px rgba(0,0,0,0.1), 0 0 0 1px rgba(0,0,0,0.04)',
-            borderRadius: 50,
-            border: `1px solid ${DS.hair}`,
-            color: DS.warn, padding: '7px 16px',
-            whiteSpace: 'nowrap', zIndex: 15, textDecoration: 'none',
-            fontFamily: DS.font,
-          }}
-        >
-          <AlertCircle size={13} style={{ color: DS.warn, flexShrink: 0 }} />
-          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: DS.ink }}>Set your values to scan</span>
-          <ChevronRight size={13} style={{ color: DS.muted }} />
-        </Link>
-      )}
-
-      {/* Bottom safe-area fill — blends dark UI into the white iOS home bar zone */}
+      {/* ════════════════════ WHITE BOTTOM BAR ════════════════════ */}
       <div style={{
-        position: 'absolute', bottom: 'calc(-1 * env(safe-area-inset-bottom, 0px))', left: 0, right: 0,
-        height: 'env(safe-area-inset-bottom, 0px)',
-        background: 'linear-gradient(to bottom, #0e0e10, rgba(14,14,16,0.4) 60%, transparent 100%)',
-        zIndex: 19,
-        pointerEvents: 'none',
-      }} />
-
-      {/* Bottom panel */}
-      <div style={{
-        position: 'absolute', bottom: 0, left: 0, right: 0,
-        paddingBottom: 16,
+        flexShrink: 0,
+        background: '#fff',
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
         zIndex: 20,
-        pointerEvents: 'none',
       }}>
-        {/* Camera controls */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 32, padding: '0 40px 16px', pointerEvents: 'auto' }}>
-
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          gap: 36, padding: '14px 40px 10px',
+        }}>
           {/* Gallery */}
           <button
             onClick={() => { if (!isDefaultPriorities) offFileInputRef.current?.click(); }}
             disabled={isDefaultPriorities}
             style={{
               width: 48, height: 48, borderRadius: 14,
-              backgroundColor: 'rgba(255,255,255,0.12)',
-              backdropFilter: 'blur(10px)',
-              WebkitBackdropFilter: 'blur(10px)',
+              backgroundColor: '#f2f2f7',
               border: 'none',
-              color: 'rgba(255,255,255,0.8)',
+              color: '#1A1614',
               cursor: isDefaultPriorities ? 'not-allowed' : 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               overflow: 'hidden',
               opacity: isDefaultPriorities ? 0.35 : 1,
+              transition: 'opacity 0.15s',
             }}
           >
             {offSearchImage ? (
@@ -1679,9 +1665,9 @@ const Scan = () => {
             onClick={handleShutter}
             disabled={offSearchLoading || isDefaultPriorities}
             style={{
-              width: 72, height: 72, borderRadius: '50%',
+              width: 70, height: 70, borderRadius: '50%',
               backgroundColor: 'transparent',
-              border: `3px solid ${isDefaultPriorities ? 'rgba(255,255,255,0.2)' : offSearchLoading ? 'rgba(74,222,128,0.6)' : 'rgba(255,255,255,0.9)'}`,
+              border: `3.5px solid ${isDefaultPriorities ? '#ddd' : offSearchLoading ? '#4ade80' : '#1A1614'}`,
               cursor: (offSearchLoading || isDefaultPriorities) ? 'not-allowed' : 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               transition: 'all 0.15s',
@@ -1691,17 +1677,19 @@ const Scan = () => {
             onTouchEnd={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)'; }}
           >
             <div style={{
-              width: 58, height: 58, borderRadius: '50%',
+              width: 56, height: 56, borderRadius: '50%',
               background: isDefaultPriorities
-                ? 'rgba(255,255,255,0.2)'
+                ? '#eee'
                 : offSearchLoading
-                  ? 'rgba(74,222,128,0.3)'
-                  : '#fff',
+                  ? 'rgba(74,222,128,0.2)'
+                  : '#1A1614',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               transition: 'all 0.15s',
             }}>
-              {offSearchLoading && (
+              {offSearchLoading ? (
                 <Loader2 size={22} style={{ color: '#4ade80', animation: 'spin 1s linear infinite' }} />
+              ) : (
+                <ScanLine size={22} style={{ color: '#fff' }} />
               )}
             </div>
           </button>
@@ -1711,11 +1699,9 @@ const Scan = () => {
             onClick={() => setShowSearch(s => !s)}
             style={{
               width: 48, height: 48, borderRadius: 14,
-              backgroundColor: 'rgba(255,255,255,0.12)',
-              backdropFilter: 'blur(10px)',
-              WebkitBackdropFilter: 'blur(10px)',
+              backgroundColor: '#f2f2f7',
               border: 'none',
-              color: 'rgba(255,255,255,0.8)',
+              color: '#1A1614',
               cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}
@@ -1730,12 +1716,11 @@ const Scan = () => {
         <div
           style={{
             position: 'absolute', bottom: 0, left: 0, right: 0,
-            background: DS.card,
-            borderTop: `1px solid ${DS.hair}`,
+            background: '#fff',
             borderRadius: '20px 20px 0 0',
-            padding: '20px 20px max(32px, env(safe-area-inset-bottom))',
+            padding: '20px 20px calc(env(safe-area-inset-bottom, 0px) + 24px)',
             zIndex: 50,
-            boxShadow: '0 -4px 24px rgba(26,22,20,0.15)',
+            boxShadow: '0 -4px 24px rgba(0,0,0,0.1)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
@@ -1743,15 +1728,15 @@ const Scan = () => {
               <AlertCircle size={18} style={{ color: DS.bad }} />
             </div>
             <div>
-              <p style={{ fontWeight: 800, fontSize: '0.95rem', color: DS.ink, marginBottom: 2 }}>Product not found</p>
-              <p style={{ fontSize: '0.78rem', color: DS.muted, lineHeight: 1.4 }}>Try a clearer photo of the barcode or label.</p>
+              <p style={{ fontWeight: 800, fontSize: '0.95rem', color: '#1A1614', marginBottom: 2 }}>Product not found</p>
+              <p style={{ fontSize: '0.78rem', color: '#8C8278', lineHeight: 1.4 }}>Try a clearer photo of the barcode or label.</p>
             </div>
           </div>
           <button
             onClick={() => { setProductUnknown(false); offFileInputRef.current?.click(); }}
             style={{
               width: '100%', height: 48, border: 'none', borderRadius: 14,
-              backgroundColor: DS.ink, color: DS.card,
+              backgroundColor: '#1A1614', color: '#fff',
               fontWeight: 700, fontSize: '0.9rem',
               cursor: 'pointer', marginTop: 8,
             }}
@@ -1766,18 +1751,18 @@ const Scan = () => {
         <div
           style={{
             position: 'absolute', inset: 0, zIndex: 40,
-            background: DS.card,
+            background: '#fff',
             display: 'flex', flexDirection: 'column',
             padding: 'calc(env(safe-area-inset-top, 0px) + 52px) 20px calc(env(safe-area-inset-bottom, 0px) + 28px)',
             boxSizing: 'border-box',
           }}
         >
-          <p style={{ fontSize: '1.25rem', fontWeight: 800, color: DS.ink, marginBottom: 4 }}>Search by name or barcode</p>
-          <p style={{ fontSize: '0.82rem', color: DS.muted, marginBottom: 18 }}>Enter a product name or scan barcode number</p>
+          <p style={{ fontSize: '1.25rem', fontWeight: 800, color: '#1A1614', marginBottom: 4 }}>Search by name or barcode</p>
+          <p style={{ fontSize: '0.82rem', color: '#8C8278', marginBottom: 18 }}>Enter a product name or scan barcode number</p>
 
           <form onSubmit={(e) => { e.preventDefault(); if (barcodeInput.trim()) { handleProductSearch(barcodeInput); } }} style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
             <div style={{ flex: 1, minWidth: 0, position: 'relative', display: 'flex', alignItems: 'center' }}>
-              <Search size={16} style={{ position: 'absolute', left: 14, color: DS.muted, pointerEvents: 'none' }} />
+              <Search size={16} style={{ position: 'absolute', left: 14, color: '#8C8278', pointerEvents: 'none' }} />
               <input
                 autoFocus
                 type="text"
@@ -1786,11 +1771,11 @@ const Scan = () => {
                 placeholder={scanMode === 'Barcode' ? 'Barcode number…' : 'e.g. Coca-Cola, Weetbix…'}
                 style={{
                   width: '100%', height: 50,
-                  border: `1.5px solid ${DS.hair}`,
+                  border: '1.5px solid #e5e5ea',
                   borderRadius: 14,
-                  backgroundColor: DS.bg,
+                  backgroundColor: '#f2f2f7',
                   fontSize: '1rem', padding: '0 14px 0 42px', outline: 'none',
-                  color: DS.ink,
+                  color: '#1A1614',
                   boxSizing: 'border-box',
                 }}
               />
@@ -1800,8 +1785,8 @@ const Scan = () => {
               disabled={!barcodeInput.trim() || offLoading}
               style={{
                 height: 50, borderRadius: 14, border: 'none',
-                backgroundColor: barcodeInput.trim() ? DS.ink : DS.bg,
-                color: barcodeInput.trim() ? DS.card : DS.muted,
+                backgroundColor: barcodeInput.trim() ? '#1A1614' : '#f2f2f7',
+                color: barcodeInput.trim() ? '#fff' : '#8C8278',
                 fontWeight: 700, fontSize: '0.9rem',
                 padding: '0 20px', cursor: 'pointer',
                 transition: 'background 0.15s',
@@ -1818,8 +1803,8 @@ const Scan = () => {
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
               padding: '20px 0',
             }}>
-              <Loader2 size={20} style={{ color: DS.ink, animation: 'spin 1s linear infinite' }} />
-              <span style={{ fontSize: '0.9rem', color: DS.muted, fontWeight: 500 }}>Searching for results…</span>
+              <Loader2 size={20} style={{ color: '#1A1614', animation: 'spin 1s linear infinite' }} />
+              <span style={{ fontSize: '0.9rem', color: '#8C8278', fontWeight: 500 }}>Searching for results…</span>
             </div>
           )}
 
@@ -1839,8 +1824,8 @@ const Scan = () => {
             >
               <AlertCircle size={14} style={{ color: DS.warn, flexShrink: 0 }} />
               <div style={{ flex: 1 }}>
-                <p style={{ fontSize: '0.82rem', fontWeight: 700, color: DS.ink, marginBottom: 1 }}>Set your values first</p>
-                <p style={{ fontSize: '0.72rem', color: DS.muted }}>Personalise every scan result</p>
+                <p style={{ fontSize: '0.82rem', fontWeight: 700, color: '#1A1614', marginBottom: 1 }}>Set your values first</p>
+                <p style={{ fontSize: '0.72rem', color: '#8C8278' }}>Personalise every scan result</p>
               </div>
               <ChevronRight size={14} style={{ color: DS.warn, flexShrink: 0 }} />
             </Link>
@@ -1852,10 +1837,10 @@ const Scan = () => {
             onClick={() => setShowSearch(false)}
             style={{
               width: '100%', padding: '14px',
-              border: `1.5px solid ${DS.hair}`,
+              border: '1.5px solid #e5e5ea',
               borderRadius: 14,
-              backgroundColor: DS.bg,
-              color: DS.muted, fontWeight: 600, fontSize: '0.9rem',
+              backgroundColor: '#f2f2f7',
+              color: '#8C8278', fontWeight: 600, fontSize: '0.9rem',
               cursor: 'pointer',
             }}
           >
@@ -1876,15 +1861,14 @@ const Scan = () => {
       {/* CSS animations */}
       <style>{`
         @keyframes scanLine {
-          0%   { top: 22%; opacity: 0.9; }
-          50%  { top: 58%; opacity: 0.5; }
-          100% { top: 22%; opacity: 0.9; }
+          0%   { top: 15%; opacity: 0.9; }
+          50%  { top: 70%; opacity: 0.5; }
+          100% { top: 15%; opacity: 0.9; }
         }
         @keyframes spin {
           from { transform: rotate(0deg); }
           to   { transform: rotate(360deg); }
         }
-        input::placeholder { color: rgba(255,255,255,0.28) !important; }
       `}</style>
 
     </div>
