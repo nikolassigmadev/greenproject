@@ -529,6 +529,7 @@ export default function OpenFoodFactsDetail() {
       )}>
         <div style={{
           maxWidth: 560, margin: "0 auto", padding: "10px 16px",
+          paddingTop: "calc(env(safe-area-inset-top, 0px) + 10px)",
           display: "flex", alignItems: "center", gap: 10,
           background: "rgba(241,235,221,0.94)",
           backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)",
@@ -561,7 +562,7 @@ export default function OpenFoodFactsDetail() {
             }}
             aria-label="Go back"
             style={{
-              position: "absolute", top: "max(18px, env(safe-area-inset-top))", left: 16,
+              position: "absolute", top: "calc(env(safe-area-inset-top, 0px) + 18px)", left: 16,
               width: 34, height: 34, borderRadius: 999, border: "none",
               background: "rgba(26,22,20,0.55)", color: EDITORIAL.card,
               display: "flex", alignItems: "center", justifyContent: "center",
@@ -571,7 +572,7 @@ export default function OpenFoodFactsDetail() {
             <ChevronLeft style={{ width: 18, height: 18 }} />
           </button>
           <div style={{
-            position: "absolute", top: "max(20px, env(safe-area-inset-top))", right: 16,
+            position: "absolute", top: "calc(env(safe-area-inset-top, 0px) + 20px)", right: 16,
             background: EDITORIAL.ink, color: EDITORIAL.card, padding: "8px 13px 8px 11px",
             borderRadius: 999, display: "inline-flex", alignItems: "center", gap: 7,
             fontSize: 12, fontWeight: 800, letterSpacing: 0.3,

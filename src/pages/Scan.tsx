@@ -1335,7 +1335,7 @@ const Scan = () => {
   };
 
   return (
-    <div style={{ position: 'fixed', top: 'calc(-1 * env(safe-area-inset-top, 0px))', left: 0, right: 0, bottom: 'calc(-1 * env(safe-area-inset-bottom, 0px))', zIndex: 60, backgroundColor: '#0e0e10', overflow: 'hidden', fontFamily: '"Inter", -apple-system, system-ui, sans-serif' }}>
+    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 'calc(-1 * env(safe-area-inset-bottom, 0px))', zIndex: 60, backgroundColor: '#0e0e10', overflow: 'hidden', fontFamily: '"Inter", -apple-system, system-ui, sans-serif' }}>
 
       {/* ── Priorities gate ─────────────────────────────────────────────── */}
       {isDefaultPriorities && (
@@ -1343,7 +1343,7 @@ const Scan = () => {
           position: 'absolute', inset: 0, zIndex: 100,
           background: DS.bg,
           display: 'flex', flexDirection: 'column',
-          padding: 'max(52px, env(safe-area-inset-top)) 24px max(32px, env(safe-area-inset-bottom))',
+          padding: 'calc(env(safe-area-inset-top, 0px) + 52px) 24px calc(env(safe-area-inset-bottom, 0px) + 32px)',
           fontFamily: DS.font,
         }}>
           {/* Close */}
@@ -1535,7 +1535,7 @@ const Scan = () => {
       {/* Top bar */}
       <div style={{
         position: 'absolute', top: 0, left: 0, right: 0,
-        paddingTop: 'max(14px, env(safe-area-inset-top))',
+        paddingTop: 'calc(env(safe-area-inset-top, 0px) + 14px)',
         paddingLeft: 16, paddingRight: 16, paddingBottom: 14,
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         zIndex: 20,
@@ -1579,7 +1579,7 @@ const Scan = () => {
       {(cameraInitializing || prioritiesJustSaved) && (
         <div style={{
           position: 'absolute',
-          top: 'calc(max(62px, env(safe-area-inset-top)) + 52px)',
+          top: 'calc(env(safe-area-inset-top, 0px) + 62px + 52px)',
           left: '50%', transform: 'translateX(-50%)',
           display: 'flex', alignItems: 'center', gap: 6,
           background: 'rgba(14,14,16,0.85)',
@@ -1605,7 +1605,7 @@ const Scan = () => {
           onClick={() => stopCamera()}
           style={{
             position: 'absolute',
-            top: 'calc(max(62px, env(safe-area-inset-top)) + 52px)',
+            top: 'calc(env(safe-area-inset-top, 0px) + 62px + 52px)',
             left: '50%', transform: 'translateX(-50%)',
             display: 'flex', alignItems: 'center', gap: 8,
             background: DS.card,
@@ -1751,7 +1751,7 @@ const Scan = () => {
             position: 'absolute', inset: 0, zIndex: 40,
             background: DS.card,
             display: 'flex', flexDirection: 'column',
-            padding: 'max(52px, env(safe-area-inset-top)) 20px max(28px, env(safe-area-inset-bottom))',
+            padding: 'calc(env(safe-area-inset-top, 0px) + 52px) 20px calc(env(safe-area-inset-bottom, 0px) + 28px)',
             boxSizing: 'border-box',
           }}
         >
