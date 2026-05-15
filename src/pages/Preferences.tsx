@@ -89,7 +89,7 @@ export default function Preferences() {
               My Values
             </h1>
             <button
-              onClick={() => navigate("/scan")}
+              onClick={() => { savePriorities(priorities); navigate("/scan"); }}
               style={{
                 background: DS.ink,
                 border: "none", borderRadius: DS.radius.sm,
