@@ -8,11 +8,11 @@ import {
 } from "lucide-react";
 import { DS } from "@/styles/design-tokens";
 
-const RED = "#E53935";
-const AMBER = "#F59E0B";
+const RED = DS.bad;
+const AMBER = DS.warn;
 const ORANGE = "#EA580C";
-const GREEN = "#00C853";
-const ACCENT = "#1a1a1a";
+const GREEN = DS.good;
+const ACCENT = DS.ink;
 
 export default function Methodology() {
   const lastUpdate = getMostRecentVerifiedDate();
@@ -38,7 +38,7 @@ export default function Methodology() {
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
         <div style={{
           width: 32, height: 32, borderRadius: 10,
-          background: `${iconColor}12`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+          background: DS.hair, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
         }}>
           <Icon style={{ width: 16, height: 16, color: iconColor }} />
         </div>
@@ -53,16 +53,16 @@ export default function Methodology() {
 
   return (
     <div style={{ minHeight: "100dvh", background: DS.bg, fontFamily: DS.font, color: DS.ink, display: "flex", flexDirection: "column" }}>
-      <main style={{ flex: 1, maxWidth: 640, margin: "0 auto", width: "100%", padding: `max(60px, calc(env(safe-area-inset-top, 0px) + 16px)) 20px 110px` }}>
+      <main style={{ flex: 1, maxWidth: 640, margin: "0 auto", width: "100%", padding: `max(60px, calc(env(safe-area-inset-top, 0px) + 16px)) 20px calc(env(safe-area-inset-bottom, 0px) + 130px)` }}>
 
         {/* Header */}
         <div style={{ textAlign: "center", marginBottom: 28 }}>
           <div style={{
             width: 56, height: 56, borderRadius: 16,
-            background: `${ACCENT}14`, display: "flex", alignItems: "center", justifyContent: "center",
+            background: DS.hair, display: "flex", alignItems: "center", justifyContent: "center",
             margin: "0 auto 14px",
           }}>
-            <Scale style={{ width: 28, height: 28, color: ACCENT }} />
+            <Scale style={{ width: 28, height: 28, color: DS.ink }} />
           </div>
           <h1 style={{ fontSize: 28, fontWeight: 700, letterSpacing: -0.5, color: DS.ink, marginBottom: 6 }}>Our Methodology</h1>
           <p style={{ fontSize: "0.85rem", color: DS.muted, lineHeight: 1.6, maxWidth: 380, margin: "0 auto" }}>
@@ -93,17 +93,17 @@ export default function Methodology() {
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {[
               {
-                label: "Critical", color: RED, bg: "#FFF0F0",
+                label: "Critical", color: RED, bg: DS.badBg,
                 desc: "Documented forced labour, child labour, or modern slavery confirmed by a government body, court ruling, or corporate admission.",
                 examples: "CBP Withhold Release Order, US federal court verdict, DOL child labour investigation",
               },
               {
-                label: "High", color: ORANGE, bg: "#FFF7ED",
+                label: "High", color: ORANGE, bg: DS.warnBg,
                 desc: "Serious findings with credible evidence from established NGOs or investigative outlets. Not yet confirmed by a government authority.",
                 examples: "Amnesty International report, Human Rights Watch investigation, BBC Dispatches",
               },
               {
-                label: "Medium", color: AMBER, bg: "#FFFBEB",
+                label: "Medium", color: AMBER, bg: DS.warnBg,
                 desc: "Ongoing concerns or unresolved supply-chain transparency gaps from campaign scorecards or multi-outlet investigations.",
                 examples: "Oxfam Behind the Brands scorecard, Green America Chocolate Scorecard",
               },
@@ -128,17 +128,17 @@ export default function Methodology() {
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {[
               {
-                tier: "Tier 1", color: RED, bg: "#FFF0F0", label: "Primary official record",
+                tier: "Tier 1", color: RED, bg: DS.badBg, label: "Primary official record",
                 types: "Court filing, regulatory finding, government report, corporate admission",
                 examples: "US DOL TVPRA list, CBP Withhold Release Order, Supreme Court opinion, OECD NCP complaint",
               },
               {
-                tier: "Tier 2", color: AMBER, bg: "#FFFBEB", label: "Independent NGO report",
+                tier: "Tier 2", color: AMBER, bg: DS.warnBg, label: "Independent NGO report",
                 types: "NGO report, academic study",
                 examples: "Amnesty International, Human Rights Watch, Oxfam, Greenpeace, BHRRC, Columbia Law School",
               },
               {
-                tier: "Tier 3", color: DS.muted, bg: "#F3F4F6", label: "Investigative journalism",
+                tier: "Tier 3", color: DS.muted, bg: DS.hair, label: "Investigative journalism",
                 types: "Investigative journalism, news report",
                 examples: "BBC, The Guardian, Washington Post, AP, Channel 4, NYT, Reporter Brasil",
               },
@@ -174,11 +174,12 @@ export default function Methodology() {
               { rule: "1 tier-2 + 2 tier-3 sources", detail: "One NGO report plus two separate investigative journalism pieces on the same allegation." },
             ].map((item, i) => (
               <div key={i} style={{
-                borderRadius: 12, background: `${GREEN}08`, border: `1px solid ${GREEN}25`,
+                borderRadius: 12, background: DS.goodBg,
                 padding: "14px 16px", display: "flex", gap: 12,
+                border: `1px solid ${DS.good}`,
               }}>
                 <div style={{
-                  width: 28, height: 28, borderRadius: 8, background: `${GREEN}18`,
+                  width: 28, height: 28, borderRadius: 8, background: DS.goodBg,
                   display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
                   fontSize: "0.75rem", fontWeight: 700, color: GREEN,
                 }}>
@@ -193,7 +194,7 @@ export default function Methodology() {
           </div>
 
           <div style={{
-            marginTop: 12, borderRadius: 10, background: `${AMBER}10`, border: `1px solid ${AMBER}30`,
+            marginTop: 12, borderRadius: 10, background: DS.warnBg, border: `1px solid ${DS.warn}`,
             padding: "12px 14px",
           }}>
             <p style={{ fontSize: "0.78rem", color: ORANGE, lineHeight: 1.6, fontWeight: 500 }}>
@@ -214,7 +215,7 @@ export default function Methodology() {
             ].map((item, i) => (
               <div key={i} style={{
                 display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 12px",
-                borderRadius: 10, background: i % 2 === 0 ? "#F9FAFB" : DS.card,
+                borderRadius: 10, background: i % 2 === 0 ? DS.bg : DS.card,
               }}>
                 <span style={{ color: RED, fontWeight: 700, fontSize: "0.85rem", flexShrink: 0, lineHeight: 1.5 }}>x</span>
                 <p style={{ fontSize: "0.8rem", color: DS.muted, lineHeight: 1.6 }}>{item}</p>
@@ -233,7 +234,7 @@ export default function Methodology() {
               { label: "All URLs Cited", value: "Yes", color: GREEN },
             ].map(({ label, value, color }) => (
               <div key={label} style={{
-                borderRadius: 12, background: "#F9FAFB",
+                borderRadius: 12, background: DS.bg,
                 padding: "14px", textAlign: "center",
               }}>
                 <p style={{ fontSize: "1.1rem", fontWeight: 800, color, lineHeight: 1, marginBottom: 4 }}>{value}</p>
@@ -245,13 +246,13 @@ export default function Methodology() {
 
         {/* 07 — Limitations */}
         <div style={{
-          background: `${AMBER}08`, borderRadius: 18,
+          background: DS.warnBg, borderRadius: 18,
           padding: "20px", marginBottom: 14,
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
             <div style={{
               width: 32, height: 32, borderRadius: 10,
-              background: `${AMBER}18`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+              background: DS.warnBg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
             }}>
               <AlertTriangle style={{ width: 16, height: 16, color: AMBER }} />
             </div>
