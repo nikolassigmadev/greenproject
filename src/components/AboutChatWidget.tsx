@@ -120,6 +120,7 @@ export function AboutChatWidget() {
             flexDirection: "column",
             zIndex: 1000,
             overflow: "hidden",
+            touchAction: "manipulation",
           }}
         >
           {/* Header */}
@@ -285,7 +286,7 @@ export function AboutChatWidget() {
                 border: `1px solid ${BORDER}`,
                 borderRadius: 10,
                 padding: "10px 12px",
-                fontSize: "0.85rem",
+                fontSize: "16px",
                 outline: "none",
                 color: TEXT,
                 background: BG,
