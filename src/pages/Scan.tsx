@@ -1186,17 +1186,34 @@ const Scan = () => {
         .toLowerCase().split(/\s+/).filter(w => w.length >= 4);
 
       let chosenCandidate = candidates[0];
-      if (ocrBrand.length >= 3 || ocrProductWords.length > 0) {
+      let matchFound = false;
+      const hasOcrSignal = ocrBrand.length >= 3 || ocrProductWords.length > 0;
+
+      if (hasOcrSignal) {
         for (const candidate of candidates) {
           const candidateText = `${candidate.productName || ''} ${candidate.brand || ''}`.toLowerCase();
           const brandOk = ocrBrand.length >= 3 && candidateText.includes(ocrBrand);
           const productOk = ocrProductWords.length > 0 && ocrProductWords.some(w => candidateText.includes(w));
           if (brandOk || productOk) {
             chosenCandidate = candidate;
+            matchFound = true;
             console.log(`✅ Matched candidate: "${candidate.productName}" by ${candidate.brand} (brand=${brandOk}, product=${productOk})`);
             break;
           }
         }
+      }
+
+      // If OCR identified a product but none of the OFF results match,
+      // don't show a random unrelated product — ask user to retry.
+      if (hasOcrSignal && !matchFound) {
+        const topName = `${candidates[0].productName || ''} ${candidates[0].brand || ''}`.trim();
+        console.warn(`⚠️ No OFF candidate matches OCR "${fullQuery}". Top result was "${topName}"`);
+        toast({
+          title: "Couldn't confirm match",
+          description: `We identified "${fullQuery}" but couldn't find a matching product in our database. Try a clearer image or search manually.`,
+          variant: "destructive",
+        });
+        return;
       }
 
       const finalCandidates = [chosenCandidate, ...candidates.filter(c => c.barcode !== chosenCandidate.barcode)];
@@ -1647,7 +1664,7 @@ const Scan = () => {
             style={{
               width: 70, height: 70, borderRadius: '50%',
               backgroundColor: 'transparent',
-              border: `3.5px solid ${isDefaultPriorities ? '#ddd' : offSearchLoading ? '#4ade80' : '#1A1614'}`,
+              border: `3.5px solid ${isDefaultPriorities ? '#ddd' : offSearchLoading ? '#4ade80' : DS.ink}`,
               cursor: (offSearchLoading || isDefaultPriorities) ? 'not-allowed' : 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               transition: 'all 0.15s',
@@ -1662,7 +1679,7 @@ const Scan = () => {
                 ? '#eee'
                 : offSearchLoading
                   ? 'rgba(74,222,128,0.2)'
-                  : '#1A1614',
+                  : DS.ink,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               transition: 'all 0.15s',
             }}>

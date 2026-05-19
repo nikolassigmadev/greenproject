@@ -4,6 +4,7 @@
  */
 
 import { checkAnimalWelfareFlag, getAnimalWelfareFlagEmoji, getAnimalWelfareFlagColor } from '@/utils/animalWelfareFlags';
+import { DS } from '@/styles/design-tokens';
 
 interface AnimalWelfareFlagBadgeProps {
   brand: string | null | undefined;
@@ -39,13 +40,13 @@ export function AnimalWelfareFlagBadge({ brand, showDetails = true }: AnimalWelf
         <h3 style={{ fontWeight: 'bold', color, marginBottom: '0.25rem' }}>
           Animal Welfare Concern
         </h3>
-        <p style={{ color: 'hsl(150 10% 35%)', fontSize: '0.9rem', marginBottom: showDetails ? '0.75rem' : 0 }}>
+        <p style={{ color: DS.ink2, fontSize: '0.9rem', marginBottom: showDetails ? '0.75rem' : 0 }}>
           {company.companyName} has poor animal welfare practices according to the BBFAW (Business Benchmark on Farm
           Animal Welfare).
         </p>
 
         {showDetails && company && (
-          <div style={{ fontSize: '0.85rem', color: 'hsl(150 10% 45%)' }}>
+          <div style={{ fontSize: '0.85rem', color: DS.ink2 }}>
             <p style={{ marginBottom: '0.5rem' }}>
               <strong>BBFAW Tier:</strong> {company.bbfawTier} ({company.bbfawScore})
             </p>
@@ -64,7 +65,7 @@ export function AnimalWelfareFlagBadge({ brand, showDetails = true }: AnimalWelf
                 </ul>
               </div>
             )}
-            <p style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: 'hsl(150 10% 55%)', fontStyle: 'italic' }}>
+            <p style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: DS.muted, fontStyle: 'italic' }}>
               Source: BBFAW 2024/2025 Report, World Animal Protection
             </p>
           </div>

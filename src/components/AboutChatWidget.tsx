@@ -112,14 +112,10 @@ export function AboutChatWidget() {
           aria-label="About chatbot"
           style={{
             position: "fixed",
-            right: 16,
-            bottom: 86,
-            width: "min(360px, calc(100vw - 32px))",
-            height: "min(520px, calc(100vh - 140px))",
+            inset: 0,
+            width: "100%",
+            height: "100dvh",
             background: CARD,
-            border: `1px solid ${BORDER}`,
-            borderRadius: 16,
-            boxShadow: "0 10px 40px rgba(0,0,0,0.18)",
             display: "flex",
             flexDirection: "column",
             zIndex: 1000,
@@ -130,11 +126,13 @@ export function AboutChatWidget() {
           <div
             style={{
               padding: "12px 14px",
+              paddingTop: "calc(env(safe-area-inset-top, 0px) + 12px)",
               borderBottom: `1px solid ${BORDER}`,
               display: "flex",
               alignItems: "center",
               gap: 10,
               background: BG,
+              flexShrink: 0,
             }}
           >
             <div
@@ -269,10 +267,11 @@ export function AboutChatWidget() {
           <div
             style={{
               borderTop: `1px solid ${BORDER}`,
-              padding: 10,
+              padding: "10px 10px calc(env(safe-area-inset-bottom, 0px) + 10px)",
               display: "flex",
               gap: 8,
               background: CARD,
+              flexShrink: 0,
             }}
           >
             <input
