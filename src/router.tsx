@@ -16,6 +16,7 @@ import AboutUs from "./pages/AboutUs";
 import Methodology from "./pages/Methodology";
 import Privacy from "./pages/Privacy";
 import { CalAIShowcase } from "./components/CalAIShowcase";
+import ChatGPTScan from "./pages/ChatGPTScan";
 
 // Import admin components - uncomment to enable
 import Admin from "./pages/Admin";
@@ -88,6 +89,10 @@ export const router = createBrowserRouter([
       {
         path: "/privacy",
         element: <Privacy />,
+      },
+      {
+        path: "/chatgpt",
+        element: <ChatGPTScan />,
       },
       {
         path: "/design-system",

@@ -208,6 +208,124 @@ ${ABOUT_US_KNOWLEDGE}`,
 });
 
 // =====================================================
+// CHATGPT PRODUCT ANALYSIS (no OpenFoodFacts)
+// =====================================================
+
+/**
+ * POST /api/chatgpt/analyze-product
+ * Pure ChatGPT product analysis — no OFF dependency.
+ * Accepts { query } (text) or { imageBase64 } (photo) or both.
+ */
+app.post('/api/chatgpt/analyze-product', openaiLimiter, async (req, res) => {
+  try {
+    if (!openaiClient) {
+      return res.status(500).json({ success: false, error: 'OpenAI API key not configured' });
+    }
+
+    const { query, imageBase64 } = req.body;
+    if (!query && !imageBase64) {
+      return res.status(400).json({ success: false, error: 'Provide query or imageBase64' });
+    }
+
+    console.log(`[ChatGPT Analyze] query="${(query || '').slice(0, 60)}" hasImage=${!!imageBase64}`);
+
+    const systemPrompt = `You are an expert ethical-shopping analyst. Given a product name (or image), return a JSON analysis. Use your training knowledge about brands, supply chains, certifications, nutrition, and environmental impact.
+
+IMPORTANT: Be honest about certainty. If you're unsure, say so. Never invent specific numeric scores — estimate ranges instead.
+
+Return ONLY valid JSON matching this schema:
+{
+  "productName": "string",
+  "brand": "string or null",
+  "category": "string (e.g. Snacks, Beverages, Dairy)",
+  "summary": "1-2 sentence ethical verdict",
+  "overallScore": "A | B | C | D | E (A=excellent, E=serious concerns)",
+  "environment": {
+    "score": "A-E or unknown",
+    "notes": "string — packaging, carbon footprint, sourcing"
+  },
+  "nutrition": {
+    "score": "A-E or unknown",
+    "novaGroup": 1-4 or null,
+    "notes": "string — processing level, sugar, additives"
+  },
+  "labor": {
+    "risk": "low | medium | high | critical | unknown",
+    "notes": "string — known supply chain issues, certifications"
+  },
+  "animalWelfare": {
+    "risk": "low | medium | high | critical | not-applicable",
+    "notes": "string"
+  },
+  "certifications": ["list of known certifications or empty"],
+  "alternatives": ["1-3 more ethical alternatives if applicable"],
+  "confidence": "high | medium | low",
+  "disclaimer": "string — what you're uncertain about"
+}`;
+
+    const userContent = [];
+
+    if (query) {
+      userContent.push({
+        type: 'text',
+        text: `Analyze this product for ethical shopping: "${query}"`,
+      });
+    }
+
+    if (imageBase64) {
+      if (!query) {
+        userContent.push({
+          type: 'text',
+          text: 'Identify this product and analyze it for ethical shopping.',
+        });
+      }
+      userContent.push({
+        type: 'image_url',
+        image_url: {
+          url: `data:image/jpeg;base64,${imageBase64}`,
+          detail: 'low',
+        },
+      });
+    }
+
+    const completion = await openaiClient.chat.completions.create({
+      model: 'gpt-4o-mini',
+      temperature: 0.3,
+      max_tokens: 1200,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userContent },
+      ],
+    });
+
+    const raw = completion.choices?.[0]?.message?.content || '';
+    console.log(`[ChatGPT Analyze] tokens: ${JSON.stringify(completion.usage)}`);
+
+    // Extract JSON from response (handle markdown code fences)
+    let parsed;
+    try {
+      const jsonMatch = raw.match(/\{[\s\S]*\}/);
+      parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
+    } catch {
+      parsed = null;
+    }
+
+    if (!parsed) {
+      return res.status(500).json({ success: false, error: 'Failed to parse AI response', raw });
+    }
+
+    res.json({
+      success: true,
+      analysis: parsed,
+      usage: completion.usage,
+    });
+  } catch (error) {
+    console.error('[ChatGPT Analyze] error:', error);
+    res.status(500).json({ success: false, error: error.message || 'Analysis failed' });
+  }
+});
+
+// =====================================================
 // OPENAI API PROXY ENDPOINTS
 // =====================================================
 

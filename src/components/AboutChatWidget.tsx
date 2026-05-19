@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { MessageCircle, X, Send } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { MessageCircle, X, Send, Sparkles } from "lucide-react";
 import { getBackendUrl } from "@/config/backend";
 
 import { DS } from "@/styles/design-tokens";
@@ -18,6 +19,7 @@ const STARTER: Msg = {
 };
 
 export function AboutChatWidget() {
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([STARTER]);
   const [input, setInput] = useState("");
@@ -30,11 +32,23 @@ export function AboutChatWidget() {
     }
   }, [messages, open]);
 
+  const SECRET_KEYWORD = "GPTGPT";
+
   const send = async () => {
     const text = input.trim();
     if (!text || loading) return;
     setInput("");
     setMessages((m) => [...m, { role: "user", content: text }]);
+
+    // Secret passphrase — respond locally, no API call
+    if (text.toUpperCase() === SECRET_KEYWORD) {
+      setMessages((m) => [
+        ...m,
+        { role: "bot", content: "ACCESS_GRANTED::You've unlocked the AI Product Analyst. Tap the link below to try it.\n\n→ /chatgpt" },
+      ]);
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await fetch(`${getBackendUrl()}/api/chat/aboutus`, {
@@ -172,25 +186,68 @@ export function AboutChatWidget() {
               gap: 10,
             }}
           >
-            {messages.map((m, i) => (
-              <div
-                key={i}
-                style={{
-                  alignSelf: m.role === "user" ? "flex-end" : "flex-start",
-                  maxWidth: "85%",
-                  padding: "10px 12px",
-                  borderRadius: 14,
-                  background: m.role === "user" ? BLUE : BG,
-                  color: m.role === "user" ? CARD : TEXT,
-                  fontSize: "0.82rem",
-                  lineHeight: 1.5,
-                  whiteSpace: "pre-wrap",
-                  wordBreak: "break-word",
-                }}
-              >
-                {m.content}
-              </div>
-            ))}
+            {messages.map((m, i) => {
+              const isSecret = m.role === "bot" && m.content.startsWith("ACCESS_GRANTED::");
+              if (isSecret) {
+                return (
+                  <div
+                    key={i}
+                    style={{
+                      alignSelf: "flex-start",
+                      maxWidth: "85%",
+                      padding: "14px 14px",
+                      borderRadius: 14,
+                      background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                      color: "#fff",
+                      fontSize: "0.82rem",
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                      <Sparkles style={{ width: 14, height: 14 }} />
+                      <span style={{ fontWeight: 700 }}>Access Granted</span>
+                    </div>
+                    <p style={{ margin: "0 0 10px" }}>You've unlocked the AI Product Analyst.</p>
+                    <button
+                      onClick={() => { setOpen(false); navigate("/chatgpt"); }}
+                      style={{
+                        background: "rgba(255,255,255,0.2)",
+                        border: "1px solid rgba(255,255,255,0.3)",
+                        borderRadius: 10,
+                        padding: "8px 14px",
+                        color: "#fff",
+                        fontSize: "0.8rem",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        width: "100%",
+                        fontFamily: DS.font,
+                      }}
+                    >
+                      Open AI Analyst →
+                    </button>
+                  </div>
+                );
+              }
+              return (
+                <div
+                  key={i}
+                  style={{
+                    alignSelf: m.role === "user" ? "flex-end" : "flex-start",
+                    maxWidth: "85%",
+                    padding: "10px 12px",
+                    borderRadius: 14,
+                    background: m.role === "user" ? BLUE : BG,
+                    color: m.role === "user" ? CARD : TEXT,
+                    fontSize: "0.82rem",
+                    lineHeight: 1.5,
+                    whiteSpace: "pre-wrap",
+                    wordBreak: "break-word",
+                  }}
+                >
+                  {m.content}
+                </div>
+              );
+            })}
             {loading && (
               <div
                 style={{

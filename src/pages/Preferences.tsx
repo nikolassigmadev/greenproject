@@ -44,8 +44,8 @@ const priorityConfig = [
     label: "Animal Welfare",
     description: "Factory farming, animal testing, cruelty-free practices",
     icon: Heart,
-    color: "#7A5A8A",
-    bgColor: "#EAE0EF",
+    color: "#9B7AAE",
+    bgColor: "var(--ds-animal-bg, #EAE0EF)",
   },
   {
     key: "nutrition" as keyof UserPriorities,

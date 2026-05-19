@@ -48,29 +48,29 @@ const findLaborAllegations = (product: OpenFoodFactsResult) =>
 // ─── Design constants ─────────────────────────────────────────────────────────
 
 const EDITORIAL = {
-  ink: "#1A1614",
-  ink2: "#5C544B",
-  ink3: "#8C8278",
-  paper: "#F7F6F3",
-  page: "#F7F6F3",
-  card: "#FBF7EC",
-  line: "#E4DCC9",
-  green: "#1F6B4E",
-  greenSoft: "#D8E5DA",
-  red: "#B23A2B",
-  redSoft: "#F0DAD3",
-  amber: "#C0822A",
-  amberSoft: "#F0E1C2",
+  ink: DS.ink,
+  ink2: DS.ink2,
+  ink3: DS.muted,
+  paper: DS.bg,
+  page: DS.bg,
+  card: DS.card,
+  line: DS.hair,
+  green: DS.good,
+  greenSoft: DS.goodBg,
+  red: DS.bad,
+  redSoft: DS.badBg,
+  amber: DS.warn,
+  amberSoft: DS.warnBg,
   blue: "#2E5A7A",
   purple: "#6A4A6E",
 } as const;
 
 const GRADE_COLOR: Record<string, string> = {
-  a: "#1F6B4E", b: "#1F6B4E", c: "#C0822A", d: "#C26544", e: "#B23A2B",
+  a: DS.good, b: DS.good, c: DS.warn, d: "#C26544", e: DS.bad,
 };
 
 const GRADE_BG: Record<string, string> = {
-  a: "#D8E5DA", b: "#D8E5DA", c: "#F0E1C2", d: "#FBE9E2", e: "#F0DAD3",
+  a: DS.goodBg, b: DS.goodBg, c: DS.warnBg, d: "var(--ds-caution-bg, #FBE9E2)", e: DS.badBg,
 };
 
 const NOVA_LABEL: Record<number, string> = {
@@ -78,15 +78,15 @@ const NOVA_LABEL: Record<number, string> = {
 };
 
 const NOVA_COLOR: Record<number, string> = {
-  1: "#1F6B4E", 2: "#1F6B4E", 3: "#C0822A", 4: "#B23A2B",
+  1: DS.good, 2: DS.good, 3: DS.warn, 4: DS.bad,
 };
 
 const VERDICT_CONFIG = {
   BUY:      { color: EDITORIAL.green, bg: EDITORIAL.greenSoft, Icon: CheckCircle2, label: "Buy" },
   CONSIDER: { color: EDITORIAL.amber, bg: EDITORIAL.amberSoft, Icon: Clock,        label: "Consider" },
-  CAUTION:  { color: "#C26544",       bg: "#FBE9E2",           Icon: AlertTriangle, label: "Caution" },
+  CAUTION:  { color: "#C26544",       bg: "var(--ds-caution-bg, #FBE9E2)", Icon: AlertTriangle, label: "Caution" },
   AVOID:    { color: EDITORIAL.red,   bg: EDITORIAL.redSoft,   Icon: XCircle,       label: "Avoid" },
-  UNKNOWN:  { color: EDITORIAL.ink3,  bg: "#EDE6D2",           Icon: Clock,        label: "Unknown" },
+  UNKNOWN:  { color: EDITORIAL.ink3,  bg: "var(--ds-neutral-bg, #EDE6D2)", Icon: Clock,        label: "Unknown" },
 };
 
 const CO2_BARS = [
@@ -353,9 +353,12 @@ export default function OpenFoodFactsDetail() {
 
             {/* Header */}
             <div style={{ paddingTop: "max(60px, calc(env(safe-area-inset-top, 0px) + 16px))", marginBottom: 24 }}>
-              <p style={{ fontSize: 13, fontWeight: 600, color: DS.good, margin: "0 0 6px", letterSpacing: 0.3 }}>
-                GoodScan
-              </p>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "0 0 6px" }}>
+                <img src="/logo.png" alt="GoodScan" style={{ width: 24, height: 24, borderRadius: 6 }} />
+                <p style={{ fontSize: 13, fontWeight: 600, color: DS.good, margin: 0, letterSpacing: 0.3 }}>
+                  GoodScan
+                </p>
+              </div>
               <h1 style={{ fontSize: 26, fontWeight: 800, margin: "0 0 8px", letterSpacing: -0.5, lineHeight: 1.15 }}>
                 {isShort ? "Quick reminder" : "Before you continue"}
               </h1>
@@ -469,10 +472,10 @@ export default function OpenFoodFactsDetail() {
     return (
       <div style={{ background: DS.bg, fontFamily: DS.font, color: DS.ink, minHeight: "100dvh", display: "flex", flexDirection: "column" }}>
         <div style={{ flex: 1, padding: "0 20px", paddingTop: "max(24px, calc(env(safe-area-inset-top, 0px) + 16px))", maxWidth: 560, margin: "0 auto", width: "100%" }}>
-          <div style={{ background: "#fef2f2", borderRadius: 16, border: "1px solid #fecaca", padding: 18, display: "flex", alignItems: "flex-start", gap: 14 }}>
-            <XCircle style={{ color: "#ef4444", width: 20, height: 20, flexShrink: 0, marginTop: 2 }} />
+          <div style={{ background: "var(--ds-error-bg, #fef2f2)", borderRadius: 16, border: "1px solid var(--ds-error-border, #fecaca)", padding: 18, display: "flex", alignItems: "flex-start", gap: 14 }}>
+            <XCircle style={{ color: EDITORIAL.red, width: 20, height: 20, flexShrink: 0, marginTop: 2 }} />
             <div>
-              <p style={{ fontSize: "0.88rem", fontWeight: 700, color: "#ef4444", marginBottom: 4 }}>Product not found</p>
+              <p style={{ fontSize: "0.88rem", fontWeight: 700, color: EDITORIAL.red, marginBottom: 4 }}>Product not found</p>
               <p style={{ fontSize: "0.78rem", color: DS.muted }}>{error || "Unable to load product details"}</p>
             </div>
           </div>
@@ -531,7 +534,7 @@ export default function OpenFoodFactsDetail() {
           maxWidth: 560, margin: "0 auto", padding: "10px 16px",
           paddingTop: "calc(env(safe-area-inset-top, 0px) + 10px)",
           display: "flex", alignItems: "center", gap: 10,
-          background: "rgba(241,235,221,0.94)",
+          background: "var(--ds-sticky-bg, rgba(241,235,221,0.94))",
           backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)",
           borderBottom: `1px solid ${EDITORIAL.line}`,
         }}>
@@ -552,7 +555,7 @@ export default function OpenFoodFactsDetail() {
 
       <main style={{ paddingBottom: 96, maxWidth: 560, margin: "0 auto", background: EDITORIAL.paper, minHeight: "100dvh" }}>
 
-        <div ref={heroRef} style={{ position: "relative", height: 280, overflow: "hidden", background: "radial-gradient(ellipse at 50% 35%, #F4DCB8 0%, #E8C58A 45%, #D9A86A 100%)" }}>
+        <div ref={heroRef} style={{ position: "relative", height: 280, overflow: "hidden", background: "var(--ds-hero-gradient, radial-gradient(ellipse at 50% 35%, #F4DCB8 0%, #E8C58A 45%, #D9A86A 100%))" }}>
           <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(rgba(0,0,0,0.04) 1px, transparent 1px)", backgroundSize: "3px 3px", opacity: 0.55 }} />
           <button
             type="button"
@@ -613,14 +616,14 @@ export default function OpenFoodFactsDetail() {
           <div style={{ display: "flex", gap: 6, marginTop: 14, flexWrap: "wrap" }}>
             <Tag bg={vc.bg} color={vc.color}>{verdict.key[0] + verdict.key.slice(1).toLowerCase()}</Tag>
             {ecoGrade && <Tag bg={GRADE_BG[ecoGrade]} color={GRADE_COLOR[ecoGrade]}>Eco-Score {ecoGrade.toUpperCase()}</Tag>}
-            {product.novaGroup !== null && <Tag bg="#EDE6D2" color={EDITORIAL.ink2}>{NOVA_LABEL[product.novaGroup] || `NOVA ${product.novaGroup}`}</Tag>}
-            {verifiedEthics && <Tag bg="#D8E5DA" color={EDITORIAL.green}>Verified Ethics</Tag>}
+            {product.novaGroup !== null && <Tag bg="var(--ds-neutral-bg, #EDE6D2)" color={EDITORIAL.ink2}>{NOVA_LABEL[product.novaGroup] || `NOVA ${product.novaGroup}`}</Tag>}
+            {verifiedEthics && <Tag bg={EDITORIAL.greenSoft} color={EDITORIAL.green}>Verified Ethics</Tag>}
           </div>
         </div>
 
         <div style={{ padding: "0 22px 18px", display: "flex", flexDirection: "column", gap: 10 }}>
           <div style={{
-            background: "#FBE9E2", borderRadius: 14, padding: "14px 16px",
+            background: "var(--ds-caution-bg, #FBE9E2)", borderRadius: 14, padding: "14px 16px",
             display: "flex", gap: 12, alignItems: "flex-start",
             border: `1px solid ${EDITORIAL.redSoft}`,
           }}>
@@ -640,7 +643,7 @@ export default function OpenFoodFactsDetail() {
           </div>
           {verifiedEthics && (
             <div style={{
-              background: "#D8E5DA", borderRadius: 14, padding: "14px 16px",
+              background: EDITORIAL.greenSoft, borderRadius: 14, padding: "14px 16px",
               display: "flex", gap: 12, alignItems: "flex-start",
               border: `1px solid rgba(31,107,78,0.2)`,
             }}>
@@ -874,7 +877,7 @@ export default function OpenFoodFactsDetail() {
             )}
             <div style={{ marginTop: 14, display: "grid", gap: 10 }}>
               {boycottMatch && (
-                <div style={{ padding: "14px 16px", background: "#FFFFFF", border: `1px solid ${EDITORIAL.amberSoft}`, borderLeft: `4px solid ${EDITORIAL.amber}`, borderRadius: 14, display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ padding: "14px 16px", background: EDITORIAL.card, border: `1px solid ${EDITORIAL.amberSoft}`, borderLeft: `4px solid ${EDITORIAL.amber}`, borderRadius: 14, display: "flex", alignItems: "center", gap: 12 }}>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 13, fontWeight: 800, color: EDITORIAL.ink }}>{boycottMatch.parent} - Boycott listed</div>
                     <div style={{ fontSize: 11.5, color: EDITORIAL.ink2, marginTop: 2 }}>{boycottMatch.reason}</div>
@@ -897,29 +900,33 @@ export default function OpenFoodFactsDetail() {
               ? "Palm oil is the #1 driver of tropical deforestation. Its cultivation destroys critical habitat for orangutans, pygmy elephants, and Sumatran tigers."
               : `${ingredientRaw} production is linked to habitat destruction in biodiversity hotspots.`;
             return (
-              <div style={{
-                background: EDITORIAL.card, borderRadius: 20, overflow: "hidden", border: `1px solid ${EDITORIAL.line}`,
+              <section style={{
                 opacity: mounted ? 1 : 0, transform: mounted ? "translateY(0)" : "translateY(10px)",
                 transition: "all 0.5s ease 0.55s",
               }}>
-                <div style={{ padding: "18px" }}>
-                  <SectionHead num="03" title="Threatened species" />
-                  <div style={{
-                    background: "#fef2f2", borderRadius: 14, padding: 14,
-                    borderLeft: `3px solid ${EDITORIAL.red}`,
-                    display: "flex", alignItems: "flex-start", gap: 10,
-                  }}>
-                    <AlertTriangle style={{ width: 16, height: 16, color: EDITORIAL.red, flexShrink: 0, marginTop: 1 }} />
+                <SectionHead num="03" title="Threatened species" />
+                <div style={{ background: EDITORIAL.card, border: `1px solid ${EDITORIAL.line}`, borderRadius: 22, padding: "8px 20px 22px" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "46px 1fr", gap: 14, padding: "18px 0", borderTop: `1px solid ${EDITORIAL.line}` }}>
                     <div>
-                      <p style={{ fontSize: "0.8rem", fontWeight: 700, color: EDITORIAL.red, margin: "0 0 4px" }}>
+                      <PawPrint style={{ width: 22, height: 22, color: EDITORIAL.ink }} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 19, lineHeight: 1.15, color: EDITORIAL.ink, letterSpacing: -0.3, fontWeight: 700 }}>
                         Contains {ingredientRaw}
-                      </p>
-                      <p style={{ fontSize: "0.75rem", color: EDITORIAL.ink, lineHeight: 1.55, margin: 0 }}>{explanation}</p>
+                      </div>
+                      <div style={{ fontSize: 12.5, color: EDITORIAL.ink2, marginTop: 6, lineHeight: 1.45 }}>
+                        {explanation}
+                      </div>
+                      <div style={{ fontSize: 11, color: EDITORIAL.ink3, marginTop: 8, fontWeight: 700 }}>
+                        Open Food Facts Ecoscore
+                      </div>
                     </div>
                   </div>
-                  <p style={{ fontSize: "0.62rem", color: EDITORIAL.ink3, marginTop: 10, margin: "10px 0 0" }}>Source: Open Food Facts Ecoscore</p>
+                  <div style={{ fontStyle: "italic", fontSize: 12, color: EDITORIAL.ink3, marginTop: 16, lineHeight: 1.4, borderTop: `1px solid ${EDITORIAL.line}`, paddingTop: 14 }}>
+                    Ingredient linked to habitat loss for threatened species.
+                  </div>
                 </div>
-              </div>
+              </section>
             );
           })()}
 
@@ -939,7 +946,7 @@ export default function OpenFoodFactsDetail() {
                     <div style={{ fontSize: 13, fontWeight: 800, color: EDITORIAL.ink }}>{item.label}</div>
                     <div style={{ fontSize: 12, color: EDITORIAL.ink2, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.value}</div>
                   </div>
-                  <Tag bg={item.bad ? EDITORIAL.redSoft : item.impact === "Unknown" || item.impact === "None" ? "#EDE6D2" : EDITORIAL.greenSoft} color={item.bad ? EDITORIAL.red : item.impact === "Unknown" || item.impact === "None" ? EDITORIAL.ink2 : EDITORIAL.green}>{item.impact}</Tag>
+                  <Tag bg={item.bad ? EDITORIAL.redSoft : item.impact === "Unknown" || item.impact === "None" ? "var(--ds-neutral-bg, #EDE6D2)" : EDITORIAL.greenSoft} color={item.bad ? EDITORIAL.red : item.impact === "Unknown" || item.impact === "None" ? EDITORIAL.ink2 : EDITORIAL.green}>{item.impact}</Tag>
                 </div>
               ))}
             </div>

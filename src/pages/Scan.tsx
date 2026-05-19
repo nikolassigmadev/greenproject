@@ -1178,31 +1178,22 @@ const Scan = () => {
       }
       const candidates = topResults;
 
-      // Step 4b: Confidence check — verify that the top candidate's barcode
-      // actually resolves to a product matching what OCR identified. This catches
-      // cases where OpenFoodFacts text search returns a result whose barcode maps
-      // to a completely different product (data quality issue in OFF).
+      // Step 4b: Pick the best candidate by matching OCR brand/product against
+      // the search results' own inline data (no barcode re-lookup — OFF search
+      // index barcodes often resolve to different products).
       const ocrBrand = (identified.brandName || '').toLowerCase().trim();
       const ocrProductWords = (identified.productName || '')
         .toLowerCase().split(/\s+/).filter(w => w.length >= 4);
 
       let chosenCandidate = candidates[0];
-      if (ocrBrand.length >= 3) {
-        for (const candidate of candidates.slice(0, 4)) {
-          try {
-            const verify = await lookupBarcode(candidate.barcode);
-            if (!verify.found) continue;
-            const verifyText = `${verify.productName || ''} ${verify.brand || ''}`.toLowerCase();
-            const brandOk = verifyText.includes(ocrBrand);
-            const productOk = ocrProductWords.length === 0 || ocrProductWords.some(w => verifyText.includes(w));
-            if (brandOk || productOk) {
-              chosenCandidate = candidate;
-              break;
-            }
-            console.warn(`⚠️ Candidate barcode "${candidate.barcode}" → "${verify.productName}" — doesn't match OCR brand "${ocrBrand}", skipping`);
-          } catch {
-            // Network error — use this candidate and move on
+      if (ocrBrand.length >= 3 || ocrProductWords.length > 0) {
+        for (const candidate of candidates) {
+          const candidateText = `${candidate.productName || ''} ${candidate.brand || ''}`.toLowerCase();
+          const brandOk = ocrBrand.length >= 3 && candidateText.includes(ocrBrand);
+          const productOk = ocrProductWords.length > 0 && ocrProductWords.some(w => candidateText.includes(w));
+          if (brandOk || productOk) {
             chosenCandidate = candidate;
+            console.log(`✅ Matched candidate: "${candidate.productName}" by ${candidate.brand} (brand=${brandOk}, product=${productOk})`);
             break;
           }
         }
@@ -1385,7 +1376,7 @@ const Scan = () => {
             {[
               { icon: Users,  label: 'Labour Rights',  color: DS.bad,            bg: DS.badBg,   border: 'rgba(178,58,43,0.2)' },
               { icon: Leaf,   label: 'Environment',    color: DS.good,           bg: DS.goodBg,  border: 'rgba(31,107,78,0.2)' },
-              { icon: Heart,  label: 'Animal Welfare', color: '#7A5A8A',         bg: '#EAE0EF',  border: 'rgba(122,90,138,0.2)' },
+              { icon: Heart,  label: 'Animal Welfare', color: '#9B7AAE',         bg: 'var(--ds-animal-bg, #EAE0EF)',  border: 'rgba(122,90,138,0.2)' },
               { icon: Apple,  label: 'Nutrition',      color: DS.warn,           bg: DS.warnBg,  border: 'rgba(192,130,42,0.2)' },
             ].map(({ icon: Icon, label, color, bg, border }) => (
               <div key={label} style={{
@@ -1443,21 +1434,24 @@ const Scan = () => {
               backgroundColor: DS.bg,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
-              <X size={16} color="#1A1614" />
+              <X size={16} style={{ color: DS.ink }} />
             </div>
           </Link>
 
           {/* Centre label */}
-          <span style={{ fontSize: '0.8rem', fontWeight: 700, color: DS.ink, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-            GoodScan
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <img src="/logo.png" alt="GoodScan" style={{ width: 22, height: 22, borderRadius: 5 }} />
+            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: DS.ink, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+              GoodScan
+            </span>
+          </div>
 
           {/* Flash */}
           <button
             onClick={() => setFlashOn(f => !f)}
             style={{
               width: 36, height: 36, borderRadius: 18,
-              backgroundColor: flashOn ? '#FFF8E1' : '#E8E6E1',
+              backgroundColor: flashOn ? DS.warnBg : DS.hair,
               border: 'none', cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               transition: 'all 0.15s',

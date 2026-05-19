@@ -12,7 +12,10 @@ export default function AboutUs() {
 
           {/* Title */}
           <div style={{ padding: "8px 0 22px" }}>
-            <div style={{ fontSize: 30, fontWeight: 800, letterSpacing: -0.6 }}>GoodScan</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 30, fontWeight: 800, letterSpacing: -0.6 }}>
+              <img src="/logo.png" alt="GoodScan" style={{ width: 40, height: 40, borderRadius: 10 }} />
+              GoodScan
+            </div>
             <div style={{ fontSize: 16, color: DS.muted, marginTop: 6, lineHeight: 1.4 }}>
               Making ethical shopping simple — scan a product and instantly understand its impact.
             </div>
