@@ -156,7 +156,7 @@ export default function ShoppingList() {
                 <p style={{ fontSize: "0.9rem", fontWeight: 700, color: "#7F1D1D" }}>Clear entire basket?</p>
               </div>
               <div style={{ display: "flex", gap: 8 }}>
-                <button onClick={handleClear} style={{ flex: 1, height: 40, borderRadius: 10, border: "none", background: RED, color: "#fff", fontWeight: 700, fontSize: "0.85rem", cursor: "pointer" }}>
+                <button onClick={handleClear} style={{ flex: 1, height: 40, borderRadius: 10, border: "none", background: RED, color: DS.card, fontWeight: 700, fontSize: "0.85rem", cursor: "pointer" }}>
                   Yes, clear
                 </button>
                 <button onClick={() => setShowClearConfirm(false)} style={{ flex: 1, height: 40, borderRadius: 10, border: "none", background: DS.card, color: DS.muted, fontWeight: 600, fontSize: "0.85rem", cursor: "pointer" }}>
@@ -338,7 +338,7 @@ export default function ShoppingList() {
                           width: 34, height: 34, borderRadius: 10,
                           border: "none",
                           background: already ? "#F0FAF1" : DS.ink,
-                          color: already ? GREEN : "#fff",
+                          color: already ? GREEN : DS.card,
                           cursor: already ? "default" : "pointer",
                           display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
                         }}
@@ -374,7 +374,7 @@ export default function ShoppingList() {
               <Link to="/scan" style={{
                 display: "inline-flex", alignItems: "center", gap: 8,
                 padding: "12px 24px", borderRadius: 14,
-                background: DS.ink, color: "#fff",
+                background: DS.ink, color: DS.card,
                 textDecoration: "none", fontWeight: 700, fontSize: "0.875rem",
               }}>
                 <ShoppingBag size={15} /> Start Scanning

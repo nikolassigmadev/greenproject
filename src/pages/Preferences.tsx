@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { BottomNav } from "@/components/BottomNav";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { loadPriorities, savePriorities, DEFAULT_PRIORITIES, type UserPriorities } from "@/utils/userPreferences";
 import { Leaf, Users, Heart, Apple } from "lucide-react";
 import { DS } from "@/styles/design-tokens";
@@ -93,7 +94,7 @@ export default function Preferences() {
               style={{
                 background: DS.ink,
                 border: "none", borderRadius: DS.radius.sm,
-                color: "#fff", fontWeight: 700, fontSize: "0.75rem",
+                color: DS.card, fontWeight: 700, fontSize: "0.75rem",
                 padding: "8px 14px",
                 cursor: "pointer",
                 fontFamily: DS.font,
@@ -155,7 +156,7 @@ export default function Preferences() {
                           borderRadius: 10,
                           border: isSelected ? "none" : `1px solid ${DS.hair}`,
                           background: isSelected ? DS.ink : DS.bg,
-                          color: isSelected ? "#fff" : DS.muted,
+                          color: isSelected ? DS.card : DS.muted,
                           fontSize: "0.68rem",
                           fontWeight: isSelected ? 700 : 500,
                           cursor: "pointer",
@@ -173,6 +174,20 @@ export default function Preferences() {
               </div>
             );
           })}
+
+          {/* Appearance card */}
+          <div style={{
+            background: DS.card,
+            borderRadius: DS.radius.md,
+            padding: 16,
+            boxShadow: "0 2px 6px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)",
+          }}>
+            <p style={{ fontSize: "0.9rem", fontWeight: 700, color: DS.ink, marginBottom: 4 }}>Appearance</p>
+            <p style={{ fontSize: "0.72rem", color: DS.muted, lineHeight: 1.5, marginBottom: 14 }}>
+              Choose your preferred theme
+            </p>
+            <ThemeToggle />
+          </div>
 
           {/* Info card */}
           <div style={{

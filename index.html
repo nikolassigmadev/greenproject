@@ -1,6 +1,10 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" suppressHydrationWarning>
   <head>
+    <script>
+      // Prevent flash of wrong theme on load (default: system)
+      (function(){try{var t=localStorage.getItem('theme');if(t==='dark'||(t!=='light'&&matchMedia('(prefers-color-scheme:dark)').matches))document.documentElement.classList.add('dark')}catch(e){}})();
+    </script>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />

@@ -7,12 +7,13 @@ interface ProductCardProps {
   product: Product;
 }
 
-const BLUE = "#1a1a1a";
-const BG   = "#f7f6f3";
-const CARD = "#ffffff";
-const BORDER = "rgba(0,0,0,0.08)";
-const TEXT = "#1a1a1a";
-const TEXT_MUTED = "#6e6e73";
+import { DS } from "@/styles/design-tokens";
+const BLUE = DS.ink;
+const BG   = DS.bg;
+const CARD = DS.card;
+const BORDER = DS.hair;
+const TEXT = DS.ink;
+const TEXT_MUTED = DS.muted;
 
 const laborRiskConfig = {
   low:    { label: "Low risk",  color: "#10b981", bg: "#F0FAF6" },

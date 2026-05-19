@@ -1426,8 +1426,8 @@ const Scan = () => {
                 boxShadow: '0 4px 16px rgba(26,22,20,0.2)',
               }}
             >
-              <Settings size={18} color="#fff" strokeWidth={2} />
-              <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#fff' }}>Set my values</span>
+              <Settings size={18} style={{ color: DS.card }} strokeWidth={2} />
+              <span style={{ fontSize: '0.95rem', fontWeight: 800, color: DS.card }}>Set my values</span>
             </Link>
             <p style={{ textAlign: 'center', fontSize: '0.72rem', color: DS.muted, lineHeight: 1.5 }}>
               Takes 30 seconds · you can change them anytime
@@ -1442,7 +1442,7 @@ const Scan = () => {
       {/* ════════════════════ WHITE TOP BAR ════════════════════ */}
       <div style={{
         flexShrink: 0,
-        background: '#F7F6F3',
+        background: DS.bg,
         paddingTop: 'env(safe-area-inset-top, 0px)',
         zIndex: 20,
       }}>
@@ -1454,7 +1454,7 @@ const Scan = () => {
           <Link to="/" onClick={() => stopCamera()} style={{ textDecoration: 'none' }}>
             <div style={{
               width: 36, height: 36, borderRadius: 18,
-              backgroundColor: '#E8E6E1',
+              backgroundColor: DS.bg,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
               <X size={16} color="#1A1614" />
@@ -1462,7 +1462,7 @@ const Scan = () => {
           </Link>
 
           {/* Centre label */}
-          <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#1A1614', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+          <span style={{ fontSize: '0.8rem', fontWeight: 700, color: DS.ink, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
             GoodScan
           </span>
 
@@ -1493,9 +1493,9 @@ const Scan = () => {
               padding: '5px 14px',
             }}>
               {prioritiesJustSaved ? (
-                <><Check size={12} style={{ color: '#1F6B4E' }} /><span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#1A1614' }}>Values saved — ready!</span></>
+                <><Check size={12} style={{ color: '#1F6B4E' }} /><span style={{ fontSize: '0.72rem', fontWeight: 600, color: DS.ink }}>Values saved — ready!</span></>
               ) : (
-                <><Loader2 size={12} style={{ animation: 'spin 1s linear infinite', color: '#8C8278' }} /><span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#8C8278' }}>Starting camera…</span></>
+                <><Loader2 size={12} style={{ animation: 'spin 1s linear infinite', color: DS.muted }} /><span style={{ fontSize: '0.72rem', fontWeight: 600, color: DS.muted }}>Starting camera…</span></>
               )}
             </div>
           </div>
@@ -1602,7 +1602,7 @@ const Scan = () => {
                 background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(8px)',
                 borderRadius: 20, padding: '5px 14px',
               }}>
-                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#fff' }}>
+                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: DS.card }}>
                   Scanning {Math.round(scanProgress)}%
                 </span>
               </div>
@@ -1615,7 +1615,7 @@ const Scan = () => {
               WebkitBackdropFilter: 'blur(8px)',
               borderRadius: 14, padding: '10px 18px',
             }}>
-              <p style={{ fontSize: '0.88rem', fontWeight: 700, color: '#fff', margin: 0 }}>
+              <p style={{ fontSize: '0.88rem', fontWeight: 700, color: DS.card, margin: 0 }}>
                 Point at a product
               </p>
               <p style={{ fontSize: '0.72rem', fontWeight: 500, color: 'rgba(255,255,255,0.55)', margin: '3px 0 0' }}>
@@ -1629,7 +1629,7 @@ const Scan = () => {
       {/* ════════════════════ WHITE BOTTOM BAR ════════════════════ */}
       <div style={{
         flexShrink: 0,
-        background: '#F7F6F3',
+        background: DS.bg,
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
         zIndex: 20,
       }}>
@@ -1643,9 +1643,9 @@ const Scan = () => {
             disabled={isDefaultPriorities}
             style={{
               width: 48, height: 48, borderRadius: 14,
-              backgroundColor: '#E8E6E1',
+              backgroundColor: DS.bg,
               border: 'none',
-              color: '#1A1614',
+              color: DS.ink,
               cursor: isDefaultPriorities ? 'not-allowed' : 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               overflow: 'hidden',
@@ -1689,7 +1689,7 @@ const Scan = () => {
               {offSearchLoading ? (
                 <Loader2 size={22} style={{ color: '#4ade80', animation: 'spin 1s linear infinite' }} />
               ) : (
-                <ScanLine size={22} style={{ color: '#fff' }} />
+                <ScanLine size={22} style={{ color: DS.card }} />
               )}
             </div>
           </button>
@@ -1699,9 +1699,9 @@ const Scan = () => {
             onClick={() => setShowSearch(s => !s)}
             style={{
               width: 48, height: 48, borderRadius: 14,
-              backgroundColor: '#E8E6E1',
+              backgroundColor: DS.bg,
               border: 'none',
-              color: '#1A1614',
+              color: DS.ink,
               cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}
@@ -1716,7 +1716,7 @@ const Scan = () => {
         <div
           style={{
             position: 'absolute', bottom: 0, left: 0, right: 0,
-            background: '#F7F6F3',
+            background: DS.bg,
             borderRadius: '20px 20px 0 0',
             padding: '20px 20px calc(env(safe-area-inset-bottom, 0px) + 24px)',
             zIndex: 50,
@@ -1728,15 +1728,15 @@ const Scan = () => {
               <AlertCircle size={18} style={{ color: DS.bad }} />
             </div>
             <div>
-              <p style={{ fontWeight: 800, fontSize: '0.95rem', color: '#1A1614', marginBottom: 2 }}>Product not found</p>
-              <p style={{ fontSize: '0.78rem', color: '#8C8278', lineHeight: 1.4 }}>Try a clearer photo of the barcode or label.</p>
+              <p style={{ fontWeight: 800, fontSize: '0.95rem', color: DS.ink, marginBottom: 2 }}>Product not found</p>
+              <p style={{ fontSize: '0.78rem', color: DS.muted, lineHeight: 1.4 }}>Try a clearer photo of the barcode or label.</p>
             </div>
           </div>
           <button
             onClick={() => { setProductUnknown(false); offFileInputRef.current?.click(); }}
             style={{
               width: '100%', height: 48, border: 'none', borderRadius: 14,
-              backgroundColor: '#1A1614', color: '#fff',
+              backgroundColor: DS.ink, color: DS.card,
               fontWeight: 700, fontSize: '0.9rem',
               cursor: 'pointer', marginTop: 8,
             }}
@@ -1751,18 +1751,18 @@ const Scan = () => {
         <div
           style={{
             position: 'absolute', inset: 0, zIndex: 40,
-            background: '#F7F6F3',
+            background: DS.bg,
             display: 'flex', flexDirection: 'column',
             padding: 'calc(env(safe-area-inset-top, 0px) + 52px) 20px calc(env(safe-area-inset-bottom, 0px) + 28px)',
             boxSizing: 'border-box',
           }}
         >
-          <p style={{ fontSize: '1.25rem', fontWeight: 800, color: '#1A1614', marginBottom: 4 }}>Search by name or barcode</p>
-          <p style={{ fontSize: '0.82rem', color: '#8C8278', marginBottom: 18 }}>Enter a product name or scan barcode number</p>
+          <p style={{ fontSize: '1.25rem', fontWeight: 800, color: DS.ink, marginBottom: 4 }}>Search by name or barcode</p>
+          <p style={{ fontSize: '0.82rem', color: DS.muted, marginBottom: 18 }}>Enter a product name or scan barcode number</p>
 
           <form onSubmit={(e) => { e.preventDefault(); if (barcodeInput.trim()) { handleProductSearch(barcodeInput); } }} style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
             <div style={{ flex: 1, minWidth: 0, position: 'relative', display: 'flex', alignItems: 'center' }}>
-              <Search size={16} style={{ position: 'absolute', left: 14, color: '#8C8278', pointerEvents: 'none' }} />
+              <Search size={16} style={{ position: 'absolute', left: 14, color: DS.muted, pointerEvents: 'none' }} />
               <input
                 autoFocus
                 type="text"
@@ -1771,11 +1771,11 @@ const Scan = () => {
                 placeholder={scanMode === 'Barcode' ? 'Barcode number…' : 'e.g. Coca-Cola, Weetbix…'}
                 style={{
                   width: '100%', height: 50,
-                  border: '1.5px solid #DDD9D2',
+                  border: `1.5px solid ${DS.hair}`,
                   borderRadius: 14,
-                  backgroundColor: '#E8E6E1',
+                  backgroundColor: DS.bg,
                   fontSize: '1rem', padding: '0 14px 0 42px', outline: 'none',
-                  color: '#1A1614',
+                  color: DS.ink,
                   boxSizing: 'border-box',
                 }}
               />
@@ -1785,8 +1785,8 @@ const Scan = () => {
               disabled={!barcodeInput.trim() || offLoading}
               style={{
                 height: 50, borderRadius: 14, border: 'none',
-                backgroundColor: barcodeInput.trim() ? '#1A1614' : '#E8E6E1',
-                color: barcodeInput.trim() ? '#fff' : '#8C8278',
+                backgroundColor: barcodeInput.trim() ? DS.ink : DS.bg,
+                color: barcodeInput.trim() ? DS.card : DS.muted,
                 fontWeight: 700, fontSize: '0.9rem',
                 padding: '0 20px', cursor: 'pointer',
                 transition: 'background 0.15s',
@@ -1803,8 +1803,8 @@ const Scan = () => {
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
               padding: '20px 0',
             }}>
-              <Loader2 size={20} style={{ color: '#1A1614', animation: 'spin 1s linear infinite' }} />
-              <span style={{ fontSize: '0.9rem', color: '#8C8278', fontWeight: 500 }}>Searching for results…</span>
+              <Loader2 size={20} style={{ color: DS.ink, animation: 'spin 1s linear infinite' }} />
+              <span style={{ fontSize: '0.9rem', color: DS.muted, fontWeight: 500 }}>Searching for results…</span>
             </div>
           )}
 
@@ -1824,8 +1824,8 @@ const Scan = () => {
             >
               <AlertCircle size={14} style={{ color: DS.warn, flexShrink: 0 }} />
               <div style={{ flex: 1 }}>
-                <p style={{ fontSize: '0.82rem', fontWeight: 700, color: '#1A1614', marginBottom: 1 }}>Set your values first</p>
-                <p style={{ fontSize: '0.72rem', color: '#8C8278' }}>Personalise every scan result</p>
+                <p style={{ fontSize: '0.82rem', fontWeight: 700, color: DS.ink, marginBottom: 1 }}>Set your values first</p>
+                <p style={{ fontSize: '0.72rem', color: DS.muted }}>Personalise every scan result</p>
               </div>
               <ChevronRight size={14} style={{ color: DS.warn, flexShrink: 0 }} />
             </Link>
@@ -1837,10 +1837,10 @@ const Scan = () => {
             onClick={() => setShowSearch(false)}
             style={{
               width: '100%', padding: '14px',
-              border: '1.5px solid #DDD9D2',
+              border: `1.5px solid ${DS.hair}`,
               borderRadius: 14,
-              backgroundColor: '#E8E6E1',
-              color: '#8C8278', fontWeight: 600, fontSize: '0.9rem',
+              backgroundColor: DS.bg,
+              color: DS.muted, fontWeight: 600, fontSize: '0.9rem',
               cursor: 'pointer',
             }}
           >

@@ -1,18 +1,19 @@
-// GoodScan — Simple design direction tokens
+// GoodScan — Design tokens backed by CSS custom properties for theme support.
+// Light values are the defaults; .dark overrides live in index.css.
 export const DS = {
-  bg: '#F7F6F3',
-  card: '#FBF7EC',
-  ink: '#1A1614',
-  ink2: '#5C544B',
-  muted: '#8C8278',
-  hair: '#E4DCC9',
-  good: '#1F6B4E',
-  warn: '#C0822A',
-  bad: '#B23A2B',
-  goodBg: '#D8E5DA',
-  warnBg: '#F0E1C2',
-  badBg: '#F0DAD3',
-  brand: '#1A1614',
+  bg: 'var(--ds-bg)',
+  card: 'var(--ds-card)',
+  ink: 'var(--ds-ink)',
+  ink2: 'var(--ds-ink2)',
+  muted: 'var(--ds-muted)',
+  hair: 'var(--ds-hair)',
+  good: 'var(--ds-good)',
+  warn: 'var(--ds-warn)',
+  bad: 'var(--ds-bad)',
+  goodBg: 'var(--ds-good-bg)',
+  warnBg: 'var(--ds-warn-bg)',
+  badBg: 'var(--ds-bad-bg)',
+  brand: 'var(--ds-brand)',
   font: '"Inter", -apple-system, system-ui, sans-serif',
   radius: {
     sm: 14,

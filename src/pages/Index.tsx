@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { ChevronRight, Camera, Leaf, Shield, BarChart3, Users, Award, Zap, CheckCircle2, AlertTriangle as AlertTriangleIcon, Share, Plus, MoreVertical } from "lucide-react";
+import { ChevronRight, Camera, Leaf, Shield, BarChart3, Users, Award, Zap, CheckCircle2, AlertTriangle as AlertTriangleIcon, Share, Plus, MoreVertical, X } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { DS, scoreTone, toneColor, toneBg } from "@/styles/design-tokens";
 import { loadScanHistory, type ScanHistoryEntry } from "@/utils/userPreferences";
@@ -282,6 +282,10 @@ function isStandalone(): boolean {
   return false;
 }
 
+function isNativeApp(): boolean {
+  return !!(window as any).Capacitor;
+}
+
 function getInstallPlatform(): "ios" | "android" | null {
   const ua = navigator.userAgent;
   if (/iPad|iPhone|iPod/.test(ua)) return "ios";
@@ -289,17 +293,30 @@ function getInstallPlatform(): "ios" | "android" | null {
   return null;
 }
 
+const INSTALL_DISMISSED_KEY = "gs_install_dismissed";
+
 export default function Index() {
   const [history, setHistory] = useState<ScanHistoryEntry[]>([]);
   const [showInstall, setShowInstall] = useState(false);
+  const [showInstallBanner, setShowInstallBanner] = useState(false);
 
   useEffect(() => {
     setHistory(loadScanHistory());
-    // Show install prompt only in browser, not standalone
-    if (!isStandalone()) {
-      setShowInstall(true);
+    // Only show on web browsers — never on native Capacitor apps or standalone PWAs
+    if (!isStandalone() && !isNativeApp()) {
+      const dismissed = localStorage.getItem(INSTALL_DISMISSED_KEY);
+      if (dismissed) {
+        setShowInstallBanner(true);
+      } else {
+        setShowInstall(true);
+      }
     }
   }, []);
+
+  const handleDismissInstall = () => {
+    localStorage.setItem(INSTALL_DISMISSED_KEY, "1");
+    setShowInstall(false);
+  };
 
   const platform = getInstallPlatform();
   const recent = history.slice(0, 3);
@@ -324,14 +341,14 @@ export default function Index() {
         {/* Big scan CTA */}
         <Link to="/scan" style={{ textDecoration: "none", display: "block", marginBottom: 28 }}>
           <div style={{
-            background: DS.ink, color: "#fff", borderRadius: DS.radius.lg, padding: 22,
+            background: "#1A1614", color: "#F7F6F3", borderRadius: DS.radius.lg, padding: 22,
             display: "flex", alignItems: "center", gap: 16,
           }}>
             <div style={{
-              width: 56, height: 56, borderRadius: 28, background: "rgba(255,255,255,0.12)",
+              width: 56, height: 56, borderRadius: 28, background: DS.good,
               display: "flex", alignItems: "center", justifyContent: "center",
             }}>
-              <Camera style={{ width: 26, height: 26, color: "#fff" }} />
+              <Camera style={{ width: 26, height: 26, color: "#F7F6F3" }} />
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 18, fontWeight: 700 }}>Scan a product</div>
@@ -414,7 +431,7 @@ export default function Index() {
               }}>
                 <div style={{
                   width: 36, height: 36, borderRadius: 18,
-                  background: toneColor(row.tone), color: "#fff",
+                  background: toneColor(row.tone), color: DS.card,
                   display: "flex", alignItems: "center", justifyContent: "center",
                   fontSize: 12, fontWeight: 800, flexShrink: 0,
                 }}>{row.range.split("–")[0]}</div>
@@ -707,7 +724,7 @@ export default function Index() {
               You need to add GoodScan to your home screen for the app to work properly.
             </p>
             <button
-              onClick={() => setShowInstall(false)}
+              onClick={handleDismissInstall}
               style={{
                 background: "none", border: "none", cursor: "pointer",
                 fontSize: 11, color: DS.muted, opacity: 0.6,
@@ -716,6 +733,58 @@ export default function Index() {
               }}
             >
               Continue to website
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Small reminder banner (shown after first dismissal) ── */}
+      {showInstallBanner && (
+        <div
+          style={{
+            position: "fixed",
+            top: "env(safe-area-inset-top, 0px)",
+            left: 0, right: 0,
+            zIndex: 100,
+            padding: "0 12px",
+          }}
+        >
+          <div
+            style={{
+              display: "flex", alignItems: "center", gap: 10,
+              background: DS.card, borderRadius: 14,
+              padding: "10px 14px",
+              margin: "8px auto", maxWidth: 480,
+              boxShadow: "0 4px 20px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.06)",
+            }}
+          >
+            <Plus style={{ width: 18, height: 18, color: DS.good, flexShrink: 0 }} />
+            <p style={{ flex: 1, fontSize: 13, color: DS.ink2, margin: 0, lineHeight: 1.35 }}>
+              <strong style={{ color: DS.ink }}>Add to Home Screen</strong> for the full experience
+            </p>
+            <button
+              onClick={() => {
+                setShowInstallBanner(false);
+                setShowInstall(true);
+              }}
+              style={{
+                background: DS.ink, color: DS.card, border: "none",
+                borderRadius: 8, padding: "6px 12px", fontSize: 12,
+                fontWeight: 700, cursor: "pointer", flexShrink: 0,
+                fontFamily: DS.font,
+              }}
+            >
+              Show me
+            </button>
+            <button
+              onClick={() => setShowInstallBanner(false)}
+              aria-label="Dismiss"
+              style={{
+                background: "none", border: "none", cursor: "pointer",
+                padding: 4, color: DS.muted, flexShrink: 0,
+              }}
+            >
+              <X style={{ width: 16, height: 16 }} />
             </button>
           </div>
         </div>

@@ -7,6 +7,21 @@
 /* ── Design tokens ───────────────────────────────────────────────────────── */
 
 :root {
+  /* DS tokens — light theme (consumed as var(--ds-*) in design-tokens.ts) */
+  --ds-bg: #F7F6F3;
+  --ds-card: #FBF7EC;
+  --ds-ink: #1A1614;
+  --ds-ink2: #5C544B;
+  --ds-muted: #8C8278;
+  --ds-hair: #E4DCC9;
+  --ds-good: #1F6B4E;
+  --ds-warn: #C0822A;
+  --ds-bad: #B23A2B;
+  --ds-good-bg: #D8E5DA;
+  --ds-warn-bg: #F0E1C2;
+  --ds-bad-bg: #F0DAD3;
+  --ds-brand: #1A1614;
+
   /* Brand — editorial product-results palette */
   --brand-ink: #1A1614;
   --brand-good: #1F6B4E;
@@ -66,6 +81,80 @@
   --shadow-bottom-nav: 0 -1px 0 rgba(26,22,20,0.06), 0 -4px 16px rgba(26,22,20,0.04);
 }
 
+/* ── Dark theme ──────────────────────────────────────────────────────────── */
+
+.dark {
+  --ds-bg: #121212;
+  --ds-card: #1E1E1E;
+  --ds-ink: #E8E4DF;
+  --ds-ink2: #A9A19A;
+  --ds-muted: #6E665E;
+  --ds-hair: #2E2A26;
+  --ds-good: #3DBA82;
+  --ds-warn: #E5A83E;
+  --ds-bad: #E05A4A;
+  --ds-good-bg: #1A2E22;
+  --ds-warn-bg: #2E2618;
+  --ds-bad-bg: #2E1A18;
+  --ds-brand: #E8E4DF;
+
+  --brand-ink: #E8E4DF;
+  --brand-good: #3DBA82;
+  --brand-warn: #E5A83E;
+  --brand-bad: #E05A4A;
+
+  --background: 0 0% 7.1%;
+  --foreground: 25 10% 90%;
+  --card: 0 0% 11.8%;
+  --card-foreground: 25 10% 90%;
+  --popover: 0 0% 11.8%;
+  --popover-foreground: 25 10% 90%;
+  --primary: 25 10% 90%;
+  --primary-foreground: 0 0% 11.8%;
+  --secondary: 20 6% 20%;
+  --secondary-foreground: 25 10% 80%;
+  --muted: 20 6% 20%;
+  --muted-foreground: 25 6% 45%;
+  --accent: 157 55.1% 35%;
+  --accent-foreground: 0 0% 98%;
+  --destructive: 7 61.1% 50%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 20 8% 18%;
+  --input: 20 8% 18%;
+  --ring: 25 10% 80%;
+
+  --eco-forest: 157 55.1% 35%;
+  --eco-leaf: 157 55.1% 35%;
+  --eco-sage: 157 15% 20%;
+  --eco-cream: 0 0% 7.1%;
+  --eco-sand: 20 8% 18%;
+  --eco-amber: 35 64.1% 52%;
+  --eco-terracotta: 7 61.1% 50%;
+  --eco-ocean: 205 45.2% 45%;
+
+  --score-excellent: 157 55.1% 35%;
+  --score-good: 157 55.1% 35%;
+  --score-fair: 35 64.1% 52%;
+  --score-poor: 14 49.2% 55%;
+  --score-critical: 7 61.1% 50%;
+
+  --sidebar-background: 0 0% 7.1%;
+  --sidebar-foreground: 25 10% 90%;
+  --sidebar-primary: 25 10% 90%;
+  --sidebar-primary-foreground: 0 0% 11.8%;
+  --sidebar-accent: 20 6% 20%;
+  --sidebar-accent-foreground: 25 10% 90%;
+  --sidebar-border: 20 8% 18%;
+  --sidebar-ring: 25 10% 80%;
+
+  --shadow-soft: 0 1px 4px rgba(0,0,0,0.2), 0 2px 12px rgba(0,0,0,0.15);
+  --shadow-card: 0 2px 8px rgba(0,0,0,0.2), 0 4px 24px rgba(0,0,0,0.15);
+  --shadow-elevated: 0 8px 32px rgba(0,0,0,0.3), 0 2px 8px rgba(0,0,0,0.2);
+  --shadow-bottom-nav: 0 -1px 0 rgba(0,0,0,0.2), 0 -4px 16px rgba(0,0,0,0.15);
+
+  color-scheme: dark;
+}
+
 /* ── Base layer ──────────────────────────────────────────────────────────── */
 
 @layer base {
@@ -75,7 +164,7 @@
 
   html {
     height: 100%;
-    background: #F7F6F3;
+    background: var(--ds-bg, #F7F6F3);
   }
 
   body {
@@ -104,15 +193,15 @@
 
 @media all and (display-mode: standalone) {
   html {
-    background: #F7F6F3;
+    background: var(--ds-bg, #F7F6F3);
   }
 }
 
 /* ── Bottom nav styles ───────────────────────────────────────────────────── */
 
 .bottom-nav {
-  background: #FBF7EC;
-  border-top: 1px solid #E4DCC9;
+  background: var(--ds-card, #FBF7EC);
+  border-top: 1px solid var(--ds-hair, #E4DCC9);
   box-shadow: var(--shadow-bottom-nav);
 }
 
@@ -148,8 +237,8 @@
 
 @layer utilities {
   /* Palette compatibility for older utility-heavy components. */
-  .bg-white { background-color: #FBF7EC; }
-  .text-white { color: #FBF7EC; }
+  .bg-white { background-color: var(--ds-card, #FBF7EC); }
+  .text-white { color: var(--ds-card, #FBF7EC); }
 
   .bg-neutral-50,
   .bg-neutral-100,

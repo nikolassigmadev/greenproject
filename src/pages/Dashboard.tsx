@@ -74,7 +74,7 @@ function ScoreCircle({ entry }: { entry: ScanHistoryEntry }) {
       width: 40, height: 40, borderRadius: 20,
       background: color,
       display: "flex", alignItems: "center", justifyContent: "center",
-      fontSize: 14, fontWeight: 800, color: "#fff", flexShrink: 0,
+      fontSize: 14, fontWeight: 800, color: DS.card, flexShrink: 0,
     }}>
       {Math.round(score)}
     </div>
@@ -166,7 +166,7 @@ export default function Dashboard() {
               </div>
               <div style={{ display: "flex", gap: 8 }}>
                 <button onClick={handleClear} style={{
-                  padding: "6px 16px", borderRadius: 10, background: DS.bad, color: "#fff",
+                  padding: "6px 16px", borderRadius: 10, background: DS.bad, color: DS.card,
                   fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer",
                 }}>Yes, Clear</button>
                 <button onClick={() => setShowClearConfirm(false)} style={{
@@ -197,7 +197,7 @@ export default function Dashboard() {
               <Link to="/scan" style={{
                 display: "inline-flex", alignItems: "center", gap: 8,
                 padding: "12px 24px", borderRadius: 14, fontWeight: 700, fontSize: 14,
-                background: DS.ink, color: "#fff", textDecoration: "none",
+                background: DS.ink, color: DS.card, textDecoration: "none",
               }}>
                 Start Scanning
               </Link>
@@ -240,7 +240,7 @@ export default function Dashboard() {
                         fontSize: 13, fontWeight: 600,
                         border: "none", cursor: "pointer",
                         background: active ? DS.ink : DS.card,
-                        color: active ? "#fff" : DS.muted,
+                        color: active ? DS.card : DS.muted,
                         transition: "all 0.15s",
                       }}
                     >

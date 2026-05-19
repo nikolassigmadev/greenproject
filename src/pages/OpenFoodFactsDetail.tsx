@@ -419,7 +419,7 @@ export default function OpenFoodFactsDetail() {
               onClick={acceptDisclaimer}
               style={{
                 width: "100%", height: 52, border: "none", borderRadius: DS.radius.md,
-                background: DS.ink, color: "#fff",
+                background: DS.ink, color: DS.card,
                 fontSize: 15, fontWeight: 800, cursor: "pointer",
                 fontFamily: DS.font, marginBottom: 10,
               }}

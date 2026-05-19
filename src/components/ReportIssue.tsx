@@ -23,12 +23,13 @@ interface ReportIssueProps {
   onClose: () => void;
 }
 
-const BLUE = "#1a1a1a";
-const BG   = "#f7f6f3";
-const CARD = "#ffffff";
-const BORDER = "rgba(0,0,0,0.08)";
-const TEXT = "#1a1a1a";
-const TEXT_MUTED = "#6e6e73";
+import { DS } from "@/styles/design-tokens";
+const BLUE = DS.ink;
+const BG   = DS.bg;
+const CARD = DS.card;
+const BORDER = DS.hair;
+const TEXT = DS.ink;
+const TEXT_MUTED = DS.muted;
 const RED = "#ef4444";
 
 export function ReportIssue({ brandName, flagId, onClose }: ReportIssueProps) {
@@ -162,7 +163,7 @@ export function ReportIssue({ brandName, flagId, onClose }: ReportIssueProps) {
             <button
               onClick={onClose}
               style={{
-                background: BLUE, color: "#fff", border: "none",
+                background: BLUE, color: CARD, border: "none",
                 padding: "10px 28px", borderRadius: 12,
                 fontSize: "0.85rem", fontWeight: 600, cursor: "pointer",
               }}
@@ -283,7 +284,7 @@ export function ReportIssue({ brandName, flagId, onClose }: ReportIssueProps) {
                 style={{
                   flex: 2, fontSize: "0.85rem", fontWeight: 700,
                   background: descValid ? BLUE : "#C3D6FF",
-                  color: descValid ? "#fff" : "#9DB8E8",
+                  color: descValid ? CARD : "#9DB8E8",
                   border: "none", padding: "12px", borderRadius: 12,
                   cursor: descValid ? "pointer" : "not-allowed",
                   display: "flex", alignItems: "center", justifyContent: "center", gap: 8,

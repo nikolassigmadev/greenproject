@@ -2,6 +2,7 @@ import { Link, useLocation } from "react-router-dom";
 import { Camera, Home, ShoppingCart, BarChart3, Settings, Info } from "lucide-react";
 import { useState, useEffect } from "react";
 import { loadBasket } from "@/utils/basketStorage";
+import { ThemeToggleCompact } from "@/components/ThemeToggle";
 import { DS } from "@/styles/design-tokens";
 
 const navItems = [
@@ -37,7 +38,7 @@ export function Header() {
         top: 0,
         zIndex: 50,
         width: "100%",
-        background: isScrolled ? "rgba(247,246,243,0.94)" : "rgba(247,246,243,0.6)",
+        background: isScrolled ? "hsl(var(--background) / 0.94)" : "hsl(var(--background) / 0.6)",
         backdropFilter: "blur(20px)",
         WebkitBackdropFilter: "blur(20px)",
         borderBottom: isScrolled ? `1px solid ${DS.hair}` : "1px solid transparent",
@@ -51,7 +52,8 @@ export function Header() {
         <Link to="/" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none" }}>
           <span style={{ fontWeight: 700, fontSize: 16, color: DS.ink }}>GoodScan</span>
         </Link>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          <ThemeToggleCompact />
           <Link
             to="/basket"
             aria-label="Shopping basket"
@@ -117,10 +119,11 @@ export function Header() {
               </Link>
             );
           })}
+          <ThemeToggleCompact />
           <Link
             to="/scan"
             style={{
-              marginLeft: 8,
+              marginLeft: 4,
               display: "flex", alignItems: "center", gap: 6,
               padding: "6px 16px", borderRadius: 10,
               fontSize: 14, fontWeight: 600, textDecoration: "none",

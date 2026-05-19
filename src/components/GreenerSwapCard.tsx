@@ -9,12 +9,13 @@ interface GreenerSwapCardProps {
   loading?: boolean;
 }
 
-const BLUE = "#1a1a1a";
-const BG   = "#f7f6f3";
-const CARD = "#ffffff";
-const BORDER = "rgba(0,0,0,0.08)";
-const TEXT = "#1a1a1a";
-const TEXT_MUTED = "#6e6e73";
+import { DS } from "@/styles/design-tokens";
+const BLUE = DS.ink;
+const BG   = DS.bg;
+const CARD = DS.card;
+const BORDER = DS.hair;
+const TEXT = DS.ink;
+const TEXT_MUTED = DS.muted;
 
 const gradeColors: Record<string, { text: string; bg: string }> = {
   a: { text: "#10b981", bg: "#F0FAF6" },
@@ -186,7 +187,7 @@ export function GreenerSwapCard({ original, alternatives, loading }: GreenerSwap
           onClick={() => navigate(`/product-off/${best.barcode}`)}
           style={{
             width: "100%", height: 44, borderRadius: 12, border: "none",
-            background: BLUE, color: "#fff",
+            background: BLUE, color: CARD,
             fontWeight: 700, fontSize: "0.85rem",
             cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
           }}
@@ -195,7 +196,7 @@ export function GreenerSwapCard({ original, alternatives, loading }: GreenerSwap
           {alternatives.length > 1 && (
             <span style={{
               fontSize: "0.68rem", padding: "1px 8px", borderRadius: 10,
-              background: "rgba(255,255,255,0.2)", color: "#fff",
+              background: "rgba(255,255,255,0.2)", color: CARD,
             }}>
               +{alternatives.length - 1}
             </span>

@@ -1,6 +1,7 @@
 import { createBrowserRouter, Outlet, useLocation } from "react-router-dom";
 import { ScrollToTop } from "./components/ScrollToTop";
 import { HackerTransition } from "./components/HackerTransition";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import Index from "./pages/Index";
 import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
@@ -27,9 +28,11 @@ function RootLayout() {
     <>
       <ScrollToTop />
       <HackerTransition />
-      <div key={location.pathname} className="page-transition" style={{ isolation: 'auto' }}>
-        <Outlet />
-      </div>
+      <ErrorBoundary key={location.pathname}>
+        <div className="page-transition" style={{ isolation: 'auto' }}>
+          <Outlet />
+        </div>
+      </ErrorBoundary>
     </>
   );
 }

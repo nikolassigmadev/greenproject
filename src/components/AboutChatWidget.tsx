@@ -2,11 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import { MessageCircle, X, Send } from "lucide-react";
 import { getBackendUrl } from "@/config/backend";
 
-const BLUE = "#1a1a1a";
-const TEXT = "#1a1a1a";
-const TEXT_MUTED = "#6e6e73";
-const BORDER = "rgba(0,0,0,0.08)";
-const CARD = "#ffffff";
+import { DS } from "@/styles/design-tokens";
+const BLUE = DS.ink;
+const BG   = DS.bg;
+const TEXT = DS.ink;
+const TEXT_MUTED = DS.muted;
+const BORDER = DS.hair;
+const CARD = DS.card;
 
 type Msg = { role: "user" | "bot"; content: string };
 
@@ -75,7 +77,7 @@ export function AboutChatWidget() {
             height: 56,
             borderRadius: 28,
             background: BLUE,
-            color: "#fff",
+            color: CARD,
             border: "none",
             boxShadow: "0 6px 20px rgba(41,121,255,0.35)",
             cursor: "pointer",
@@ -118,7 +120,7 @@ export function AboutChatWidget() {
               display: "flex",
               alignItems: "center",
               gap: 10,
-              background: "#F9FAFB",
+              background: BG,
             }}
           >
             <div
@@ -126,7 +128,7 @@ export function AboutChatWidget() {
                 width: 32,
                 height: 32,
                 borderRadius: 10,
-                background: `${BLUE}14`,
+                background: DS.hair,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -178,8 +180,8 @@ export function AboutChatWidget() {
                   maxWidth: "85%",
                   padding: "10px 12px",
                   borderRadius: 14,
-                  background: m.role === "user" ? BLUE : "#F3F4F6",
-                  color: m.role === "user" ? "#fff" : TEXT,
+                  background: m.role === "user" ? BLUE : BG,
+                  color: m.role === "user" ? CARD : TEXT,
                   fontSize: "0.82rem",
                   lineHeight: 1.5,
                   whiteSpace: "pre-wrap",
@@ -195,7 +197,7 @@ export function AboutChatWidget() {
                   alignSelf: "flex-start",
                   padding: "10px 12px",
                   borderRadius: 14,
-                  background: "#F3F4F6",
+                  background: BG,
                   color: TEXT_MUTED,
                   fontSize: "0.82rem",
                   fontStyle: "italic",
@@ -213,7 +215,7 @@ export function AboutChatWidget() {
               padding: 10,
               display: "flex",
               gap: 8,
-              background: "#fff",
+              background: CARD,
             }}
           >
             <input
@@ -230,7 +232,7 @@ export function AboutChatWidget() {
                 fontSize: "0.85rem",
                 outline: "none",
                 color: TEXT,
-                background: "#F9FAFB",
+                background: BG,
               }}
             />
             <button
@@ -239,7 +241,7 @@ export function AboutChatWidget() {
               aria-label="Send"
               style={{
                 background: BLUE,
-                color: "#fff",
+                color: CARD,
                 border: "none",
                 borderRadius: 10,
                 padding: "0 14px",
