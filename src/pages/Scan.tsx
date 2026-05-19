@@ -186,11 +186,9 @@ const filterBestProducts = (results: OpenFoodFactsResult[], query?: string): Ope
         .sort((a, b) => b.ecoScore - a.ecoScore);
       if (loose.length > 0) return loose.slice(0, 5).map(s => s.result);
 
-      // Absolute fallback: return the API results as-is (sorted by eco score)
-      return scored
-        .sort((a, b) => b.ecoScore - a.ecoScore)
-        .slice(0, 5)
-        .map(s => s.result);
+      // No match at all — return empty so callers can show a proper "not found"
+      // instead of displaying an unrelated product (e.g. fromage blanc).
+      return [];
     }
   }
 
