@@ -235,7 +235,7 @@ app.post('/api/openai/analyze-image', async (req, res) => {
 
     console.log(`🔄 Processing image analysis request...`);
 
-    // Call OpenAI API from server (secure)
+    // Call OpenAI API from server (secure) — gpt-4o-mini for speed
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -243,7 +243,7 @@ app.post('/api/openai/analyze-image', async (req, res) => {
         'Authorization': `Bearer ${OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: 'gpt-4o-mini',
         messages: [
           {
             role: 'user',
@@ -256,12 +256,13 @@ app.post('/api/openai/analyze-image', async (req, res) => {
                 type: 'image_url',
                 image_url: {
                   url: `data:image/jpeg;base64,${imageBase64}`,
+                  detail: 'low',
                 },
               },
             ],
           },
         ],
-        max_tokens: 500,
+        max_tokens: 300,
       }),
     });
 

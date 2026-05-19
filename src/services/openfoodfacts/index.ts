@@ -254,7 +254,7 @@ const lookupBarcodeInternal = async (barcode: string): Promise<OpenFoodFactsResu
     const startTime = Date.now();
     console.log(`   Trying backend proxy for barcode: ${barcode}`);
     const response = await fetch(`${backendUrl}/api/openfoodfacts/product/${barcode}`, {
-      signal: AbortSignal.timeout(20000),
+      signal: AbortSignal.timeout(8000),
     });
 
     const duration = Date.now() - startTime;
@@ -289,7 +289,7 @@ const lookupBarcodeInternal = async (barcode: string): Promise<OpenFoodFactsResu
     try {
       const startTime = Date.now();
       const response = await fetch(url, {
-        signal: AbortSignal.timeout(15000),
+        signal: AbortSignal.timeout(6000),
       });
 
       const duration = Date.now() - startTime;
@@ -392,7 +392,7 @@ const searchOneVariant = async (
     const response = await fetch(`${backendUrl}/api/openfoodfacts/search`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query, limit: Math.min(limit * 3, 50) }),
+      body: JSON.stringify({ query, limit: Math.min(limit * 2, 20) }),
     });
 
     if (!response.ok) {

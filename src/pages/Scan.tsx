@@ -1012,22 +1012,8 @@ const Scan = () => {
         console.warn("⚠️ Advanced OCR error, trying standard OpenAI:", error);
       }
 
-      // Fallback to standard OpenAI if advanced didn't extract text
-      if (!extractedText) {
-        try {
-          console.log("📡 Attempting standard OpenAI Vision API...");
-          const openaiResult = await recognizeImageWithOpenAI(imageData);
-
-          if (openaiResult.success && openaiResult.text) {
-            console.log("✅ Standard OpenAI extraction successful");
-            extractedText = openaiResult.text;
-          } else {
-            console.warn("Standard OpenAI failed:", openaiResult.error);
-          }
-        } catch (error) {
-          console.warn("Standard OpenAI error:", error);
-        }
-      }
+      // Skip redundant second OpenAI call — advanced OCR already uses the same
+      // endpoint; a second attempt just doubles wait time with no better result.
 
       const cleanedForDisplay = cleanupOcrTextForDisplay(extractedText);
       const cleanedForSearch = cleanupOcrTextForSearch(extractedText);
@@ -1074,8 +1060,8 @@ const Scan = () => {
     setOffSearchResults([]);
 
     try {
-      // Fetch a larger pool (20) so we can pick the 3 with the most eco data
-      const results = await searchOffProducts(productName.trim(), 20);
+      // Fetch a small pool — we navigate to the top result immediately
+      const results = await searchOffProducts(productName.trim(), 5);
 
       // Filter to show only the best 3 results (ranked by eco data completeness)
       const topResults = filterBestProducts(results, productName.trim());

@@ -67,23 +67,38 @@ Return your response as JSON with this exact structure:
 }`;
 
 /**
+ * Downscale image to max 512px on longest side and re-encode as JPEG 0.6
+ * to drastically reduce payload size sent to OpenAI (often 10x smaller).
+ */
+const compressImage = (dataUrl: string, maxSize = 512): Promise<string> =>
+  new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(maxSize / Math.max(img.width, img.height), 1);
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+      const c = document.createElement('canvas');
+      c.width = w;
+      c.height = h;
+      c.getContext('2d')!.drawImage(img, 0, 0, w, h);
+      // Return raw base64 (no data: prefix)
+      resolve(c.toDataURL('image/jpeg', 0.6).split(',')[1]);
+    };
+    img.onerror = () => {
+      // Fallback: return original base64 stripped of prefix
+      resolve(dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl);
+    };
+    img.src = dataUrl.startsWith('data:') ? dataUrl : `data:image/jpeg;base64,${dataUrl}`;
+  });
+
+/**
  * Simple ChatGPT-style product analysis
  */
 export const advancedProductOCR = async (imageDataUrl: string): Promise<AdvancedOCRResult> => {
   const startTime = performance.now();
 
-  console.log('🚀 Starting ChatGPT-style OCR analysis via backend proxy...');
-
   try {
-    let base64Image = imageDataUrl;
-    if (imageDataUrl.includes(',')) {
-      base64Image = imageDataUrl.split(',')[1];
-    }
-
-    console.log('📷 Image data processed:', {
-      hasBase64: !!base64Image,
-      base64Length: base64Image?.length,
-    });
+    const base64Image = await compressImage(imageDataUrl);
 
     console.log('🤖 Calling OpenAI API via backend proxy...');
 
