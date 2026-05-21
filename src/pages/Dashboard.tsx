@@ -6,7 +6,8 @@ import {
   clearScanHistory,
   type ScanHistoryEntry,
 } from "@/utils/userPreferences";
-import { Search, ChevronRight, ShoppingBag, Trash2, AlertTriangle } from "lucide-react";
+import { loadBasket, removeFromBasket, getBasketEthicsReport, type BasketItem } from "@/utils/basketStorage";
+import { Search, ChevronRight, ShoppingBag, Trash2, AlertTriangle, Leaf, TrendingDown, Award, X } from "lucide-react";
 import { DS, scoreTone, toneColor } from "@/styles/design-tokens";
 
 type Filter = "all" | "good" | "mixed" | "avoid";
@@ -81,17 +82,208 @@ function ScoreCircle({ entry }: { entry: ScanHistoryEntry }) {
   );
 }
 
+// ── Impact Dashboard ──
+
+function ImpactDashboard({ basket }: { basket: BasketItem[] }) {
+  const report = useMemo(() => getBasketEthicsReport(basket), [basket]);
+
+  if (basket.length === 0) return null;
+
+  const gradeColor = (g: string) => {
+    const map: Record<string, string> = { a: DS.good, b: DS.good, c: DS.warn, d: DS.bad, e: DS.bad };
+    return map[g] || DS.muted;
+  };
+
+  return (
+    <div style={{ marginBottom: 20 }}>
+      {/* Impact header card */}
+      <div style={{
+        background: DS.card, borderRadius: 20, padding: "20px 18px",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)",
+        marginBottom: 10,
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+          <div style={{
+            width: 36, height: 36, borderRadius: 12,
+            background: DS.goodBg,
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            <Leaf style={{ width: 18, height: 18, color: DS.good }} />
+          </div>
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: DS.ink }}>Your Impact</div>
+            <div style={{ fontSize: 12, color: DS.muted }}>{basket.length} item{basket.length !== 1 ? "s" : ""} in cart</div>
+          </div>
+        </div>
+
+        {/* Stats grid */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+          {/* Overall score */}
+          <div style={{
+            background: DS.bg, borderRadius: 14, padding: "14px 12px",
+            textAlign: "center",
+          }}>
+            <div style={{
+              fontSize: 28, fontWeight: 800, letterSpacing: -1,
+              color: report.scoredCount > 0 ? gradeColor(report.overallGrade) : DS.muted,
+            }}>
+              {report.scoredCount > 0 ? report.overallGrade.toUpperCase() : "—"}
+            </div>
+            <div style={{ fontSize: 10.5, fontWeight: 600, color: DS.muted, marginTop: 2 }}>
+              Avg Grade
+            </div>
+          </div>
+
+          {/* CO2 saved */}
+          <div style={{
+            background: DS.bg, borderRadius: 14, padding: "14px 12px",
+            textAlign: "center",
+          }}>
+            <div style={{
+              fontSize: 22, fontWeight: 800, letterSpacing: -0.5,
+              color: report.co2NetKg >= 0 ? DS.good : DS.bad,
+            }}>
+              {report.co2ScoredCount > 0 ? (
+                <>{report.co2NetKg >= 0 ? "+" : ""}{report.co2NetKg}<span style={{ fontSize: 13, fontWeight: 600 }}>kg</span></>
+              ) : "—"}
+            </div>
+            <div style={{ fontSize: 10.5, fontWeight: 600, color: DS.muted, marginTop: 2 }}>
+              CO2 vs Avg
+            </div>
+          </div>
+
+          {/* Clean brands */}
+          <div style={{
+            background: DS.bg, borderRadius: 14, padding: "14px 12px",
+            textAlign: "center",
+          }}>
+            <div style={{
+              fontSize: 22, fontWeight: 800, letterSpacing: -0.5,
+              color: report.laborFlagCount === 0 ? DS.good : DS.warn,
+            }}>
+              {report.cleanBrandCount}<span style={{ fontSize: 13, fontWeight: 600 }}>/{basket.length}</span>
+            </div>
+            <div style={{ fontSize: 10.5, fontWeight: 600, color: DS.muted, marginTop: 2 }}>
+              Clean Brands
+            </div>
+          </div>
+        </div>
+
+        {/* Breakdown bar */}
+        {report.scoredCount > 0 && (
+          <div style={{ marginTop: 14 }}>
+            <div style={{ display: "flex", gap: 3, height: 6, borderRadius: 3, overflow: "hidden" }}>
+              {report.goodCount > 0 && (
+                <div style={{ flex: report.goodCount, background: DS.good, borderRadius: 3 }} />
+              )}
+              {report.fairCount > 0 && (
+                <div style={{ flex: report.fairCount, background: DS.warn, borderRadius: 3 }} />
+              )}
+              {report.poorCount > 0 && (
+                <div style={{ flex: report.poorCount, background: DS.bad, borderRadius: 3 }} />
+              )}
+              {report.unknownCount > 0 && (
+                <div style={{ flex: report.unknownCount, background: DS.hair, borderRadius: 3 }} />
+              )}
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
+              <span style={{ fontSize: 10, fontWeight: 600, color: DS.good }}>{report.goodCount} good</span>
+              <span style={{ fontSize: 10, fontWeight: 600, color: DS.warn }}>{report.fairCount} fair</span>
+              <span style={{ fontSize: 10, fontWeight: 600, color: DS.bad }}>{report.poorCount} poor</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Cart items (compact) */}
+      <div style={{
+        background: DS.card, borderRadius: 16, overflow: "hidden",
+        boxShadow: "0 2px 6px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)",
+      }}>
+        <div style={{
+          padding: "12px 16px 8px",
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+        }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: DS.muted, letterSpacing: "0.04em", textTransform: "uppercase" }}>
+            Cart Items
+          </span>
+        </div>
+        {basket.map((item, i) => {
+          const grade = item.ecoscoreGrade?.toLowerCase();
+          const gColor = grade ? gradeColor(grade) : DS.muted;
+          return (
+            <div
+              key={item.id}
+              style={{
+                display: "flex", alignItems: "center", gap: 10,
+                padding: "10px 16px",
+                borderTop: i > 0 ? `1px solid ${DS.hair}` : undefined,
+              }}
+            >
+              <div style={{
+                width: 32, height: 32, borderRadius: 10,
+                background: grade ? `${gColor}18` : DS.bg,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 13, fontWeight: 800, color: gColor, flexShrink: 0,
+              }}>
+                {grade ? grade.toUpperCase() : "?"}
+              </div>
+              <Link
+                to={`/product-off/${item.barcode}`}
+                style={{
+                  flex: 1, minWidth: 0, textDecoration: "none", color: DS.ink,
+                }}
+              >
+                <div style={{
+                  fontSize: 14, fontWeight: 600,
+                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                }}>
+                  {item.productName}
+                </div>
+                <div style={{ fontSize: 11, color: DS.muted, marginTop: 1 }}>
+                  {item.brand || "Unknown brand"}
+                </div>
+              </Link>
+              <button
+                onClick={() => removeFromBasket(item.barcode)}
+                style={{
+                  width: 28, height: 28, borderRadius: 8,
+                  background: "none", border: "none", cursor: "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  color: DS.muted, flexShrink: 0,
+                }}
+                aria-label={`Remove ${item.productName}`}
+              >
+                <X style={{ width: 14, height: 14 }} />
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── Main ──
+
 export default function Dashboard() {
   const [history, setHistory] = useState<ScanHistoryEntry[]>([]);
+  const [basket, setBasket] = useState<BasketItem[]>([]);
   const [filter, setFilter] = useState<Filter>("all");
   const [search, setSearch] = useState("");
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   useEffect(() => {
     setHistory(loadScanHistory());
-    const handler = () => setHistory(loadScanHistory());
-    window.addEventListener("scanHistoryUpdated", handler);
-    return () => window.removeEventListener("scanHistoryUpdated", handler);
+    setBasket(loadBasket());
+    const histHandler = () => setHistory(loadScanHistory());
+    const basketHandler = () => setBasket(loadBasket());
+    window.addEventListener("scanHistoryUpdated", histHandler);
+    window.addEventListener("basketUpdated", basketHandler);
+    return () => {
+      window.removeEventListener("scanHistoryUpdated", histHandler);
+      window.removeEventListener("basketUpdated", basketHandler);
+    };
   }, []);
 
   const handleClear = () => {
@@ -154,6 +346,9 @@ export default function Dashboard() {
       <main style={{ padding: "0 20px", paddingBottom: 110 }}>
         <div style={{ maxWidth: 640, margin: "0 auto" }}>
 
+          {/* Impact Dashboard */}
+          <ImpactDashboard basket={basket} />
+
           {/* Clear confirmation */}
           {showClearConfirm && (
             <div style={{
@@ -177,7 +372,7 @@ export default function Dashboard() {
             </div>
           )}
 
-          {history.length === 0 ? (
+          {history.length === 0 && basket.length === 0 ? (
             /* Empty state */
             <div style={{
               background: DS.card, borderRadius: 18, padding: "48px 24px", textAlign: "center",
@@ -202,7 +397,7 @@ export default function Dashboard() {
                 Start Scanning
               </Link>
             </div>
-          ) : (
+          ) : history.length > 0 ? (
             <>
               {/* Search bar */}
               <div style={{ position: "relative", marginBottom: 14 }}>
@@ -301,7 +496,7 @@ export default function Dashboard() {
                 </div>
               )}
             </>
-          )}
+          ) : null}
         </div>
       </main>
 

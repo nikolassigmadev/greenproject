@@ -14,7 +14,7 @@ import { loadPriorities, saveScanToHistory, loadScanHistory, type UserPriorities
 import { checkBoycott } from "@/data/boycottBrands";
 import { checkAnimalWelfareFlag } from "@/utils/animalWelfareFlags";
 import { AnimalWelfareFlagBadge } from "@/components/AnimalWelfareFlagBadge";
-import { addToBasket, loadBasket } from "@/utils/basketStorage";
+import { addToBasket, removeFromBasket, loadBasket } from "@/utils/basketStorage";
 import { findLaborAllegations as findLaborAllegationsUtil, getLaborAllegationCount } from "@/utils/laborCheck";
 import { findVerifiedEthics } from "@/utils/verifiedEthics";
 import { EnvironmentalImpactCard } from "@/components/EnvironmentalImpactCard";
@@ -312,6 +312,26 @@ export default function OpenFoodFactsDetail() {
       return () => clearTimeout(t);
     }
   }, [product]);
+
+  const handleCartToggle = () => {
+    if (!product) return;
+    if (inBasket) {
+      removeFromBasket(product.barcode);
+    } else {
+      const laborCount = getLaborAllegationCount(product.brand, product.productName);
+      addToBasket({
+        barcode: product.barcode,
+        productName: product.productName || "Unknown Product",
+        brand: product.brand,
+        imageUrl: product.imageUrl,
+        ecoscoreGrade: product.ecoscoreGrade,
+        ecoscoreScore: product.ecoscoreScore,
+        nutriscoreGrade: product.nutriscoreGrade,
+        laborAllegations: laborCount,
+        co2Per100g: product.carbonFootprint100g ?? null,
+      });
+    }
+  };
 
   const loadProduct = async (code: string) => {
     setLoading(true);
@@ -976,6 +996,44 @@ export default function OpenFoodFactsDetail() {
         </div>
       </main>
 
+
+      {/* Sticky Add to Cart bar */}
+      <div style={{
+        position: "fixed", bottom: 72, left: 0, right: 0, zIndex: 45,
+        padding: "10px 20px",
+        paddingBottom: "10px",
+        background: "linear-gradient(to top, var(--ds-bg) 70%, transparent)",
+        pointerEvents: "none",
+      }}>
+        <div style={{ maxWidth: 560, margin: "0 auto", pointerEvents: "auto" }}>
+          <button
+            onClick={handleCartToggle}
+            style={{
+              width: "100%", height: 52, border: "none", borderRadius: 16,
+              background: inBasket ? DS.card : DS.ink,
+              color: inBasket ? DS.ink : DS.card,
+              fontSize: 15, fontWeight: 700, cursor: "pointer",
+              fontFamily: DS.font,
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+              boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
+              border: inBasket ? `2px solid ${DS.hair}` : "none",
+              transition: "all 0.2s ease",
+            }}
+          >
+            {inBasket ? (
+              <>
+                <Check style={{ width: 18, height: 18 }} />
+                Saved to Cart
+              </>
+            ) : (
+              <>
+                <ShoppingBag style={{ width: 18, height: 18 }} />
+                Add to Cart
+              </>
+            )}
+          </button>
+        </div>
+      </div>
 
       <BottomNav />
 
