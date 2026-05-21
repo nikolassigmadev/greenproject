@@ -143,7 +143,6 @@ METHODOLOGY — WHAT WE DON'T DO:
 
 DATABASE STATUS:
 - ~35 brands currently flagged.
-- 14-day SLA for dispute review.
 - All sources have URLs cited.
 
 LIMITATIONS:
@@ -153,8 +152,8 @@ LIMITATIONS:
 - A brand not in our database does not mean it has no issues — it may not have been researched yet.
 - Not legal advice. Flags describe documented findings, not legal verdicts (unless the source is a court ruling).
 
-DISPUTES:
-Users can report issues with any flag. Disputes are reviewed within the 14-day SLA. The dispute form is reachable from individual flag pages.
+CONTACT FOR CORRECTIONS:
+Users can report issues with any flag by emailing geovanis@proton.me.
 `;
 
 /**

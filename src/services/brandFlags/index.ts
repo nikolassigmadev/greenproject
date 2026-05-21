@@ -3,7 +3,7 @@
  * All consumer code should use these functions — never import brandFlags.v2.ts directly.
  *
  * Only 'verified' flags that meet the sourcing bar are returned to non-admin callers.
- * Pending / disputed / archived flags are available via getPendingFlags() for admin use only.
+ * Pending / archived flags are available via getPendingFlags() for admin use only.
  */
 
 import type { BrandFlagV2 } from '@/types/brandFlag';

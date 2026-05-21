@@ -390,7 +390,7 @@ export default function OpenFoodFactsDetail() {
                   { title: "Not professional advice", text: "Nothing in GoodScan constitutes legal, medical, dietary, financial, or any other form of professional advice. Do not rely solely on this app for health or purchasing decisions." },
                   { title: "Flags are based on public reports", text: "Labour, environmental, and animal welfare flags reflect publicly available allegations and reports. A flag does not mean a company is guilty of wrongdoing. The absence of a flag does not mean a brand is ethical — it may simply not have been researched yet." },
                   { title: "No brand affiliation", text: "GoodScan is fully independent. We are not affiliated with, endorsed by, or sponsored by any brand, company, or product displayed in the app." },
-                  { title: "Help us improve", text: "If you spot something wrong, you can reach us via email on the About page. We review all reports and aim to correct errors within 14 days." },
+                  { title: "Help us improve", text: "If you spot something wrong, email us at geovanis@proton.me." },
                 ].map((item, i) => (
                   <div key={i} style={{
                     background: DS.card, borderRadius: DS.radius.md, padding: 16,

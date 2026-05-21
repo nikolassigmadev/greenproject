@@ -47,7 +47,6 @@ export type FlagSeverity = 'critical' | 'high' | 'medium' | 'low';
 export type VerificationStatus =
   | 'verified'        // meets sourcing bar, shown in production
   | 'pending_review'  // awaiting source verification, not shown in production
-  | 'disputed'        // brand has formally disputed; under review
   | 'archived';       // removed from production but kept for history
 
 export interface BrandFlagV2 {
@@ -63,7 +62,6 @@ export interface BrandFlagV2 {
   lastVerified: string;          // ISO 8601
   createdAt: string;
   updatedAt: string;
-  disputeNotes?: string;         // if brand has formally responded
 }
 
 // ---------------------------------------------------------------------------

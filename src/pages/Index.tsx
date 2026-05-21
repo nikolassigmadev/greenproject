@@ -515,7 +515,7 @@ export default function Index() {
             {[
               { icon: BarChart3, title: "Greener Swaps", desc: "We suggest lower-impact alternatives in the same category." },
               { icon: Award, title: "Personalised scoring", desc: "Set your values (environment, labour, nutrition, animal welfare) and every score is weighted to you." },
-              { icon: Shield, title: "Dispute & transparency", desc: "Every flag has a citation. Disagree? Report it — we review within 14 days." },
+              { icon: Shield, title: "Transparency", desc: "Every flag has a citation. See an issue? Email us and we'll look into it." },
             ].map((feat) => (
               <div key={feat.title} style={{
                 background: DS.card, borderRadius: DS.radius.md, padding: 16,

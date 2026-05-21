@@ -77,7 +77,7 @@ export default function Methodology() {
           {[
             { label: "Verified Flags", value: String(totalVerified), color: GREEN },
             { label: "Last Updated", value: lastUpdate ? lastUpdate.slice(5, 10).replace("-", "/") : "—", color: ACCENT },
-            { label: "Review SLA", value: "14 days", color: AMBER },
+            { label: "Source Tiers", value: "3", color: AMBER },
           ].map(({ label, value, color }) => (
             <div key={label} style={{
               background: DS.card, borderRadius: DS.radius.md, padding: "14px 12px", textAlign: "center",
