@@ -179,6 +179,8 @@
   html {
     height: 100%;
     background: var(--ds-bg, #F7F6F3);
+    touch-action: pan-x pan-y;
+    -webkit-text-size-adjust: 100%;
   }
 
   body {
