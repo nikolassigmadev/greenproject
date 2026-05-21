@@ -628,10 +628,27 @@ export default function OpenFoodFactsDetail() {
           <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: 1.4, textTransform: "uppercase", color: EDITORIAL.ink2 }}>
             {productMeta || "Product scan"}
           </div>
-          <h1 style={{ fontSize: "clamp(2.45rem, 11vw, 3.05rem)", lineHeight: 1, margin: "8px 0 0", letterSpacing: -1.5, color: EDITORIAL.ink, fontWeight: 700 }}>
-            {title.first}
-            {title.rest && <><br /><span style={{ fontStyle: "italic", color: EDITORIAL.ink2, fontWeight: 500 }}>{title.rest}.</span></>}
-          </h1>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+            <h1 style={{ fontSize: "clamp(2.45rem, 11vw, 3.05rem)", lineHeight: 1, margin: "8px 0 0", letterSpacing: -1.5, color: EDITORIAL.ink, fontWeight: 700, flex: 1 }}>
+              {title.first}
+              {title.rest && <><br /><span style={{ fontStyle: "italic", color: EDITORIAL.ink2, fontWeight: 500 }}>{title.rest}.</span></>}
+            </h1>
+            <button
+              onClick={handleCartToggle}
+              aria-label={inBasket ? "Remove from cart" : "Add to cart"}
+              style={{
+                width: 40, height: 40, borderRadius: 12, border: "none",
+                background: inBasket ? EDITORIAL.greenSoft : EDITORIAL.card,
+                color: inBasket ? EDITORIAL.green : EDITORIAL.ink2,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                cursor: "pointer", flexShrink: 0, marginTop: 8,
+                transition: "all 0.2s ease",
+                border: `1.5px solid ${inBasket ? EDITORIAL.green : EDITORIAL.line}`,
+              }}
+            >
+              {inBasket ? <Check style={{ width: 18, height: 18 }} /> : <ShoppingBag style={{ width: 18, height: 18 }} />}
+            </button>
+          </div>
           <div style={{ display: "flex", gap: 6, marginTop: 14, flexWrap: "wrap" }}>
             <Tag bg={vc.bg} color={vc.color}>{verdict.key[0] + verdict.key.slice(1).toLowerCase()}</Tag>
             {ecoGrade && <Tag bg={GRADE_BG[ecoGrade]} color={GRADE_COLOR[ecoGrade]}>Eco-Score {ecoGrade.toUpperCase()}</Tag>}
@@ -996,44 +1013,6 @@ export default function OpenFoodFactsDetail() {
         </div>
       </main>
 
-
-      {/* Sticky Add to Cart bar */}
-      <div style={{
-        position: "fixed", bottom: 72, left: 0, right: 0, zIndex: 45,
-        padding: "10px 20px",
-        paddingBottom: "10px",
-        background: "linear-gradient(to top, var(--ds-bg) 70%, transparent)",
-        pointerEvents: "none",
-      }}>
-        <div style={{ maxWidth: 560, margin: "0 auto", pointerEvents: "auto" }}>
-          <button
-            onClick={handleCartToggle}
-            style={{
-              width: "100%", height: 52, border: "none", borderRadius: 16,
-              background: inBasket ? DS.card : DS.ink,
-              color: inBasket ? DS.ink : DS.card,
-              fontSize: 15, fontWeight: 700, cursor: "pointer",
-              fontFamily: DS.font,
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-              boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
-              border: inBasket ? `2px solid ${DS.hair}` : "none",
-              transition: "all 0.2s ease",
-            }}
-          >
-            {inBasket ? (
-              <>
-                <Check style={{ width: 18, height: 18 }} />
-                Saved to Cart
-              </>
-            ) : (
-              <>
-                <ShoppingBag style={{ width: 18, height: 18 }} />
-                Add to Cart
-              </>
-            )}
-          </button>
-        </div>
-      </div>
 
       <BottomNav />
 
