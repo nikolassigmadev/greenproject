@@ -339,6 +339,7 @@ const Scan = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cameraInitializingRef = useRef(false);
   const timeoutIdRef = useRef<NodeJS.Timeout | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   const [isScanning, setIsScanning] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -419,6 +420,16 @@ const Scan = () => {
     }
     return () => { stopCamera(); };
   }, [isDefaultPriorities]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Guarantee camera is killed on unmount (even if refs are stale)
+  useEffect(() => {
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
+      }
+    };
+  }, []);
 
   // Debug: Check if video element is mounted
   useEffect(() => {
@@ -583,6 +594,7 @@ const Scan = () => {
 
       // Assign new stream
       video.srcObject = stream;
+      streamRef.current = stream;
 
       // Setup handlers
       const onCanPlay = () => {
@@ -727,9 +739,14 @@ const Scan = () => {
       const stream = videoRef.current.srcObject as MediaStream;
       stream.getTracks().forEach((track) => track.stop());
       videoRef.current.srcObject = null;
-      setCameraActive(false);
-      setCameraInitializing(false);
     }
+    // Also stop via streamRef in case videoRef was already unmounted
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    setCameraActive(false);
+    setCameraInitializing(false);
   }, []);
 
   // Search products with improved name-first matching
@@ -1597,7 +1614,7 @@ const Scan = () => {
                 background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(8px)',
                 borderRadius: 20, padding: '5px 14px',
               }}>
-                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: DS.card }}>
+                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#fff' }}>
                   Scanning {Math.round(scanProgress)}%
                 </span>
               </div>
@@ -1610,7 +1627,7 @@ const Scan = () => {
               WebkitBackdropFilter: 'blur(8px)',
               borderRadius: 14, padding: '10px 18px',
             }}>
-              <p style={{ fontSize: '0.88rem', fontWeight: 700, color: DS.card, margin: 0 }}>
+              <p style={{ fontSize: '0.88rem', fontWeight: 700, color: '#fff', margin: 0 }}>
                 Point at a product
               </p>
               <p style={{ fontSize: '0.72rem', fontWeight: 500, color: 'rgba(255,255,255,0.55)', margin: '3px 0 0' }}>

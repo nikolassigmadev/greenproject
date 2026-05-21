@@ -937,15 +937,17 @@ export default function OpenFoodFactsDetail() {
                 { icon: <Truck style={{ width: 17, height: 17 }} />, label: "Transport origin", value: product.origins || "Manufacturer undisclosed", impact: product.ecoscoreData?.adjustments?.origins_of_ingredients?.value != null ? `${product.ecoscoreData.adjustments.origins_of_ingredients.value} pts` : "Unknown", bad: (product.ecoscoreData?.adjustments?.origins_of_ingredients?.value ?? 0) < 0 },
                 { icon: <BadgeCheck style={{ width: 17, height: 17 }} />, label: "Certifications", value: product.labels.length ? product.labels.slice(0, 3).map(cleanLabel).join(", ") : "None found", impact: product.labels.length ? `${product.labels.length} mark${product.labels.length > 1 ? "s" : ""}` : "None", bad: false },
               ].map(item => (
-                <div key={item.label} style={{ padding: "16px 18px", background: EDITORIAL.card, border: `1px solid ${EDITORIAL.line}`, borderRadius: 18, display: "flex", alignItems: "center", gap: 14 }}>
-                  <div style={{ width: 36, height: 36, borderRadius: 10, background: EDITORIAL.paper, display: "flex", alignItems: "center", justifyContent: "center", color: EDITORIAL.ink }}>
+                <div key={item.label} style={{ padding: "16px 14px 16px 18px", background: EDITORIAL.card, border: `1px solid ${EDITORIAL.line}`, borderRadius: 18, display: "flex", alignItems: "center", gap: 12, overflow: "hidden" }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: EDITORIAL.paper, display: "flex", alignItems: "center", justifyContent: "center", color: EDITORIAL.ink, flexShrink: 0 }}>
                     {item.icon}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 13, fontWeight: 800, color: EDITORIAL.ink }}>{item.label}</div>
                     <div style={{ fontSize: 12, color: EDITORIAL.ink2, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.value}</div>
                   </div>
-                  <Tag bg={item.bad ? EDITORIAL.redSoft : item.impact === "Unknown" || item.impact === "None" ? "var(--ds-neutral-bg, #EDE6D2)" : EDITORIAL.greenSoft} color={item.bad ? EDITORIAL.red : item.impact === "Unknown" || item.impact === "None" ? EDITORIAL.ink2 : EDITORIAL.green}>{item.impact}</Tag>
+                  <span style={{ flexShrink: 0 }}>
+                    <Tag bg={item.bad ? EDITORIAL.redSoft : item.impact === "Unknown" || item.impact === "None" ? "var(--ds-neutral-bg, #EDE6D2)" : EDITORIAL.greenSoft} color={item.bad ? EDITORIAL.red : item.impact === "Unknown" || item.impact === "None" ? EDITORIAL.ink2 : EDITORIAL.green}>{item.impact}</Tag>
+                  </span>
                 </div>
               ))}
             </div>
