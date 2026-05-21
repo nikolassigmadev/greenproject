@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import type { ReactNode } from "react";
 import {
   ChevronLeft, Loader2, Leaf, AlertTriangle, ExternalLink,
-  CheckCircle2, ChevronRight, Package, ShoppingBag, XCircle, Clock,
+  CheckCircle2, ChevronRight, Package, ShoppingBag, ShoppingCart, XCircle, Clock,
   BadgeCheck, Wheat, Factory, Truck, Store, UtensilsCrossed,
   ScanLine, Check, Sprout, PawPrint,
 } from "lucide-react";
@@ -637,7 +637,7 @@ export default function OpenFoodFactsDetail() {
               onClick={handleCartToggle}
               aria-label={inBasket ? "Remove from cart" : "Add to cart"}
               style={{
-                width: 40, height: 40, borderRadius: 12, border: "none",
+                width: 48, height: 48, borderRadius: 14,
                 background: inBasket ? EDITORIAL.greenSoft : EDITORIAL.card,
                 color: inBasket ? EDITORIAL.green : EDITORIAL.ink2,
                 display: "flex", alignItems: "center", justifyContent: "center",
@@ -646,7 +646,7 @@ export default function OpenFoodFactsDetail() {
                 border: `1.5px solid ${inBasket ? EDITORIAL.green : EDITORIAL.line}`,
               }}
             >
-              {inBasket ? <Check style={{ width: 18, height: 18 }} /> : <ShoppingBag style={{ width: 18, height: 18 }} />}
+              {inBasket ? <Check style={{ width: 22, height: 22 }} /> : <ShoppingCart style={{ width: 22, height: 22 }} />}
             </button>
           </div>
           <div style={{ display: "flex", gap: 6, marginTop: 14, flexWrap: "wrap" }}>
@@ -999,6 +999,23 @@ export default function OpenFoodFactsDetail() {
               Read fewer labels.<br />Eat with more intent.
             </div>
           </div>
+
+          {/* Add to cart */}
+          <button
+            onClick={handleCartToggle}
+            style={{
+              width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+              padding: "14px 0", borderRadius: 14, marginBottom: 16,
+              background: inBasket ? EDITORIAL.greenSoft : EDITORIAL.card,
+              color: inBasket ? EDITORIAL.green : EDITORIAL.ink2,
+              border: `1.5px solid ${inBasket ? EDITORIAL.green : EDITORIAL.line}`,
+              fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: DS.font,
+              transition: "all 0.2s ease",
+            }}
+          >
+            {inBasket ? <Check style={{ width: 16, height: 16 }} /> : <ShoppingCart style={{ width: 16, height: 16 }} />}
+            {inBasket ? "Saved to cart" : "Add to cart"}
+          </button>
 
           {/* Disclaimer */}
           <div style={{
