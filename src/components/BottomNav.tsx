@@ -35,8 +35,8 @@ export function BottomNav() {
       style={{
         background: DS.card,
         borderTop: `1px solid ${DS.hair}`,
-        paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 24px)",
-        bottom: 0,
+        paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 18px)",
+        bottom: "calc(-1 * env(safe-area-inset-bottom, 0px))",
       }}
     >
       <div style={{
