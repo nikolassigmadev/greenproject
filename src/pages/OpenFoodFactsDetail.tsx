@@ -30,9 +30,8 @@ async function fetchCleanName(rawName: string): Promise<string> {
   if (nameCache.has(rawName)) return nameCache.get(rawName)!;
   try {
     const res = await sendChatMessage(
-      [{ role: "user", content: `Given this product name from a barcode database: "${rawName}", return ONLY the clean, properly formatted product name (e.g. "Coca-Cola", "Nutella", "Lay's Classic Chips"). Remove size, weight, volume, and any descriptors that aren't part of the brand/product identity. Return just the name, nothing else.` }],
-      "gpt-4o-mini",
-      0
+      'clean-product-name',
+      `Given this product name from a barcode database: "${rawName}", return ONLY the clean, properly formatted product name (e.g. "Coca-Cola", "Nutella", "Lay's Classic Chips"). Remove size, weight, volume, and any descriptors that aren't part of the brand/product identity. Return just the name, nothing else.`
     );
     const clean = res.content?.trim();
     if (clean) nameCache.set(rawName, clean);

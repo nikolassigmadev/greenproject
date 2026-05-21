@@ -8,9 +8,7 @@ export type OcrResult = {
 };
 
 /**
- * Extract text from image using OpenAI Vision API (GPT-4o) via backend proxy
- * @param imageDataUrl - Base64 encoded image data URL
- * @returns Extracted text and confidence score
+ * Extract text from image using OpenAI Vision API via backend proxy
  */
 export const recognizeImageWithOpenAI = async (imageDataUrl: string): Promise<OcrResult> => {
   try {
@@ -19,12 +17,10 @@ export const recognizeImageWithOpenAI = async (imageDataUrl: string): Promise<Oc
       base64Image = imageDataUrl.split(',')[1];
     }
 
-    const prompt = 'Extract all visible text from this image. Focus on product names, brands, ingredients, and labels. Return ONLY the extracted text, no explanations.';
-
     const response = await fetch(`${getBackendUrl()}/api/openai/analyze-image`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ imageBase64: base64Image, prompt }),
+      body: JSON.stringify({ imageBase64: base64Image, task: 'extract-text' }),
     });
 
     if (!response.ok) {
@@ -63,12 +59,10 @@ export const extractProductCode = async (imageDataUrl: string): Promise<string> 
       base64Image = imageDataUrl.split(',')[1];
     }
 
-    const prompt = 'Extract the barcode number or product code from this image. Return ONLY the numeric code, nothing else.';
-
     const response = await fetch(`${getBackendUrl()}/api/openai/analyze-image`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ imageBase64: base64Image, prompt }),
+      body: JSON.stringify({ imageBase64: base64Image, task: 'extract-barcode' }),
     });
 
     if (!response.ok) {
@@ -86,7 +80,6 @@ export const extractProductCode = async (imageDataUrl: string): Promise<string> 
 
 /**
  * Extract product names from a receipt image using OpenAI Vision.
- * Returns a clean list of item names — no prices, totals, or store info.
  */
 export const extractReceiptProducts = async (file: File): Promise<string[]> => {
   const base64Image = await new Promise<string>((resolve, reject) => {
@@ -99,15 +92,10 @@ export const extractReceiptProducts = async (file: File): Promise<string[]> => {
     reader.readAsDataURL(file);
   });
 
-  const prompt =
-    'This is a shopping receipt. List only the purchased product/item names, one per line. ' +
-    'Exclude: prices, quantities, totals, subtotals, tax, store name, date, cashier, loyalty points, and any other non-product text. ' +
-    'Return ONLY the item names, nothing else.';
-
   const response = await fetch(`${getBackendUrl()}/api/openai/analyze-image`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ imageBase64: base64Image, prompt }),
+    body: JSON.stringify({ imageBase64: base64Image, task: 'extract-receipt' }),
   });
 
   if (!response.ok) {
@@ -120,7 +108,7 @@ export const extractReceiptProducts = async (file: File): Promise<string[]> => {
 
   return text
     .split('\n')
-    .map((l: string) => l.replace(/^[\d\-.*•]+\s*/, '').trim())
+    .map((l: string) => l.replace(/^[\d\-.*]+\s*/, '').trim())
     .filter((l: string) => l.length >= 3)
     .slice(0, 15);
 };

@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Lock } from "lucide-react";
 
-import { ADMIN_PASSWORD_HASH, isAdminAuthenticated, setAdminAuthenticated, verifyPassword } from "@/utils/adminAuth";
+import { isAdminAuthenticated, loginAdmin } from "@/utils/adminAuth";
 
 type LocationState = {
   from?: { pathname?: string };
@@ -21,6 +21,7 @@ const AdminLogin = () => {
 
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (isAdminAuthenticated()) {
@@ -30,24 +31,24 @@ const AdminLogin = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
+    setError("");
 
     try {
-      const isValid = await verifyPassword(password.trim(), ADMIN_PASSWORD_HASH);
-      
-      if (isValid) {
-        setAdminAuthenticated(true);
-        setError("");
+      const success = await loginAdmin(password.trim());
 
+      if (success) {
         const state = location.state as LocationState | null;
         const to = state?.from?.pathname || "/admin";
         navigate(to, { replace: true });
         return;
       }
-    } catch (error) {
-      console.error('Login error:', error);
+    } catch (err) {
+      console.error('Login error:', err);
     }
 
     setError("Incorrect password");
+    setLoading(false);
   };
 
   return (
@@ -73,11 +74,12 @@ const AdminLogin = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter admin password"
                   autoFocus
+                  disabled={loading}
                 />
               </div>
               {error && <p className="text-destructive text-sm">{error}</p>}
-              <Button type="submit" className="w-full">
-                Unlock Admin Panel
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? 'Verifying...' : 'Unlock Admin Panel'}
               </Button>
             </form>
           </CardContent>

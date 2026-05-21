@@ -20,7 +20,7 @@ import { ScoreDisplay } from '@/components/ScoreDisplay';
 import { SimpleLivestockForm, SimpleLivestockData } from '@/components/SimpleLivestockForm';
 import { downloadProductsFile, copySingleProductCode } from '@/utils/productExporter';
 
-import { clearAdminAuthenticated, isAdminAuthenticated } from '@/utils/adminAuth';
+import { logoutAdmin, isAdminAuthenticated, verifyAdmin } from '@/utils/adminAuth';
 import { toast } from 'sonner';
 
 const Admin = () => {
@@ -60,13 +60,21 @@ const Admin = () => {
     'Fair Trade',
   ];
 
+  const [authenticated, setAuthenticated] = useState(isAdminAuthenticated());
+
   useEffect(() => {
     if (!isAdminAuthenticated()) {
       navigate('/admin/login', { replace: true, state: { from: location } });
+      return;
     }
+    // Verify token with server
+    verifyAdmin().then((valid) => {
+      if (!valid) {
+        setAuthenticated(false);
+        navigate('/admin/login', { replace: true, state: { from: location } });
+      }
+    });
   }, [location, navigate]);
-
-  const authenticated = isAdminAuthenticated();
 
   // Update editing product materials in real-time when livestock data changes
   useEffect(() => {
@@ -257,8 +265,8 @@ const Admin = () => {
               Export JSON
             </Button>
             <Button
-              onClick={() => {
-                clearAdminAuthenticated();
+              onClick={async () => {
+                await logoutAdmin();
                 navigate('/admin/login', { replace: true });
               }}
               variant="outline"
