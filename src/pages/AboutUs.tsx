@@ -1,5 +1,6 @@
 import { BottomNav } from "@/components/BottomNav";
 import { AboutChatWidget } from "@/components/AboutChatWidget";
+import { Logo } from "@/components/Logo";
 import { Link } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
 import { DS } from "@/styles/design-tokens";
@@ -13,7 +14,7 @@ export default function AboutUs() {
           {/* Title */}
           <div style={{ padding: "8px 0 22px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 30, fontWeight: 800, letterSpacing: -0.6 }}>
-              <img src="/logo-icon.png" alt="GoodScan" style={{ width: 40, height: 40 }} />
+              <Logo size={40} />
               GoodScan
             </div>
             <div style={{ fontSize: 16, color: DS.muted, marginTop: 6, lineHeight: 1.4 }}>

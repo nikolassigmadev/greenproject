@@ -8,6 +8,7 @@ import {
   ScanLine, Check, Sprout, PawPrint,
 } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
+import { Logo } from "@/components/Logo";
 import { lookupBarcode } from "@/services/openfoodfacts";
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
 import { loadPriorities, saveScanToHistory, loadScanHistory, type UserPriorities } from "@/utils/userPreferences";
@@ -373,7 +374,7 @@ export default function OpenFoodFactsDetail() {
             {/* Header */}
             <div style={{ paddingTop: "max(60px, calc(env(safe-area-inset-top, 0px) + 16px))", marginBottom: 24 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "0 0 6px" }}>
-                <img src="/logo-icon.png" alt="GoodScan" style={{ width: 24, height: 24 }} />
+                <Logo size={24} />
                 <p style={{ fontSize: 13, fontWeight: 600, color: DS.good, margin: 0, letterSpacing: 0.3 }}>
                   GoodScan
                 </p>

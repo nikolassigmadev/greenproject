@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 88">
+  <circle cx="44" cy="44" r="42" fill="#1F7A4D"/>
+  <path d="M44 18 C64 28 66 52 44 68 C22 52 24 28 44 18 Z" fill="#FFFFFF"/>
+  <path d="M44 21 L44 67" stroke="#1F7A4D" stroke-width="1.6" stroke-linecap="round"/>
+  <text x="108" y="58" font-family="Manrope, Inter, sans-serif" font-size="48" fill="#FFFFFF" font-weight="800">good</text>
+  <text x="248" y="58" font-family="Manrope, Inter, sans-serif" font-size="48" fill="#1F7A4D" font-weight="500">scan</text>
+</svg>

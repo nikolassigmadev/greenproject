@@ -91,7 +91,7 @@
 /* ── Dark theme ──────────────────────────────────────────────────────────── */
 
 .dark {
-  --ds-bg: #121212;
+  --ds-bg: #000000;
   --ds-card: #1E1E1E;
   --ds-ink: #E8E4DF;
   --ds-ink2: #A9A19A;
@@ -117,7 +117,7 @@
   --brand-warn: #E5A83E;
   --brand-bad: #E05A4A;
 
-  --background: 0 0% 7.1%;
+  --background: 0 0% 0%;
   --foreground: 25 10% 90%;
   --card: 0 0% 11.8%;
   --card-foreground: 25 10% 90%;

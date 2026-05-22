@@ -3,6 +3,7 @@ import { lookupHardcodedBarcodes, lookupHardcodedImage } from "@/data/productBar
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { Camera, Upload, Search, Loader2, AlertCircle, X, ScanLine, Image as ImageIcon, Plus, Leaf, BarChart3, QrCode, Settings, Users, Heart, Apple, ChevronRight, Check, Zap } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
+import { Logo } from "@/components/Logo";
 import { Input } from "@/components/ui/input";
 import { CalAIButton, ButtonGroup } from "@/components/CalAIButton";
 import { AlertBox, AlertList } from "@/components/AlertBox";
@@ -1472,7 +1473,7 @@ const Scan = () => {
 
           {/* Centre label */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <img src="/logo-icon.png" alt="GoodScan" style={{ width: 22, height: 22 }} />
+            <Logo size={22} />
             <span style={{ fontSize: '0.8rem', fontWeight: 700, color: DS.ink, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
               GoodScan
             </span>
