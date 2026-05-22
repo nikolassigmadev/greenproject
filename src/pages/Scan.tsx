@@ -1472,7 +1472,7 @@ const Scan = () => {
 
           {/* Centre label */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <img src="/logo.png" alt="GoodScan" style={{ width: 22, height: 22, borderRadius: 5 }} />
+            <img src="/logo-icon.png" alt="GoodScan" style={{ width: 22, height: 22 }} />
             <span style={{ fontSize: '0.8rem', fontWeight: 700, color: DS.ink, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
               GoodScan
             </span>

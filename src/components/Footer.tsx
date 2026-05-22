@@ -15,7 +15,7 @@ export function Footer() {
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 24 }}>
           <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <img src="/logo.png" alt="GoodScan" style={{ width: 22, height: 22, borderRadius: 5 }} />
+            <img src="/logo-icon.png" alt="GoodScan" style={{ width: 22, height: 22 }} />
             <span style={{ fontWeight: 700, color: DS.ink }}>GoodScan</span>
           </span>
           <nav style={{ display: "flex", alignItems: "center", gap: 24 }} aria-label="Footer navigation">

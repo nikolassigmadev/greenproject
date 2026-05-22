@@ -328,7 +328,7 @@ export default function Index() {
         {/* Header */}
         <div style={{ paddingTop: "max(60px, calc(env(safe-area-inset-top, 0px) + 16px))", marginBottom: 24 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "0 0 6px" }}>
-            <img src="/logo.png" alt="GoodScan" style={{ width: 28, height: 28, borderRadius: 7 }} />
+            <img src="/logo-icon.png" alt="GoodScan" style={{ width: 28, height: 28 }} />
             <p style={{ fontSize: 13, fontWeight: 600, color: DS.good, margin: 0, letterSpacing: 0.3 }}>
               GoodScan
             </p>
