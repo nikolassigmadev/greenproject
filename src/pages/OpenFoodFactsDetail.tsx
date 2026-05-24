@@ -22,6 +22,7 @@ import { EnvironmentalImpactCard } from "@/components/EnvironmentalImpactCard";
 import { sendChatMessage } from "@/services/api/backend-client";
 import { cn } from "@/lib/utils";
 import { DS } from "@/styles/design-tokens";
+import { toast } from "sonner";
 
 // ─── Helpers (logic) ──────────────────────────────────────────────────────────
 
@@ -318,6 +319,7 @@ export default function OpenFoodFactsDetail() {
     if (!product) return;
     if (inBasket) {
       removeFromBasket(product.barcode);
+      toast.dismiss("cart-added");
     } else {
       const laborCount = getLaborAllegationCount(product.brand, product.productName);
       addToBasket({
@@ -330,6 +332,15 @@ export default function OpenFoodFactsDetail() {
         nutriscoreGrade: product.nutriscoreGrade,
         laborAllegations: laborCount,
         co2Per100g: product.carbonFootprint100g ?? null,
+      });
+      toast.success("Added to cart", {
+        id: "cart-added",
+        description: "View it anytime under the History tab.",
+        duration: 4500,
+        action: {
+          label: "View cart",
+          onClick: () => navigate("/dashboard"),
+        },
       });
     }
   };
