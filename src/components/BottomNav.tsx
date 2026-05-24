@@ -1,20 +1,23 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Home, Clock, Info, SlidersHorizontal } from "lucide-react";
-import { DS } from "@/styles/design-tokens";
+
+const BRAND_GREEN = "#3DBA82";
+const ICON_IDLE = "rgba(255,255,255,0.62)";
+const ACTIVE_BG = "rgba(61,186,130,0.16)";
 
 const NAV_LEFT = [
-  { path: "/",            label: "Home",    icon: Home    },
-  { path: "/dashboard",   label: "History", icon: Clock   },
+  { path: "/",          label: "Home",    icon: Home  },
+  { path: "/dashboard", label: "History", icon: Clock },
 ];
 
 const NAV_RIGHT = [
-  { path: "/preferences", label: "Values",  icon: SlidersHorizontal },
-  { path: "/about",       label: "About",   icon: Info    },
+  { path: "/preferences", label: "Values", icon: SlidersHorizontal },
+  { path: "/about",       label: "About",  icon: Info              },
 ];
 
-function ScanIcon({ color }: { color: string }) {
+function ScanIcon({ color, size = 23 }: { color: string; size?: number }) {
   return (
-    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round">
+    <svg width={size} height={size} viewBox="0 0 28 28" fill="none" stroke={color} strokeWidth="1.9" strokeLinecap="round">
       <rect x="3.5" y="3.5" width="6" height="6" rx="1.5"/>
       <rect x="18.5" y="3.5" width="6" height="6" rx="1.5"/>
       <rect x="3.5" y="18.5" width="6" height="6" rx="1.5"/>
@@ -24,113 +27,117 @@ function ScanIcon({ color }: { color: string }) {
   );
 }
 
+function cellStyle(): React.CSSProperties {
+  return {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    height: "100%",
+    textDecoration: "none",
+    WebkitTapHighlightColor: "transparent",
+  };
+}
+
+function activePillStyle(active: boolean): React.CSSProperties {
+  return {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 44,
+    height: 34,
+    borderRadius: 999,
+    background: active ? ACTIVE_BG : "transparent",
+    transition: "background 180ms ease",
+  };
+}
+
 export function BottomNav() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 md:hidden bottom-nav"
+      className="md:hidden"
       aria-label="Main navigation"
       style={{
-        background: DS.card,
-        borderTop: `1px solid ${DS.hair}`,
-        paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 18px)",
-        bottom: "calc(-1 * env(safe-area-inset-bottom, 0px))",
+        position: "fixed",
+        left: "50%",
+        transform: "translateX(-50%)",
+        bottom: "calc(env(safe-area-inset-bottom, 0px) + 14px)",
+        zIndex: 50,
+        width: "calc(100% - 56px)",
+        maxWidth: 360,
+        height: 56,
+        borderRadius: 999,
+        background: "rgba(20,20,22,0.72)",
+        backdropFilter: "blur(28px) saturate(180%)",
+        WebkitBackdropFilter: "blur(28px) saturate(180%)",
+        border: "1px solid rgba(255,255,255,0.08)",
+        boxShadow:
+          "0 10px 30px rgba(0,0,0,0.32), 0 2px 8px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.06)",
+        display: "grid",
+        gridTemplateColumns: "repeat(5, 1fr)",
+        alignItems: "center",
+        padding: "0 4px",
       }}
     >
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: "1fr 1fr 1.3fr 1fr 1fr",
-        padding: "10px 12px 0",
-      }}>
-        {/* Left items */}
-        {NAV_LEFT.map((item) => {
-          const Icon = item.icon;
-          const active = pathname === item.path;
-          const c = active ? DS.ink : DS.muted;
-          return (
-            <Link
-              key={item.path}
-              to={item.path}
-              style={{
-                textDecoration: "none",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 4,
-                WebkitTapHighlightColor: "transparent",
-              }}
-            >
-              <Icon style={{ width: 22, height: 22, color: c, strokeWidth: 1.8 }} />
-              <span style={{ fontSize: 11, fontWeight: 500, color: c }}>{item.label}</span>
-            </Link>
-          );
-        })}
+      {NAV_LEFT.map((item) => {
+        const Icon = item.icon;
+        const active = pathname === item.path;
+        const c = active ? BRAND_GREEN : ICON_IDLE;
+        return (
+          <Link key={item.path} to={item.path} aria-label={item.label} style={cellStyle()}>
+            <span style={activePillStyle(active)}>
+              <Icon
+                style={{
+                  width: 23,
+                  height: 23,
+                  color: c,
+                  strokeWidth: active ? 2.4 : 1.9,
+                  transition: "color 160ms ease, stroke-width 160ms ease",
+                }}
+              />
+            </span>
+          </Link>
+        );
+      })}
 
-        {/* Centre SCAN button — raised */}
-        <button
-          onClick={() => navigate("/scan")}
-          aria-label="Scan a product"
-          style={{
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            padding: 0,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "flex-end",
-            WebkitTapHighlightColor: "transparent",
-          }}
-        >
-          <div style={{
-            width: 52,
-            height: 52,
-            borderRadius: 26,
-            background: DS.ink,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            marginTop: -22,
-            boxShadow: "0 6px 18px rgba(0,0,0,0.18)",
-          }}>
-            <ScanIcon color={DS.card} />
-          </div>
-          <span style={{
-            fontSize: 11,
-            fontWeight: 600,
-            color: DS.ink,
-            marginTop: 4,
-          }}>Scan</span>
-        </button>
+      <button
+        onClick={() => navigate("/scan")}
+        aria-label="Scan a product"
+        style={{
+          background: "none",
+          border: "none",
+          cursor: "pointer",
+          padding: 0,
+          ...cellStyle(),
+        }}
+      >
+        <span style={activePillStyle(pathname === "/scan")}>
+          <ScanIcon color={pathname === "/scan" ? BRAND_GREEN : ICON_IDLE} />
+        </span>
+      </button>
 
-        {/* Right items */}
-        {NAV_RIGHT.map((item) => {
-          const Icon = item.icon;
-          const active = pathname === item.path;
-          const c = active ? DS.ink : DS.muted;
-          return (
-            <Link
-              key={item.path}
-              to={item.path}
-              style={{
-                textDecoration: "none",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 4,
-                WebkitTapHighlightColor: "transparent",
-              }}
-            >
-              <Icon style={{ width: 22, height: 22, color: c, strokeWidth: 1.8 }} />
-              <span style={{ fontSize: 11, fontWeight: 500, color: c }}>{item.label}</span>
-            </Link>
-          );
-        })}
-      </div>
+      {NAV_RIGHT.map((item) => {
+        const Icon = item.icon;
+        const active = pathname === item.path;
+        const c = active ? BRAND_GREEN : ICON_IDLE;
+        return (
+          <Link key={item.path} to={item.path} aria-label={item.label} style={cellStyle()}>
+            <span style={activePillStyle(active)}>
+              <Icon
+                style={{
+                  width: 23,
+                  height: 23,
+                  color: c,
+                  strokeWidth: active ? 2.4 : 1.9,
+                  transition: "color 160ms ease, stroke-width 160ms ease",
+                }}
+              />
+            </span>
+          </Link>
+        );
+      })}
     </nav>
   );
 }
