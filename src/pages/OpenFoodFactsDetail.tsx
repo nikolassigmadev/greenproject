@@ -598,7 +598,7 @@ export default function OpenFoodFactsDetail() {
             style={{
               position: "absolute", top: "calc(env(safe-area-inset-top, 0px) + 18px)", left: 16,
               width: 34, height: 34, borderRadius: 999, border: "none",
-              background: "rgba(26,22,20,0.55)", color: EDITORIAL.card,
+              background: "rgba(26,22,20,0.55)", color: "#ffffff",
               display: "flex", alignItems: "center", justifyContent: "center",
               backdropFilter: "blur(10px)", cursor: "pointer", zIndex: 2,
             }}
