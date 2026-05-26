@@ -208,11 +208,12 @@ const filterBestProducts = (results: OpenFoodFactsResult[], query?: string): Ope
       });
 
       if (charFiltered.length > 0) {
-        // Sort: relevance first (descending), then eco data completeness as tiebreaker
+        // Sort: eco data completeness first so the richest result wins,
+        // then relevance as tiebreaker for equal eco scores.
         charFiltered.sort((a, b) =>
-          b.relevance !== a.relevance
-            ? b.relevance - a.relevance
-            : b.ecoScore - a.ecoScore
+          b.ecoScore !== a.ecoScore
+            ? b.ecoScore - a.ecoScore
+            : b.relevance - a.relevance
         );
         return charFiltered.slice(0, 5).map(s => s.result);
       }
@@ -1889,7 +1890,7 @@ const Scan = () => {
                 cursor: 'pointer',
               }}
             >
-              No, let me fix it
+              Search manually
             </button>
             <button
               disabled={enrichmentLoading}

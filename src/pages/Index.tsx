@@ -342,11 +342,18 @@ export default function Index() {
           </p>
         </div>
 
-        {/* Big scan CTA */}
-        <Link to="/scan" style={{ textDecoration: "none", display: "block", marginBottom: 28 }}>
+        {/* Big scan CTA — sticky on scroll */}
+        <div style={{
+          position: "sticky",
+          top: "calc(env(safe-area-inset-top, 0px) + 12px)",
+          zIndex: 30,
+          marginBottom: 28,
+        }}>
+        <Link to="/scan" style={{ textDecoration: "none", display: "block" }}>
           <div style={{
             background: "#1A1614", color: "#F7F6F3", borderRadius: DS.radius.lg, padding: 22,
             display: "flex", alignItems: "center", gap: 16,
+            boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
           }}>
             <div style={{
               width: 56, height: 56, borderRadius: 28, background: DS.good,
@@ -361,6 +368,7 @@ export default function Index() {
             <ChevronRight style={{ width: 20, height: 20, opacity: 0.7 }} />
           </div>
         </Link>
+        </div>
 
         {/* Animated example result */}
         <section style={{ marginBottom: 28 }}>
