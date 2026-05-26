@@ -1332,7 +1332,7 @@ const Scan = () => {
     setShowManualCorrection(false);
     setNotFoundQuery(null);
     setManualCorrectionInput("");
-    setOffLoading(true);
+    setOffSearchLoading(true);
 
     try {
       // Clean special chars (commas, dots, slashes etc.) and normalise whitespace
@@ -1344,7 +1344,16 @@ const Scan = () => {
         const query = words.slice(0, len).join(' ');
         console.log(`🔍 [manual] Trying: "${query}"`);
         const results = await searchOffProducts(query, 5);
-        const topResults = filterBestProducts(results, query);
+
+        // User typed this manually — skip aggressive OCR-grade filtering,
+        // just rank by eco data completeness
+        const topResults = results.length > 0
+          ? results
+              .map(r => ({ result: r, ecoScore: calculateEcoScore(r) }))
+              .sort((a, b) => b.ecoScore - a.ecoScore)
+              .slice(0, 5)
+              .map(s => s.result)
+          : [];
 
         if (topResults.length > 0) {
           console.log(`✅ [manual] Found results for: "${query}"`);
@@ -1368,7 +1377,7 @@ const Scan = () => {
         variant: "destructive",
       });
     } finally {
-      setOffLoading(false);
+      setOffSearchLoading(false);
     }
   }, [manualCorrectionInput, navigate, toast]);
 

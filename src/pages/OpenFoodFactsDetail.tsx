@@ -5,11 +5,11 @@ import {
   ChevronLeft, Loader2, Leaf, AlertTriangle, ExternalLink,
   CheckCircle2, ChevronRight, Package, ShoppingBag, ShoppingCart, XCircle, Clock,
   BadgeCheck, Wheat, Factory, Truck, Store, UtensilsCrossed,
-  ScanLine, Check, Sprout, PawPrint,
+  ScanLine, Check, Sprout, PawPrint, Search,
 } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { Logo } from "@/components/Logo";
-import { lookupBarcode } from "@/services/openfoodfacts";
+import { lookupBarcode, searchProducts } from "@/services/openfoodfacts";
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
 import { loadPriorities, saveScanToHistory, loadScanHistory, type UserPriorities } from "@/utils/userPreferences";
 import { checkBoycott } from "@/data/boycottBrands";
@@ -228,6 +228,9 @@ export default function OpenFoodFactsDetail() {
   const [confirmDismissed, setConfirmDismissed] = useState(false);
   const [showCandidates, setShowCandidates] = useState(false);
   const [candidates, setCandidates]         = useState<OpenFoodFactsResult[]>([]);
+  const [showManualSearch, setShowManualSearch] = useState(false);
+  const [manualSearchInput, setManualSearchInput] = useState("");
+  const [manualSearchLoading, setManualSearchLoading] = useState(false);
   const [inBasket, setInBasket]             = useState(false);
   const [stickyVisible, setStickyVisible]   = useState(false);
   const [cleanName, setCleanName]           = useState<string | null>(null);
@@ -314,6 +317,25 @@ export default function OpenFoodFactsDetail() {
       return () => clearTimeout(t);
     }
   }, [product]);
+
+  const handleManualProductSearch = async () => {
+    const query = manualSearchInput.trim();
+    if (!query) return;
+    setManualSearchLoading(true);
+    try {
+      const results = await searchProducts(query, 5);
+      if (results.length > 0) {
+        sessionStorage.setItem("scan_candidates", JSON.stringify(results));
+        navigate(`/product-off/${results[0].barcode}?from=scan`);
+      } else {
+        toast.error(`No results found for "${query}"`);
+      }
+    } catch {
+      toast.error("Search failed. Please try again.");
+    } finally {
+      setManualSearchLoading(false);
+    }
+  };
 
   const handleCartToggle = () => {
     if (!product) return;
@@ -714,7 +736,7 @@ export default function OpenFoodFactsDetail() {
             <div style={{ flex: 1 }} />
             <button
               type="button"
-              onClick={() => candidates.length > 0 ? setShowCandidates(true) : setConfirmDismissed(true)}
+              onClick={() => setShowCandidates(true)}
               style={{
                 fontSize: 12, fontWeight: 600, color: EDITORIAL.ink2,
                 background: "transparent", border: `1px solid ${EDITORIAL.line}`, borderRadius: 999,
@@ -734,11 +756,11 @@ export default function OpenFoodFactsDetail() {
             <div style={{ background: EDITORIAL.card, borderRadius: 18, overflow: "hidden", border: `1px solid ${EDITORIAL.line}` }}>
               <div style={{ padding: "14px 16px", borderBottom: `1px solid ${EDITORIAL.line}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <div>
-                  <p style={{ fontSize: 14, fontWeight: 800, margin: 0 }}>Other matches</p>
-                  <p style={{ fontSize: 12, color: EDITORIAL.ink2, margin: "2px 0 0" }}>Select the correct product</p>
+                  <p style={{ fontSize: 14, fontWeight: 800, margin: 0 }}>Wrong product?</p>
+                  <p style={{ fontSize: 12, color: EDITORIAL.ink2, margin: "2px 0 0" }}>{candidates.length > 0 ? "Select the correct product or search manually" : "Search for the correct product"}</p>
                 </div>
                 <button
-                  type="button" onClick={() => setShowCandidates(false)}
+                  type="button" onClick={() => { setShowCandidates(false); setShowManualSearch(false); }}
                   style={{ background: "none", border: "none", color: EDITORIAL.ink, fontSize: 12, fontWeight: 700, cursor: "pointer" }}
                 >Cancel</button>
               </div>
@@ -751,7 +773,7 @@ export default function OpenFoodFactsDetail() {
                     style={{
                       width: "100%", display: "flex", alignItems: "center", gap: 12,
                       padding: "12px 16px", textAlign: "left", cursor: "pointer",
-                      borderBottom: ci < candidates.length - 1 ? `1px solid ${EDITORIAL.line}` : "none",
+                      borderBottom: `1px solid ${EDITORIAL.line}`,
                       background: "none", border: "none", color: EDITORIAL.ink,
                     }}
                   >
@@ -780,6 +802,59 @@ export default function OpenFoodFactsDetail() {
                   </button>
                 );
               })}
+              {/* Manual search input */}
+              <div style={{ padding: "12px 16px", borderTop: candidates.length === 0 ? "none" : undefined }}>
+                {!showManualSearch ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowManualSearch(true)}
+                    style={{
+                      width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                      padding: "10px 14px", background: EDITORIAL.paper, border: `1px solid ${EDITORIAL.line}`,
+                      borderRadius: 12, cursor: "pointer", fontSize: "0.82rem", fontWeight: 600, color: EDITORIAL.ink2,
+                    }}
+                  >
+                    <Search style={{ width: 14, height: 14 }} />
+                    Search for a different product
+                  </button>
+                ) : (
+                  <form
+                    onSubmit={(e) => { e.preventDefault(); handleManualProductSearch(); }}
+                    style={{ display: "flex", gap: 8 }}
+                  >
+                    <div style={{ flex: 1, position: "relative", display: "flex", alignItems: "center" }}>
+                      <Search size={14} style={{ position: "absolute", left: 12, color: EDITORIAL.ink3, pointerEvents: "none" }} />
+                      <input
+                        autoFocus
+                        type="text"
+                        value={manualSearchInput}
+                        onChange={e => setManualSearchInput(e.target.value)}
+                        placeholder="e.g. Coca-Cola, Weetbix…"
+                        style={{
+                          width: "100%", height: 42, border: `1.5px solid ${EDITORIAL.line}`,
+                          borderRadius: 12, backgroundColor: EDITORIAL.paper,
+                          fontSize: "0.88rem", padding: "0 12px 0 36px", outline: "none",
+                          color: EDITORIAL.ink, boxSizing: "border-box",
+                        }}
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={!manualSearchInput.trim() || manualSearchLoading}
+                      style={{
+                        height: 42, borderRadius: 12, border: "none",
+                        backgroundColor: manualSearchInput.trim() ? EDITORIAL.ink : EDITORIAL.paper,
+                        color: manualSearchInput.trim() ? "#fff" : EDITORIAL.ink3,
+                        fontWeight: 700, fontSize: "0.85rem", padding: "0 16px",
+                        cursor: manualSearchInput.trim() && !manualSearchLoading ? "pointer" : "not-allowed",
+                        flexShrink: 0,
+                      }}
+                    >
+                      {manualSearchLoading ? <Loader2 size={14} style={{ animation: "off-spin 0.7s linear infinite" }} /> : "Go"}
+                    </button>
+                  </form>
+                )}
+              </div>
             </div>
           )}
 
