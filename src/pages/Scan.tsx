@@ -1313,17 +1313,56 @@ const Scan = () => {
     }).catch(err => console.warn('Failed to log missing product:', err));
   }, []);
 
-  // Handle manual correction: user typed the correct name → re-search OFF
+  // Handle manual correction: user typed the correct name → progressively
+  // strip words/special chars until OFF returns a match.
+  // e.g. "kitkat nest,le mini matcha" → "kitkat nestle mini matcha"
+  //   → "kitkat nestle mini" → "kitkat nestle" → "kitkat"
   const handleManualCorrectionSearch = useCallback(async () => {
-    const corrected = manualCorrectionInput.trim();
-    if (!corrected) return;
+    const raw = manualCorrectionInput.trim();
+    if (!raw) return;
 
     setShowManualCorrection(false);
     setNotFoundQuery(null);
     setManualCorrectionInput("");
-    // Re-use the same product search flow
-    handleProductSearch(corrected);
-  }, [manualCorrectionInput, handleProductSearch]);
+    setOffLoading(true);
+
+    try {
+      // Clean special chars (commas, dots, slashes etc.) and normalise whitespace
+      const cleaned = raw.replace(/[^a-zA-Z0-9\s\-']/g, ' ').replace(/\s+/g, ' ').trim();
+      const words = cleaned.split(' ').filter(Boolean);
+
+      // Try progressively shorter queries: full → drop last word each time
+      for (let len = words.length; len >= 1; len--) {
+        const query = words.slice(0, len).join(' ');
+        console.log(`🔍 [manual] Trying: "${query}"`);
+        const results = await searchOffProducts(query, 5);
+        const topResults = filterBestProducts(results, query);
+
+        if (topResults.length > 0) {
+          console.log(`✅ [manual] Found results for: "${query}"`);
+          sessionStorage.setItem('scan_candidates', JSON.stringify(topResults));
+          setShowSearch(false);
+          navigate(`/product-off/${topResults[0].barcode}?from=scan`);
+          return;
+        }
+        if (len > 1) {
+          console.warn(`   ↪ No results for "${query}", stripping last word...`);
+        }
+      }
+
+      // Nothing found even with single word — show not-found flow
+      setNotFoundQuery(cleaned);
+    } catch (error) {
+      console.error('Manual correction search error:', error);
+      toast({
+        title: "Search Error",
+        description: "Failed to search products. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setOffLoading(false);
+    }
+  }, [manualCorrectionInput, navigate, toast]);
 
   // Handle enrichment: user confirmed the search was correct → submit missing product
   const handleEnrichmentSubmit = useCallback(async (productName: string) => {
