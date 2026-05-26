@@ -22,6 +22,7 @@ import { advancedProductOCR } from "@/services/ocr/advanced-openai-ocr";
 import { copySingleProductCode } from "@/utils/productExporter";
 import { loadPriorities, DEFAULT_PRIORITIES, hasSavedPriorities, type UserPriorities } from "@/utils/userPreferences";
 import { lookupBarcode, isValidBarcode, searchProducts as searchOffProducts, searchBetterAlternatives } from "@/services/openfoodfacts";
+import { getBackendUrl } from "@/config/backend";
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
 import { DS } from "@/styles/design-tokens";
 
@@ -91,6 +92,36 @@ const levenshtein = (a: string, b: string): number => {
   }
   return prev[n];
 };
+
+// Character-level similarity between a query and an OFF result (0–1).
+// Compares against the query length so extra words in the OFF name
+// (e.g. "Tortilla Chips") don't penalise the score. If the OFF text
+// is longer, we slide a window of query-length over it and take the
+// best (lowest distance) alignment.
+const characterSimilarity = (query: string, offText: string): number => {
+  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const nq = norm(query);
+  const no = norm(offText);
+  if (nq.length === 0 && no.length === 0) return 1;
+  if (nq.length === 0 || no.length === 0) return 0;
+
+  // If OFF text is shorter or equal, simple full-string comparison
+  if (no.length <= nq.length) {
+    return 1 - levenshtein(nq, no) / nq.length;
+  }
+
+  // OFF text is longer: slide a window of nq.length over no and find best match
+  let bestDist = nq.length; // worst case
+  for (let i = 0; i <= no.length - nq.length; i++) {
+    const window = no.substring(i, i + nq.length);
+    const d = levenshtein(nq, window);
+    if (d < bestDist) bestDist = d;
+    if (d === 0) break; // perfect match
+  }
+  return 1 - bestDist / nq.length;
+};
+
+const MIN_CHAR_SIMILARITY = 0.75;
 
 // Check if a query word fuzzy-matches any word in the haystack
 const fuzzyWordMatch = (queryWord: string, haystackWords: string[]): boolean => {
@@ -164,28 +195,27 @@ const filterBestProducts = (results: OpenFoodFactsResult[], query?: string): Ope
 
       const candidates = relevant.length > 0 ? relevant : fallback;
 
-      if (candidates.length > 0) {
+      // 75% character-similarity gate: only keep results whose product name + brand
+      // is at least 75% similar to the original query (prevents unrelated results).
+      const q = query.trim();
+      const charFiltered = candidates.filter(s => {
+        const offText = [s.result.productName, s.result.brand].filter(Boolean).join(' ');
+        const sim = characterSimilarity(q, offText);
+        if (sim < MIN_CHAR_SIMILARITY) {
+          console.log(`   [charSim] REJECTED "${offText}" (${(sim * 100).toFixed(0)}% < 75%) for query "${q}"`);
+        }
+        return sim >= MIN_CHAR_SIMILARITY;
+      });
+
+      if (charFiltered.length > 0) {
         // Sort: relevance first (descending), then eco data completeness as tiebreaker
-        candidates.sort((a, b) =>
+        charFiltered.sort((a, b) =>
           b.relevance !== a.relevance
             ? b.relevance - a.relevance
             : b.ecoScore - a.ecoScore
         );
-        return candidates.slice(0, 5).map(s => s.result);
+        return charFiltered.slice(0, 5).map(s => s.result);
       }
-
-      // Nothing matched the strict relevance filter — relax: return any result
-      // where the query appears in product name, brand, or categories
-      const q = query.trim().toLowerCase();
-      const loose = scored
-        .filter(s => {
-          const name = (s.result.productName || '').toLowerCase();
-          const brand = (s.result.brand || '').toLowerCase();
-          const cats = s.result.categories.join(' ').toLowerCase();
-          return name.includes(q) || brand.includes(q) || cats.includes(q);
-        })
-        .sort((a, b) => b.ecoScore - a.ecoScore);
-      if (loose.length > 0) return loose.slice(0, 5).map(s => s.result);
 
       // No match at all — return empty so callers can show a proper "not found"
       // instead of displaying an unrelated product (e.g. fromage blanc).
@@ -360,6 +390,12 @@ const Scan = () => {
   const [productUnknown, setProductUnknown] = useState(false);
   const [offSearchImage, setOffSearchImage] = useState<string | null>(null);
   const [offSearchText, setOffSearchText] = useState("");
+  // Flowchart states: not-found confirmation, manual correction, enrichment
+  const [notFoundQuery, setNotFoundQuery] = useState<string | null>(null);       // "We searched for X"
+  const [showManualCorrection, setShowManualCorrection] = useState(false);       // User types correct name
+  const [manualCorrectionInput, setManualCorrectionInput] = useState("");
+  const [enrichmentSubmitted, setEnrichmentSubmitted] = useState<string | null>(null); // Shows "gathering data" message
+  const [enrichmentLoading, setEnrichmentLoading] = useState(false);
   const [showDetailedEnvironmental, setShowDetailedEnvironmental] = useState(false);
   const [selectedEnvironmentalResult, setSelectedEnvironmentalResult] = useState<OpenFoodFactsResult | null>(null);
   const [offAlternatives, setOffAlternatives] = useState<OpenFoodFactsResult[]>([]);
@@ -1087,11 +1123,9 @@ const Scan = () => {
         setShowSearch(false);
         navigate(`/product-off/${topResults[0].barcode}?from=scan`);
       } else {
-        toast({
-          title: "No Products Found",
-          description: `No products found for "${productName}"`,
-          variant: "destructive",
-        });
+        // Not found → "Was the search correct?" flow
+        setShowSearch(false);
+        setNotFoundQuery(productName.trim());
       }
     } catch (error) {
       console.error("Product search error:", error);
@@ -1114,6 +1148,9 @@ const Scan = () => {
     setOffSearchText("");
     setOffSearchImage(imageData);
     setProductUnknown(false);
+    setNotFoundQuery(null);
+    setShowManualCorrection(false);
+    setEnrichmentSubmitted(null);
 
     try {
       // Step 1: OpenAI identifies the product
@@ -1173,11 +1210,12 @@ const Scan = () => {
       const results = await searchOffProducts(fullQuery, 20);
 
       if (results.length === 0) {
-        toast({
-          title: "No Results",
-          description: `Couldn't find "${fullQuery}" or any simplified version in OpenFoodFacts.`,
-          variant: "destructive",
+        // Not found → auto-log + "Was the search correct?" flow
+        submitMissingProduct(fullQuery, 'off-no-results', {
+          openAiBrand: identified.brandName || undefined,
+          openAiProduct: identified.productName || undefined,
         });
+        setNotFoundQuery(fullQuery);
         return;
       }
 
@@ -1185,54 +1223,44 @@ const Scan = () => {
       console.log(`Found results for query: "${fullQuery}"`);
       const topResults = filterBestProducts(results, fullQuery);
       if (topResults.length === 0) {
-        toast({
-          title: "No Matching Products",
-          description: `Couldn't find a product matching "${fullQuery}". Try a different search.`,
-          variant: "destructive",
+        submitMissingProduct(fullQuery, 'off-no-relevant-results', {
+          openAiBrand: identified.brandName || undefined,
+          openAiProduct: identified.productName || undefined,
+          offTopResult: [results[0]?.productName, results[0]?.brand].filter(Boolean).join(' ') || undefined,
         });
+        setNotFoundQuery(fullQuery);
         return;
       }
       const candidates = topResults;
 
-      // Step 4b: Pick the best candidate by matching OCR brand/product against
-      // the search results' own inline data (no barcode re-lookup — OFF search
-      // index barcodes often resolve to different products).
-      const ocrBrand = (identified.brandName || '').toLowerCase().trim();
-      const ocrProductWords = (identified.productName || '')
-        .toLowerCase().split(/\s+/).filter(w => w.length >= 4);
-
-      let chosenCandidate = candidates[0];
-      let matchFound = false;
-      const hasOcrSignal = ocrBrand.length >= 3 || ocrProductWords.length > 0;
-
-      if (hasOcrSignal) {
-        for (const candidate of candidates) {
-          const candidateText = `${candidate.productName || ''} ${candidate.brand || ''}`.toLowerCase();
-          const brandOk = ocrBrand.length >= 3 && candidateText.includes(ocrBrand);
-          const productOk = ocrProductWords.length > 0 && ocrProductWords.some(w => candidateText.includes(w));
-          if (brandOk || productOk) {
-            chosenCandidate = candidate;
-            matchFound = true;
-            console.log(`✅ Matched candidate: "${candidate.productName}" by ${candidate.brand} (brand=${brandOk}, product=${productOk})`);
-            break;
-          }
+      // Step 4b: Pick the best candidate using 75% character similarity gate.
+      // Compare each OFF result's name+brand against the OCR query string.
+      let chosenCandidate: typeof candidates[0] | null = null;
+      for (const candidate of candidates) {
+        const offText = [candidate.productName, candidate.brand].filter(Boolean).join(' ');
+        const sim = characterSimilarity(fullQuery, offText);
+        console.log(`   [charSim] "${offText}" vs "${fullQuery}" → ${(sim * 100).toFixed(0)}%`);
+        if (sim >= MIN_CHAR_SIMILARITY) {
+          chosenCandidate = candidate;
+          console.log(`✅ Matched candidate: "${candidate.productName}" by ${candidate.brand} (${(sim * 100).toFixed(0)}% similarity)`);
+          break;
         }
       }
 
-      // If OCR identified a product but none of the OFF results match,
-      // don't show a random unrelated product — ask user to retry.
-      if (hasOcrSignal && !matchFound) {
+      // If no OFF result reaches 75% similarity → auto-log + not found flow
+      if (!chosenCandidate) {
         const topName = `${candidates[0].productName || ''} ${candidates[0].brand || ''}`.trim();
-        console.warn(`⚠️ No OFF candidate matches OCR "${fullQuery}". Top result was "${topName}"`);
-        toast({
-          title: "Couldn't confirm match",
-          description: `We identified "${fullQuery}" but couldn't find a matching product in our database. Try a clearer image or search manually.`,
-          variant: "destructive",
+        console.warn(`⚠️ No OFF candidate passes 75% char similarity for "${fullQuery}". Top result was "${topName}"`);
+        submitMissingProduct(fullQuery, 'similarity-mismatch', {
+          openAiBrand: identified.brandName || undefined,
+          openAiProduct: identified.productName || undefined,
+          offTopResult: topName || undefined,
         });
+        setNotFoundQuery(fullQuery);
         return;
       }
 
-      const finalCandidates = [chosenCandidate, ...candidates.filter(c => c.barcode !== chosenCandidate.barcode)];
+      const finalCandidates = [chosenCandidate, ...candidates.filter(c => c.barcode !== chosenCandidate!.barcode)];
       sessionStorage.setItem('scan_candidates', JSON.stringify(finalCandidates));
       navigate(`/product-off/${chosenCandidate.barcode}?from=scan`);
     } catch (error) {
@@ -1264,6 +1292,63 @@ const Scan = () => {
     // Reset input so same file can be selected again
     e.target.value = "";
   }, [processImageForOFF]);
+
+  // Fire-and-forget: silently log a product as missing (no UI state changes)
+  const submitMissingProduct = useCallback((productName: string, source: string, extra?: {
+    openAiBrand?: string;
+    openAiProduct?: string;
+    offTopResult?: string;
+  }) => {
+    const backendUrl = getBackendUrl();
+    fetch(`${backendUrl}/api/missing-products`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        productName,
+        submittedAt: new Date().toISOString(),
+        source,
+        ...(extra || {}),
+      }),
+    }).catch(err => console.warn('Failed to log missing product:', err));
+  }, []);
+
+  // Handle manual correction: user typed the correct name → re-search OFF
+  const handleManualCorrectionSearch = useCallback(async () => {
+    const corrected = manualCorrectionInput.trim();
+    if (!corrected) return;
+
+    setShowManualCorrection(false);
+    setNotFoundQuery(null);
+    setManualCorrectionInput("");
+    // Re-use the same product search flow
+    handleProductSearch(corrected);
+  }, [manualCorrectionInput, handleProductSearch]);
+
+  // Handle enrichment: user confirmed the search was correct → submit missing product
+  const handleEnrichmentSubmit = useCallback(async (productName: string) => {
+    setEnrichmentLoading(true);
+    try {
+      const backendUrl = getBackendUrl();
+      await fetch(`${backendUrl}/api/missing-products`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productName,
+          submittedAt: new Date().toISOString(),
+          source: 'scan-not-found',
+        }),
+      });
+      setNotFoundQuery(null);
+      setEnrichmentSubmitted(productName);
+    } catch (error) {
+      console.error('Enrichment submit error:', error);
+      // Still show success to user — the backend will retry
+      setNotFoundQuery(null);
+      setEnrichmentSubmitted(productName);
+    } finally {
+      setEnrichmentLoading(false);
+    }
+  }, []);
 
   // Capture photo from camera with mobile orientation handling
   const capturePhoto = useCallback(() => {
@@ -1725,7 +1810,8 @@ const Scan = () => {
       </div>
 
       {/* Product Unknown overlay */}
-      {productUnknown && (
+      {/* AMBIGUOUS — OpenAI couldn't identify the product */}
+      {productUnknown && !notFoundQuery && !showManualCorrection && !enrichmentSubmitted && (
         <div
           style={{
             position: 'absolute', bottom: 0, left: 0, right: 0,
@@ -1737,12 +1823,12 @@ const Scan = () => {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: DS.badBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <AlertCircle size={18} style={{ color: DS.bad }} />
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: DS.warnBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <AlertCircle size={18} style={{ color: DS.warn }} />
             </div>
             <div>
-              <p style={{ fontWeight: 800, fontSize: '0.95rem', color: DS.ink, marginBottom: 2 }}>Product not found</p>
-              <p style={{ fontSize: '0.78rem', color: DS.muted, lineHeight: 1.4 }}>Try a clearer photo of the barcode or label.</p>
+              <p style={{ fontWeight: 800, fontSize: '0.95rem', color: DS.ink, marginBottom: 2 }}>Couldn't identify product</p>
+              <p style={{ fontSize: '0.78rem', color: DS.muted, lineHeight: 1.4 }}>The image was too unclear to recognise. Retake with better lighting, or type the product name.</p>
             </div>
           </div>
           <button
@@ -1754,7 +1840,169 @@ const Scan = () => {
               cursor: 'pointer', marginTop: 8,
             }}
           >
-            Try Again
+            Retake Photo
+          </button>
+          <button
+            onClick={() => { setProductUnknown(false); setShowManualCorrection(true); setManualCorrectionInput(""); }}
+            style={{
+              width: '100%', height: 48, border: `1.5px solid ${DS.hair}`, borderRadius: 14,
+              backgroundColor: DS.bg, color: DS.ink,
+              fontWeight: 600, fontSize: '0.9rem',
+              cursor: 'pointer', marginTop: 8,
+            }}
+          >
+            Enter Product Name
+          </button>
+        </div>
+      )}
+
+      {/* NOT FOUND — "We searched for X, was the search correct?" */}
+      {notFoundQuery && !showManualCorrection && !enrichmentSubmitted && (
+        <div
+          style={{
+            position: 'absolute', bottom: 0, left: 0, right: 0,
+            background: DS.bg,
+            borderRadius: '20px 20px 0 0',
+            padding: '20px 20px calc(env(safe-area-inset-bottom, 0px) + 24px)',
+            zIndex: 50,
+            boxShadow: '0 -4px 24px rgba(0,0,0,0.1)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: DS.warnBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Search size={18} style={{ color: DS.warn }} />
+            </div>
+            <div>
+              <p style={{ fontWeight: 800, fontSize: '0.95rem', color: DS.ink, marginBottom: 2 }}>No results found</p>
+              <p style={{ fontSize: '0.78rem', color: DS.muted, lineHeight: 1.4 }}>
+                We searched for <strong style={{ color: DS.ink }}>"{notFoundQuery}"</strong> and didn't find anything. Was the search correct?
+              </p>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={() => { setNotFoundQuery(null); setShowManualCorrection(true); setManualCorrectionInput(""); }}
+              style={{
+                flex: 1, height: 48, border: `1.5px solid ${DS.hair}`, borderRadius: 14,
+                backgroundColor: DS.bg, color: DS.ink,
+                fontWeight: 600, fontSize: '0.9rem',
+                cursor: 'pointer',
+              }}
+            >
+              No, let me fix it
+            </button>
+            <button
+              disabled={enrichmentLoading}
+              onClick={() => handleEnrichmentSubmit(notFoundQuery)}
+              style={{
+                flex: 1, height: 48, border: 'none', borderRadius: 14,
+                backgroundColor: DS.ink, color: DS.card,
+                fontWeight: 700, fontSize: '0.9rem',
+                cursor: enrichmentLoading ? 'wait' : 'pointer',
+                opacity: enrichmentLoading ? 0.7 : 1,
+              }}
+            >
+              {enrichmentLoading ? 'Submitting…' : 'Yes, add it'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* MANUAL CORRECTION — User types the correct product name */}
+      {showManualCorrection && !enrichmentSubmitted && (
+        <div
+          style={{
+            position: 'absolute', bottom: 0, left: 0, right: 0,
+            background: DS.bg,
+            borderRadius: '20px 20px 0 0',
+            padding: '20px 20px calc(env(safe-area-inset-bottom, 0px) + 24px)',
+            zIndex: 50,
+            boxShadow: '0 -4px 24px rgba(0,0,0,0.1)',
+          }}
+        >
+          <p style={{ fontWeight: 800, fontSize: '0.95rem', color: DS.ink, marginBottom: 4 }}>Enter product name</p>
+          <p style={{ fontSize: '0.78rem', color: DS.muted, marginBottom: 12, lineHeight: 1.4 }}>Type the correct product name and we'll search again.</p>
+          <form onSubmit={(e) => { e.preventDefault(); handleManualCorrectionSearch(); }} style={{ display: 'flex', gap: 8 }}>
+            <div style={{ flex: 1, minWidth: 0, position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <Search size={16} style={{ position: 'absolute', left: 14, color: DS.muted, pointerEvents: 'none' }} />
+              <input
+                autoFocus
+                type="text"
+                value={manualCorrectionInput}
+                onChange={e => setManualCorrectionInput(e.target.value)}
+                placeholder="e.g. Coca-Cola, Weetbix…"
+                style={{
+                  width: '100%', height: 50,
+                  border: `1.5px solid ${DS.hair}`,
+                  borderRadius: 14,
+                  backgroundColor: DS.bg,
+                  fontSize: '1rem', padding: '0 14px 0 42px', outline: 'none',
+                  color: DS.ink, boxSizing: 'border-box',
+                }}
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={!manualCorrectionInput.trim() || offLoading}
+              style={{
+                height: 50, borderRadius: 14, border: 'none',
+                backgroundColor: manualCorrectionInput.trim() ? DS.ink : DS.bg,
+                color: manualCorrectionInput.trim() ? DS.card : DS.muted,
+                fontWeight: 700, fontSize: '0.9rem',
+                padding: '0 20px', cursor: 'pointer',
+                flexShrink: 0,
+              }}
+            >
+              {offLoading ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> : 'Go'}
+            </button>
+          </form>
+          <button
+            onClick={() => { setShowManualCorrection(false); setNotFoundQuery(null); setProductUnknown(false); }}
+            style={{
+              width: '100%', height: 42, border: 'none', borderRadius: 14,
+              backgroundColor: 'transparent', color: DS.muted,
+              fontWeight: 600, fontSize: '0.85rem',
+              cursor: 'pointer', marginTop: 6,
+            }}
+          >
+            Cancel
+          </button>
+        </div>
+      )}
+
+      {/* ENRICHMENT SUBMITTED — product queued for data gathering */}
+      {enrichmentSubmitted && (
+        <div
+          style={{
+            position: 'absolute', bottom: 0, left: 0, right: 0,
+            background: DS.bg,
+            borderRadius: '20px 20px 0 0',
+            padding: '20px 20px calc(env(safe-area-inset-bottom, 0px) + 24px)',
+            zIndex: 50,
+            boxShadow: '0 -4px 24px rgba(0,0,0,0.1)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: DS.goodBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Check size={18} style={{ color: DS.good }} />
+            </div>
+            <div>
+              <p style={{ fontWeight: 800, fontSize: '0.95rem', color: DS.ink, marginBottom: 2 }}>Product submitted</p>
+              <p style={{ fontSize: '0.78rem', color: DS.muted, lineHeight: 1.4 }}>
+                <strong style={{ color: DS.ink }}>"{enrichmentSubmitted}"</strong> has been added to our queue. We're gathering ethical data for it now — check back soon.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => { setEnrichmentSubmitted(null); setProductUnknown(false); setNotFoundQuery(null); }}
+            style={{
+              width: '100%', height: 48, border: 'none', borderRadius: 14,
+              backgroundColor: DS.ink, color: DS.card,
+              fontWeight: 700, fontSize: '0.9rem',
+              cursor: 'pointer', marginTop: 8,
+            }}
+          >
+            Scan Another Product
           </button>
         </div>
       )}
