@@ -22,7 +22,6 @@ import { advancedProductOCR } from "@/services/ocr/advanced-openai-ocr";
 import { copySingleProductCode } from "@/utils/productExporter";
 import { loadPriorities, DEFAULT_PRIORITIES, hasSavedPriorities, type UserPriorities } from "@/utils/userPreferences";
 import { lookupBarcode, isValidBarcode, searchProducts as searchOffProducts, searchBetterAlternatives } from "@/services/openfoodfacts";
-import { getBackendUrl } from "@/config/backend";
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
 import { DS } from "@/styles/design-tokens";
 
@@ -391,12 +390,10 @@ const Scan = () => {
   const [productUnknown, setProductUnknown] = useState(false);
   const [offSearchImage, setOffSearchImage] = useState<string | null>(null);
   const [offSearchText, setOffSearchText] = useState("");
-  // Flowchart states: not-found confirmation, manual correction, enrichment
+  // Flowchart states: not-found confirmation, manual correction
   const [notFoundQuery, setNotFoundQuery] = useState<string | null>(null);       // "We searched for X"
   const [showManualCorrection, setShowManualCorrection] = useState(false);       // User types correct name
   const [manualCorrectionInput, setManualCorrectionInput] = useState("");
-  const [enrichmentSubmitted, setEnrichmentSubmitted] = useState<string | null>(null); // Shows "gathering data" message
-  const [enrichmentLoading, setEnrichmentLoading] = useState(false);
   const [showDetailedEnvironmental, setShowDetailedEnvironmental] = useState(false);
   const [selectedEnvironmentalResult, setSelectedEnvironmentalResult] = useState<OpenFoodFactsResult | null>(null);
   const [offAlternatives, setOffAlternatives] = useState<OpenFoodFactsResult[]>([]);
@@ -1219,11 +1216,6 @@ const Scan = () => {
       const results = await searchOffProducts(fullQuery, 20);
 
       if (results.length === 0) {
-        // Not found → auto-log + "Was the search correct?" flow
-        submitMissingProduct(fullQuery, 'off-no-results', {
-          openAiBrand: identified.brandName || undefined,
-          openAiProduct: identified.productName || undefined,
-        });
         setNotFoundQuery(fullQuery);
         return;
       }
@@ -1232,11 +1224,6 @@ const Scan = () => {
       console.log(`Found results for query: "${fullQuery}"`);
       const topResults = filterBestProducts(results, fullQuery);
       if (topResults.length === 0) {
-        submitMissingProduct(fullQuery, 'off-no-relevant-results', {
-          openAiBrand: identified.brandName || undefined,
-          openAiProduct: identified.productName || undefined,
-          offTopResult: [results[0]?.productName, results[0]?.brand].filter(Boolean).join(' ') || undefined,
-        });
         setNotFoundQuery(fullQuery);
         return;
       }
@@ -1260,11 +1247,6 @@ const Scan = () => {
       if (!chosenCandidate) {
         const topName = `${candidates[0].productName || ''} ${candidates[0].brand || ''}`.trim();
         console.warn(`⚠️ No OFF candidate passes 75% char similarity for "${fullQuery}". Top result was "${topName}"`);
-        submitMissingProduct(fullQuery, 'similarity-mismatch', {
-          openAiBrand: identified.brandName || undefined,
-          openAiProduct: identified.productName || undefined,
-          offTopResult: topName || undefined,
-        });
         setNotFoundQuery(fullQuery);
         return;
       }
@@ -1301,25 +1283,6 @@ const Scan = () => {
     // Reset input so same file can be selected again
     e.target.value = "";
   }, [processImageForOFF]);
-
-  // Fire-and-forget: silently log a product as missing (no UI state changes)
-  const submitMissingProduct = useCallback((productName: string, source: string, extra?: {
-    openAiBrand?: string;
-    openAiProduct?: string;
-    offTopResult?: string;
-  }) => {
-    const backendUrl = getBackendUrl();
-    fetch(`${backendUrl}/api/missing-products`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        productName,
-        submittedAt: new Date().toISOString(),
-        source,
-        ...(extra || {}),
-      }),
-    }).catch(err => console.warn('Failed to log missing product:', err));
-  }, []);
 
   // Handle manual correction: user typed the correct name → progressively
   // strip words/special chars until OFF returns a match.
@@ -1380,32 +1343,6 @@ const Scan = () => {
       setOffSearchLoading(false);
     }
   }, [manualCorrectionInput, navigate, toast]);
-
-  // Handle enrichment: user confirmed the search was correct → submit missing product
-  const handleEnrichmentSubmit = useCallback(async (productName: string) => {
-    setEnrichmentLoading(true);
-    try {
-      const backendUrl = getBackendUrl();
-      await fetch(`${backendUrl}/api/missing-products`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          productName,
-          submittedAt: new Date().toISOString(),
-          source: 'scan-not-found',
-        }),
-      });
-      setNotFoundQuery(null);
-      setEnrichmentSubmitted(productName);
-    } catch (error) {
-      console.error('Enrichment submit error:', error);
-      // Still show success to user — the backend will retry
-      setNotFoundQuery(null);
-      setEnrichmentSubmitted(productName);
-    } finally {
-      setEnrichmentLoading(false);
-    }
-  }, []);
 
   // Capture photo from camera with mobile orientation handling
   const capturePhoto = useCallback(() => {
@@ -1868,7 +1805,7 @@ const Scan = () => {
 
       {/* Product Unknown overlay */}
       {/* AMBIGUOUS — OpenAI couldn't identify the product */}
-      {productUnknown && !notFoundQuery && !showManualCorrection && !enrichmentSubmitted && (
+      {productUnknown && !notFoundQuery && !showManualCorrection && (
         <div
           style={{
             position: 'absolute', bottom: 0, left: 0, right: 0,
@@ -1917,7 +1854,7 @@ const Scan = () => {
       )}
 
       {/* NOT FOUND — "We searched for X, was the search correct?" */}
-      {notFoundQuery && !showManualCorrection && !enrichmentSubmitted && (
+      {notFoundQuery && !showManualCorrection && (
         <div
           style={{
             position: 'absolute', bottom: 0, left: 0, right: 0,
@@ -1953,24 +1890,11 @@ const Scan = () => {
             <Search size={18} />
             Type Product Manually
           </button>
-          <button
-            disabled={enrichmentLoading}
-            onClick={() => handleEnrichmentSubmit(notFoundQuery)}
-            style={{
-              width: '100%', height: 44, border: 'none', borderRadius: 14,
-              backgroundColor: 'transparent', color: DS.muted,
-              fontWeight: 600, fontSize: '0.85rem',
-              cursor: enrichmentLoading ? 'wait' : 'pointer', marginTop: 6,
-              opacity: enrichmentLoading ? 0.7 : 1,
-            }}
-          >
-            {enrichmentLoading ? 'Submitting…' : 'Search was correct — add to database'}
-          </button>
         </div>
       )}
 
       {/* MANUAL CORRECTION — User types the correct product name */}
-      {showManualCorrection && !enrichmentSubmitted && (
+      {showManualCorrection && (
         <div
           style={{
             position: 'absolute', bottom: 0, left: 0, right: 0,
@@ -2032,42 +1956,6 @@ const Scan = () => {
       )}
 
       {/* ENRICHMENT SUBMITTED — product queued for data gathering */}
-      {enrichmentSubmitted && (
-        <div
-          style={{
-            position: 'absolute', bottom: 0, left: 0, right: 0,
-            background: DS.bg,
-            borderRadius: '20px 20px 0 0',
-            padding: '20px 20px calc(env(safe-area-inset-bottom, 0px) + 24px)',
-            zIndex: 50,
-            boxShadow: '0 -4px 24px rgba(0,0,0,0.1)',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: DS.goodBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <Check size={18} style={{ color: DS.good }} />
-            </div>
-            <div>
-              <p style={{ fontWeight: 800, fontSize: '0.95rem', color: DS.ink, marginBottom: 2 }}>Product submitted</p>
-              <p style={{ fontSize: '0.78rem', color: DS.muted, lineHeight: 1.4 }}>
-                <strong style={{ color: DS.ink }}>"{enrichmentSubmitted}"</strong> has been added to our queue. We're gathering ethical data for it now — check back soon.
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={() => { setEnrichmentSubmitted(null); setProductUnknown(false); setNotFoundQuery(null); }}
-            style={{
-              width: '100%', height: 48, border: 'none', borderRadius: 14,
-              backgroundColor: DS.ink, color: DS.card,
-              fontWeight: 700, fontSize: '0.9rem',
-              cursor: 'pointer', marginTop: 8,
-            }}
-          >
-            Scan Another Product
-          </button>
-        </div>
-      )}
-
       {/* Search full-screen overlay */}
       {showSearch && (
         <div
