@@ -1823,36 +1823,39 @@ const Scan = () => {
             boxShadow: '0 -4px 24px rgba(0,0,0,0.1)',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
             <div style={{ width: 36, height: 36, borderRadius: 10, background: DS.warnBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <AlertCircle size={18} style={{ color: DS.warn }} />
             </div>
             <div>
               <p style={{ fontWeight: 800, fontSize: '0.95rem', color: DS.ink, marginBottom: 2 }}>Couldn't identify product</p>
-              <p style={{ fontSize: '0.78rem', color: DS.muted, lineHeight: 1.4 }}>The image was too unclear to recognise. Retake with better lighting, or type the product name.</p>
+              <p style={{ fontSize: '0.78rem', color: DS.muted, lineHeight: 1.4 }}>We couldn't recognise the product from your image.</p>
             </div>
           </div>
-          <button
-            onClick={() => { setProductUnknown(false); offFileInputRef.current?.click(); }}
-            style={{
-              width: '100%', height: 48, border: 'none', borderRadius: 14,
-              backgroundColor: DS.ink, color: DS.card,
-              fontWeight: 700, fontSize: '0.9rem',
-              cursor: 'pointer', marginTop: 8,
-            }}
-          >
-            Retake Photo
-          </button>
+          {/* Primary CTA — always the most visible */}
           <button
             onClick={() => { setProductUnknown(false); setShowManualCorrection(true); setManualCorrectionInput(""); }}
             style={{
-              width: '100%', height: 48, border: `1.5px solid ${DS.hair}`, borderRadius: 14,
-              backgroundColor: DS.bg, color: DS.ink,
-              fontWeight: 600, fontSize: '0.9rem',
-              cursor: 'pointer', marginTop: 8,
+              width: '100%', height: 52, border: 'none', borderRadius: 14,
+              background: DS.good, color: '#fff',
+              fontWeight: 700, fontSize: '0.95rem', letterSpacing: 0.2,
+              cursor: 'pointer', marginTop: 4,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             }}
           >
-            Enter Product Name
+            <Search size={18} />
+            Type Product Manually
+          </button>
+          <button
+            onClick={() => { setProductUnknown(false); offFileInputRef.current?.click(); }}
+            style={{
+              width: '100%', height: 44, border: 'none', borderRadius: 14,
+              backgroundColor: 'transparent', color: DS.muted,
+              fontWeight: 600, fontSize: '0.85rem',
+              cursor: 'pointer', marginTop: 6,
+            }}
+          >
+            or retake photo
           </button>
         </div>
       )}
@@ -1874,38 +1877,39 @@ const Scan = () => {
               <Search size={18} style={{ color: DS.warn }} />
             </div>
             <div>
-              <p style={{ fontWeight: 800, fontSize: '0.95rem', color: DS.ink, marginBottom: 2 }}>No results found</p>
+              <p style={{ fontWeight: 800, fontSize: '0.95rem', color: DS.ink, marginBottom: 2 }}>Wrong product?</p>
               <p style={{ fontSize: '0.78rem', color: DS.muted, lineHeight: 1.4 }}>
-                We searched for <strong style={{ color: DS.ink }}>"{notFoundQuery}"</strong> and didn't find anything. Was the search correct?
+                We searched for <strong style={{ color: DS.ink }}>"{notFoundQuery}"</strong> but couldn't find it.
               </p>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button
-              onClick={() => { setNotFoundQuery(null); setShowManualCorrection(true); setManualCorrectionInput(""); }}
-              style={{
-                flex: 1, height: 48, border: `1.5px solid ${DS.hair}`, borderRadius: 14,
-                backgroundColor: DS.bg, color: DS.ink,
-                fontWeight: 600, fontSize: '0.9rem',
-                cursor: 'pointer',
-              }}
-            >
-              Search manually
-            </button>
-            <button
-              disabled={enrichmentLoading}
-              onClick={() => handleEnrichmentSubmit(notFoundQuery)}
-              style={{
-                flex: 1, height: 48, border: 'none', borderRadius: 14,
-                backgroundColor: DS.ink, color: DS.card,
-                fontWeight: 700, fontSize: '0.9rem',
-                cursor: enrichmentLoading ? 'wait' : 'pointer',
-                opacity: enrichmentLoading ? 0.7 : 1,
-              }}
-            >
-              {enrichmentLoading ? 'Submitting…' : 'Yes, add it'}
-            </button>
-          </div>
+          {/* Primary CTA — always the most visible */}
+          <button
+            onClick={() => { setNotFoundQuery(null); setShowManualCorrection(true); setManualCorrectionInput(""); }}
+            style={{
+              width: '100%', height: 52, border: 'none', borderRadius: 14,
+              background: DS.good, color: '#fff',
+              fontWeight: 700, fontSize: '0.95rem', letterSpacing: 0.2,
+              cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            }}
+          >
+            <Search size={18} />
+            Type Product Manually
+          </button>
+          <button
+            disabled={enrichmentLoading}
+            onClick={() => handleEnrichmentSubmit(notFoundQuery)}
+            style={{
+              width: '100%', height: 44, border: 'none', borderRadius: 14,
+              backgroundColor: 'transparent', color: DS.muted,
+              fontWeight: 600, fontSize: '0.85rem',
+              cursor: enrichmentLoading ? 'wait' : 'pointer', marginTop: 6,
+              opacity: enrichmentLoading ? 0.7 : 1,
+            }}
+          >
+            {enrichmentLoading ? 'Submitting…' : 'Search was correct — add to database'}
+          </button>
         </div>
       )}
 
