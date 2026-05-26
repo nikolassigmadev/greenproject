@@ -1116,8 +1116,16 @@ const Scan = () => {
       // Fetch a small pool — we navigate to the top result immediately
       const results = await searchOffProducts(productName.trim(), 5);
 
-      // Filter to show only the best 3 results (ranked by eco data completeness)
-      const topResults = filterBestProducts(results, productName.trim());
+      // For manual text search, skip aggressive OCR-grade filtering —
+      // the user typed the query themselves, so OFF results are already relevant.
+      // Just rank by eco data completeness and take the top results.
+      const topResults = results.length > 0
+        ? results
+            .map(r => ({ result: r, ecoScore: calculateEcoScore(r) }))
+            .sort((a, b) => b.ecoScore - a.ecoScore)
+            .slice(0, 5)
+            .map(s => s.result)
+        : [];
 
       if (topResults.length > 0) {
         sessionStorage.setItem('scan_candidates', JSON.stringify(topResults));
