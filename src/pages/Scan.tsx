@@ -1140,13 +1140,13 @@ const Scan = () => {
       // Fetch a small pool — we navigate to the top result immediately
       const results = await searchOffProducts(productName.trim(), 5);
 
-      // For manual text search, skip aggressive OCR-grade filtering —
-      // the user typed the query themselves, so OFF results are already relevant.
-      // Just rank by eco data completeness and take the top results.
+      // Filter by relevance — require at least 75% match to avoid garbage results
+      const queryWords = productName.trim().toLowerCase().split(/[\s\-_]+/).filter(w => w.length >= 2);
       const topResults = results.length > 0
         ? results
-            .map(r => ({ result: r, ecoScore: calculateEcoScore(r) }))
-            .sort((a, b) => b.ecoScore - a.ecoScore)
+            .map(r => ({ result: r, relevance: computeRelevance(r, queryWords), ecoScore: calculateEcoScore(r) }))
+            .filter(s => s.relevance >= 0.75)
+            .sort((a, b) => b.relevance - a.relevance || b.ecoScore - a.ecoScore)
             .slice(0, 5)
             .map(s => s.result)
         : [];
@@ -1380,12 +1380,13 @@ const Scan = () => {
         console.log(`🔍 [manual] Trying: "${query}"`);
         const results = await searchOffProducts(query, 5);
 
-        // User typed this manually — skip aggressive OCR-grade filtering,
-        // just rank by eco data completeness
+        // Filter by relevance — require 75% match
+        const qWords = query.toLowerCase().split(/[\s\-_]+/).filter(w => w.length >= 2);
         const topResults = results.length > 0
           ? results
-              .map(r => ({ result: r, ecoScore: calculateEcoScore(r) }))
-              .sort((a, b) => b.ecoScore - a.ecoScore)
+              .map(r => ({ result: r, relevance: computeRelevance(r, qWords), ecoScore: calculateEcoScore(r) }))
+              .filter(s => s.relevance >= 0.75)
+              .sort((a, b) => b.relevance - a.relevance || b.ecoScore - a.ecoScore)
               .slice(0, 5)
               .map(s => s.result)
           : [];
