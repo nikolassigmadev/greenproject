@@ -122,6 +122,33 @@ const characterSimilarity = (query: string, offText: string): number => {
 
 const MIN_CHAR_SIMILARITY = 0.75;
 
+/**
+ * Clean an OCR query string for better search results.
+ * - Strips numbers with units (500g, 250ml, 1.5L, 12oz, etc.)
+ * - Strips standalone numbers
+ * - Deduplicates words (case-insensitive, keeps first occurrence)
+ * - Normalises whitespace
+ */
+const cleanOCRQuery = (raw: string): string => {
+  let q = raw
+    // Remove numbers with units: 500g, 250ml, 1.5L, 12oz, 100%, 330cl etc.
+    .replace(/\d+[\.,]?\d*\s*(g|kg|mg|ml|l|cl|oz|fl\.?\s*oz|lb|lbs|liter|litre|%)\b/gi, ' ')
+    // Remove standalone numbers
+    .replace(/\b\d+\b/g, ' ')
+    // Normalise whitespace
+    .replace(/\s+/g, ' ')
+    .trim();
+  // Deduplicate words (case-insensitive, keep first occurrence)
+  const seen = new Set<string>();
+  q = q.split(' ').filter(w => {
+    const lower = w.toLowerCase();
+    if (seen.has(lower)) return false;
+    seen.add(lower);
+    return true;
+  }).join(' ');
+  return q;
+};
+
 // Check if a query word fuzzy-matches any word in the haystack
 const fuzzyWordMatch = (queryWord: string, haystackWords: string[]): boolean => {
   // Allow up to ~25% edit distance (1 for short words, 2 for longer)
@@ -1200,64 +1227,88 @@ const Scan = () => {
         }
       }
 
-      // Step 3: Search OFF — searchOffProducts internally tries multiple query
-      // variations (full → prefix shrink → suffix → brand alone), so one call suffices.
-      const fullQuery = [identified.brandName, identified.productName]
+      // Step 3: Build search queries — raw OCR, then cleaned, then progressive word strip
+      const rawQuery = [identified.brandName, identified.productName]
         .filter(s => !isUnknownResponse(s))
         .join(' ')
         .trim();
 
-      if (!fullQuery) {
+      if (!rawQuery) {
         setProductUnknown(true);
         return;
       }
 
-      setOffSearchText(fullQuery);
-      setScanStage("Searching food database...");
-      setScanProgress(60);
-      const results = await searchOffProducts(fullQuery, 20);
-
-      if (results.length === 0) {
-        setNotFoundQuery(fullQuery);
-        return;
+      const cleanedQuery = cleanOCRQuery(rawQuery);
+      // Build candidate queries: raw, cleaned, then progressively strip words from right
+      const searchQueries: string[] = [];
+      const addUnique = (q: string) => { if (q && !searchQueries.some(s => s.toLowerCase() === q.toLowerCase())) searchQueries.push(q); };
+      addUnique(rawQuery);
+      if (cleanedQuery !== rawQuery) addUnique(cleanedQuery);
+      // Progressive strip: drop rightmost word each time, down to 1 word
+      const cleanedWords = cleanedQuery.split(' ').filter(Boolean);
+      for (let len = cleanedWords.length - 1; len >= 1; len--) {
+        addUnique(cleanedWords.slice(0, len).join(' '));
       }
 
-      // Step 4: Rank by eco data completeness, discard unrelated results
-      setScanStage("Ranking results...");
-      setScanProgress(80);
-      console.log(`Found results for query: "${fullQuery}"`);
-      const topResults = filterBestProducts(results, fullQuery);
-      if (topResults.length === 0) {
-        setNotFoundQuery(fullQuery);
-        return;
-      }
-      const candidates = topResults;
+      console.log(`🔍 [OCR] Raw: "${rawQuery}" → Cleaned: "${cleanedQuery}" → ${searchQueries.length} query candidates`);
 
-      // Step 4b: Pick the best candidate using 75% character similarity gate.
-      // Compare each OFF result's name+brand against the OCR query string.
-      let chosenCandidate: typeof candidates[0] | null = null;
-      for (const candidate of candidates) {
-        const offText = [candidate.productName, candidate.brand].filter(Boolean).join(' ');
-        const sim = characterSimilarity(fullQuery, offText);
-        console.log(`   [charSim] "${offText}" vs "${fullQuery}" → ${(sim * 100).toFixed(0)}%`);
-        if (sim >= MIN_CHAR_SIMILARITY) {
-          chosenCandidate = candidate;
-          console.log(`✅ Matched candidate: "${candidate.productName}" by ${candidate.brand} (${(sim * 100).toFixed(0)}% similarity)`);
+      setOffSearchText(cleanedQuery);
+
+      // Try each query candidate until we find a matching product
+      let chosenCandidate: OpenFoodFactsResult | null = null;
+      let allCandidates: OpenFoodFactsResult[] = [];
+
+      for (let qi = 0; qi < searchQueries.length; qi++) {
+        const q = searchQueries[qi];
+        setScanStage(`Searching "${q}"...`);
+        setScanProgress(60 + Math.round((qi / searchQueries.length) * 25));
+        console.log(`   [attempt ${qi + 1}/${searchQueries.length}] Searching: "${q}"`);
+
+        const results = await searchOffProducts(q, 20);
+        if (results.length === 0) {
+          console.warn(`   ↪ No results for "${q}"`);
+          continue;
+        }
+
+        const topResults = filterBestProducts(results, q);
+        if (topResults.length === 0) {
+          console.warn(`   ↪ Results for "${q}" filtered out by relevance`);
+          continue;
+        }
+
+        // Try similarity gate against the cleaned query (not the raw noisy one)
+        for (const candidate of topResults) {
+          const offText = [candidate.productName, candidate.brand].filter(Boolean).join(' ');
+          const sim = characterSimilarity(q, offText);
+          console.log(`   [charSim] "${offText}" vs "${q}" → ${(sim * 100).toFixed(0)}%`);
+          if (sim >= MIN_CHAR_SIMILARITY) {
+            chosenCandidate = candidate;
+            allCandidates = topResults;
+            console.log(`✅ Matched: "${candidate.productName}" by ${candidate.brand} (${(sim * 100).toFixed(0)}% sim, query="${q}")`);
+            break;
+          }
+        }
+
+        if (chosenCandidate) break;
+
+        // For very short queries (1-2 words), accept the top result directly
+        if (q.split(' ').length <= 2 && topResults.length > 0) {
+          chosenCandidate = topResults[0];
+          allCandidates = topResults;
+          console.log(`✅ Short-query accept: "${topResults[0].productName}" by ${topResults[0].brand} (query="${q}")`);
           break;
         }
       }
 
-      // If no OFF result reaches 75% similarity → auto-log + not found flow
       if (!chosenCandidate) {
-        const topName = `${candidates[0].productName || ''} ${candidates[0].brand || ''}`.trim();
-        console.warn(`⚠️ No OFF candidate passes 75% char similarity for "${fullQuery}". Top result was "${topName}"`);
-        setNotFoundQuery(fullQuery);
+        console.warn(`⚠️ No match found after ${searchQueries.length} query attempts for "${rawQuery}"`);
+        setNotFoundQuery(cleanedQuery);
         return;
       }
 
       setScanStage("Loading product details...");
       setScanProgress(95);
-      const finalCandidates = [chosenCandidate, ...candidates.filter(c => c.barcode !== chosenCandidate!.barcode)];
+      const finalCandidates = [chosenCandidate, ...allCandidates.filter(c => c.barcode !== chosenCandidate!.barcode)];
       sessionStorage.setItem('scan_candidates', JSON.stringify(finalCandidates));
       navigate(`/product-off/${chosenCandidate.barcode}?from=scan`);
     } catch (error) {
