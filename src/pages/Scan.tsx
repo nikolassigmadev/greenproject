@@ -24,6 +24,30 @@ import { loadPriorities, DEFAULT_PRIORITIES, hasSavedPriorities, type UserPriori
 import { lookupBarcode, isValidBarcode, searchProducts as searchOffProducts, searchBetterAlternatives } from "@/services/openfoodfacts";
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
 import { DS } from "@/styles/design-tokens";
+import { getBackendUrl } from "@/config/backend";
+
+/** Ask OpenAI to fix typos and clean up a user-typed product query */
+const fixProductQuery = async (raw: string): Promise<string> => {
+  try {
+    const backendUrl = getBackendUrl();
+    const response = await fetch(`${backendUrl}/api/openai/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ task: 'fix-product-query', userMessage: raw }),
+      signal: AbortSignal.timeout(3000),
+    });
+    if (!response.ok) return raw;
+    const data = await response.json();
+    if (data.success && data.content?.trim()) {
+      const fixed = data.content.trim();
+      console.log(`🤖 [AI] "${raw}" → "${fixed}"`);
+      return fixed;
+    }
+  } catch {
+    // Timeout or error — just use the raw query
+  }
+  return raw;
+};
 
 // Check if a product has an eco-score grade
 const hasEcoScore = (product: OpenFoodFactsResult): boolean => {
@@ -1137,11 +1161,14 @@ const Scan = () => {
     setOffSearchResults([]);
 
     try {
+      // Ask AI to fix typos before searching
+      const cleanedName = await fixProductQuery(productName.trim());
+
       // Fetch a small pool — we navigate to the top result immediately
-      const results = await searchOffProducts(productName.trim(), 5);
+      const results = await searchOffProducts(cleanedName, 5);
 
       // Filter by relevance — require at least 75% match to avoid garbage results
-      const queryWords = productName.trim().toLowerCase().split(/[\s\-_]+/).filter(w => w.length >= 2);
+      const queryWords = cleanedName.toLowerCase().split(/[\s\-_]+/).filter(w => w.length >= 2);
       const topResults = results.length > 0
         ? results
             .map(r => ({ result: r, relevance: computeRelevance(r, queryWords), ecoScore: calculateEcoScore(r) }))
@@ -1369,7 +1396,9 @@ const Scan = () => {
 
     try {
       // Clean special chars (commas, dots, slashes etc.) and normalise whitespace
-      const cleaned = raw.replace(/[^a-zA-Z0-9\s\-']/g, ' ').replace(/\s+/g, ' ').trim();
+      const rawCleaned = raw.replace(/[^a-zA-Z0-9\s\-']/g, ' ').replace(/\s+/g, ' ').trim();
+      // Ask AI to fix typos
+      const cleaned = await fixProductQuery(rawCleaned);
       const words = cleaned.split(' ').filter(Boolean);
 
       // Try progressively shorter queries: full → drop last word each time

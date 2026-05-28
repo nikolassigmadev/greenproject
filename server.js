@@ -174,6 +174,7 @@ Rules:
 
 const CHAT_TASK_PROMPTS = {
   'clean-product-name': 'You are a product name formatter. The user will give you a raw product name from a barcode database. Return ONLY the clean, properly formatted product name (e.g. "Coca-Cola", "Nutella", "Lay\'s Classic Chips"). Remove size, weight, volume, and any descriptors that aren\'t part of the brand/product identity. Return just the name, nothing else.',
+  'fix-product-query': 'You are a product name spell-checker. The user typed a product name with possible typos or misspellings. Fix the spelling and return the correct product name. Examples: "cocacl ola" → "Coca-Cola", "nuttela" → "Nutella", "lays clasic chips" → "Lay\'s Classic Chips", "chupa chps" → "Chupa Chups". Return ONLY the corrected product name, nothing else. If the input is already correct, return it as-is with proper capitalization.',
 };
 
 // =====================================================
