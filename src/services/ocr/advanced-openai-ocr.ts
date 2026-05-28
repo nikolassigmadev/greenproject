@@ -24,8 +24,11 @@ export interface AdvancedOCRResult {
  */
 const compressImage = (dataUrl: string, maxSize = 512): Promise<string> =>
   new Promise((resolve) => {
+    const fallback = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
+    const timer = setTimeout(() => resolve(fallback), 10000);
     const img = new Image();
     img.onload = () => {
+      clearTimeout(timer);
       const scale = Math.min(maxSize / Math.max(img.width, img.height), 1);
       const w = Math.round(img.width * scale);
       const h = Math.round(img.height * scale);
@@ -36,7 +39,8 @@ const compressImage = (dataUrl: string, maxSize = 512): Promise<string> =>
       resolve(c.toDataURL('image/jpeg', 0.6).split(',')[1]);
     };
     img.onerror = () => {
-      resolve(dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl);
+      clearTimeout(timer);
+      resolve(fallback);
     };
     img.src = dataUrl.startsWith('data:') ? dataUrl : `data:image/jpeg;base64,${dataUrl}`;
   });
@@ -50,11 +54,16 @@ export const advancedProductOCR = async (imageDataUrl: string): Promise<Advanced
   try {
     const base64Image = await compressImage(imageDataUrl);
 
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
+
     const proxyResponse = await fetch(`${getBackendUrl()}/api/openai/analyze-image`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ imageBase64: base64Image, task: 'scan-product' }),
+      signal: controller.signal,
     });
+    clearTimeout(timeout);
 
     if (!proxyResponse.ok) {
       const errData = await proxyResponse.json().catch(() => ({ error: `HTTP ${proxyResponse.status}` }));

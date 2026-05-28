@@ -1143,6 +1143,8 @@ const Scan = () => {
   const processImageForOFF = useCallback(async (imageData: string) => {
     if (!requirePriorities()) return;
     setOffSearchLoading(true);
+    setScanStage("Extracting text from image...");
+    setScanProgress(10);
     setOffSearchResults([]);
     setOffSearchText("");
     setOffSearchImage(imageData);
@@ -1153,8 +1155,6 @@ const Scan = () => {
 
     try {
       // Step 1: OpenAI identifies the product
-      setScanStage("Extracting text from image...");
-      setScanProgress(10);
       const identified = await advancedProductOCR(imageData);
       setScanStage("Product identified");
       setScanProgress(30);
@@ -1263,9 +1263,13 @@ const Scan = () => {
       navigate(`/product-off/${chosenCandidate.barcode}?from=scan`);
     } catch (error) {
       console.error("Image scan error:", error);
+      const msg = error instanceof Error && error.name === 'AbortError'
+        ? "Server took too long. Please try again."
+        : "Failed to process the image. Please try again.";
+      setScanStage("Error — tap to retry");
       toast({
         title: "Processing Error",
-        description: "Failed to process the image. Please try again.",
+        description: msg,
         variant: "destructive",
       });
     } finally {
