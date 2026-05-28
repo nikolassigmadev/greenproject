@@ -1151,7 +1151,6 @@ const Scan = () => {
     setProductUnknown(false);
     setNotFoundQuery(null);
     setShowManualCorrection(false);
-    setEnrichmentSubmitted(null);
 
     try {
       // Step 1: OpenAI identifies the product
