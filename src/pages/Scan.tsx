@@ -400,6 +400,7 @@ const Scan = () => {
   const [offAlternativeLoading, setOffAlternativeLoading] = useState(false);
   const offFileInputRef = useRef<HTMLInputElement>(null);
   const [scanProgress, setScanProgress] = useState(0);
+  const [scanStage, setScanStage] = useState<string>("");
   const searchInputRef = useRef<HTMLInputElement>(null);
   const viewfinderRef = useRef<HTMLDivElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
@@ -472,20 +473,12 @@ const Scan = () => {
     console.log('Canvas ref status:', Boolean(canvasRef.current));
   }, [cameraActive, cameraInitializing]);
 
-  // Animated scan progress
+  // Reset scan progress when not loading
   useEffect(() => {
     if (!offSearchLoading) {
       setScanProgress(0);
-      return;
+      setScanStage("");
     }
-    setScanProgress(5);
-    const interval = setInterval(() => {
-      setScanProgress(prev => {
-        if (prev >= 90) return prev;
-        return Math.min(90, prev + Math.random() * 8 + 2);
-      });
-    }, 300);
-    return () => clearInterval(interval);
   }, [offSearchLoading]);
 
   // Auto-scroll to results when products are found
@@ -1160,7 +1153,11 @@ const Scan = () => {
 
     try {
       // Step 1: OpenAI identifies the product
+      setScanStage("Extracting text from image...");
+      setScanProgress(10);
       const identified = await advancedProductOCR(imageData);
+      setScanStage("Product identified");
+      setScanProgress(30);
 
       const isUnknownResponse = (s: string | null | undefined) =>
         !s || s.trim().toLowerCase() === 'unknown' || s.trim().toLowerCase() === 'none';
@@ -1171,6 +1168,8 @@ const Scan = () => {
       }
 
       // Step 1b: Check hardcoded barcode map before anything else
+      setScanStage("Checking local product database...");
+      setScanProgress(40);
       const identifiedText = [identified.brandName, identified.productName].filter(Boolean).join(' ');
       const hardcodedBarcodes = lookupHardcodedBarcodes(identifiedText);
       if (hardcodedBarcodes.length > 0) {
@@ -1189,6 +1188,8 @@ const Scan = () => {
       }
 
       // Step 2: If a barcode was spotted, look it up directly — most precise
+      setScanStage("Looking up barcode...");
+      setScanProgress(50);
       if (identified.barcode && isValidBarcode(identified.barcode)) {
         const barcodeResult = await lookupBarcode(identified.barcode);
         if (barcodeResult.found) {
@@ -1213,6 +1214,8 @@ const Scan = () => {
       }
 
       setOffSearchText(fullQuery);
+      setScanStage("Searching food database...");
+      setScanProgress(60);
       const results = await searchOffProducts(fullQuery, 20);
 
       if (results.length === 0) {
@@ -1221,6 +1224,8 @@ const Scan = () => {
       }
 
       // Step 4: Rank by eco data completeness, discard unrelated results
+      setScanStage("Ranking results...");
+      setScanProgress(80);
       console.log(`Found results for query: "${fullQuery}"`);
       const topResults = filterBestProducts(results, fullQuery);
       if (topResults.length === 0) {
@@ -1251,6 +1256,8 @@ const Scan = () => {
         return;
       }
 
+      setScanStage("Loading product details...");
+      setScanProgress(95);
       const finalCandidates = [chosenCandidate, ...candidates.filter(c => c.barcode !== chosenCandidate!.barcode)];
       sessionStorage.setItem('scan_candidates', JSON.stringify(finalCandidates));
       navigate(`/product-off/${chosenCandidate.barcode}?from=scan`);
@@ -1296,6 +1303,8 @@ const Scan = () => {
     setNotFoundQuery(null);
     setManualCorrectionInput("");
     setOffSearchLoading(true);
+    setScanStage("Searching food database...");
+    setScanProgress(20);
 
     try {
       // Clean special chars (commas, dots, slashes etc.) and normalise whitespace
@@ -1305,6 +1314,8 @@ const Scan = () => {
       // Try progressively shorter queries: full → drop last word each time
       for (let len = words.length; len >= 1; len--) {
         const query = words.slice(0, len).join(' ');
+        setScanStage(`Trying "${query}"...`);
+        setScanProgress(20 + Math.round(((words.length - len) / words.length) * 60));
         console.log(`🔍 [manual] Trying: "${query}"`);
         const results = await searchOffProducts(query, 5);
 
@@ -1692,11 +1703,24 @@ const Scan = () => {
               </div>
               <div style={{
                 background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(8px)',
-                borderRadius: 20, padding: '5px 14px',
+                borderRadius: 20, padding: '7px 16px',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                minWidth: 180,
               }}>
-                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#fff' }}>
-                  Scanning {Math.round(scanProgress)}%
+                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#4ade80' }}>
+                  {scanStage || "Initializing..."}
                 </span>
+                <div style={{
+                  width: '100%', height: 3, borderRadius: 2,
+                  background: 'rgba(255,255,255,0.15)', overflow: 'hidden',
+                }}>
+                  <div style={{
+                    height: '100%', borderRadius: 2,
+                    background: '#4ade80',
+                    width: `${scanProgress}%`,
+                    transition: 'width 0.4s ease-out',
+                  }} />
+                </div>
               </div>
             </>
           ) : !cameraActive && !frozenFrame && !cameraInitializing ? (
