@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { ChevronRight, Camera, Leaf, Shield, BarChart3, Users, Award, Zap, CheckCircle2, AlertTriangle as AlertTriangleIcon, Share, Plus, MoreVertical, X } from "lucide-react";
+import { ChevronRight, Camera, Leaf, Shield, BarChart3, Users, Award, Zap, CheckCircle2, AlertTriangle as AlertTriangleIcon, Share, Plus, MoreVertical, X, Search } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { Logo } from "@/components/Logo";
 import { DS, scoreTone, toneColor, toneBg } from "@/styles/design-tokens";
@@ -369,6 +369,15 @@ export default function Index() {
           </div>
         </Link>
         </div>
+
+        {/* Enter product manually */}
+        <Link to="/scan?manual=true" style={{
+          textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "center",
+          gap: 6, marginTop: -16, marginBottom: 28, padding: "8px 0",
+        }}>
+          <Search style={{ width: 14, height: 14, color: DS.muted }} />
+          <span style={{ fontSize: 13, color: DS.muted, fontWeight: 500 }}>Or enter a product manually</span>
+        </Link>
 
         {/* Animated example result */}
         <section style={{ marginBottom: 28 }}>

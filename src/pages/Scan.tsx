@@ -440,7 +440,14 @@ const Scan = () => {
   const [flashOn, setFlashOn] = useState(false);
   const [scanMode, setScanMode] = useState<'Scan Food' | 'Barcode' | 'Food label'>('Scan Food');
 
-  // When arriving from Preferences save, scroll to viewfinder and show message
+  // Auto-open manual search if ?manual=true
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('manual') === 'true') {
+      setShowSearch(true);
+    }
+  }, []);
+
   // Set html background to white while Scan is mounted (matches white chrome)
   useEffect(() => {
     const html = document.documentElement;
