@@ -717,51 +717,34 @@ export default function OpenFoodFactsDetail() {
             </div>
           </div>
           {verifiedEthics && (() => {
-            const primaryCert = getPrimaryCertification(verifiedEthics);
-            const primaryBadge = primaryCert ? CERTIFICATION_BADGES[primaryCert] : null;
             const categoryLabel = CATEGORY_LABELS[verifiedEthics.category] || verifiedEthics.category;
             return (
               <div style={{
-                background: primaryBadge?.bg || EDITORIAL.greenSoft, borderRadius: 14, padding: "14px 16px",
-                display: "flex", gap: 12, alignItems: "flex-start",
-                border: `1px solid ${primaryBadge ? `${primaryBadge.color}33` : "rgba(31,107,78,0.2)"}`,
+                background: EDITORIAL.card, borderRadius: 14, padding: "14px 16px",
+                border: `1px solid ${EDITORIAL.line}`,
+                borderLeft: `4px solid ${EDITORIAL.green}`,
               }}>
-                <div style={{
-                  width: 32, height: 32, borderRadius: 8, flexShrink: 0,
-                  background: primaryBadge?.color || EDITORIAL.green, color: "#fff",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 11, fontWeight: 900, letterSpacing: -0.3,
-                }}>
-                  {primaryBadge?.icon || "VE"}
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                  <BadgeCheck style={{ width: 16, height: 16, color: EDITORIAL.green, flexShrink: 0 }} />
+                  <span style={{ fontSize: 14, fontWeight: 800, color: EDITORIAL.ink }}>{verifiedEthics.brandName}</span>
                 </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13.5, fontWeight: 800, color: EDITORIAL.ink, lineHeight: 1.3 }}>
-                    {verifiedEthics.brandName}
-                  </div>
-                  <div style={{ fontSize: 12, color: EDITORIAL.ink2, marginTop: 3, lineHeight: 1.4 }}>
-                    {categoryLabel} · {verifiedEthics.certifications.map(c => CERTIFICATION_BADGES[c].shortLabel).join(" · ")}
-                  </div>
-                  <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginTop: 8 }}>
-                    {verifiedEthics.certifications.map(cert => {
-                      const b = CERTIFICATION_BADGES[cert];
-                      return (
-                        <span key={cert} style={{
-                          display: "inline-flex", alignItems: "center", gap: 4,
-                          background: "#fff", color: b.color, padding: "3px 8px", borderRadius: 999,
-                          fontSize: 10, fontWeight: 800, letterSpacing: 0.2,
-                          border: `1px solid ${b.color}22`,
-                        }}>
-                          <span style={{
-                            width: 14, height: 14, borderRadius: 4,
-                            background: b.color, color: "#fff",
-                            display: "inline-flex", alignItems: "center", justifyContent: "center",
-                            fontSize: 7, fontWeight: 900,
-                          }}>{b.icon}</span>
-                          {b.label}
-                        </span>
-                      );
-                    })}
-                  </div>
+                <div style={{ fontSize: 11.5, color: EDITORIAL.ink3, marginBottom: 10, marginLeft: 24 }}>
+                  {categoryLabel}
+                </div>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginLeft: 24 }}>
+                  {verifiedEthics.certifications.map(cert => {
+                    const b = CERTIFICATION_BADGES[cert];
+                    return (
+                      <span key={cert} style={{
+                        display: "inline-flex", alignItems: "center", gap: 5,
+                        background: b.bg, color: b.color, padding: "4px 10px", borderRadius: 8,
+                        fontSize: 11, fontWeight: 700,
+                        border: `1px solid ${b.color}20`,
+                      }}>
+                        {b.shortLabel}
+                      </span>
+                    );
+                  })}
                 </div>
               </div>
             );

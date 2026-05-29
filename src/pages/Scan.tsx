@@ -1380,6 +1380,9 @@ const Scan = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Stop camera so the uploaded image stays visible in the viewfinder
+    stopCamera();
+
     const reader = new FileReader();
     reader.onload = (event) => {
       const result = event.target?.result;
@@ -1391,7 +1394,7 @@ const Scan = () => {
 
     // Reset input so same file can be selected again
     e.target.value = "";
-  }, [processImageForOFF]);
+  }, [processImageForOFF, stopCamera]);
 
   // Handle manual correction: user typed the correct name → progressively
   // strip words/special chars until OFF returns a match.
@@ -1743,10 +1746,10 @@ const Scan = () => {
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
         />
 
-        {/* Frozen frame / dark placeholder */}
+        {/* Frozen frame / uploaded image / dark placeholder */}
         {!cameraActive && !cameraInitializing && (
-          frozenFrame
-            ? <img src={frozenFrame} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
+          (offSearchImage || frozenFrame)
+            ? <img src={offSearchImage || frozenFrame!} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
             : <div style={{ position: 'absolute', inset: 0, background: '#111' }} />
         )}
 
@@ -1828,7 +1831,7 @@ const Scan = () => {
                 </div>
               </div>
             </>
-          ) : !cameraActive && !frozenFrame && !cameraInitializing ? (
+          ) : !cameraActive && !frozenFrame && !offSearchImage && !cameraInitializing ? (
             <div style={{
               textAlign: 'center',
               background: 'rgba(0,0,0,0.5)',
