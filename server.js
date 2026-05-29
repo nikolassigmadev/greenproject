@@ -166,6 +166,7 @@ Brand: [brand or company name, or "Unknown"]
 Barcode: [any numeric barcode you can see, or "none"]
 
 Rules:
+- The Product field must contain ONLY the product name WITHOUT the brand name. For example if the product is "Nestle KitKat", Product should be "KitKat" and Brand should be "Nestle". Never repeat the brand inside the Product field.
 - Even if the image is blurry or partial, do your best to identify any text or numbers.
 - Barcodes are the long sequence of numbers printed under barcode lines - extract those digits.
 - Never say "I'm unable to read" - always fill each field with your best guess or "Unknown".

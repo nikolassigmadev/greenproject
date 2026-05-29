@@ -1273,11 +1273,19 @@ const Scan = () => {
       }
 
       const cleanedQuery = cleanOCRQuery(rawQuery);
-      // Build candidate queries: raw, cleaned, then progressively strip words from right
+      // Build candidate queries: raw, cleaned, product-only, brand-only, then progressive strip
       const searchQueries: string[] = [];
       const addUnique = (q: string) => { if (q && !searchQueries.some(s => s.toLowerCase() === q.toLowerCase())) searchQueries.push(q); };
       addUnique(rawQuery);
       if (cleanedQuery !== rawQuery) addUnique(cleanedQuery);
+      // Add product-name-only and brand-only as early candidates so stripping doesn't lose the product name
+      const prodOnly = identified.productName && !isUnknownResponse(identified.productName) ? identified.productName.trim() : '';
+      const brandOnly = identified.brandName && !isUnknownResponse(identified.brandName) ? identified.brandName.trim() : '';
+      if (prodOnly && brandOnly) {
+        addUnique(`${prodOnly} ${brandOnly}`);  // product-first order
+        addUnique(prodOnly);
+        addUnique(brandOnly);
+      }
       // Progressive strip: drop rightmost word each time, down to 1 word
       const cleanedWords = cleanedQuery.split(' ').filter(Boolean);
       for (let len = cleanedWords.length - 1; len >= 1; len--) {
