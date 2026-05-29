@@ -997,36 +997,36 @@ export default function OpenFoodFactsDetail() {
               </div>
             </div>
             {verifiedEthics && (
-              <div style={{ marginTop: 14, background: EDITORIAL.card, border: `1px solid ${EDITORIAL.line}`, borderLeft: `4px solid ${EDITORIAL.green}`, borderRadius: 14, padding: "16px 18px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                  <BadgeCheck style={{ width: 18, height: 18, color: EDITORIAL.green, flexShrink: 0 }} />
-                  <span style={{ fontSize: 14, fontWeight: 800, color: EDITORIAL.green }}>Verified Ethics — {verifiedEthics.brandName}</span>
-                </div>
-                <div style={{ fontSize: 11, color: EDITORIAL.ink3, marginBottom: 12 }}>
-                  {CATEGORY_LABELS[verifiedEthics.category] || verifiedEthics.category}
-                </div>
+              <div style={{ marginTop: 14, background: EDITORIAL.card, border: `1px solid ${EDITORIAL.line}`, borderRadius: 22, padding: "8px 20px 22px" }}>
                 {verifiedEthics.highlights.map((h, i) => {
                   const certBadge = h.certification ? CERTIFICATION_BADGES[h.certification] : null;
                   return (
-                    <div key={i} style={{ padding: "10px 0", borderTop: i > 0 ? `1px solid ${EDITORIAL.line}` : "none" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
-                        {certBadge && (
-                          <span style={{
-                            display: "inline-flex", alignItems: "center", justifyContent: "center",
-                            width: 20, height: 20, borderRadius: 5,
-                            background: certBadge.color, color: "#fff",
-                            fontSize: 7, fontWeight: 900, flexShrink: 0,
-                          }}>{certBadge.icon}</span>
+                    <div key={i} style={{ display: "grid", gridTemplateColumns: "46px 1fr", gap: 14, padding: "18px 0", borderTop: `1px solid ${EDITORIAL.line}` }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        {certBadge ? (
+                          <div style={{
+                            width: 36, height: 36, borderRadius: 10,
+                            background: EDITORIAL.greenSoft,
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            fontSize: 11, fontWeight: 900, color: EDITORIAL.green,
+                          }}>{certBadge.icon}</div>
+                        ) : (
+                          <CheckCircle2 style={{ width: 22, height: 22, color: EDITORIAL.green }} />
                         )}
-                        <p style={{ fontSize: 13, fontWeight: 700, color: EDITORIAL.ink, margin: 0 }}>{h.label}</p>
                       </div>
-                      <p style={{ fontSize: 12, color: EDITORIAL.ink2, lineHeight: 1.5, margin: "0 0 6px" }}>{h.detail}</p>
-                      <a href={h.sourceUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: EDITORIAL.green, fontWeight: 700, textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}>
-                        <ExternalLink style={{ width: 10, height: 10 }} /> {h.source}
-                      </a>
+                      <div>
+                        <div style={{ fontSize: 19, lineHeight: 1.15, color: EDITORIAL.ink, letterSpacing: -0.3, fontWeight: 700 }}>{h.label}</div>
+                        <div style={{ fontSize: 12.5, color: EDITORIAL.ink2, marginTop: 6, lineHeight: 1.45 }}>{h.detail}</div>
+                        <a href={h.sourceUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: EDITORIAL.green, marginTop: 8, display: "flex", alignItems: "center", gap: 4, fontWeight: 700, textDecoration: "none" }}>
+                          <ExternalLink style={{ width: 10, height: 10 }} /> {h.source}
+                        </a>
+                      </div>
                     </div>
                   );
                 })}
+                <div style={{ fontStyle: "italic", fontSize: 12, color: EDITORIAL.ink3, marginTop: 16, lineHeight: 1.4, borderTop: `1px solid ${EDITORIAL.line}`, paddingTop: 14 }}>
+                  Certifications reduce risk; they do not guarantee a supply chain free of abuse. Re-verify against cited sources.
+                </div>
               </div>
             )}
             <div style={{ marginTop: 14, display: "grid", gap: 10 }}>
