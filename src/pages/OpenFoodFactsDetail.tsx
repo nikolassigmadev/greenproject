@@ -52,8 +52,8 @@ const EDITORIAL = {
   ink: DS.ink,
   ink2: DS.ink2,
   ink3: DS.muted,
-  paper: DS.bg,
-  page: DS.bg,
+  paper: DS.card,
+  page: DS.card,
   card: DS.card,
   line: DS.hair,
   green: DS.good,
@@ -559,7 +559,9 @@ export default function OpenFoodFactsDetail() {
     ? Math.round((agri.co2_total / 0.21) * 10) / 10
     : null;
 
-  const displayName = cleanName ?? product.productName ?? "Unknown product";
+  // Prefer OCR-identified product name from scan (e.g. "KitKat") over OFF's product_name (e.g. "Chunky")
+  const ocrName = fromScan ? sessionStorage.getItem('ocr_product_name') : null;
+  const displayName = ocrName || cleanName || product.productName || "Unknown product";
 
   const hasScores = !!(ecoGrade || nutriGrade || product.novaGroup);
   const hasEthicsConcerns = !!(laborRecord || boycottMatch || welfare.isFlagged);

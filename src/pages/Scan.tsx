@@ -1227,6 +1227,12 @@ const Scan = () => {
         return;
       }
 
+      // Store OCR-identified product name so the detail page can use it as heading
+      const ocrProductName = !isUnknownResponse(identified.productName) ? identified.productName!.trim() : null;
+      if (ocrProductName) {
+        sessionStorage.setItem('ocr_product_name', ocrProductName);
+      }
+
       // Step 1b: Check hardcoded barcode map before anything else
       setScanStage("Checking local product database...");
       setScanProgress(40);
