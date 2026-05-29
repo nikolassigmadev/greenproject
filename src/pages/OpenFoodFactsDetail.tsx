@@ -17,7 +17,7 @@ import { checkAnimalWelfareFlag } from "@/utils/animalWelfareFlags";
 import { AnimalWelfareFlagBadge } from "@/components/AnimalWelfareFlagBadge";
 import { addToBasket, removeFromBasket, loadBasket } from "@/utils/basketStorage";
 import { findLaborAllegations as findLaborAllegationsUtil, getLaborAllegationCount } from "@/utils/laborCheck";
-import { findVerifiedEthics } from "@/utils/verifiedEthics";
+import { findVerifiedEthics, CERTIFICATION_BADGES, getPrimaryCertification, CATEGORY_LABELS, type CertificationType } from "@/utils/verifiedEthics";
 import { EnvironmentalImpactCard } from "@/components/EnvironmentalImpactCard";
 import { sendChatMessage } from "@/services/api/backend-client";
 import { cn } from "@/lib/utils";
@@ -689,7 +689,10 @@ export default function OpenFoodFactsDetail() {
             <Tag bg={vc.bg} color={vc.color}>{verdict.key[0] + verdict.key.slice(1).toLowerCase()}</Tag>
             {ecoGrade && <Tag bg={GRADE_BG[ecoGrade]} color={GRADE_COLOR[ecoGrade]}>Eco-Score {ecoGrade.toUpperCase()}</Tag>}
             {product.novaGroup !== null && <Tag bg="var(--ds-neutral-bg, #EDE6D2)" color={EDITORIAL.ink2}>{NOVA_LABEL[product.novaGroup] || `NOVA ${product.novaGroup}`}</Tag>}
-            {verifiedEthics && <Tag bg={EDITORIAL.greenSoft} color={EDITORIAL.green}>Verified Ethics</Tag>}
+            {verifiedEthics && verifiedEthics.certifications.map(cert => {
+              const badge = CERTIFICATION_BADGES[cert];
+              return <Tag key={cert} bg={badge.bg} color={badge.color}>{badge.shortLabel}</Tag>;
+            })}
           </div>
         </div>
 
@@ -713,23 +716,56 @@ export default function OpenFoodFactsDetail() {
               </div>
             </div>
           </div>
-          {verifiedEthics && (
-            <div style={{
-              background: EDITORIAL.greenSoft, borderRadius: 14, padding: "14px 16px",
-              display: "flex", gap: 12, alignItems: "flex-start",
-              border: `1px solid rgba(31,107,78,0.2)`,
-            }}>
-              <BadgeCheck style={{ width: 20, height: 20, color: EDITORIAL.green, flexShrink: 0, marginTop: 1 }} />
-              <div>
-                <div style={{ fontSize: 13.5, fontWeight: 800, color: EDITORIAL.ink, lineHeight: 1.3 }}>
-                  Verified Ethics — {verifiedEthics.brandName}
+          {verifiedEthics && (() => {
+            const primaryCert = getPrimaryCertification(verifiedEthics);
+            const primaryBadge = primaryCert ? CERTIFICATION_BADGES[primaryCert] : null;
+            const categoryLabel = CATEGORY_LABELS[verifiedEthics.category] || verifiedEthics.category;
+            return (
+              <div style={{
+                background: primaryBadge?.bg || EDITORIAL.greenSoft, borderRadius: 14, padding: "14px 16px",
+                display: "flex", gap: 12, alignItems: "flex-start",
+                border: `1px solid ${primaryBadge ? `${primaryBadge.color}33` : "rgba(31,107,78,0.2)"}`,
+              }}>
+                <div style={{
+                  width: 32, height: 32, borderRadius: 8, flexShrink: 0,
+                  background: primaryBadge?.color || EDITORIAL.green, color: "#fff",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 11, fontWeight: 900, letterSpacing: -0.3,
+                }}>
+                  {primaryBadge?.icon || "VE"}
                 </div>
-                <div style={{ fontSize: 12, color: EDITORIAL.ink2, marginTop: 3, lineHeight: 1.4 }}>
-                  This brand has verified ethical sourcing and fair trade practices.
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 800, color: EDITORIAL.ink, lineHeight: 1.3 }}>
+                    {verifiedEthics.brandName}
+                  </div>
+                  <div style={{ fontSize: 12, color: EDITORIAL.ink2, marginTop: 3, lineHeight: 1.4 }}>
+                    {categoryLabel} · {verifiedEthics.certifications.map(c => CERTIFICATION_BADGES[c].shortLabel).join(" · ")}
+                  </div>
+                  <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginTop: 8 }}>
+                    {verifiedEthics.certifications.map(cert => {
+                      const b = CERTIFICATION_BADGES[cert];
+                      return (
+                        <span key={cert} style={{
+                          display: "inline-flex", alignItems: "center", gap: 4,
+                          background: "#fff", color: b.color, padding: "3px 8px", borderRadius: 999,
+                          fontSize: 10, fontWeight: 800, letterSpacing: 0.2,
+                          border: `1px solid ${b.color}22`,
+                        }}>
+                          <span style={{
+                            width: 14, height: 14, borderRadius: 4,
+                            background: b.color, color: "#fff",
+                            display: "inline-flex", alignItems: "center", justifyContent: "center",
+                            fontSize: 7, fontWeight: 900,
+                          }}>{b.icon}</span>
+                          {b.label}
+                        </span>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
 
         {fromScan && (
@@ -985,19 +1021,35 @@ export default function OpenFoodFactsDetail() {
             </div>
             {verifiedEthics && (
               <div style={{ marginTop: 14, background: EDITORIAL.card, border: `1px solid ${EDITORIAL.line}`, borderLeft: `4px solid ${EDITORIAL.green}`, borderRadius: 14, padding: "16px 18px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
                   <BadgeCheck style={{ width: 18, height: 18, color: EDITORIAL.green, flexShrink: 0 }} />
                   <span style={{ fontSize: 14, fontWeight: 800, color: EDITORIAL.green }}>Verified Ethics — {verifiedEthics.brandName}</span>
                 </div>
-                {verifiedEthics.highlights.map((h, i) => (
-                  <div key={i} style={{ padding: "10px 0", borderTop: i > 0 ? `1px solid ${EDITORIAL.line}` : "none" }}>
-                    <p style={{ fontSize: 13, fontWeight: 700, color: EDITORIAL.ink, margin: "0 0 3px" }}>{h.label}</p>
-                    <p style={{ fontSize: 12, color: EDITORIAL.ink2, lineHeight: 1.5, margin: "0 0 6px" }}>{h.detail}</p>
-                    <a href={h.sourceUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: EDITORIAL.green, fontWeight: 700, textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}>
-                      <ExternalLink style={{ width: 10, height: 10 }} /> {h.source}
-                    </a>
-                  </div>
-                ))}
+                <div style={{ fontSize: 11, color: EDITORIAL.ink3, marginBottom: 12 }}>
+                  {CATEGORY_LABELS[verifiedEthics.category] || verifiedEthics.category}
+                </div>
+                {verifiedEthics.highlights.map((h, i) => {
+                  const certBadge = h.certification ? CERTIFICATION_BADGES[h.certification] : null;
+                  return (
+                    <div key={i} style={{ padding: "10px 0", borderTop: i > 0 ? `1px solid ${EDITORIAL.line}` : "none" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
+                        {certBadge && (
+                          <span style={{
+                            display: "inline-flex", alignItems: "center", justifyContent: "center",
+                            width: 20, height: 20, borderRadius: 5,
+                            background: certBadge.color, color: "#fff",
+                            fontSize: 7, fontWeight: 900, flexShrink: 0,
+                          }}>{certBadge.icon}</span>
+                        )}
+                        <p style={{ fontSize: 13, fontWeight: 700, color: EDITORIAL.ink, margin: 0 }}>{h.label}</p>
+                      </div>
+                      <p style={{ fontSize: 12, color: EDITORIAL.ink2, lineHeight: 1.5, margin: "0 0 6px" }}>{h.detail}</p>
+                      <a href={h.sourceUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: EDITORIAL.green, fontWeight: 700, textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}>
+                        <ExternalLink style={{ width: 10, height: 10 }} /> {h.source}
+                      </a>
+                    </div>
+                  );
+                })}
               </div>
             )}
             <div style={{ marginTop: 14, display: "grid", gap: 10 }}>
@@ -1218,6 +1270,12 @@ function getVerdict(product: OpenFoodFactsResult, priorities: UserPriorities) {
     } else if (welfare.severity === "high" && (key === "BUY" || key === "UNKNOWN")) {
       key = "CONSIDER"; reason = `${welfare.company!.companyName} has animal welfare concerns`;
     }
+  }
+
+  // Verified ethical brands can upgrade UNKNOWN → BUY
+  const ethics = findVerifiedEthics(product.brand, product.productName);
+  if (ethics && key === "UNKNOWN") {
+    key = "BUY"; reason = `${ethics.brandName} has verified ethical certifications (${ethics.certifications.map(c => CERTIFICATION_BADGES[c].shortLabel).join(", ")})`;
   }
 
   return { key, reason };

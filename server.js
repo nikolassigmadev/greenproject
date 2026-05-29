@@ -166,7 +166,9 @@ Brand: [brand or company name, or "Unknown"]
 Barcode: [any numeric barcode you can see, or "none"]
 
 Rules:
-- The Product field must contain ONLY the product name WITHOUT the brand name. For example if the product is "Nestle KitKat", Product should be "KitKat" and Brand should be "Nestle". Never repeat the brand inside the Product field.
+- Brand = the parent company or manufacturer (e.g. "Nestle", "Mondelez", "PepsiCo"). Product = the product line name plus any variant or flavour. The product line name (e.g. "Oreo", "KitKat", "Doritos") must ALWAYS be the first word in the Product field — never strip it.
+- For example: "Nestle KitKat Chunky" → Brand: "Nestle", Product: "KitKat Chunky". "Oreo New York Double Stuffed Cheesecake" → Brand: "Mondelez", Product: "Oreo Double Stuffed Cheesecake". "Doritos Cool Ranch" → Brand: "PepsiCo", Product: "Doritos Cool Ranch".
+- Strip city names, seasonal tags, and promotional text from the Product field, but NEVER strip the core product line name.
 - Even if the image is blurry or partial, do your best to identify any text or numbers.
 - Barcodes are the long sequence of numbers printed under barcode lines - extract those digits.
 - Never say "I'm unable to read" - always fill each field with your best guess or "Unknown".
