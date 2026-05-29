@@ -319,6 +319,7 @@ app.post('/api/chat/aboutus', async (req, res) => {
 
     const completion = await openaiClient.chat.completions.create({
       model: 'gpt-4o-mini',
+      store: true,
       temperature: 0.2,
       max_tokens: 400,
       messages: [
@@ -427,6 +428,7 @@ Return ONLY valid JSON matching this schema:
 
     const completion = await openaiClient.chat.completions.create({
       model: 'gpt-4o-mini',
+      store: true,
       temperature: 0.3,
       max_tokens: 1200,
       messages: [
@@ -505,6 +507,7 @@ app.post('/api/openai/analyze-image', openaiLimiter, largeBody, async (req, res)
       },
       body: JSON.stringify({
         model: 'gpt-4o-mini',
+        store: true,
         messages: [
           {
             role: 'user',
@@ -589,6 +592,7 @@ app.post('/api/openai/chat', openaiLimiter, async (req, res) => {
       },
       body: JSON.stringify({
         model: 'gpt-4o-mini',
+        store: true,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userMessage },
