@@ -718,33 +718,27 @@ export default function OpenFoodFactsDetail() {
           </div>
           {verifiedEthics && (() => {
             const categoryLabel = CATEGORY_LABELS[verifiedEthics.category] || verifiedEthics.category;
+            const certText = verifiedEthics.certifications.map(c => CERTIFICATION_BADGES[c].shortLabel).join(", ");
             return (
               <div style={{
-                background: EDITORIAL.card, borderRadius: 14, padding: "14px 16px",
-                border: `1px solid ${EDITORIAL.line}`,
-                borderLeft: `4px solid ${EDITORIAL.green}`,
+                background: EDITORIAL.greenSoft, borderRadius: 14, padding: "14px 16px",
+                display: "flex", gap: 12, alignItems: "flex-start",
+                border: `1px solid rgba(31,107,78,0.2)`,
               }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                  <BadgeCheck style={{ width: 16, height: 16, color: EDITORIAL.green, flexShrink: 0 }} />
-                  <span style={{ fontSize: 14, fontWeight: 800, color: EDITORIAL.ink }}>{verifiedEthics.brandName}</span>
+                <div style={{
+                  width: 22, height: 22, borderRadius: 99, background: EDITORIAL.green, color: EDITORIAL.card,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  flexShrink: 0, marginTop: 1,
+                }}>
+                  <Check style={{ width: 13, height: 13 }} />
                 </div>
-                <div style={{ fontSize: 11.5, color: EDITORIAL.ink3, marginBottom: 10, marginLeft: 24 }}>
-                  {categoryLabel}
-                </div>
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginLeft: 24 }}>
-                  {verifiedEthics.certifications.map(cert => {
-                    const b = CERTIFICATION_BADGES[cert];
-                    return (
-                      <span key={cert} style={{
-                        display: "inline-flex", alignItems: "center", gap: 5,
-                        background: b.bg, color: b.color, padding: "4px 10px", borderRadius: 8,
-                        fontSize: 11, fontWeight: 700,
-                        border: `1px solid ${b.color}20`,
-                      }}>
-                        {b.shortLabel}
-                      </span>
-                    );
-                  })}
+                <div>
+                  <div style={{ fontSize: 13.5, fontWeight: 800, color: EDITORIAL.ink, lineHeight: 1.3 }}>
+                    {verifiedEthics.brandName} — {certText}
+                  </div>
+                  <div style={{ fontSize: 12, color: EDITORIAL.ink2, marginTop: 3, lineHeight: 1.4 }}>
+                    {categoryLabel} · Verified ethical certifications and sourcing practices
+                  </div>
                 </div>
               </div>
             );
