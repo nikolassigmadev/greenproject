@@ -2102,8 +2102,8 @@ const Scan = () => {
             boxSizing: 'border-box',
           }}
         >
-          <p style={{ fontSize: '1.25rem', fontWeight: 800, color: DS.ink, marginBottom: 4 }}>Search by name or barcode</p>
-          <p style={{ fontSize: '0.82rem', color: DS.muted, marginBottom: 18 }}>Enter a product name or scan barcode number</p>
+          <p style={{ fontSize: '1.25rem', fontWeight: 800, color: DS.ink, marginBottom: 4 }}>Search manually</p>
+          <p style={{ fontSize: '0.82rem', color: DS.muted, marginBottom: 18 }}>Search by brand or product name</p>
 
           <form onSubmit={(e) => { e.preventDefault(); if (barcodeInput.trim()) { handleProductSearch(barcodeInput); } }} style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
             <div style={{ flex: 1, minWidth: 0, position: 'relative', display: 'flex', alignItems: 'center' }}>
