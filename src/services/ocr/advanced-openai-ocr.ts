@@ -22,10 +22,10 @@ export interface AdvancedOCRResult {
 /**
  * Downscale image to max 512px on longest side and re-encode as JPEG 0.6
  */
-const compressImage = (dataUrl: string, maxSize = 512): Promise<string> =>
+const compressImage = (dataUrl: string, maxSize = 256): Promise<string> =>
   new Promise((resolve) => {
     const fallback = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
-    const timer = setTimeout(() => resolve(fallback), 10000);
+    const timer = setTimeout(() => resolve(fallback), 5000);
     const img = new Image();
     img.onload = () => {
       clearTimeout(timer);
@@ -36,7 +36,7 @@ const compressImage = (dataUrl: string, maxSize = 512): Promise<string> =>
       c.width = w;
       c.height = h;
       c.getContext('2d')!.drawImage(img, 0, 0, w, h);
-      resolve(c.toDataURL('image/jpeg', 0.6).split(',')[1]);
+      resolve(c.toDataURL('image/jpeg', 0.4).split(',')[1]);
     };
     img.onerror = () => {
       clearTimeout(timer);
@@ -55,7 +55,7 @@ export const advancedProductOCR = async (imageDataUrl: string): Promise<Advanced
     const base64Image = await compressImage(imageDataUrl);
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000);
+    const timeout = setTimeout(() => controller.abort(), 10000);
 
     const proxyResponse = await fetch(`${getBackendUrl()}/api/openai/analyze-image`, {
       method: 'POST',

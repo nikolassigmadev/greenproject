@@ -157,22 +157,17 @@ const IMAGE_TASK_PROMPTS = {
 
 Return a JSON array of found certifications. Example: ["Organic", "Fair Trade"]
 Return empty array [] if none found.`,
-  'scan-product': `You are a barcode and product label scanner. Analyze this image and extract any product information visible.
+  'scan-product': `Identify this product. Respond ONLY in this format:
 
-ALWAYS respond in this exact format - never refuse, never say you cannot read it:
-
-Product: [product name, or "Unknown"]
-Brand: [brand or company name, or "Unknown"]
-Barcode: [any numeric barcode you can see, or "none"]
+Product: [short product name]
+Brand: [brand]
+Barcode: [digits or "none"]
 
 Rules:
-- Brand = the parent company or manufacturer (e.g. "Nestle", "Mondelez", "PepsiCo"). Product = the product line name plus any variant or flavour. The product line name (e.g. "Oreo", "KitKat", "Doritos") must ALWAYS be the first word in the Product field — never strip it.
-- For example: "Nestle KitKat Chunky" → Brand: "Nestle", Product: "KitKat Chunky". "Oreo New York Double Stuffed Cheesecake" → Brand: "Mondelez", Product: "Oreo Double Stuffed Cheesecake". "Doritos Cool Ranch" → Brand: "PepsiCo", Product: "Doritos Cool Ranch".
-- Strip city names, seasonal tags, and promotional text from the Product field, but NEVER strip the core product line name.
-- Even if the image is blurry or partial, do your best to identify any text or numbers.
-- Barcodes are the long sequence of numbers printed under barcode lines - extract those digits.
-- Never say "I'm unable to read" - always fill each field with your best guess or "Unknown".
-- Do not add any other text outside the three lines above.`,
+- Product = short recognizable name a shopper would use. E.g. "KitKat Chunky", "Fanta Orange", "Doritos Cool Ranch", "Hubba Bubba Original". Do NOT include size, weight, volume, barcodes, slogans, or marketing text.
+- Brand = parent company (e.g. "Nestle", "Coca-Cola", "PepsiCo").
+- Always give your best guess. Never refuse or say you cannot read it.
+- No extra text outside the three lines.`,
 };
 
 const CHAT_TASK_PROMPTS = {
@@ -525,7 +520,7 @@ app.post('/api/openai/analyze-image', openaiLimiter, largeBody, async (req, res)
             ],
           },
         ],
-        max_tokens: 300,
+        max_tokens: task === 'scan-product' ? 60 : 300,
       }),
     });
 

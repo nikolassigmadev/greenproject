@@ -560,7 +560,19 @@ export default function OpenFoodFactsDetail() {
     : null;
 
   // Prefer OCR-identified product name from scan (e.g. "KitKat") over OFF's product_name (e.g. "Chunky")
-  const ocrName = fromScan ? sessionStorage.getItem('ocr_product_name') : null;
+  // Only use it if it's not obviously unrelated to the product (guard against stale sessionStorage)
+  const ocrNameRaw = fromScan ? sessionStorage.getItem('ocr_product_name') : null;
+  const ocrName = (() => {
+    if (!ocrNameRaw) return null;
+    // If the product has a name/brand and the OCR name shares no words with either, skip it
+    const ocrLower = ocrNameRaw.toLowerCase();
+    const prodLower = (product.productName || "").toLowerCase();
+    const brandLower = (product.brand || "").toLowerCase();
+    const ocrWords = ocrLower.split(/\s+/).filter(w => w.length >= 3);
+    const prodBrandText = `${prodLower} ${brandLower}`;
+    if (ocrWords.length > 0 && !ocrWords.some(w => prodBrandText.includes(w))) return null;
+    return ocrNameRaw;
+  })();
   const displayName = ocrName || cleanName || product.productName || "Unknown product";
 
   const hasScores = !!(ecoGrade || nutriGrade || product.novaGroup);

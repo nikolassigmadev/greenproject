@@ -1212,6 +1212,8 @@ const Scan = () => {
     setProductUnknown(false);
     setNotFoundQuery(null);
     setShowManualCorrection(false);
+    // Clear stale OCR name from previous scan
+    sessionStorage.removeItem('ocr_product_name');
 
     try {
       // Step 1: OpenAI identifies the product
@@ -1439,6 +1441,7 @@ const Scan = () => {
 
         if (topResults.length > 0) {
           console.log(`✅ [manual] Found results for: "${query}"`);
+          sessionStorage.removeItem('ocr_product_name');
           sessionStorage.setItem('scan_candidates', JSON.stringify(topResults));
           setShowSearch(false);
           navigate(`/product-off/${topResults[0].barcode}?from=scan`);
