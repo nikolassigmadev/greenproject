@@ -205,21 +205,23 @@ const filterBestProducts = (results: OpenFoodFactsResult[], query?: string): Ope
         ecoScore: calculateEcoScore(r),
       }));
 
-      // Brand-priority filter: if the first query word matches a brand field in
-      // some results, restrict the candidate pool to those. This prevents a text
-      // search for "Lipton Iced Tea" from picking a result whose brand is unrelated.
-      const queryBrand = words[0];
-      const brandMatches = scored.filter(s =>
-        (s.result.brand || '').toLowerCase().split(/[\s,/&]+/).some(bw =>
-          bw.length >= 3 && (bw === queryBrand || bw.startsWith(queryBrand) || queryBrand.startsWith(bw))
-        )
-      );
-      // Only apply brand filter when it narrows meaningfully (≥1 match)
-      const searchPool = brandMatches.length >= 1 ? brandMatches : scored;
+      // Brand-priority filter: if the query has multiple words and the first word
+      // matches a brand field in some results, restrict the pool to those.
+      // Skip for single-word queries — the word is likely the product name, not brand.
+      let searchPool = scored;
+      if (words.length >= 2) {
+        const queryBrand = words[0];
+        const brandMatches = scored.filter(s =>
+          (s.result.brand || '').toLowerCase().split(/[\s,/&]+/).some(bw =>
+            bw.length >= 3 && (bw === queryBrand || bw.startsWith(queryBrand) || queryBrand.startsWith(bw))
+          )
+        );
+        if (brandMatches.length >= 1) searchPool = brandMatches;
+      }
 
-      // Require at least 40% of the query's weighted characters to match.
-      // For a 1-word query the threshold is effectively "must contain that word".
-      const MIN_RELEVANCE = words.length === 1 ? 1.0 : 0.4;
+      // Require relevance: for multi-word, 40% is fine. For single-word, require
+      // the word to appear somewhere in the product name or brand (relevance > 0).
+      const MIN_RELEVANCE = words.length === 1 ? 0.5 : 0.4;
 
       const relevant = searchPool.filter(s => s.relevance >= MIN_RELEVANCE);
 
