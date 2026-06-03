@@ -117,34 +117,20 @@ const levenshtein = (a: string, b: string): number => {
 };
 
 // Character-level similarity between a query and an OFF result (0–1).
-// Compares against the query length so extra words in the OFF name
-// (e.g. "Tortilla Chips") don't penalise the score. If the OFF text
-// is longer, we slide a window of query-length over it and take the
-// best (lowest distance) alignment.
-const characterSimilarity = (query: string, offText: string): number => {
-  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
-  const nq = norm(query);
-  const no = norm(offText);
-  if (nq.length === 0 && no.length === 0) return 1;
-  if (nq.length === 0 || no.length === 0) return 0;
 
-  // If OFF text is shorter or equal, simple full-string comparison
-  if (no.length <= nq.length) {
-    return 1 - levenshtein(nq, no) / nq.length;
-  }
-
-  // OFF text is longer: slide a window of nq.length over no and find best match
-  let bestDist = nq.length; // worst case
-  for (let i = 0; i <= no.length - nq.length; i++) {
-    const window = no.substring(i, i + nq.length);
-    const d = levenshtein(nq, window);
-    if (d < bestDist) bestDist = d;
-    if (d === 0) break; // perfect match
-  }
-  return 1 - bestDist / nq.length;
+/**
+ * Check if a product result contains at least one significant word from the query.
+ * Prevents random/unrelated products while being lenient enough for OCR typos.
+ */
+const resultContainsQueryWord = (query: string, productText: string): boolean => {
+  const qWords = query.toLowerCase().split(/[\s\-_,/&().]+/).filter(w => w.length >= 3);
+  const pText = productText.toLowerCase();
+  const pWords = pText.split(/[\s\-_,/&().]+/).filter(w => w.length >= 2);
+  // At least one query word (≥3 chars) must appear in the product text (substring or fuzzy)
+  return qWords.length === 0 || qWords.some(qw =>
+    pText.includes(qw) || fuzzyWordMatch(qw, pWords)
+  );
 };
-
-const MIN_CHAR_SIMILARITY = 0.75;
 
 /**
  * Clean an OCR query string for better search results.
@@ -245,16 +231,16 @@ const filterBestProducts = (results: OpenFoodFactsResult[], query?: string): Ope
 
       const candidates = relevant.length > 0 ? relevant : fallback;
 
-      // 75% character-similarity gate: only keep results whose product name + brand
-      // is at least 75% similar to the original query (prevents unrelated results).
+      // Word-containment gate: product must contain at least one word from the query
+      // to prevent completely unrelated results (e.g. from API errors).
       const q = query.trim();
       const charFiltered = candidates.filter(s => {
         const offText = [s.result.productName, s.result.brand].filter(Boolean).join(' ');
-        const sim = characterSimilarity(q, offText);
-        if (sim < MIN_CHAR_SIMILARITY) {
-          console.log(`   [charSim] REJECTED "${offText}" (${(sim * 100).toFixed(0)}% < 75%) for query "${q}"`);
+        const passes = resultContainsQueryWord(q, offText);
+        if (!passes) {
+          console.log(`   [wordGate] REJECTED "${offText}" — no matching word from query "${q}"`);
         }
-        return sim >= MIN_CHAR_SIMILARITY;
+        return passes;
       });
 
       if (charFiltered.length > 0) {
@@ -1167,12 +1153,12 @@ const Scan = () => {
       // Fetch a small pool — we navigate to the top result immediately
       const results = await searchOffProducts(cleanedName, 5);
 
-      // Filter by relevance — require at least 75% match to avoid garbage results
+      // Filter: product must contain at least one query word to avoid random results
       const queryWords = cleanedName.toLowerCase().split(/[\s\-_]+/).filter(w => w.length >= 2);
       const topResults = results.length > 0
         ? results
+            .filter(r => resultContainsQueryWord(cleanedName, [r.productName, r.brand].filter(Boolean).join(' ')))
             .map(r => ({ result: r, relevance: computeRelevance(r, queryWords), ecoScore: calculateEcoScore(r) }))
-            .filter(s => s.relevance >= 0.75)
             .sort((a, b) => b.relevance - a.relevance || b.ecoScore - a.ecoScore)
             .slice(0, 5)
             .map(s => s.result)
@@ -1326,28 +1312,19 @@ const Scan = () => {
           continue;
         }
 
-        // Try similarity gate against the cleaned query (not the raw noisy one)
+        // Word-containment gate: product must share at least one word with the query
         for (const candidate of topResults) {
           const offText = [candidate.productName, candidate.brand].filter(Boolean).join(' ');
-          const sim = characterSimilarity(q, offText);
-          console.log(`   [charSim] "${offText}" vs "${q}" → ${(sim * 100).toFixed(0)}%`);
-          if (sim >= MIN_CHAR_SIMILARITY) {
+          if (resultContainsQueryWord(q, offText)) {
             chosenCandidate = candidate;
             allCandidates = topResults;
-            console.log(`✅ Matched: "${candidate.productName}" by ${candidate.brand} (${(sim * 100).toFixed(0)}% sim, query="${q}")`);
+            console.log(`✅ Matched: "${candidate.productName}" by ${candidate.brand} (query="${q}")`);
             break;
           }
+          console.log(`   [wordGate] REJECTED "${offText}" — no matching word from query "${q}"`);
         }
 
         if (chosenCandidate) break;
-
-        // For very short queries (1-2 words), accept the top result directly
-        if (q.split(' ').length <= 2 && topResults.length > 0) {
-          chosenCandidate = topResults[0];
-          allCandidates = topResults;
-          console.log(`✅ Short-query accept: "${topResults[0].productName}" by ${topResults[0].brand} (query="${q}")`);
-          break;
-        }
       }
 
       if (!chosenCandidate) {
@@ -1428,12 +1405,12 @@ const Scan = () => {
         console.log(`🔍 [manual] Trying: "${query}"`);
         const results = await searchOffProducts(query, 5);
 
-        // Filter by relevance — require 75% match
+        // Filter: product must contain at least one query word to avoid random results
         const qWords = query.toLowerCase().split(/[\s\-_]+/).filter(w => w.length >= 2);
         const topResults = results.length > 0
           ? results
+              .filter(r => resultContainsQueryWord(query, [r.productName, r.brand].filter(Boolean).join(' ')))
               .map(r => ({ result: r, relevance: computeRelevance(r, qWords), ecoScore: calculateEcoScore(r) }))
-              .filter(s => s.relevance >= 0.75)
               .sort((a, b) => b.relevance - a.relevance || b.ecoScore - a.ecoScore)
               .slice(0, 5)
               .map(s => s.result)
