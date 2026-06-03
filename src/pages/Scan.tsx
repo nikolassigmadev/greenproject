@@ -25,6 +25,7 @@ import { lookupBarcode, isValidBarcode, searchProducts as searchOffProducts, sea
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
 import { DS } from "@/styles/design-tokens";
 import { getBackendUrl } from "@/config/backend";
+import { pickBestMatch, validateBarcodeResult, type MatchResult } from "@/utils/productRelevance";
 
 /** Ask OpenAI to fix typos and clean up a user-typed product query */
 const fixProductQuery = async (raw: string): Promise<string> => {
@@ -1059,15 +1060,12 @@ const Scan = () => {
               .then((result) => {
                 console.log("OpenFoodFacts result:", result);
                 if (result.found) {
-                  // Cross-validate: make sure the found product name roughly matches
-                  // what OCR identified (prevents hallucinated barcodes returning wrong products)
-                  const ocrName = `${advancedResult.brandName || ''} ${advancedResult.productName || ''}`.toLowerCase().trim();
-                  const foundName = `${result.productName || ''} ${result.brand || ''}`.toLowerCase().trim();
-                  const ocrWords = ocrName.split(/\s+/).filter(w => w.length >= 3);
-                  const nameMatches = ocrWords.length === 0 || ocrWords.some(w => foundName.includes(w));
+                  // Validate barcode result against OCR-identified product
+                  const ocrText = `${advancedResult.brandName || ''} ${advancedResult.productName || ''}`.trim();
+                  const { valid } = validateBarcodeResult(result, ocrText);
 
-                  if (!nameMatches) {
-                    console.warn(`⚠️ Barcode product "${foundName}" doesn't match OCR name "${ocrName}" — ignoring barcode result`);
+                  if (!valid) {
+                    console.warn(`⚠️ Barcode product "${result.productName}" doesn't pass relevance check against OCR "${ocrText}" — ignoring`);
                     return;
                   }
 
@@ -1241,17 +1239,23 @@ const Scan = () => {
         }
       }
 
-      // Step 2: If a barcode was spotted, look it up directly — most precise
+      // Step 2: If a barcode was spotted, look it up directly — but validate against OCR text
       setScanStage("Looking up barcode...");
       setScanProgress(50);
       if (identified.barcode && isValidBarcode(identified.barcode)) {
         const barcodeResult = await lookupBarcode(identified.barcode);
         if (barcodeResult.found) {
-          const hardcodedImage = lookupHardcodedImage(identified.barcode);
-          const finalResult = hardcodedImage ? { ...barcodeResult, imageUrl: hardcodedImage } : barcodeResult;
-          sessionStorage.setItem('scan_candidates', JSON.stringify([finalResult]));
-          navigate(`/product-off/${finalResult.barcode}?from=scan`);
-          return;
+          // Validate: the resolved product must share a distinctive token with the OCR query
+          const ocrText = [identified.brandName, identified.productName].filter(s => !isUnknownResponse(s)).join(' ');
+          const { valid, relevance } = validateBarcodeResult(barcodeResult, ocrText);
+          if (valid) {
+            const hardcodedImage = lookupHardcodedImage(identified.barcode);
+            const finalResult = hardcodedImage ? { ...barcodeResult, imageUrl: hardcodedImage } : barcodeResult;
+            sessionStorage.setItem('scan_candidates', JSON.stringify([finalResult]));
+            navigate(`/product-off/${finalResult.barcode}?from=scan`);
+            return;
+          }
+          console.warn(`⚠️ Barcode ${identified.barcode} resolved to "${barcodeResult.productName}" but failed relevance check against OCR "${ocrText}" (score=${relevance.score.toFixed(2)}, distinctiveOverlap=${relevance.distinctiveOverlap}) — falling through to text search`);
         }
       }
 
@@ -1290,8 +1294,8 @@ const Scan = () => {
 
       setOffSearchText(cleanedQuery);
 
-      // Try each query candidate until we find a matching product
-      let chosenCandidate: OpenFoodFactsResult | null = null;
+      // Try each query candidate — validate against the ORIGINAL OCR query (rawQuery)
+      let bestMatch: MatchResult<OpenFoodFactsResult> | null = null;
       let allCandidates: OpenFoodFactsResult[] = [];
 
       for (let qi = 0; qi < searchQueries.length; qi++) {
@@ -1312,22 +1316,24 @@ const Scan = () => {
           continue;
         }
 
-        // Word-containment gate: product must share at least one word with the query
-        for (const candidate of topResults) {
-          const offText = [candidate.productName, candidate.brand].filter(Boolean).join(' ');
-          if (resultContainsQueryWord(q, offText)) {
-            chosenCandidate = candidate;
-            allCandidates = topResults;
-            console.log(`✅ Matched: "${candidate.productName}" by ${candidate.brand} (query="${q}")`);
-            break;
-          }
-          console.log(`   [wordGate] REJECTED "${offText}" — no matching word from query "${q}"`);
+        // Score against the ORIGINAL OCR query to prevent brand-only fallback winning
+        const match = pickBestMatch(topResults, rawQuery, q);
+        console.log(`   [relevance] query="${q}" → passed=${match.passedRelevanceGate}, brandOnly=${match.brandOnlyFallback}, confidence=${match.confidence.toFixed(2)}`);
+
+        if (match.passedRelevanceGate && match.product) {
+          bestMatch = match;
+          allCandidates = topResults;
+          console.log(`✅ Matched: "${match.product.productName}" by ${match.product.brand} (query="${q}", confidence=${match.confidence.toFixed(2)})`);
+          break;
         }
 
-        if (chosenCandidate) break;
+        // A brand-only fallback is never auto-accepted — log and continue trying
+        if (match.brandOnlyFallback) {
+          console.warn(`   ↪ Brand-only fallback for "${q}" — not auto-accepting`);
+        }
       }
 
-      if (!chosenCandidate) {
+      if (!bestMatch || !bestMatch.product) {
         console.warn(`⚠️ No match found after ${searchQueries.length} query attempts for "${rawQuery}"`);
         setNotFoundQuery(cleanedQuery);
         return;
@@ -1335,7 +1341,8 @@ const Scan = () => {
 
       setScanStage("Loading product details...");
       setScanProgress(95);
-      const finalCandidates = [chosenCandidate, ...allCandidates.filter(c => c.barcode !== chosenCandidate!.barcode)];
+      const chosenCandidate = bestMatch.product;
+      const finalCandidates = [chosenCandidate, ...allCandidates.filter(c => c.barcode !== chosenCandidate.barcode)];
       sessionStorage.setItem('scan_candidates', JSON.stringify(finalCandidates));
       navigate(`/product-off/${chosenCandidate.barcode}?from=scan`);
     } catch (error) {
