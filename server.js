@@ -71,11 +71,18 @@ function requireAdmin(req, res, next) {
 }
 
 // ── CORS ──
+// IMPORTANT: every regex MUST be anchored with ^ AND $.
+// Otherwise an origin like https://evilgoodscan.shop matches /goodscan\.shop$/
+// and, combined with Access-Control-Allow-Credentials: true below, lets a
+// malicious site call the API as the victim.
 const ALLOWED_ORIGINS = [
   /^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+)(:\d+)?$/,
-  /capacitor:\/\/localhost/,
-  /goodscan\.shop$/,
-  /hostingersite\.com$/,
+  /^capacitor:\/\/localhost$/,
+  // goodscan.shop apex + any direct subdomain (e.g. www.goodscan.shop)
+  /^https:\/\/([a-z0-9-]+\.)?goodscan\.shop$/,
+  // Hostinger staging slot. Tighten to your actual subdomain when known —
+  // ANY .hostingersite.com is a shared host where other people can register.
+  /^https:\/\/([a-z0-9-]+\.)?hostingersite\.com$/,
 ];
 
 function isAllowedOrigin(origin) {
