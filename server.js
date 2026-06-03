@@ -711,17 +711,22 @@ app.post('/api/openfoodfacts/search', async (req, res) => {
     const queryLower = query.trim().toLowerCase();
     const queryWords = queryLower.split(/[\s-]+/).filter(w => w.length > 1);
 
+    // Sort by relevance but preserve original API order (popularity) as tiebreaker.
+    // Only reorder when there's a meaningful name-match difference.
     const sortByRelevance = (products, words, fullQuery) => {
       return products.sort((a, b) => {
         const nameA = (a.product_name || a.product_name_en || '').toLowerCase();
         const nameB = (b.product_name || b.product_name_en || '').toLowerCase();
+        // Exact full-query match in name wins
         const aExact = nameA.includes(fullQuery);
         const bExact = nameB.includes(fullQuery);
         if (aExact && !bExact) return -1;
         if (!aExact && bExact) return 1;
+        // If both match equally, preserve original order (popularity from API)
         const aScore = words.filter(w => nameA.includes(w)).length;
         const bScore = words.filter(w => nameB.includes(w)).length;
-        return bScore - aScore;
+        if (bScore !== aScore) return bScore - aScore;
+        return 0; // stable — keeps API's popularity order
       });
     };
 

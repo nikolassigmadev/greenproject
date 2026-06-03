@@ -247,13 +247,12 @@ const filterBestProducts = (results: OpenFoodFactsResult[], query?: string): Ope
       });
 
       if (charFiltered.length > 0) {
-        // Sort: eco data completeness first so the richest result wins,
-        // then relevance as tiebreaker for equal eco scores.
-        charFiltered.sort((a, b) =>
-          b.ecoScore !== a.ecoScore
-            ? b.ecoScore - a.ecoScore
-            : b.relevance - a.relevance
-        );
+        // Preserve API order (popularity/scans) — the first result from OFF
+        // is typically the most relevant. Only break ties by relevance score.
+        charFiltered.sort((a, b) => {
+          if (b.relevance !== a.relevance) return b.relevance - a.relevance;
+          return 0; // preserve original API order for equal relevance
+        });
         return charFiltered.slice(0, 5).map(s => s.result);
       }
 
