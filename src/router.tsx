@@ -19,8 +19,8 @@ import { CalAIShowcase } from "./components/CalAIShowcase";
 import ChatGPTScan from "./pages/ChatGPTScan";
 
 // Import admin components - uncomment to enable
-import Admin from "./pages/Admin";
-import AdminLogin from "./pages/AdminLogin";
+// import Admin from "./pages/Admin";
+// import AdminLogin from "./pages/AdminLogin";
 
 
 function RootLayout() {
@@ -99,14 +99,14 @@ export const router = createBrowserRouter([
         element: <CalAIShowcase />,
       },
       // Uncomment admin routes to enable
-      {
-        path: "/admin",
-        element: <Admin />,
-      },
-      {
-        path: "/admin/login",
-        element: <AdminLogin />,
-      },
+      //{
+        //path: "/admin",
+        //element: <Admin />,
+      //},
+      //{
+        //path: "/admin/login",
+        //element: <AdminLogin />,
+      //},
     ],
   },
 ]);
