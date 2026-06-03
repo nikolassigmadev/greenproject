@@ -1259,11 +1259,12 @@ const Scan = () => {
         }
       }
 
-      // Step 3: Build search queries — raw OCR, then cleaned, then progressive word strip
-      const rawQuery = [identified.brandName, identified.productName]
-        .filter(s => !isUnknownResponse(s))
-        .join(' ')
-        .trim();
+      // Step 3: Build search queries — product name first (better for OpenFoodFacts),
+      // then combined, then brand-only as last resort.
+      // rawQuery includes brand for relevance scoring, but search order prioritises product name.
+      const prodOnly = identified.productName && !isUnknownResponse(identified.productName) ? identified.productName.trim() : '';
+      const brandOnly = identified.brandName && !isUnknownResponse(identified.brandName) ? identified.brandName.trim() : '';
+      const rawQuery = [brandOnly, prodOnly].filter(Boolean).join(' ');
 
       if (!rawQuery) {
         setProductUnknown(true);
@@ -1271,22 +1272,19 @@ const Scan = () => {
       }
 
       const cleanedQuery = cleanOCRQuery(rawQuery);
-      // Build candidate queries: raw, cleaned, product-only, brand-only, then progressive strip
+      // Search order: product name alone first (most distinctive), then product+brand, then full raw
       const searchQueries: string[] = [];
       const addUnique = (q: string) => { if (q && !searchQueries.some(s => s.toLowerCase() === q.toLowerCase())) searchQueries.push(q); };
+      // Lead with product name — this is what OpenFoodFacts matches best
+      if (prodOnly) addUnique(prodOnly);
+      // Then product + brand (brand helps disambiguate if product name is generic)
+      if (prodOnly && brandOnly) addUnique(`${prodOnly} ${brandOnly}`);
+      // Then full raw/cleaned as fallback
       addUnique(rawQuery);
       if (cleanedQuery !== rawQuery) addUnique(cleanedQuery);
-      // Add product-name-only and brand-only as early candidates so stripping doesn't lose the product name
-      const prodOnly = identified.productName && !isUnknownResponse(identified.productName) ? identified.productName.trim() : '';
-      const brandOnly = identified.brandName && !isUnknownResponse(identified.brandName) ? identified.brandName.trim() : '';
-      if (prodOnly && brandOnly) {
-        addUnique(`${prodOnly} ${brandOnly}`);  // product-first order
-        addUnique(prodOnly);
-        addUnique(brandOnly);
-      }
-      // Progressive strip: drop rightmost word each time, down to 1 word
+      // Progressive strip of cleaned query (drop rightmost word each time)
       const cleanedWords = cleanedQuery.split(' ').filter(Boolean);
-      for (let len = cleanedWords.length - 1; len >= 1; len--) {
+      for (let len = cleanedWords.length - 1; len >= 2; len--) {
         addUnique(cleanedWords.slice(0, len).join(' '));
       }
 
