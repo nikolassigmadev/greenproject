@@ -30,3 +30,7 @@ dist-ssr
 # Android signing keys
 *.keystore
 *.jks
+
+# Server runtime data (disputes, OpenAI call logs, etc.) — never commit
+data/
+

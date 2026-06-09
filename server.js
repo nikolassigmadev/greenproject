@@ -20,7 +20,7 @@ import OpenAI from 'openai';
 import bcrypt from 'bcryptjs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, appendFileSync, chmodSync } from 'fs';
 
 console.log('server.js: imports loaded');
 
@@ -35,6 +35,33 @@ dotenv.config({ path: '.env.local' });
 dotenv.config();
 
 console.log('server.js: dotenv loaded, PORT=', process.env.PORT);
+
+// ── OpenAI call logger ──
+// Persists { productName, timestamp } per API call to a private JSONL file.
+// Reason: OpenAI's dashboard purges logs after 30 days; we want a permanent record.
+// Stored at data/openai-logs.jsonl. This directory is OUTSIDE dist/ (the only
+// static-served path), the catch-all route always serves index.html, and the
+// directory is gitignored — so the file is not reachable over HTTP or in source.
+const LOG_DIR = join(__dirname, 'data');
+const OPENAI_LOG_FILE = join(LOG_DIR, 'openai-logs.jsonl');
+
+function logOpenAICall(productName) {
+  try {
+    if (!existsSync(LOG_DIR)) {
+      mkdirSync(LOG_DIR, { recursive: true, mode: 0o700 });
+    }
+    const raw = typeof productName === 'string' ? productName : '';
+    const safe = raw.replace(/[\r\n\t]+/g, ' ').trim().slice(0, 200) || 'unknown';
+    const line = JSON.stringify({
+      productName: safe,
+      timestamp: new Date().toISOString(),
+    }) + '\n';
+    appendFileSync(OPENAI_LOG_FILE, line);
+    try { chmodSync(OPENAI_LOG_FILE, 0o600); } catch {}
+  } catch (e) {
+    console.error('Failed to log OpenAI call:', e.message);
+  }
+}
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -339,6 +366,7 @@ ${ABOUT_US_KNOWLEDGE}`,
     });
 
     const reply = completion.choices?.[0]?.message?.content?.trim() || "I don't have that information.";
+    logOpenAICall(userMessage);
     res.json({ success: true, reply });
   } catch (error) {
     console.error('About-us chat error:', error);
@@ -455,6 +483,8 @@ Return ONLY valid JSON matching this schema:
       return res.status(500).json({ success: false, error: 'Failed to parse AI response' });
     }
 
+    logOpenAICall(parsed?.productName || query || 'image-only-product');
+
     res.json({
       success: true,
       analysis: parsed,
@@ -543,6 +573,13 @@ app.post('/api/openai/analyze-image', openaiLimiter, largeBody, async (req, res)
     const data = await response.json();
     const content = data.choices[0].message.content;
 
+    let loggedName = task;
+    if (task === 'scan-product' && typeof content === 'string') {
+      const m = content.match(/Product:\s*(.+)/i);
+      if (m) loggedName = m[1].trim();
+    }
+    logOpenAICall(loggedName);
+
     res.json({
       success: true,
       content,
@@ -617,6 +654,8 @@ app.post('/api/openai/chat', openaiLimiter, async (req, res) => {
 
     const data = await response.json();
     const content = data.choices[0].message.content;
+
+    logOpenAICall(userMessage);
 
     res.json({
       success: true,
