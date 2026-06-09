@@ -6,19 +6,33 @@ import { computeMonthlyImpact, type MonthlyImpact } from "@/utils/impactStats";
 import { WATCHLIST_EVENT, loadWatchlist } from "@/utils/watchlist";
 import { SWAP_EVENT } from "@/utils/swapTracking";
 
-function Stat({ value, label, color }: { value: string; label: string; color: string }) {
+function alpha(color: string, pct: number): string {
+  return `color-mix(in srgb, ${color} ${pct}%, transparent)`;
+}
+
+/** Inline stat — no bordered box, just number + label. Breathes better. */
+function StatCell({ value, label, color }: { value: string; label: string; color: string }) {
   return (
-    <div style={{
-      background: DS.bg, borderRadius: 14, padding: "14px 12px", textAlign: "center", flex: 1, minWidth: 0,
-    }}>
-      <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: -0.5, color, lineHeight: 1.1 }}>
+    <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{
+        fontSize: 22, fontWeight: 800, letterSpacing: -0.5,
+        color, lineHeight: 1, fontVariantNumeric: "tabular-nums",
+      }}>
         {value}
       </div>
-      <div style={{ fontSize: 10.5, fontWeight: 600, color: DS.muted, marginTop: 4 }}>
+      <div style={{
+        fontSize: 10.5, fontWeight: 600, color: DS.muted,
+        marginTop: 6, lineHeight: 1.2,
+      }}>
         {label}
       </div>
     </div>
   );
+}
+
+/** OFF brand strings can be comma-chains. Show only the first one. */
+function primaryBrand(brand: string): string {
+  return brand.split(/[,;|/]/)[0].trim();
 }
 
 export function MonthlyImpactCard() {
@@ -44,20 +58,23 @@ export function MonthlyImpactCard() {
 
   return (
     <div style={{
-      background: DS.card, borderRadius: 20, padding: "20px 18px",
+      background: DS.card, borderRadius: 20, padding: "18px 18px 16px",
       boxShadow: "0 2px 8px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)",
       marginBottom: 10,
     }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
         <div style={{
-          width: 36, height: 36, borderRadius: 12, background: DS.goodBg,
+          width: 34, height: 34, borderRadius: 11, background: DS.goodBg,
           display: "flex", alignItems: "center", justifyContent: "center",
         }}>
-          <ScanLine style={{ width: 18, height: 18, color: DS.good }} />
+          <ScanLine style={{ width: 17, height: 17, color: DS.good }} />
         </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: DS.ink }}>This month</div>
-          <div style={{ fontSize: 12, color: DS.muted }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 14.5, fontWeight: 700, color: DS.ink, lineHeight: 1.2 }}>
+            This month
+          </div>
+          <div style={{ fontSize: 11.5, color: DS.muted, marginTop: 2 }}>
             {empty
               ? "Scan a product to start tracking your impact"
               : `${impact.scanCount} scan${impact.scanCount === 1 ? "" : "s"} · last ${impact.windowDays} days`}
@@ -67,52 +84,76 @@ export function MonthlyImpactCard() {
 
       {!empty && (
         <>
-          <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
-            <Stat
+          {/* Stat strip — no boxes, just numbers with vertical hair dividers */}
+          <div style={{
+            display: "flex", gap: 4,
+            padding: "12px 14px",
+            background: DS.bg, borderRadius: 14,
+            marginBottom: 12,
+          }}>
+            <StatCell
               value={String(impact.scanCount)}
-              label="Products scanned"
+              label="Scanned"
               color={DS.ink}
             />
-            <Stat
+            <div style={{ width: 1, alignSelf: "stretch", background: DS.hair, margin: "0 6px" }} />
+            <StatCell
               value={String(impact.flaggedBrandCount)}
-              label="Flagged brands"
+              label="Flagged"
               color={impact.flaggedBrandCount > 0 ? DS.warn : DS.muted}
             />
-            <Stat
+            <div style={{ width: 1, alignSelf: "stretch", background: DS.hair, margin: "0 6px" }} />
+            <StatCell
               value={String(impact.swapsAccepted)}
-              label="Swaps accepted"
+              label="Swaps"
               color={impact.swapsAccepted > 0 ? DS.good : DS.muted}
             />
           </div>
 
+          {/* CO2 saved row — only when non-zero */}
           {impact.co2SavedKg > 0 && (
             <div style={{
-              display: "flex", alignItems: "center", gap: 10,
-              background: DS.goodBg, borderRadius: 12, padding: "10px 14px", marginBottom: 14,
+              display: "flex", alignItems: "center", gap: 8,
+              background: alpha(DS.good, 10), borderRadius: 11,
+              padding: "9px 12px", marginBottom: 12,
+              fontSize: 12, color: DS.ink, lineHeight: 1.3,
             }}>
-              <TrendingDown style={{ width: 16, height: 16, color: DS.good, flexShrink: 0 }} />
-              <div style={{ fontSize: 12.5, color: DS.ink }}>
-                <strong style={{ fontWeight: 800 }}>{impact.co2SavedKg} kg CO2</strong> avoided through accepted swaps
+              <TrendingDown style={{ width: 14, height: 14, color: DS.good, flexShrink: 0 }} />
+              <div>
+                <strong style={{ fontWeight: 800 }}>{impact.co2SavedKg} kg CO2</strong> avoided through swaps
               </div>
             </div>
           )}
 
+          {/* Top brands — primary brand only, ellipsis on overflow */}
           {impact.topBrands.length > 0 && (
-            <div style={{ marginBottom: 12 }}>
+            <div style={{ marginBottom: 14 }}>
               <div style={{
-                fontSize: 11, fontWeight: 700, color: DS.muted,
-                letterSpacing: "0.04em", textTransform: "uppercase", marginBottom: 8,
+                fontSize: 10, fontWeight: 800, color: DS.muted,
+                letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 8,
               }}>
-                Top brands scanned
+                Top brands
               </div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                {impact.topBrands.map((b) => (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                {impact.topBrands.slice(0, 5).map((b) => (
                   <span key={b.brand} style={{
-                    fontSize: 12, fontWeight: 600, color: DS.ink,
-                    background: DS.bg, padding: "5px 10px", borderRadius: 999,
-                    border: `1px solid ${DS.hair}`,
+                    display: "inline-flex", alignItems: "center", gap: 5,
+                    fontSize: 11.5, fontWeight: 600, color: DS.ink,
+                    background: DS.bg, padding: "4px 9px", borderRadius: 999,
+                    maxWidth: "100%",
                   }}>
-                    {b.brand} <span style={{ color: DS.muted, marginLeft: 4 }}>{b.count}</span>
+                    <span style={{
+                      overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                      maxWidth: 110,
+                    }}>
+                      {primaryBrand(b.brand)}
+                    </span>
+                    <span style={{
+                      fontSize: 10, fontWeight: 700, color: DS.muted,
+                      paddingLeft: 4, borderLeft: `1px solid ${DS.hair}`,
+                    }}>
+                      {b.count}
+                    </span>
                   </span>
                 ))}
               </div>
@@ -121,48 +162,47 @@ export function MonthlyImpactCard() {
         </>
       )}
 
+      {/* Action chips — 2×2 grid, lighter weight */}
       <div style={{
         display: "grid", gridTemplateColumns: "1fr 1fr",
-        gap: 8, marginTop: empty ? 4 : 12,
+        gap: 6,
       }}>
-        <Link to="/watchlist" style={linkBtn(DS.ink)}>
-          <Eye style={{ width: 14, height: 14 }} />
-          Watchlist
-          {watchlistCount > 0 && (
-            <span style={countPill}>{watchlistCount}</span>
-          )}
-        </Link>
-        <Link to="/compare" style={linkBtn(DS.ink)}>
-          <GitCompareArrows style={{ width: 14, height: 14 }} />
-          Compare
-        </Link>
-        <Link to="/receipts" style={linkBtn(DS.ink)}>
-          <Receipt style={{ width: 14, height: 14 }} />
-          Receipts
-        </Link>
-        <Link to="/submit-flag" style={linkBtn(DS.ink)}>
-          <Flag style={{ width: 14, height: 14 }} />
-          Flag a brand
-        </Link>
+        <ActionChip to="/watchlist" icon={<Eye style={{ width: 13, height: 13 }} />} label="Watchlist" badge={watchlistCount} />
+        <ActionChip to="/compare" icon={<GitCompareArrows style={{ width: 13, height: 13 }} />} label="Compare" />
+        <ActionChip to="/receipts" icon={<Receipt style={{ width: 13, height: 13 }} />} label="Receipts" />
+        <ActionChip to="/submit-flag" icon={<Flag style={{ width: 13, height: 13 }} />} label="Flag" />
       </div>
     </div>
   );
 }
 
-function linkBtn(color: string): React.CSSProperties {
-  return {
-    display: "inline-flex", alignItems: "center", gap: 6,
-    background: DS.bg, color,
-    padding: "10px 14px", borderRadius: 12,
-    fontSize: 13, fontWeight: 700,
-    textDecoration: "none",
-    border: `1px solid ${DS.hair}`,
-    flex: 1, justifyContent: "center",
-  };
+function ActionChip({
+  to, icon, label, badge,
+}: {
+  to: string; icon: React.ReactNode; label: string; badge?: number;
+}) {
+  return (
+    <Link to={to} style={{
+      display: "inline-flex", alignItems: "center", gap: 6,
+      background: "transparent", color: DS.ink,
+      padding: "9px 12px", borderRadius: 10,
+      fontSize: 12.5, fontWeight: 700,
+      textDecoration: "none",
+      border: `1px solid ${DS.hair}`,
+      justifyContent: "center",
+    }}>
+      {icon}
+      {label}
+      {badge != null && badge > 0 && (
+        <span style={{
+          background: DS.ink, color: DS.card,
+          fontSize: 10, fontWeight: 800,
+          padding: "1px 6px", borderRadius: 999, marginLeft: 2,
+          fontVariantNumeric: "tabular-nums",
+        }}>
+          {badge}
+        </span>
+      )}
+    </Link>
+  );
 }
-
-const countPill: React.CSSProperties = {
-  background: DS.ink, color: DS.card,
-  fontSize: 10, fontWeight: 800,
-  padding: "2px 7px", borderRadius: 999, marginLeft: 4,
-};

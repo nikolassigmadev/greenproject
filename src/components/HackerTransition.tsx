@@ -26,9 +26,13 @@ export function HackerTransition() {
         width: '100vw', height: '100vh',
         zIndex: 9998,
         pointerEvents: 'none',
-        background: 'var(--ds-good)',
+        // Subtle ink-tinted wash instead of saturated brand green.
+        // Reads as a directional cue rather than a wall of color.
+        background: 'color-mix(in srgb, var(--ds-ink) 18%, transparent)',
+        backdropFilter: 'blur(2px) saturate(110%)',
+        WebkitBackdropFilter: 'blur(2px) saturate(110%)',
         transform: 'translateX(-101%)',
-        animation: active ? 'blade-sweep 0.38s cubic-bezier(0.77,0,0.18,1) forwards' : 'none',
+        animation: active ? 'blade-sweep 0.32s cubic-bezier(0.77,0,0.18,1) forwards' : 'none',
       }}
     />
   );

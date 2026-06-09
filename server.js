@@ -1244,7 +1244,17 @@ app.post('/api/openfoodfacts/search', async (req, res) => {
       });
     };
 
-    // Strategy 1: v2 brand tag search
+    // Determinism rules:
+    //  - For SINGLE-word queries we trust the brand_tags index (Strategy 1).
+    //  - For MULTI-word queries we go straight to full-text (Strategy 3) so
+    //    distinctive product tokens (Phish Food, Dairy Milk) are scored. The
+    //    old "first word brand_tags" fallback returned products from any brand
+    //    whose name happened to start with the query's first word (e.g. query
+    //    "Ben & Jerry's Phish Food" → first word "Ben" → matched a whey-protein
+    //    brand called "Ben" and Moroccan "jben" yogurt → wildly wrong + flaky).
+    const isMultiWord = queryWords.length > 1;
+
+    // Strategy 1: v2 brand tag search (full slug)
     try {
       const brandParams = new URLSearchParams({
         brands_tags: searchQuery,
@@ -1266,10 +1276,12 @@ app.post('/api/openfoodfacts/search', async (req, res) => {
       console.warn(`Brand tag search failed: ${e.message}`);
     }
 
-    // Strategy 2: first-word brand tag
-    if (!data?.products?.length) {
+    // Strategy 2: first-word brand_tags — ONLY for single-word queries.
+    // Multi-word queries skip this; using the first word alone makes search
+    // non-deterministic and routinely returns the wrong brand.
+    if (!data?.products?.length && !isMultiWord) {
       const firstWord = queryWords[0];
-      if (firstWord && firstWord !== searchQuery) {
+      if (firstWord && firstWord !== searchQuery && firstWord.length >= 4) {
         try {
           const firstWordParams = new URLSearchParams({
             brands_tags: firstWord,
@@ -1293,7 +1305,7 @@ app.post('/api/openfoodfacts/search', async (req, res) => {
       }
     }
 
-    // Strategy 3: v2 API full-text search
+    // Strategy 3: v2 API full-text search — primary path for multi-word queries.
     if (!data?.products?.length) {
       try {
         const v2TextParams = new URLSearchParams({
@@ -1371,6 +1383,26 @@ app.post('/api/openfoodfacts/search', async (req, res) => {
 
     if (!data || !data.products) {
       data = { products: [], count: 0 };
+    }
+
+    // Final safety net: regardless of which strategy hit, drop products whose
+    // name/brand share NO whole-word token (>=3 chars) with the query. This
+    // prevents leaks like "Natural Whey Protein (Ben)" coming back for a
+    // "Ben & Jerry's Phish Food" query. Whole-word, not substring — "Ben" must
+    // not match "jben".
+    const significantQueryWords = queryWords.filter((w) => w.length >= 3);
+    if (significantQueryWords.length > 0 && Array.isArray(data.products)) {
+      const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const patterns = significantQueryWords.map((w) => new RegExp(`\\b${escapeRe(w)}\\b`, 'i'));
+      const filtered = data.products.filter((p) => {
+        const haystack = [p.product_name, p.product_name_en, p.brands].filter(Boolean).join(' ');
+        return patterns.some((re) => re.test(haystack));
+      });
+      // Only apply the filter if it leaves at least one result. If the entire
+      // pool was unrelated, return the filtered (empty) set so the client gets
+      // a clean "no match" instead of nonsense.
+      data.products = filtered;
+      data.count = filtered.length;
     }
 
     res.json({

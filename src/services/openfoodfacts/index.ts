@@ -414,13 +414,26 @@ const searchOneVariant = async (
 
     ocrSearchLogger.logRegionalFiltering(allNormalized.length, regionalResults.length, false);
 
-    // If too few results after regional filter, pad with global results
+    // If we have far too few regional results, pad — but ONLY with products that
+    // share a query token (whole-word). Previously we padded with anything in
+    // the response, which is how unrelated products (Moroccan dairy on a Nutella
+    // search) leaked through. The relevance check stays cheap.
     if (results.length < Math.ceil(limit * 0.5)) {
-      const allResults = allNormalized.slice(0, limit * 2);
-      results = [
-        ...results,
-        ...allResults.filter(r => !results.some(ur => ur.barcode === r.barcode)),
-      ].slice(0, limit);
+      const queryWords = query
+        .toLowerCase()
+        .split(/[\s\-_,/&().]+/)
+        .filter((w) => w.length >= 3)
+        .map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+      const isRelevant = (p: OpenFoodFactsResult): boolean => {
+        if (queryWords.length === 0) return true;
+        const haystack = [p.productName, p.brand].filter(Boolean).join(' ').toLowerCase();
+        return queryWords.some((qw) => new RegExp(`\\b${qw}\\b`, 'i').test(haystack));
+      };
+      const padding = allNormalized
+        .slice(0, limit * 3)
+        .filter((r) => isRelevant(r))
+        .filter((r) => !results.some((ur) => ur.barcode === r.barcode));
+      results = [...results, ...padding].slice(0, limit);
     }
 
     cacheSet(cacheKey, results);
@@ -537,12 +550,14 @@ const searchProductsGlobal = async (
     return cached;
   }
 
-  // Build progressively shorter query candidates to try:
-  // "Doritos Cool Ranch" → ["Doritos Cool Ranch", "Doritos Cool", "Doritos"]
+  // Build progressively shorter query candidates to try.
+  // We deliberately do NOT drop down to a single word — "Ben & Jerry's Phish Food"
+  // shrunk to "Ben" returned Moroccan dairy (jben) under OFF's loose match. A
+  // single token is too ambiguous; keep at least two distinctive words.
   const words = trimmed.split(/\s+/).filter(Boolean);
   const candidates: string[] = [trimmed];
+  if (words.length > 3) candidates.push(words.slice(0, 3).join(' '));
   if (words.length > 2) candidates.push(words.slice(0, 2).join(' '));
-  if (words.length > 1) candidates.push(words[0]);
 
   for (const candidate of candidates) {
     try {

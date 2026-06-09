@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ChevronLeft, Search, Loader2, GitCompareArrows, AlertTriangle,
   CheckCircle2, ExternalLink, Package2, X, Trophy, Leaf, Heart, Cloud,
-  ShieldCheck, ArrowRight, Sparkles, Plus,
+  ShieldCheck, Sparkles, Plus,
 } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { DS } from "@/styles/design-tokens";
@@ -109,21 +109,96 @@ function computeVerdict(a: OpenFoodFactsResult, b: OpenFoodFactsResult): Verdict
 }
 
 // ────────────────────────────────────────────────────────────
-// Search input — shared shell
+// Unified compare form — both inputs + one Compare button in a single step
 // ────────────────────────────────────────────────────────────
 
-function SearchInput({
-  slot, query, loading, onChange, onSubmit,
+function UnifiedCompareForm({
+  initialA, initialB, loading, onCompare,
+}: {
+  initialA: string;
+  initialB: string;
+  loading: boolean;
+  onCompare: (a: string, b: string) => void;
+}) {
+  const [a, setA] = useState(initialA);
+  const [b, setB] = useState(initialB);
+
+  // Keep inputs in sync if parent resets / preloads them (e.g. quick pair click).
+  useSyncedValue(initialA, setA);
+  useSyncedValue(initialB, setB);
+
+  const canSubmit = a.trim().length > 0 && b.trim().length > 0 && !loading;
+
+  return (
+    <form
+      onSubmit={(e) => { e.preventDefault(); if (canSubmit) onCompare(a.trim(), b.trim()); }}
+      style={{
+        background: DS.card, borderRadius: 18, padding: 14,
+        border: `1px solid ${DS.hair}`, marginBottom: 12,
+        boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+        display: "flex", flexDirection: "column", gap: 10,
+      }}
+    >
+      <SlotInput slot="A" value={a} onChange={setA} disabled={loading} />
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontSize: 10, fontWeight: 800, color: DS.muted,
+        letterSpacing: "0.15em",
+      }}>
+        <div style={{ height: 1, background: DS.hair, flex: 1, marginRight: 10 }} />
+        VS
+        <div style={{ height: 1, background: DS.hair, flex: 1, marginLeft: 10 }} />
+      </div>
+      <SlotInput slot="B" value={b} onChange={setB} disabled={loading} />
+      <button
+        type="submit"
+        disabled={!canSubmit}
+        style={{
+          marginTop: 4, height: 48, borderRadius: 12, border: "none",
+          background: canSubmit ? DS.ink : DS.hair,
+          color: canSubmit ? DS.card : DS.muted,
+          fontSize: 14, fontWeight: 800, letterSpacing: "0.02em",
+          cursor: canSubmit ? "pointer" : "not-allowed",
+          fontFamily: DS.font,
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+          transition: "background 150ms ease",
+        }}
+      >
+        {loading ? (
+          <>
+            <Loader2 style={{ width: 16, height: 16, animation: "spin 0.7s linear infinite" }} />
+            Comparing…
+          </>
+        ) : (
+          <>
+            <GitCompareArrows style={{ width: 16, height: 16 }} />
+            Compare
+          </>
+        )}
+      </button>
+    </form>
+  );
+}
+
+function SlotInput({
+  slot, value, onChange, disabled,
 }: {
   slot: Slot;
-  query: string;
-  loading: boolean;
+  value: string;
   onChange: (v: string) => void;
-  onSubmit: () => void;
+  disabled: boolean;
 }) {
   const accent = slot === "A" ? DS.brand : DS.ink;
   return (
-    <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }} style={{ display: "flex", gap: 8 }}>
+    <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      <span style={{
+        width: 26, height: 26, borderRadius: 999,
+        background: alpha(accent, 13), color: accent,
+        display: "inline-flex", alignItems: "center", justifyContent: "center",
+        fontSize: 12, fontWeight: 800, flexShrink: 0,
+      }}>
+        {slot}
+      </span>
       <div style={{ flex: 1, position: "relative", display: "flex", alignItems: "center" }}>
         <Search style={{
           position: "absolute", left: 12, width: 14, height: 14,
@@ -131,37 +206,26 @@ function SearchInput({
         }} />
         <input
           type="text"
-          value={query}
+          value={value}
           onChange={(e) => onChange(e.target.value)}
-          placeholder={`Product ${slot}…`}
+          disabled={disabled}
+          placeholder={slot === "A" ? "First product (e.g. Oreo)" : "Second product (e.g. Hydrox)"}
           style={{
-            width: "100%", height: 42, padding: "0 12px 0 34px",
-            borderRadius: 12, border: `1.5px solid ${DS.hair}`,
-            background: DS.card, color: DS.ink,
+            width: "100%", height: 44, padding: "0 12px 0 34px",
+            borderRadius: 11, border: `1.5px solid ${DS.hair}`,
+            background: DS.bg, color: DS.ink,
             fontSize: 14, fontFamily: DS.font, outline: "none", boxSizing: "border-box",
-            fontWeight: 600,
+            fontWeight: 600, opacity: disabled ? 0.6 : 1,
           }}
         />
       </div>
-      <button
-        type="submit"
-        disabled={!query.trim() || loading}
-        style={{
-          height: 42, width: 42, borderRadius: 12, border: "none",
-          background: query.trim() ? accent : DS.hair,
-          color: query.trim() ? DS.card : DS.muted,
-          cursor: query.trim() ? "pointer" : "not-allowed",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          flexShrink: 0,
-        }}
-        aria-label={`Search product ${slot}`}
-      >
-        {loading
-          ? <Loader2 style={{ width: 16, height: 16, animation: "spin 0.7s linear infinite" }} />
-          : <ArrowRight style={{ width: 16, height: 16 }} />}
-      </button>
-    </form>
+    </label>
   );
+}
+
+/** Sync an external value into local state when it changes (e.g. parent reset). */
+function useSyncedValue(external: string, setter: (v: string) => void) {
+  useEffect(() => { setter(external); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [external]);
 }
 
 // ────────────────────────────────────────────────────────────
@@ -169,13 +233,11 @@ function SearchInput({
 // ────────────────────────────────────────────────────────────
 
 function ProductSlot({
-  slot, state, outcome, onSearch, onQueryChange, onClear,
+  slot, state, outcome, onClear,
 }: {
   slot: Slot;
   state: SlotState;
   outcome: "winner" | "loser" | "neutral";
-  onSearch: () => void;
-  onQueryChange: (value: string) => void;
   onClear: () => void;
 }) {
   const product = state.product;
@@ -193,34 +255,38 @@ function ProductSlot({
   if (!product) {
     return (
       <div style={{
-        background: DS.card, borderRadius: 18, padding: 14,
-        border: `1.5px dashed ${outcomeColor ? alpha(outcomeColor, 35) : DS.hair}`,
-        display: "flex", flexDirection: "column", gap: 10,
+        background: DS.card, borderRadius: 18, padding: "18px 14px",
+        border: `1.5px dashed ${DS.hair}`,
+        display: "flex", alignItems: "center", gap: 12,
+        opacity: state.loading ? 1 : 0.7,
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{
-            width: 22, height: 22, borderRadius: 999,
-            background: isAccentBrand ? alpha(DS.brand, 13) : DS.bg,
-            color: accent,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 12, fontWeight: 800, flexShrink: 0,
-          }}>
-            {slot}
-          </span>
-          <span style={{
+        <span style={{
+          width: 28, height: 28, borderRadius: 999,
+          background: alpha(accent, 13), color: accent,
+          display: "inline-flex", alignItems: "center", justifyContent: "center",
+          fontSize: 13, fontWeight: 800, flexShrink: 0,
+        }}>
+          {slot}
+        </span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{
             fontSize: 11, fontWeight: 800, color: DS.muted,
             letterSpacing: "0.06em", textTransform: "uppercase",
           }}>
             Product {slot}
-          </span>
+          </div>
+          <div style={{ fontSize: 13, color: DS.ink, fontWeight: 600, marginTop: 2 }}>
+            {state.loading
+              ? (state.query ? `Searching “${state.query}”…` : "Searching…")
+              : "Waiting for a comparison"}
+          </div>
         </div>
-        <SearchInput
-          slot={slot}
-          query={state.query}
-          loading={state.loading}
-          onChange={onQueryChange}
-          onSubmit={onSearch}
-        />
+        {state.loading && (
+          <Loader2 style={{
+            width: 18, height: 18, color: DS.muted,
+            animation: "spin 0.7s linear infinite", flexShrink: 0,
+          }} />
+        )}
       </div>
     );
   }
@@ -538,39 +604,18 @@ export default function Compare() {
     else setSlotB((s) => ({ ...s, ...patch }));
   };
 
-  const runSearch = async (slot: Slot, queryOverride?: string) => {
-    const state = slot === "A" ? slotA : slotB;
-    const q = (queryOverride ?? state.query).trim();
-    if (!q) return;
-    updateSlot(slot, { loading: true, query: q });
-    try {
-      const match = await smartProductSearch(q);
-      if (!match.product) {
-        toast.error(`No comparable product for "${q}"`, {
-          description: "We only show products with full eco / CO2 / nutrition data so the comparison is meaningful.",
-        });
-        updateSlot(slot, { loading: false });
-        return;
-      }
-      updateSlot(slot, { loading: false, product: match.product });
-    } catch {
-      toast.error("Search failed. Try again.");
-      updateSlot(slot, { loading: false });
-    }
-  };
-
   const runPair = async (a: string, b: string) => {
-    updateSlot("A", { query: a, loading: true });
-    updateSlot("B", { query: b, loading: true });
+    setSlotA({ query: a, loading: true, product: null });
+    setSlotB({ query: b, loading: true, product: null });
     try {
       const [matchA, matchB] = await Promise.all([
         smartProductSearch(a).catch(() => ({ product: null, noMatch: true } as const)),
         smartProductSearch(b).catch(() => ({ product: null, noMatch: true } as const)),
       ]);
-      updateSlot("A", { loading: false, product: matchA.product ?? null });
-      updateSlot("B", { loading: false, product: matchB.product ?? null });
-      if (!matchA.product) toast.error(`No good match for "${a}"`);
-      if (!matchB.product) toast.error(`No good match for "${b}"`);
+      setSlotA({ query: a, loading: false, product: matchA.product ?? null });
+      setSlotB({ query: b, loading: false, product: matchB.product ?? null });
+      if (!matchA.product) toast.error(`No good match for “${a}”`);
+      if (!matchB.product) toast.error(`No good match for “${b}”`);
     } catch {
       toast.error("Search failed.");
       updateSlot("A", { loading: false });
@@ -676,23 +721,23 @@ export default function Compare() {
           </section>
         )}
 
-        {/* Comparison grid */}
+        {/* Single-step search form — both inputs, one Compare button. */}
+        <UnifiedCompareForm
+          initialA={slotA.query}
+          initialB={slotB.query}
+          loading={slotA.loading || slotB.loading}
+          onCompare={runPair}
+        />
+
+        {/* Result cards */}
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <ProductSlot
-            slot="A"
-            state={slotA}
-            outcome={outcomeFor("A")}
-            onSearch={() => runSearch("A")}
-            onQueryChange={(v) => updateSlot("A", { query: v })}
+            slot="A" state={slotA} outcome={outcomeFor("A")}
             onClear={() => setSlotA({ query: "", loading: false, product: null })}
           />
           <VsDivider active={!!both} />
           <ProductSlot
-            slot="B"
-            state={slotB}
-            outcome={outcomeFor("B")}
-            onSearch={() => runSearch("B")}
-            onQueryChange={(v) => updateSlot("B", { query: v })}
+            slot="B" state={slotB} outcome={outcomeFor("B")}
             onClear={() => setSlotB({ query: "", loading: false, product: null })}
           />
         </div>

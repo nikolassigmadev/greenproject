@@ -47,7 +47,11 @@ async function fixProductQuery(raw: string): Promise<string> {
   }
 }
 
-/** At least one ≥3-char word in `query` must appear in `text` (case-insensitive). */
+/**
+ * At least one ≥3-char word in `query` must appear as a WHOLE WORD in `text`.
+ * Using substring matching (e.g. `.includes`) is wrong here — query "Ben"
+ * would match "jben" (Moroccan yogurt). Word boundaries fix that.
+ */
 function containsAnyWord(query: string, text: string): boolean {
   const qWords = query
     .toLowerCase()
@@ -55,7 +59,10 @@ function containsAnyWord(query: string, text: string): boolean {
     .filter((w) => w.length >= 3);
   if (qWords.length === 0) return true;
   const lowered = text.toLowerCase();
-  return qWords.some((w) => lowered.includes(w));
+  return qWords.some((qw) => {
+    const escaped = qw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp(`\\b${escaped}\\b`, 'i').test(lowered);
+  });
 }
 
 /** Sort tiebreaker: how much eco/nutrition data does this product have? */
@@ -125,6 +132,66 @@ function isBrandHit(query: string, brand: string | null | undefined): boolean {
   return stripped(primary) === stripped(q);
 }
 
+/**
+ * Canonicality boost — how "iconic" is this product for the given query?
+ * Strong positive for "Oreo / Oreo", strong negative for "Oreo / Oreo O's Cereal"
+ * when the user just typed "Oreo".
+ */
+function canonicalityScore(
+  query: string,
+  productName: string | null,
+  brand: string | null,
+): number {
+  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+  const q = norm(query);
+  const p = norm(productName ?? '');
+  const b = norm((brand ?? '').split(/[,;|/]/)[0]);
+
+  if (!p) return -40;          // nameless product can't be canonical
+
+  let score = 0;
+
+  // Strong: product name IS the brand or query (e.g. brand=Oreo, name=Oreo)
+  if (p === b) score += 100;
+  if (p === q) score += 100;
+
+  // Strong: product name starts with brand and adds <= 12 chars
+  // (e.g. "Oreo Original", "Oreo Cookies"). Penalises "Oreo Birthday Cake Bites".
+  if (b && p.startsWith(b)) {
+    const extra = p.length - b.length;
+    if (extra <= 2) score += 90;
+    else if (extra <= 12) score += 60;
+    else if (extra <= 24) score += 20;
+  }
+  if (q && q !== b && p.startsWith(q)) {
+    const extra = p.length - q.length;
+    if (extra <= 2) score += 90;
+    else if (extra <= 12) score += 60;
+  }
+
+  // Variant penalty: query was bare brand, but product is a derivative line.
+  const VARIANT_TOKENS = [
+    'cereal', 'ice cream', 'icecream', 'bar', 'bars', 'cake', 'cake mix',
+    'mix', 'shake', 'drink', 'spread', 'pudding', 'bites', 'thins',
+    'crumbs', 'creme', 'cream cheese', 'cookies & cream', 'biscuit',
+    'wafer', 'roll', 'rolls', 'pop', 'pops', 'mini',
+  ];
+  const queryMentionsVariant = VARIANT_TOKENS.some((v) => q.includes(v));
+  if (!queryMentionsVariant) {
+    for (const v of VARIANT_TOKENS) {
+      if (p.includes(v)) {
+        score -= 45;
+        break;
+      }
+    }
+  }
+
+  // Heavy penalty when product name is suspiciously long (likely a niche SKU).
+  if (p.length > 40) score -= 15;
+
+  return score;
+}
+
 /** Heuristic: a 1-2 word query that doesn't look like a generic noun. */
 function looksLikeBrandQuery(query: string): boolean {
   const words = query.trim().split(/\s+/);
@@ -159,18 +226,28 @@ export async function smartProductSearch(
   if (looksLikeBrandQuery(trimmed)) {
     const brandHits = pool.filter((c) => isBrandHit(trimmed, c.brand));
     if (brandHits.length > 0) {
-      // Within brand hits: prefer the data tier that has at least one survivor,
-      // then sort by data richness (CO2 weighted highest), then popularity.
-      const dataTiered = applyDataFloor(brandHits);
-      // applyDataFloor always returns SOMETHING for a non-empty input, but
-      // guard anyway.
-      const candidatePool = dataTiered.length > 0 ? dataTiered : brandHits;
-      const winner = [...candidatePool]
-        .map((c) => ({ c, originalIndex: brandHits.indexOf(c), richness: dataRichness(c) }))
+      // Score by:
+      //   1. Canonicality — "Oreo" beats "Oreo O's Cereal" beats "Oreo Birthday Bites".
+      //   2. Popularity band — top-3 vs top-10 vs rest (OFF orders by scans).
+      //   3. Data richness — only as final tiebreak.
+      // This intentionally LOWERS richness's influence: a barely-scored canonical
+      // cookie beats a richly-scored niche variant, because canonical is what
+      // the shopper actually meant.
+      const ranked = brandHits
+        .map((c, originalIndex) => ({
+          c,
+          originalIndex,
+          canonical: canonicalityScore(trimmed, c.productName, c.brand),
+          popBand: originalIndex < 3 ? 0 : originalIndex < 10 ? 1 : 2,
+          richness: dataRichness(c),
+        }))
         .sort((a, b) => {
-          if (b.richness !== a.richness) return b.richness - a.richness;
-          return a.originalIndex - b.originalIndex; // popularity tiebreak
-        })[0].c;
+          if (b.canonical !== a.canonical) return b.canonical - a.canonical;
+          if (a.popBand !== b.popBand) return a.popBand - b.popBand;
+          if (a.originalIndex !== b.originalIndex) return a.originalIndex - b.originalIndex;
+          return b.richness - a.richness;
+        });
+      const winner = ranked[0].c;
       return { product: winner, confidence: 0.9, cleanedQuery, noMatch: false };
     }
     // Brand query but no brand hit anywhere in the pool — refuse rather than
@@ -204,21 +281,21 @@ export async function smartProductSearch(
 
 /**
  * If multiple candidates pass the relevance gate with similar scores,
- * prefer the one with more eco / nutrition data — otherwise the user
- * lands on a product with no scores to compare.
+ * prefer the one whose name is most CANONICAL for the query — then richness.
+ * "Oreo" stays Oreo, doesn't become "Oreo O's Cereal".
  */
 function pickRichestEquallyRelevant(
   candidates: OpenFoodFactsResult[],
   defaultWinner: OpenFoodFactsResult,
   originalQuery: string,
 ): OpenFoodFactsResult {
-  // Re-score every candidate and find any whose score is within 0.08 of the leader.
   const scored = candidates
     .map((c) => {
       const m = pickBestMatch([c], originalQuery, originalQuery);
       return {
         product: c,
         score: m.passedRelevanceGate ? m.confidence : 0,
+        canonical: canonicalityScore(originalQuery, c.productName, c.brand),
         richness: dataRichness(c),
       };
     })
@@ -231,6 +308,10 @@ function pickRichestEquallyRelevant(
 
   if (closeContenders.length <= 1) return defaultWinner;
 
-  closeContenders.sort((a, b) => b.richness - a.richness || b.score - a.score);
+  closeContenders.sort((a, b) => {
+    if (b.canonical !== a.canonical) return b.canonical - a.canonical;
+    if (b.score !== a.score) return b.score - a.score;
+    return b.richness - a.richness;
+  });
   return closeContenders[0].product;
 }

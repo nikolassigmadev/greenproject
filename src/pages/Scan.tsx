@@ -122,15 +122,24 @@ const levenshtein = (a: string, b: string): number => {
 /**
  * Check if a product result contains at least one significant word from the query.
  * Prevents random/unrelated products while being lenient enough for OCR typos.
+ *
+ * Uses WORD BOUNDARIES, not substring. Substring matching is wrong here:
+ *   query "Ben" should NOT match "jben jaouda" (Moroccan yogurt), but
+ *   `pText.includes("ben")` is true because "jben" contains "ben" as a substring.
+ * Fuzzy whole-word matching still handles OCR typos.
  */
 const resultContainsQueryWord = (query: string, productText: string): boolean => {
   const qWords = query.toLowerCase().split(/[\s\-_,/&().]+/).filter(w => w.length >= 3);
+  if (qWords.length === 0) return true;
   const pText = productText.toLowerCase();
   const pWords = pText.split(/[\s\-_,/&().]+/).filter(w => w.length >= 2);
-  // At least one query word (≥3 chars) must appear in the product text (substring or fuzzy)
-  return qWords.length === 0 || qWords.some(qw =>
-    pText.includes(qw) || fuzzyWordMatch(qw, pWords)
-  );
+  return qWords.some(qw => {
+    const escaped = qw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const wholeWord = new RegExp(`\\b${escaped}\\b`, 'i');
+    if (wholeWord.test(pText)) return true;
+    // OCR-typo tolerance: fuzzy match against whole words, not substrings.
+    return fuzzyWordMatch(qw, pWords);
+  });
 };
 
 /**
