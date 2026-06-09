@@ -66,7 +66,9 @@ function logOpenAICall(productName) {
 const app = express();
 const PORT = process.env.PORT || 3001;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-const ADMIN_PASSWORD_HASH = process.env.ADMIN_PASSWORD_HASH;
+// Hardcoded so login doesn't depend on Hostinger env vars.
+// Replace this string with a new bcrypt hash to rotate the password.
+const ADMIN_PASSWORD_HASH = '$2b$10$OwDevUsgK7kV0kkUWM./n.a7vX4zMYKxF.TdsA0b3624GCWPYHKj2';
 
 // In-memory session store (replace with Redis/DB in production)
 const adminSessions = new Map();
