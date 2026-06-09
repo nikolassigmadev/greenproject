@@ -66,26 +66,38 @@ if command -v jq >/dev/null 2>&1; then
   fi
 fi
 
-# Count submissions in the response.
+# The endpoint returns { success, count, records } — extract the records array.
 if command -v jq >/dev/null 2>&1; then
-  COUNT=$(jq 'length' "$OUT" 2>/dev/null || echo "?")
+  COUNT=$(jq -r '.count // (.records | length) // 0' "$OUT" 2>/dev/null || echo "?")
+  SUCCESS=$(jq -r '.success // false' "$OUT" 2>/dev/null || echo "false")
 else
-  # crude fallback: count "\"id\"" occurrences
-  COUNT=$(grep -o '"id"' "$OUT" | wc -l | tr -d ' ')
+  # crude fallback: count "\"id\":" occurrences in records
+  COUNT=$(grep -o '"id":' "$OUT" | wc -l | tr -d ' ')
+  SUCCESS="?"
 fi
 SIZE=$(wc -c < "$OUT" | tr -d ' ')
 
 echo ""
-if [ "$COUNT" = "0" ]; then
-  echo "Downloaded — no $STATUS submissions yet."
+if [ "$SUCCESS" = "false" ]; then
+  echo "Server returned an error response. Raw payload:"
+  cat "$OUT"
+  echo ""
+elif [ "$COUNT" = "0" ]; then
+  echo "Server replied OK — but there are NO $STATUS submissions on the server."
+  echo "  (If you've submitted from the website, the deploy that has the"
+  echo "   /api/community-flags endpoint may not be live yet.)"
+elif [ "$COUNT" = "?" ]; then
+  echo "Downloaded $SIZE bytes — install jq to see a parsed count."
 else
   echo "Downloaded $COUNT $STATUS submission(s) ($SIZE bytes)."
 fi
 echo "  $OUT"
 
-# Quick preview of the brand names if jq is around.
-if command -v jq >/dev/null 2>&1 && [ "$COUNT" != "0" ] && [ "$COUNT" != "?" ]; then
+# Quick preview of the brand names if jq is around AND we have records.
+if command -v jq >/dev/null 2>&1 \
+   && [ "$COUNT" != "0" ] && [ "$COUNT" != "?" ] \
+   && [ "$SUCCESS" != "false" ]; then
   echo ""
   echo "Brands submitted:"
-  jq -r '.[] | "  - \(.submission.brandName)  (\(.submission.category), \(.submission.severity))  [\(if .meetsSourcingBar then "✓ meets bar" else "✗ below bar" end)]"' "$OUT"
+  jq -r '.records[] | "  - \(.submission.brandName)  (\(.submission.category), \(.submission.severity))  [\(if .meetsSourcingBar then "✓ meets bar" else "✗ below bar" end)]"' "$OUT"
 fi
