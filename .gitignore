@@ -31,6 +31,7 @@ dist-ssr
 *.keystore
 *.jks
 
-# Server runtime data (disputes, OpenAI call logs, etc.) — never commit
-data/
+# Server runtime data (disputes, OpenAI call logs, etc.) — never commit.
+# Anchor to project root so it does NOT match src/data/ (where shipped data lives).
+/data/
 
