@@ -225,7 +225,14 @@ export async function smartProductSearch(
   // different brand just because the right brand has no eco data.
   if (looksLikeBrandQuery(trimmed)) {
     const brandHits = pool.filter((c) => isBrandHit(trimmed, c.brand));
-    if (brandHits.length > 0) {
+    // OFF often stores the consumer-facing brand name in the product name rather
+    // than the brand field (e.g. brand="Nabisco" but name="Oreo Original").
+    // Fall back to product-name containment before giving up entirely.
+    const hitsToRank = brandHits.length > 0
+      ? brandHits
+      : pool.filter((c) => containsAnyWord(trimmed, c.productName ?? ''));
+
+    if (hitsToRank.length > 0) {
       // Score by:
       //   1. Canonicality — "Oreo" beats "Oreo O's Cereal" beats "Oreo Birthday Bites".
       //   2. Popularity band — top-3 vs top-10 vs rest (OFF orders by scans).
@@ -233,7 +240,7 @@ export async function smartProductSearch(
       // This intentionally LOWERS richness's influence: a barely-scored canonical
       // cookie beats a richly-scored niche variant, because canonical is what
       // the shopper actually meant.
-      const ranked = brandHits
+      const ranked = hitsToRank
         .map((c, originalIndex) => ({
           c,
           originalIndex,
@@ -250,8 +257,6 @@ export async function smartProductSearch(
       const winner = ranked[0].c;
       return { product: winner, confidence: 0.9, cleanedQuery, noMatch: false };
     }
-    // Brand query but no brand hit anywhere in the pool — refuse rather than
-    // fall through to a fuzzy-text match that would return the wrong brand.
     return NO_MATCH(cleanedQuery);
   }
 
