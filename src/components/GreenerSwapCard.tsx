@@ -1,7 +1,11 @@
-import { ArrowRight, Package2, TrendingDown } from "lucide-react";
+import { useState } from "react";
+import { ArrowRight, Package2, TrendingDown, Share2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
 import { cn } from "@/lib/utils";
+import { recordSwap } from "@/utils/swapTracking";
+import { shareSwapCard } from "@/utils/shareCard";
+import { toast } from "sonner";
 
 interface GreenerSwapCardProps {
   original: OpenFoodFactsResult;
@@ -102,6 +106,42 @@ function ProductChip({
 export function GreenerSwapCard({ original, alternatives, loading }: GreenerSwapCardProps) {
   const navigate = useNavigate();
   const best = alternatives[0];
+  const [sharing, setSharing] = useState(false);
+
+  const handleAcceptSwap = () => {
+    if (!best) return;
+    recordSwap({
+      timestamp: Date.now(),
+      fromBarcode: original.barcode,
+      fromName: original.productName || "Unknown",
+      fromBrand: original.brand,
+      toBarcode: best.barcode,
+      toName: best.productName || "Unknown",
+      toBrand: best.brand,
+      co2SavedKg: co2SavedRoundedKg(original, best),
+    });
+    navigate(`/product-off/${best.barcode}`);
+  };
+
+  const handleShare = async () => {
+    if (!best || sharing) return;
+    setSharing(true);
+    try {
+      const result = await shareSwapCard({
+        fromName: original.productName || "Current product",
+        fromBrand: original.brand,
+        toName: best.productName || "Better option",
+        toBrand: best.brand,
+        co2SavedKg: co2SavedRoundedKg(original, best),
+        pctSaved: co2PctSaved(original, best),
+      });
+      if (result === "downloaded") toast.success("Share card downloaded");
+      else if (result === "shared") toast.success("Shared");
+      else toast.error("Couldn't generate share card");
+    } finally {
+      setSharing(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -181,27 +221,44 @@ export function GreenerSwapCard({ original, alternatives, loading }: GreenerSwap
           </div>
         </div>
 
-        {/* Switch CTA */}
-        <button
-          type="button"
-          onClick={() => navigate(`/product-off/${best.barcode}`)}
-          style={{
-            width: "100%", height: 44, borderRadius: 12, border: "none",
-            background: BLUE, color: CARD,
-            fontWeight: 700, fontSize: "0.85rem",
-            cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-          }}
-        >
-          Switch to this product
-          {alternatives.length > 1 && (
-            <span style={{
-              fontSize: "0.68rem", padding: "1px 8px", borderRadius: 10,
-              background: "rgba(255,255,255,0.2)", color: CARD,
-            }}>
-              +{alternatives.length - 1}
-            </span>
-          )}
-        </button>
+        {/* Switch CTA + Share */}
+        <div style={{ display: "flex", gap: 8 }}>
+          <button
+            type="button"
+            onClick={handleAcceptSwap}
+            style={{
+              flex: 1, height: 44, borderRadius: 12, border: "none",
+              background: BLUE, color: CARD,
+              fontWeight: 700, fontSize: "0.85rem",
+              cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+            }}
+          >
+            Switch to this product
+            {alternatives.length > 1 && (
+              <span style={{
+                fontSize: "0.68rem", padding: "1px 8px", borderRadius: 10,
+                background: "rgba(255,255,255,0.2)", color: CARD,
+              }}>
+                +{alternatives.length - 1}
+              </span>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={handleShare}
+            disabled={sharing}
+            aria-label="Share this swap"
+            style={{
+              width: 44, height: 44, borderRadius: 12,
+              border: `1px solid ${BORDER}`, background: CARD,
+              color: BLUE, cursor: sharing ? "not-allowed" : "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              flexShrink: 0,
+            }}
+          >
+            <Share2 style={{ width: 16, height: 16 }} />
+          </button>
+        </div>
 
         {alternatives.length > 1 && (
           <button
@@ -220,4 +277,20 @@ export function GreenerSwapCard({ original, alternatives, loading }: GreenerSwap
       </div>
     </div>
   );
+}
+
+function co2SavedRoundedKg(orig: OpenFoodFactsResult, swap: OpenFoodFactsResult): number | null {
+  const a = orig.ecoscoreData?.agribalyse?.co2_total ?? null;
+  const b = swap.ecoscoreData?.agribalyse?.co2_total ?? null;
+  if (a == null || b == null) return null;
+  const diff = a - b;
+  return diff > 0 ? Math.round(diff * 10) / 10 : 0;
+}
+
+function co2PctSaved(orig: OpenFoodFactsResult, swap: OpenFoodFactsResult): number | null {
+  const a = orig.ecoscoreData?.agribalyse?.co2_total ?? null;
+  const b = swap.ecoscoreData?.agribalyse?.co2_total ?? null;
+  if (a == null || b == null || a <= 0) return null;
+  const diff = a - b;
+  return diff > 0 ? Math.round((diff / a) * 100) : null;
 }

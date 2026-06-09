@@ -9,6 +9,7 @@ import {
 import { loadBasket, removeFromBasket, getBasketEthicsReport, type BasketItem } from "@/utils/basketStorage";
 import { Search, ChevronRight, ShoppingBag, Trash2, AlertTriangle, Leaf, TrendingDown, Award, X } from "lucide-react";
 import { DS, scoreTone, toneColor } from "@/styles/design-tokens";
+import { MonthlyImpactCard } from "@/components/MonthlyImpactCard";
 
 type Filter = "all" | "good" | "mixed" | "avoid";
 
@@ -346,7 +347,10 @@ export default function Dashboard() {
       <main style={{ padding: "0 20px", paddingBottom: 110 }}>
         <div style={{ maxWidth: 640, margin: "0 auto" }}>
 
-          {/* Impact Dashboard */}
+          {/* Monthly impact (scan history + flagged + swaps) */}
+          <MonthlyImpactCard />
+
+          {/* Basket Impact Dashboard */}
           <ImpactDashboard basket={basket} />
 
           {/* Clear confirmation */}

@@ -5,8 +5,9 @@ import {
   ChevronLeft, Loader2, Leaf, AlertTriangle, ExternalLink,
   CheckCircle2, ChevronRight, Package, ShoppingBag, ShoppingCart, XCircle, Clock,
   BadgeCheck, Wheat, Factory, Truck, Store, UtensilsCrossed,
-  ScanLine, Check, Sprout, PawPrint, Search,
+  ScanLine, Check, Sprout, PawPrint, Search, Heart,
 } from "lucide-react";
+import { isWatched, toggleWatchlist, WATCHLIST_EVENT } from "@/utils/watchlist";
 import { BottomNav } from "@/components/BottomNav";
 import { Logo } from "@/components/Logo";
 import { lookupBarcode, searchProducts } from "@/services/openfoodfacts";
@@ -232,6 +233,7 @@ export default function OpenFoodFactsDetail() {
   const [manualSearchInput, setManualSearchInput] = useState("");
   const [manualSearchLoading, setManualSearchLoading] = useState(false);
   const [inBasket, setInBasket]             = useState(false);
+  const [brandWatched, setBrandWatched]     = useState(false);
   const [stickyVisible, setStickyVisible]   = useState(false);
   const [cleanName, setCleanName]           = useState<string | null>(null);
   const [mounted, setMounted]               = useState(false);
@@ -265,6 +267,24 @@ export default function OpenFoodFactsDetail() {
       return () => window.removeEventListener("basketUpdated", handler);
     }
   }, [product?.barcode]);
+
+  useEffect(() => {
+    if (!product?.brand) {
+      setBrandWatched(false);
+      return;
+    }
+    setBrandWatched(isWatched(product.brand));
+    const handler = () => setBrandWatched(isWatched(product.brand));
+    window.addEventListener(WATCHLIST_EVENT, handler);
+    return () => window.removeEventListener(WATCHLIST_EVENT, handler);
+  }, [product?.brand]);
+
+  const handleWatchlistToggle = () => {
+    if (!product?.brand) return;
+    const nowWatched = toggleWatchlist(product.brand);
+    setBrandWatched(nowWatched);
+    toast.success(nowWatched ? `Watching ${product.brand}` : `Removed ${product.brand} from watchlist`);
+  };
 
   useEffect(() => {
     if (!product) return;
@@ -681,21 +701,43 @@ export default function OpenFoodFactsDetail() {
               {title.first}
               {title.rest && <><br /><span style={{ fontStyle: "italic", color: EDITORIAL.ink2, fontWeight: 500 }}>{title.rest}.</span></>}
             </h1>
-            <button
-              onClick={handleCartToggle}
-              aria-label={inBasket ? "Remove from cart" : "Add to cart"}
-              style={{
-                width: 48, height: 48, borderRadius: 14,
-                background: inBasket ? EDITORIAL.greenSoft : EDITORIAL.card,
-                color: inBasket ? EDITORIAL.green : EDITORIAL.ink2,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                cursor: "pointer", flexShrink: 0, marginTop: 8,
-                transition: "all 0.2s ease",
-                border: `1.5px solid ${inBasket ? EDITORIAL.green : EDITORIAL.line}`,
-              }}
-            >
-              {inBasket ? <Check style={{ width: 22, height: 22 }} /> : <ShoppingCart style={{ width: 22, height: 22 }} />}
-            </button>
+            <div style={{ display: "flex", gap: 6, marginTop: 8, flexShrink: 0 }}>
+              {product.brand && (
+                <button
+                  onClick={handleWatchlistToggle}
+                  aria-label={brandWatched ? "Remove brand from watchlist" : "Watch this brand"}
+                  style={{
+                    width: 48, height: 48, borderRadius: 14,
+                    background: brandWatched ? EDITORIAL.redSoft : EDITORIAL.card,
+                    color: brandWatched ? EDITORIAL.red : EDITORIAL.ink2,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    cursor: "pointer",
+                    transition: "all 0.2s ease",
+                    border: `1.5px solid ${brandWatched ? EDITORIAL.red : EDITORIAL.line}`,
+                  }}
+                >
+                  <Heart style={{
+                    width: 22, height: 22,
+                    fill: brandWatched ? EDITORIAL.red : "transparent",
+                  }} />
+                </button>
+              )}
+              <button
+                onClick={handleCartToggle}
+                aria-label={inBasket ? "Remove from cart" : "Add to cart"}
+                style={{
+                  width: 48, height: 48, borderRadius: 14,
+                  background: inBasket ? EDITORIAL.greenSoft : EDITORIAL.card,
+                  color: inBasket ? EDITORIAL.green : EDITORIAL.ink2,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
+                  border: `1.5px solid ${inBasket ? EDITORIAL.green : EDITORIAL.line}`,
+                }}
+              >
+                {inBasket ? <Check style={{ width: 22, height: 22 }} /> : <ShoppingCart style={{ width: 22, height: 22 }} />}
+              </button>
+            </div>
           </div>
           <div style={{ display: "flex", gap: 6, marginTop: 14, flexWrap: "wrap" }}>
             <Tag bg={vc.bg} color={vc.color}>{verdict.key[0] + verdict.key.slice(1).toLowerCase()}</Tag>
@@ -709,6 +751,21 @@ export default function OpenFoodFactsDetail() {
         </div>
 
         <div style={{ padding: "0 22px 18px", display: "flex", flexDirection: "column", gap: 10 }}>
+          {brandWatched && product.brand && (
+            <div style={{
+              background: EDITORIAL.redSoft, borderRadius: 14, padding: "12px 14px",
+              display: "flex", gap: 10, alignItems: "center",
+              border: `1px solid ${EDITORIAL.red}33`,
+            }}>
+              <Heart style={{
+                width: 18, height: 18, color: EDITORIAL.red,
+                fill: EDITORIAL.red, flexShrink: 0,
+              }} />
+              <div style={{ fontSize: 12.5, color: EDITORIAL.ink, lineHeight: 1.4 }}>
+                On your watchlist. You asked to be reminded about <strong style={{ fontWeight: 800 }}>{product.brand}</strong>.
+              </div>
+            </div>
+          )}
           <div style={{
             background: "var(--ds-caution-bg, #FBE9E2)", borderRadius: 14, padding: "14px 16px",
             display: "flex", gap: 12, alignItems: "flex-start",
