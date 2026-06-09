@@ -176,9 +176,19 @@ app.use('/api/openfoodfacts', searchLimiter);
 const IMAGE_TASK_PROMPTS = {
   'extract-text': 'Extract all visible text from this image. Focus on product names, brands, ingredients, and labels. Return ONLY the extracted text, no explanations.',
   'extract-barcode': 'Extract the barcode number or product code from this image. Return ONLY the numeric code, nothing else.',
-  'extract-receipt': 'This is a shopping receipt. List only the purchased product/item names, one per line. Exclude: prices, quantities, totals, subtotals, tax, store name, date, cashier, loyalty points, and any other non-product text. Return ONLY the item names, nothing else.',
+  'extract-receipt': `This is a shopping receipt. List only the purchased product/item names, one per line. Exclude: prices, quantities, totals, subtotals, tax, store name, date, cashier, loyalty points, and any other non-product text.
+
+CRITICAL: Each line MUST include the brand name followed by the product. The brand name is REQUIRED for every item -- this output is used to query Open Food Facts and a bare product name is not searchable. Use your knowledge to infer the brand from abbreviations on the receipt when possible.
+- Good: "Lays Chilli Chips", "Cadbury Dairy Milk", "Coca-Cola Zero"
+- Bad: "Chilli Chips", "Dairy Milk", "Zero"
+If you genuinely cannot determine the brand for an item, prefix that line with "UNKNOWN " (e.g. "UNKNOWN Chilli Chips") rather than omitting it. Return ONLY the item names, one per line, nothing else.`,
   'extract-brand': 'Extract ONLY the brand/manufacturer name from this product image. Return just the brand name, nothing else. If not found, return "UNKNOWN".',
-  'extract-product-name': 'Extract ONLY the product name/item name from this product image. Return just the product name, nothing else. If not found, return "UNKNOWN".',
+  'extract-product-name': `Extract the product name from this product image.
+
+CRITICAL: The product name you return MUST include the brand name at the start. The brand name is REQUIRED -- this output is used to query Open Food Facts and a bare product name is not searchable.
+- Good: "Lays Chilli Chips", "Cadbury Dairy Milk", "Coca-Cola Zero", "Nestle KitKat Chunky"
+- Bad: "Chilli Chips", "Dairy Milk", "Zero", "KitKat Chunky"
+Return just the "Brand ProductName" string, nothing else. If the brand is unreadable or missing, return "UNKNOWN".`,
   'extract-certifications': `Look for ethical and sustainability certifications/labels on this product:
 - Organic (USDA, EU, etc.)
 - Fair Trade

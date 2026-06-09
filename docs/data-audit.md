@@ -18,7 +18,7 @@ Each entry in `brandFlags.ts` has:
 - No publisher / source type / tier classification
 - No `publishedDate` or `accessedDate`
 - No `id` slug
-- No `status` (verified / pending / disputed)
+- No `status` (verified / pending)
 - No `lastVerified` date
 - No `createdAt` / `updatedAt`
 - No `brandAliases` (aliases are handled via flat key duplication instead)
