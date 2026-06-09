@@ -259,6 +259,29 @@ app.get('/api/admin/verify', (req, res) => {
   res.json({ success: true, authenticated: isValidAdminSession(token) });
 });
 
+/**
+ * GET /api/admin/openai-logs
+ * Admin-gated: returns the permanent OpenAI call log (data/openai-logs.jsonl).
+ * Format is JSONL — one {productName, timestamp} per line.
+ * Add ?download=1 to force a file download.
+ */
+app.get('/api/admin/openai-logs', requireAdmin, (req, res) => {
+  try {
+    res.setHeader('Content-Type', 'application/x-ndjson; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-store');
+    if (req.query.download) {
+      res.setHeader('Content-Disposition', 'attachment; filename="openai-logs.jsonl"');
+    }
+    if (!existsSync(OPENAI_LOG_FILE)) {
+      return res.status(200).send('');
+    }
+    res.status(200).send(readFileSync(OPENAI_LOG_FILE, 'utf8'));
+  } catch (e) {
+    console.error('Failed to read OpenAI logs:', e);
+    res.status(500).json({ success: false, error: 'Failed to read logs' });
+  }
+});
+
 // =====================================================
 // ABOUT-US CHATBOT
 // =====================================================
