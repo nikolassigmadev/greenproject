@@ -125,40 +125,6 @@ export function MonthlyImpactCard() {
             </div>
           )}
 
-          {/* Top brands — primary brand only, ellipsis on overflow */}
-          {impact.topBrands.length > 0 && (
-            <div style={{ marginBottom: 14 }}>
-              <div style={{
-                fontSize: 10, fontWeight: 800, color: DS.muted,
-                letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 8,
-              }}>
-                Top brands
-              </div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
-                {impact.topBrands.slice(0, 5).map((b) => (
-                  <span key={b.brand} style={{
-                    display: "inline-flex", alignItems: "center", gap: 5,
-                    fontSize: 11.5, fontWeight: 600, color: DS.ink,
-                    background: DS.bg, padding: "4px 9px", borderRadius: 999,
-                    maxWidth: "100%",
-                  }}>
-                    <span style={{
-                      overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                      maxWidth: 110,
-                    }}>
-                      {primaryBrand(b.brand)}
-                    </span>
-                    <span style={{
-                      fontSize: 10, fontWeight: 700, color: DS.muted,
-                      paddingLeft: 4, borderLeft: `1px solid ${DS.hair}`,
-                    }}>
-                      {b.count}
-                    </span>
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
         </>
       )}
 
