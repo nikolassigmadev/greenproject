@@ -5,7 +5,7 @@ import {
   ChevronLeft, Loader2, Leaf, AlertTriangle, ExternalLink,
   CheckCircle2, ChevronRight, Package, ShoppingBag, ShoppingCart, XCircle, Clock,
   BadgeCheck, Wheat, Factory, Truck, Store, UtensilsCrossed,
-  ScanLine, Check, Sprout, PawPrint, Search, Heart,
+  ScanLine, Check, Sprout, PawPrint, Search, Eye,
 } from "lucide-react";
 import { isWatched, toggleWatchlist, WATCHLIST_EVENT } from "@/utils/watchlist";
 import { BottomNav } from "@/components/BottomNav";
@@ -716,7 +716,7 @@ export default function OpenFoodFactsDetail() {
                     border: `1.5px solid ${brandWatched ? EDITORIAL.red : EDITORIAL.line}`,
                   }}
                 >
-                  <Heart style={{
+                  <Eye style={{
                     width: 22, height: 22,
                     fill: brandWatched ? EDITORIAL.red : "transparent",
                   }} />
@@ -757,7 +757,7 @@ export default function OpenFoodFactsDetail() {
               display: "flex", gap: 10, alignItems: "center",
               border: `1px solid ${EDITORIAL.red}33`,
             }}>
-              <Heart style={{
+              <Eye style={{
                 width: 18, height: 18, color: EDITORIAL.red,
                 fill: EDITORIAL.red, flexShrink: 0,
               }} />

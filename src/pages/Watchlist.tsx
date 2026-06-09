@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ChevronLeft, Heart, Trash2, ExternalLink, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { ChevronLeft, Eye, Trash2, ExternalLink, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { DS } from "@/styles/design-tokens";
 import {
@@ -92,7 +92,7 @@ export default function Watchlist() {
               fontSize: 22, fontWeight: 800, margin: 0, letterSpacing: -0.4,
               display: "flex", alignItems: "center", gap: 8,
             }}>
-              <Heart style={{ width: 20, height: 20, color: DS.bad, fill: DS.bad }} />
+              <Eye style={{ width: 20, height: 20, color: DS.bad, fill: DS.bad }} />
               Watchlist
             </h1>
             <p style={{ fontSize: 12.5, color: DS.muted, margin: "2px 0 0" }}>
@@ -139,7 +139,7 @@ export default function Watchlist() {
               display: "inline-flex", alignItems: "center", justifyContent: "center",
               marginBottom: 12,
             }}>
-              <Heart style={{ width: 24, height: 24, color: DS.muted }} />
+              <Eye style={{ width: 24, height: 24, color: DS.muted }} />
             </div>
             <h2 style={{ fontSize: 16, fontWeight: 800, margin: "0 0 6px" }}>No brands yet</h2>
             <p style={{ fontSize: 13, color: DS.muted, margin: "0 0 16px", lineHeight: 1.5 }}>

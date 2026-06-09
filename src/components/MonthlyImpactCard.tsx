@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ScanLine, TrendingDown, Heart, GitCompareArrows } from "lucide-react";
+import { ScanLine, TrendingDown, Eye, GitCompareArrows } from "lucide-react";
 import { DS } from "@/styles/design-tokens";
 import { computeMonthlyImpact, type MonthlyImpact } from "@/utils/impactStats";
 import { WATCHLIST_EVENT, loadWatchlist } from "@/utils/watchlist";
@@ -123,7 +123,7 @@ export function MonthlyImpactCard() {
 
       <div style={{ display: "flex", gap: 8, marginTop: empty ? 4 : 12 }}>
         <Link to="/watchlist" style={linkBtn(DS.ink)}>
-          <Heart style={{ width: 14, height: 14 }} />
+          <Eye style={{ width: 14, height: 14 }} />
           Watchlist
           {watchlistCount > 0 && (
             <span style={countPill}>{watchlistCount}</span>
