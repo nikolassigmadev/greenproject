@@ -68,7 +68,7 @@ git push origin --tags
 
 
 --------------------------------------------------------------
-  3. PULL / FETCH
+  3. PULL / FETC
 --------------------------------------------------------------
 
 # Pull latest changes from remote (fetch + merge)
