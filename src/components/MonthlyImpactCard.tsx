@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ScanLine, TrendingDown, Eye, GitCompareArrows } from "lucide-react";
+import { ScanLine, TrendingDown, Eye, GitCompareArrows, Receipt, Flag } from "lucide-react";
 import { DS } from "@/styles/design-tokens";
 import { computeMonthlyImpact, type MonthlyImpact } from "@/utils/impactStats";
 import { WATCHLIST_EVENT, loadWatchlist } from "@/utils/watchlist";
@@ -121,7 +121,10 @@ export function MonthlyImpactCard() {
         </>
       )}
 
-      <div style={{ display: "flex", gap: 8, marginTop: empty ? 4 : 12 }}>
+      <div style={{
+        display: "grid", gridTemplateColumns: "1fr 1fr",
+        gap: 8, marginTop: empty ? 4 : 12,
+      }}>
         <Link to="/watchlist" style={linkBtn(DS.ink)}>
           <Eye style={{ width: 14, height: 14 }} />
           Watchlist
@@ -132,6 +135,14 @@ export function MonthlyImpactCard() {
         <Link to="/compare" style={linkBtn(DS.ink)}>
           <GitCompareArrows style={{ width: 14, height: 14 }} />
           Compare
+        </Link>
+        <Link to="/receipts" style={linkBtn(DS.ink)}>
+          <Receipt style={{ width: 14, height: 14 }} />
+          Receipts
+        </Link>
+        <Link to="/submit-flag" style={linkBtn(DS.ink)}>
+          <Flag style={{ width: 14, height: 14 }} />
+          Flag a brand
         </Link>
       </div>
     </div>

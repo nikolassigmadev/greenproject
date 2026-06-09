@@ -20,6 +20,8 @@ import { addToBasket, removeFromBasket, loadBasket } from "@/utils/basketStorage
 import { findLaborAllegations as findLaborAllegationsUtil, getLaborAllegationCount } from "@/utils/laborCheck";
 import { findVerifiedEthics, CERTIFICATION_BADGES, getPrimaryCertification, CATEGORY_LABELS, type CertificationType } from "@/utils/verifiedEthics";
 import { EnvironmentalImpactCard } from "@/components/EnvironmentalImpactCard";
+import { IngredientConcernsCard } from "@/components/IngredientConcernsCard";
+import { findIngredientFlagsInText } from "@/services/ingredientFlags";
 import { sendChatMessage } from "@/services/api/backend-client";
 import { cn } from "@/lib/utils";
 import { DS } from "@/styles/design-tokens";
@@ -68,11 +70,11 @@ const EDITORIAL = {
 } as const;
 
 const GRADE_COLOR: Record<string, string> = {
-  a: DS.good, b: DS.good, c: DS.warn, d: "#C26544", e: DS.bad,
+  "a-plus": DS.good, a: DS.good, b: DS.good, c: DS.warn, d: "#C26544", e: DS.bad,
 };
 
 const GRADE_BG: Record<string, string> = {
-  a: DS.goodBg, b: DS.goodBg, c: DS.warnBg, d: "var(--ds-caution-bg, #FBE9E2)", e: DS.badBg,
+  "a-plus": DS.goodBg, a: DS.goodBg, b: DS.goodBg, c: DS.warnBg, d: "var(--ds-caution-bg, #FBE9E2)", e: DS.badBg,
 };
 
 const NOVA_LABEL: Record<number, string> = {
@@ -100,7 +102,12 @@ const CO2_BARS = [
   { key: "co2_consumption",    label: "Consumption",  Icon: UtensilsCrossed, color: "#9B4E63" },
 ] as const;
 
-const GRADE_PERCENT: Record<string, number> = { a: 1, b: 0.8, c: 0.6, d: 0.4, e: 0.2 };
+const GRADE_PERCENT: Record<string, number> = { "a-plus": 1, a: 0.9, b: 0.8, c: 0.6, d: 0.4, e: 0.2 };
+
+/** OFF grade → tight display label. "a-plus" prints as "A+", everything else uppercased. */
+function gradeLabel(grade: string): string {
+  return grade.toLowerCase() === "a-plus" ? "A+" : grade.toUpperCase();
+}
 const NOVA_PERCENT: Record<number, number> = { 1: 1, 2: 0.75, 3: 0.5, 4: 0.25 };
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -283,7 +290,20 @@ export default function OpenFoodFactsDetail() {
     if (!product?.brand) return;
     const nowWatched = toggleWatchlist(product.brand);
     setBrandWatched(nowWatched);
-    toast.success(nowWatched ? `Watching ${product.brand}` : `Removed ${product.brand} from watchlist`);
+    toast.success(
+      nowWatched ? `Watching ${product.brand}` : `Removed ${product.brand}`,
+      {
+        id: "watchlist-toggle",
+        description: nowWatched
+          ? "We'll alert you about new verified flags."
+          : "No longer in your watchlist.",
+        duration: 4500,
+        action: {
+          label: "View watched brands",
+          onClick: () => navigate("/watchlist"),
+        },
+      },
+    );
   };
 
   useEffect(() => {
@@ -719,7 +739,7 @@ export default function OpenFoodFactsDetail() {
                   <Eye style={{
                     width: 22, height: 22,
                     color: brandWatched ? EDITORIAL.red : EDITORIAL.ink2,
-                    fill: brandWatched ? EDITORIAL.red : "none",
+                    strokeWidth: brandWatched ? 2.4 : 1.9,
                   }} />
                 </button>
               )}
@@ -742,7 +762,7 @@ export default function OpenFoodFactsDetail() {
           </div>
           <div style={{ display: "flex", gap: 6, marginTop: 14, flexWrap: "wrap" }}>
             <Tag bg={vc.bg} color={vc.color}>{verdict.key[0] + verdict.key.slice(1).toLowerCase()}</Tag>
-            {ecoGrade && <Tag bg={GRADE_BG[ecoGrade]} color={GRADE_COLOR[ecoGrade]}>Eco-Score {ecoGrade.toUpperCase()}</Tag>}
+            {ecoGrade && <Tag bg={GRADE_BG[ecoGrade]} color={GRADE_COLOR[ecoGrade]}>Eco-Score {gradeLabel(ecoGrade)}</Tag>}
             {product.novaGroup !== null && <Tag bg="var(--ds-neutral-bg, #EDE6D2)" color={EDITORIAL.ink2}>{NOVA_LABEL[product.novaGroup] || `NOVA ${product.novaGroup}`}</Tag>}
             {verifiedEthics && verifiedEthics.certifications.map(cert => {
               const badge = CERTIFICATION_BADGES[cert];
@@ -760,7 +780,7 @@ export default function OpenFoodFactsDetail() {
             }}>
               <Eye style={{
                 width: 18, height: 18, color: EDITORIAL.red,
-                fill: EDITORIAL.red, flexShrink: 0,
+                strokeWidth: 2.2, flexShrink: 0,
               }} />
               <div style={{ fontSize: 12.5, color: EDITORIAL.ink, lineHeight: 1.4 }}>
                 On your watchlist. You asked to be reminded about <strong style={{ fontWeight: 800 }}>{product.brand}</strong>.
@@ -881,7 +901,7 @@ export default function OpenFoodFactsDetail() {
                         background: GRADE_BG[g], color: GRADE_COLOR[g],
                         fontSize: "0.78rem", fontWeight: 800,
                         display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-                      }}>{g.toUpperCase()}</span>
+                      }}>{gradeLabel(g)}</span>
                     )}
                     <ChevronRight style={{ width: 14, height: 14, color: EDITORIAL.ink3, flexShrink: 0 }} />
                   </button>
@@ -956,7 +976,7 @@ export default function OpenFoodFactsDetail() {
             >
               {ecoGrade && (
                 <ScoreGauge
-                  value={ecoGrade.toUpperCase()}
+                  value={gradeLabel(ecoGrade)}
                   color={GRADE_COLOR[ecoGrade] ?? EDITORIAL.ink3}
                   percent={GRADE_PERCENT[ecoGrade] ?? 0.5}
                   label="Eco-Score"
@@ -966,7 +986,7 @@ export default function OpenFoodFactsDetail() {
               )}
               {nutriGrade && ["a", "b", "c", "d", "e"].includes(nutriGrade) && (
                 <ScoreGauge
-                  value={nutriGrade.toUpperCase()}
+                  value={gradeLabel(nutriGrade)}
                   color={GRADE_COLOR[nutriGrade] ?? EDITORIAL.ink3}
                   percent={GRADE_PERCENT[nutriGrade] ?? 0.5}
                   label="Nutri-Score"
@@ -1116,6 +1136,17 @@ export default function OpenFoodFactsDetail() {
           </section>
 
           {(() => {
+            const ingredientFlags = findIngredientFlagsInText(product.ingredientsText);
+            if (ingredientFlags.length === 0) return null;
+            return (
+              <section style={{ opacity: mounted ? 1 : 0, transform: mounted ? "translateY(0)" : "translateY(10px)", transition: "all 0.5s ease 0.5s" }}>
+                <SectionHead num="03" title="Ingredient concerns" kicker="Detected from the ingredient list." />
+                <IngredientConcernsCard flags={ingredientFlags} />
+              </section>
+            );
+          })()}
+
+          {(() => {
             const threatened = product.ecoscoreData?.adjustments?.threatened_species;
             if (!threatened?.ingredient) return null;
             const ingredientRaw = threatened.ingredient.replace(/^en:/, "").replace(/-/g, " ");
@@ -1128,7 +1159,7 @@ export default function OpenFoodFactsDetail() {
                 opacity: mounted ? 1 : 0, transform: mounted ? "translateY(0)" : "translateY(10px)",
                 transition: "all 0.5s ease 0.55s",
               }}>
-                <SectionHead num="03" title="Threatened species" />
+                <SectionHead num="04" title="Threatened species" />
                 <div style={{ background: EDITORIAL.card, border: `1px solid ${EDITORIAL.line}`, borderRadius: 22, padding: "8px 20px 22px" }}>
                   <div style={{ display: "grid", gridTemplateColumns: "46px 1fr", gap: 14, padding: "18px 0", borderTop: `1px solid ${EDITORIAL.line}` }}>
                     <div>
@@ -1155,7 +1186,7 @@ export default function OpenFoodFactsDetail() {
           })()}
 
           <section style={{ opacity: mounted ? 1 : 0, transform: mounted ? "translateY(0)" : "translateY(10px)", transition: "all 0.5s ease 0.6s" }}>
-            <SectionHead num="04" title="Materials & logistics" />
+            <SectionHead num="05" title="Materials & logistics" />
             <div style={{ display: "grid", gap: 10 }}>
               {[
                 { icon: <Package style={{ width: 17, height: 17 }} />, label: "Packaging", value: packagingSummary(product), impact: product.ecoscoreData?.adjustments?.packaging?.value != null ? `${product.ecoscoreData.adjustments.packaging.value} pts` : "Unknown", bad: (product.ecoscoreData?.adjustments?.packaging?.value ?? 0) < 0 },

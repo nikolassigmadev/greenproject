@@ -10,6 +10,7 @@ import { addToBasket } from "@/utils/basketStorage";
 import { useToast } from "@/hooks/use-toast";
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
 import { extractReceiptProducts } from "@/services/ocr/openai-service";
+import { saveReceiptScan } from "@/utils/receiptStorage";
 
 const gradeColor: Record<string, string> = {
   a: 'hsl(142 55% 38%)',
@@ -60,14 +61,17 @@ export default function ReceiptScanner() {
 
       const settled = await Promise.allSettled(lines.map((q) => searchOffProducts(q)));
 
-      setProducts(
-        lines.map((query, i) => {
-          const r = settled[i];
-          const result =
-            r.status === 'fulfilled' && r.value.length > 0 ? r.value[0] : null;
-          return { query, result, loading: false, added: false };
-        })
-      );
+      const resolved = lines.map((query, i) => {
+        const r = settled[i];
+        const result =
+          r.status === 'fulfilled' && r.value.length > 0 ? r.value[0] : null;
+        return { query, result, loading: false, added: false };
+      });
+
+      setProducts(resolved);
+
+      // Persist this receipt scan to the analytics store.
+      saveReceiptScan(resolved.map(({ query, result }) => ({ query, result })));
 
       setPhase('results');
     } catch {

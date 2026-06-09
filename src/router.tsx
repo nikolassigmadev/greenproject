@@ -19,6 +19,8 @@ import { CalAIShowcase } from "./components/CalAIShowcase";
 import ChatGPTScan from "./pages/ChatGPTScan";
 import Watchlist from "./pages/Watchlist";
 import Compare from "./pages/Compare";
+import SubmitFlag from "./pages/SubmitFlag";
+import ReceiptAnalytics from "./pages/ReceiptAnalytics";
 
 // Import admin components - uncomment to enable
 // import Admin from "./pages/Admin";
@@ -103,6 +105,14 @@ export const router = createBrowserRouter([
       {
         path: "/compare",
         element: <Compare />,
+      },
+      {
+        path: "/submit-flag",
+        element: <SubmitFlag />,
+      },
+      {
+        path: "/receipts",
+        element: <ReceiptAnalytics />,
       },
       {
         path: "/design-system",

@@ -165,6 +165,18 @@ const authLimiter = rateLimit({
   message: { success: false, error: 'Too many login attempts - try again later' },
 });
 
+// Community flag submissions: strict 3-per-hour-per-IP cap (spam mitigation).
+const communityFlagLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 3,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many flag submissions - try again in an hour' },
+});
+
+// Small JSON body cap for community-flag submissions (4KB).
+const smallBody = express.json({ limit: '4kb' });
+
 app.use('/api/openai', openaiLimiter);
 app.use('/api/chat', openaiLimiter);
 app.use('/api/openfoodfacts', searchLimiter);
@@ -210,9 +222,12 @@ Brand: [brand]
 Barcode: [digits or "none"]
 
 Rules:
-- Product = short recognizable name a shopper would use. E.g. "KitKat Chunky", "Fanta Orange", "Doritos Cool Ranch", "Hubba Bubba Original". Do NOT include size, weight, volume, barcodes, slogans, or marketing text.
-- Brand = parent company (e.g. "Nestle", "Coca-Cola", "PepsiCo").
-- Always give your best guess. Never refuse or say you cannot read it.
+- Brand is REQUIRED. We use "Brand Product" to query Open Food Facts; without the brand the search is unreliable. Always populate Brand with your best guess from the package, even if the brand text is small or partially obscured.
+- Brand = the consumer-facing brand on the package (e.g. "Ben & Jerry's", "Lay's", "Nestle", "Coca-Cola"). If the package shows both a parent and a sub-brand, prefer the SUB-brand the shopper sees (e.g. "Ben & Jerry's", not "Unilever").
+- Product = short recognizable name a shopper would use, WITHOUT the brand. E.g. "Phish Food", "KitKat Chunky", "Fanta Orange", "Doritos Cool Ranch". Do NOT include size, weight, volume, barcodes, slogans, or marketing text.
+- Good: Brand "Ben & Jerry's" + Product "Phish Food" | Brand "Lay's" + Product "Chilli" | Brand "Cadbury" + Product "Dairy Milk".
+- Bad: Brand "UNKNOWN" + Product "Phish Food" (we lose searchability) | Brand "Ben & Jerry's Phish Food" + Product "Phish Food" (brand should not duplicate product).
+- Always give your best guess. Never refuse or say you cannot read it. Only return Brand: UNKNOWN when there is literally no brand text or logo visible anywhere in the image.
 - No extra text outside the three lines.`,
 };
 
@@ -291,6 +306,424 @@ app.get('/api/admin/openai-logs', requireAdmin, (req, res) => {
   } catch (e) {
     console.error('Failed to read OpenAI logs:', e);
     res.status(500).json({ success: false, error: 'Failed to read logs' });
+  }
+});
+
+// =====================================================
+// COMMUNITY FLAG SUBMISSIONS
+// =====================================================
+// Public submission queue for user-reported brand flags. Each record is scored
+// against the tier-1/2/3 sourcing bar (same rules as in-house flags) and lands
+// in pending_review until an admin approves or rejects it.
+//
+// Storage: append-only JSONL at data/community-flags.jsonl. Single-process
+// server, small file expected (admins keep the queue drained), so plain
+// readFileSync + writeFileSync is fine for the moderation rewrite path.
+//
+// Spam controls: honeypot field, 4KB body cap, 3-per-hour-per-IP rate limit,
+// SHA-256 IP fingerprint (with daily salt) so we can spot abuse without ever
+// storing or returning the raw IP.
+
+const COMMUNITY_FLAGS_FILE = join(LOG_DIR, 'community-flags.jsonl');
+
+const ALLOWED_FLAG_CATEGORIES = new Set([
+  'forced_labour', 'child_labour', 'wage_theft', 'unsafe_conditions',
+  'union_busting', 'discrimination', 'supply_chain_opacity',
+  'animal_welfare', 'environmental_harm', 'boycott_listed',
+]);
+const ALLOWED_FLAG_SEVERITIES = new Set(['critical', 'high', 'medium', 'low']);
+const ALLOWED_SOURCE_TIERS = new Set(['tier1', 'tier2', 'tier3']);
+
+// Daily salt: rotates at UTC midnight so IP hashes can't be correlated across
+// long periods. We never persist the raw IP -- only the salted hash.
+function getDailyIpSalt() {
+  return new Date().toISOString().slice(0, 10); // YYYY-MM-DD UTC
+}
+
+function hashIp(ip) {
+  const salt = getDailyIpSalt();
+  return crypto.createHash('sha256').update(`${ip || 'unknown'}|${salt}`).digest('hex');
+}
+
+function generateCommunityFlagId() {
+  return `cf_${Date.now()}_${crypto.randomBytes(6).toString('hex')}`;
+}
+
+function isHttpUrl(value) {
+  if (typeof value !== 'string') return false;
+  try {
+    const u = new URL(value);
+    return u.protocol === 'http:' || u.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+function isAllCaps(text) {
+  if (typeof text !== 'string') return false;
+  const letters = text.replace(/[^A-Za-z]/g, '');
+  if (letters.length < 6) return false;
+  return letters === letters.toUpperCase();
+}
+
+// The sourcing bar: identical rule to the in-house flag schema.
+// 1) 1+ tier-1 source, OR
+// 2) 2+ tier-2 sources from DIFFERENT publishers, OR
+// 3) 1 tier-2 source + 2+ tier-3 sources.
+function meetsSourcingBar(sources) {
+  if (!Array.isArray(sources) || sources.length === 0) return false;
+  const tier1 = sources.filter(s => s.tier === 'tier1');
+  const tier2 = sources.filter(s => s.tier === 'tier2');
+  const tier3 = sources.filter(s => s.tier === 'tier3');
+  if (tier1.length >= 1) return true;
+  const tier2Publishers = new Set(
+    tier2.map(s => (typeof s.publisher === 'string' ? s.publisher.trim().toLowerCase() : '')).filter(Boolean)
+  );
+  if (tier2.length >= 2 && tier2Publishers.size >= 2) return true;
+  if (tier2.length >= 1 && tier3.length >= 2) return true;
+  return false;
+}
+
+function readJsonlRecords(filePath) {
+  if (!existsSync(filePath)) return [];
+  const raw = readFileSync(filePath, 'utf8');
+  if (!raw) return [];
+  const records = [];
+  for (const line of raw.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    try {
+      records.push(JSON.parse(trimmed));
+    } catch (e) {
+      console.warn('Skipped corrupt JSONL line:', e.message);
+    }
+  }
+  return records;
+}
+
+function writeJsonlRecords(filePath, records) {
+  if (!existsSync(LOG_DIR)) {
+    mkdirSync(LOG_DIR, { recursive: true, mode: 0o700 });
+  }
+  const payload = records.map(r => JSON.stringify(r)).join('\n') + (records.length ? '\n' : '');
+  writeFileSync(filePath, payload, { mode: 0o600 });
+}
+
+/**
+ * POST /api/community-flags
+ * Public submission endpoint -- writes one record to data/community-flags.jsonl.
+ * Validates structure, enforces sourcing-bar scoring, and rejects honeypot hits.
+ */
+app.post('/api/community-flags', communityFlagLimiter, smallBody, (req, res) => {
+  try {
+    const body = req.body || {};
+    const {
+      brandName,
+      category,
+      severity,
+      summary,
+      sources,
+      submitterEmail,
+      honeypot,
+    } = body;
+
+    // Honeypot: legitimate clients leave this empty. Bots fill every field.
+    // Return a success-ish 200 so spammers don't learn the trap exists.
+    if (typeof honeypot !== 'string' || honeypot.length > 0) {
+      return res.status(200).json({ success: true, id: 'cf_ignored' });
+    }
+
+    if (typeof brandName !== 'string' || brandName.trim().length < 2 || brandName.trim().length > 80) {
+      return res.status(400).json({ success: false, error: 'brandName must be 2-80 characters' });
+    }
+    if (!ALLOWED_FLAG_CATEGORIES.has(category)) {
+      return res.status(400).json({ success: false, error: 'Invalid category' });
+    }
+    if (!ALLOWED_FLAG_SEVERITIES.has(severity)) {
+      return res.status(400).json({ success: false, error: 'Invalid severity' });
+    }
+    if (typeof summary !== 'string' || summary.trim().length < 10 || summary.trim().length > 300) {
+      return res.status(400).json({ success: false, error: 'summary must be 10-300 characters' });
+    }
+    if (isAllCaps(summary)) {
+      return res.status(400).json({ success: false, error: 'summary must not be all caps' });
+    }
+    if (!Array.isArray(sources) || sources.length < 1 || sources.length > 5) {
+      return res.status(400).json({ success: false, error: 'sources must contain 1-5 entries' });
+    }
+    for (const [i, s] of sources.entries()) {
+      if (!s || typeof s !== 'object') {
+        return res.status(400).json({ success: false, error: `sources[${i}] must be an object` });
+      }
+      if (!isHttpUrl(s.url)) {
+        return res.status(400).json({ success: false, error: `sources[${i}].url must be a valid http(s) URL` });
+      }
+      if (typeof s.title !== 'string' || !s.title.trim()) {
+        return res.status(400).json({ success: false, error: `sources[${i}].title is required` });
+      }
+      if (typeof s.publisher !== 'string' || !s.publisher.trim()) {
+        return res.status(400).json({ success: false, error: `sources[${i}].publisher is required` });
+      }
+      if (!ALLOWED_SOURCE_TIERS.has(s.tier)) {
+        return res.status(400).json({ success: false, error: `sources[${i}].tier must be tier1, tier2, or tier3` });
+      }
+    }
+    if (submitterEmail !== undefined && submitterEmail !== null) {
+      if (typeof submitterEmail !== 'string' || submitterEmail.length > 200) {
+        return res.status(400).json({ success: false, error: 'submitterEmail invalid' });
+      }
+    }
+
+    const normalisedSources = sources.map(s => ({
+      url: s.url.trim(),
+      title: s.title.trim().slice(0, 300),
+      publisher: s.publisher.trim().slice(0, 120),
+      tier: s.tier,
+    }));
+
+    const record = {
+      id: generateCommunityFlagId(),
+      submittedAt: new Date().toISOString(),
+      status: 'pending_review',
+      meetsSourcingBar: meetsSourcingBar(normalisedSources),
+      ipHash: hashIp(req.ip),
+      submission: {
+        brandName: brandName.trim(),
+        category,
+        severity,
+        summary: summary.trim(),
+        sources: normalisedSources,
+        submitterEmail: typeof submitterEmail === 'string' ? submitterEmail.trim() : undefined,
+      },
+    };
+
+    if (!existsSync(LOG_DIR)) {
+      mkdirSync(LOG_DIR, { recursive: true, mode: 0o700 });
+    }
+    appendFileSync(COMMUNITY_FLAGS_FILE, JSON.stringify(record) + '\n');
+    try { chmodSync(COMMUNITY_FLAGS_FILE, 0o600); } catch {}
+
+    res.json({ success: true, id: record.id });
+  } catch (error) {
+    console.error('Community flag submission error:', error);
+    res.status(500).json({ success: false, error: 'Failed to submit flag' });
+  }
+});
+
+/**
+ * GET /api/admin/community-flags?status=pending_review|approved|rejected
+ * Admin-gated -- returns matching records, newest first.
+ */
+app.get('/api/admin/community-flags', requireAdmin, (req, res) => {
+  try {
+    const status = typeof req.query.status === 'string' ? req.query.status : 'pending_review';
+    if (!['pending_review', 'approved', 'rejected'].includes(status)) {
+      return res.status(400).json({ success: false, error: 'Invalid status filter' });
+    }
+    const records = readJsonlRecords(COMMUNITY_FLAGS_FILE)
+      .filter(r => r.status === status)
+      .sort((a, b) => (b.submittedAt || '').localeCompare(a.submittedAt || ''));
+    res.json({ success: true, count: records.length, records });
+  } catch (error) {
+    console.error('Community flag list error:', error);
+    res.status(500).json({ success: false, error: 'Failed to read flags' });
+  }
+});
+
+/**
+ * PATCH /api/admin/community-flags/:id
+ * Admin-gated -- approve or reject a pending submission.
+ * Body: { status: 'approved' | 'rejected', note?: string }
+ */
+app.patch('/api/admin/community-flags/:id', requireAdmin, smallBody, (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, note } = req.body || {};
+    if (!['approved', 'rejected'].includes(status)) {
+      return res.status(400).json({ success: false, error: 'status must be approved or rejected' });
+    }
+    if (note !== undefined && (typeof note !== 'string' || note.length > 500)) {
+      return res.status(400).json({ success: false, error: 'note must be a string up to 500 chars' });
+    }
+
+    const records = readJsonlRecords(COMMUNITY_FLAGS_FILE);
+    const idx = records.findIndex(r => r.id === id);
+    if (idx === -1) {
+      return res.status(404).json({ success: false, error: 'Flag not found' });
+    }
+
+    records[idx] = {
+      ...records[idx],
+      status,
+      moderatedAt: new Date().toISOString(),
+      moderatorNote: typeof note === 'string' ? note.trim() : undefined,
+    };
+
+    writeJsonlRecords(COMMUNITY_FLAGS_FILE, records);
+    res.json({ success: true, record: records[idx] });
+  } catch (error) {
+    console.error('Community flag patch error:', error);
+    res.status(500).json({ success: false, error: 'Failed to update flag' });
+  }
+});
+
+// =====================================================
+// WEB PUSH SUBSCRIPTION REGISTRY (stub)
+// =====================================================
+// Stores Web Push subscriptions for "watched brand" notifications. Actual
+// VAPID-signed push delivery is not wired up yet -- this section handles
+// registration, dedupe by endpoint, and a manual admin trigger that just
+// logs and counts matching subscriptions.
+//
+// Storage: data/push-subscriptions.jsonl. Append-only for new subs; dedupe
+// rewrites the whole file when an endpoint already exists.
+
+const PUSH_SUBSCRIPTIONS_FILE = join(LOG_DIR, 'push-subscriptions.jsonl');
+
+function isValidPushSubscription(sub) {
+  if (!sub || typeof sub !== 'object') return false;
+  if (typeof sub.endpoint !== 'string' || !isHttpUrl(sub.endpoint)) return false;
+  if (sub.keys && typeof sub.keys !== 'object') return false;
+  return true;
+}
+
+function normaliseWatchedBrands(list) {
+  if (!Array.isArray(list)) return [];
+  const seen = new Set();
+  const out = [];
+  for (const item of list) {
+    if (typeof item !== 'string') continue;
+    const trimmed = item.trim();
+    if (!trimmed || trimmed.length > 80) continue;
+    const key = trimmed.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(trimmed);
+    if (out.length >= 50) break; // hard cap
+  }
+  return out;
+}
+
+/**
+ * POST /api/push/subscribe
+ * Public -- registers a Web Push subscription. Dedupes by subscription.endpoint;
+ * an existing record for that endpoint is replaced.
+ */
+app.post('/api/push/subscribe', smallBody, (req, res) => {
+  try {
+    const { subscription, watchedBrands } = req.body || {};
+    if (!isValidPushSubscription(subscription)) {
+      return res.status(400).json({ success: false, error: 'Invalid push subscription' });
+    }
+
+    const record = {
+      subscription: {
+        endpoint: subscription.endpoint,
+        expirationTime: subscription.expirationTime ?? null,
+        keys: subscription.keys || {},
+      },
+      watchedBrands: normaliseWatchedBrands(watchedBrands),
+      registeredAt: new Date().toISOString(),
+    };
+
+    const existing = readJsonlRecords(PUSH_SUBSCRIPTIONS_FILE);
+    const idx = existing.findIndex(r => r.subscription?.endpoint === record.subscription.endpoint);
+
+    if (idx === -1) {
+      // New subscription: append-only fast path.
+      if (!existsSync(LOG_DIR)) {
+        mkdirSync(LOG_DIR, { recursive: true, mode: 0o700 });
+      }
+      appendFileSync(PUSH_SUBSCRIPTIONS_FILE, JSON.stringify(record) + '\n');
+      try { chmodSync(PUSH_SUBSCRIPTIONS_FILE, 0o600); } catch {}
+    } else {
+      // Existing endpoint: replace and rewrite the whole file.
+      existing[idx] = record;
+      writeJsonlRecords(PUSH_SUBSCRIPTIONS_FILE, existing);
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Push subscribe error:', error);
+    res.status(500).json({ success: false, error: 'Failed to register subscription' });
+  }
+});
+
+/**
+ * POST /api/push/unsubscribe
+ * Public -- removes the subscription matching { endpoint }.
+ */
+app.post('/api/push/unsubscribe', smallBody, (req, res) => {
+  try {
+    const { endpoint } = req.body || {};
+    if (typeof endpoint !== 'string' || !isHttpUrl(endpoint)) {
+      return res.status(400).json({ success: false, error: 'endpoint required' });
+    }
+
+    const existing = readJsonlRecords(PUSH_SUBSCRIPTIONS_FILE);
+    const filtered = existing.filter(r => r.subscription?.endpoint !== endpoint);
+
+    if (filtered.length === existing.length) {
+      // Nothing to remove. Idempotent success.
+      return res.json({ success: true, removed: 0 });
+    }
+
+    writeJsonlRecords(PUSH_SUBSCRIPTIONS_FILE, filtered);
+    res.json({ success: true, removed: existing.length - filtered.length });
+  } catch (error) {
+    console.error('Push unsubscribe error:', error);
+    res.status(500).json({ success: false, error: 'Failed to unsubscribe' });
+  }
+});
+
+/**
+ * GET /api/admin/push-subscriptions
+ * Admin-gated -- returns total count + a sample list (endpoint truncated to
+ * 60 chars + watched brands). Full endpoint URLs are not exposed.
+ */
+app.get('/api/admin/push-subscriptions', requireAdmin, (req, res) => {
+  try {
+    const records = readJsonlRecords(PUSH_SUBSCRIPTIONS_FILE);
+    const sample = records.slice(0, 50).map(r => ({
+      endpointPreview: (r.subscription?.endpoint || '').slice(0, 60),
+      watchedBrands: Array.isArray(r.watchedBrands) ? r.watchedBrands : [],
+      registeredAt: r.registeredAt || null,
+    }));
+    res.json({ success: true, count: records.length, sample });
+  } catch (error) {
+    console.error('Push list error:', error);
+    res.status(500).json({ success: false, error: 'Failed to read subscriptions' });
+  }
+});
+
+/**
+ * POST /api/admin/push/trigger-demo
+ * Admin-gated -- DEMO ONLY. Counts subscriptions watching the given brand
+ * (case-insensitive) and logs the payload. Actual VAPID delivery is a
+ * follow-up; for now we just report how many users would have been notified.
+ */
+app.post('/api/admin/push/trigger-demo', requireAdmin, smallBody, (req, res) => {
+  try {
+    const { brand, message } = req.body || {};
+    if (typeof brand !== 'string' || !brand.trim()) {
+      return res.status(400).json({ success: false, error: 'brand required' });
+    }
+    if (typeof message !== 'string' || !message.trim() || message.length > 280) {
+      return res.status(400).json({ success: false, error: 'message required (max 280 chars)' });
+    }
+
+    const brandKey = brand.trim().toLowerCase();
+    const records = readJsonlRecords(PUSH_SUBSCRIPTIONS_FILE);
+    const wouldNotify = records.filter(r =>
+      Array.isArray(r.watchedBrands) &&
+      r.watchedBrands.some(b => typeof b === 'string' && b.trim().toLowerCase() === brandKey)
+    ).length;
+
+    console.log('[push-demo]', { brand: brand.trim(), message: message.trim(), wouldNotify });
+    res.json({ success: true, wouldNotify });
+  } catch (error) {
+    console.error('Push trigger-demo error:', error);
+    res.status(500).json({ success: false, error: 'Failed to trigger demo' });
   }
 });
 

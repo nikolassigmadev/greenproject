@@ -2,14 +2,15 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ChevronLeft, Search, Loader2, GitCompareArrows, AlertTriangle,
-  CheckCircle2, ExternalLink, Package2,
+  CheckCircle2, ExternalLink, Package2, X, Trophy, Leaf, Heart, Cloud,
+  ShieldCheck, ArrowRight, Sparkles, Plus,
 } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { DS } from "@/styles/design-tokens";
-import { searchProducts } from "@/services/openfoodfacts";
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
 import { getVerifiedFlagForBrand } from "@/services/brandFlags";
 import type { BrandFlagV2 } from "@/types/brandFlag";
+import { smartProductSearch } from "@/utils/smartProductSearch";
 import { toast } from "sonner";
 
 type Slot = "A" | "B";
@@ -24,28 +25,424 @@ const GRADE_COLOR: Record<string, string> = {
   a: DS.good, b: DS.good, c: DS.warn, d: DS.bad, e: DS.bad,
 };
 
-function GradeBadge({ grade, label }: { grade: string | null; label: string }) {
-  const g = grade?.toLowerCase();
-  const color = g ? (GRADE_COLOR[g] ?? DS.muted) : DS.muted;
+// Alpha helper. Hex-string concat (`${color}22`) breaks when `color` is a
+// CSS var, since `var(--x)22` is invalid. Use color-mix so it works for both
+// hex literals and CSS vars.
+function alpha(color: string, pct: number): string {
+  return `color-mix(in srgb, ${color} ${pct}%, transparent)`;
+}
+
+const QUICK_PAIRS: Array<{ a: string; b: string; tag: string }> = [
+  { a: "Coca-Cola", b: "Pepsi", tag: "Cola classics" },
+  { a: "Nutella", b: "Biscoff", tag: "Spread duel" },
+  { a: "KitKat", b: "Twix", tag: "Bar fight" },
+  { a: "Lay's Classic", b: "Pringles", tag: "Crisp face-off" },
+];
+
+function gradeRank(grade: string | null | undefined): number {
+  if (!grade) return 6;
+  const g = grade.toLowerCase();
+  return ({ a: 1, b: 2, c: 3, d: 4, e: 5 } as Record<string, number>)[g] ?? 6;
+}
+
+// ────────────────────────────────────────────────────────────
+// Shared verdict — computes who wins so card borders + verdict card stay in sync
+// ────────────────────────────────────────────────────────────
+
+interface VerdictPoint {
+  label: string;
+  icon: typeof Leaf;
+  winner: "A" | "B" | "tie";
+  note?: string;
+}
+
+interface VerdictResult {
+  points: VerdictPoint[];
+  aWins: number;
+  bWins: number;
+  leader: "A" | "B" | "tie";
+}
+
+function computeVerdict(a: OpenFoodFactsResult, b: OpenFoodFactsResult): VerdictResult {
+  const aFlag = getVerifiedFlagForBrand(a.brand);
+  const bFlag = getVerifiedFlagForBrand(b.brand);
+  const points: VerdictPoint[] = [];
+
+  const ar = gradeRank(a.ecoscoreGrade);
+  const br = gradeRank(b.ecoscoreGrade);
+  if (ar !== br) {
+    points.push({
+      label: "Eco-score", icon: Leaf,
+      winner: ar < br ? "A" : "B",
+      note: `${(a.ecoscoreGrade ?? "?").toUpperCase()} vs ${(b.ecoscoreGrade ?? "?").toUpperCase()}`,
+    });
+  }
+
+  const an = gradeRank(a.nutriscoreGrade);
+  const bn = gradeRank(b.nutriscoreGrade);
+  if (an !== bn) {
+    points.push({
+      label: "Nutri-score", icon: Heart,
+      winner: an < bn ? "A" : "B",
+      note: `${(a.nutriscoreGrade ?? "?").toUpperCase()} vs ${(b.nutriscoreGrade ?? "?").toUpperCase()}`,
+    });
+  }
+
+  const aco2 = a.ecoscoreData?.agribalyse?.co2_total;
+  const bco2 = b.ecoscoreData?.agribalyse?.co2_total;
+  if (aco2 != null && bco2 != null && aco2 !== bco2) {
+    points.push({
+      label: "Lower CO2", icon: Cloud,
+      winner: aco2 < bco2 ? "A" : "B",
+      note: `${aco2.toFixed(1)} vs ${bco2.toFixed(1)} kg`,
+    });
+  }
+
+  if (!aFlag && bFlag) points.push({ label: "Clean ethics record", icon: ShieldCheck, winner: "A" });
+  else if (aFlag && !bFlag) points.push({ label: "Clean ethics record", icon: ShieldCheck, winner: "B" });
+
+  const aWins = points.filter((p) => p.winner === "A").length;
+  const bWins = points.filter((p) => p.winner === "B").length;
+  const leader: "A" | "B" | "tie" = aWins > bWins ? "A" : bWins > aWins ? "B" : "tie";
+
+  return { points, aWins, bWins, leader };
+}
+
+// ────────────────────────────────────────────────────────────
+// Search input — shared shell
+// ────────────────────────────────────────────────────────────
+
+function SearchInput({
+  slot, query, loading, onChange, onSubmit,
+}: {
+  slot: Slot;
+  query: string;
+  loading: boolean;
+  onChange: (v: string) => void;
+  onSubmit: () => void;
+}) {
+  const accent = slot === "A" ? DS.brand : DS.ink;
+  return (
+    <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }} style={{ display: "flex", gap: 8 }}>
+      <div style={{ flex: 1, position: "relative", display: "flex", alignItems: "center" }}>
+        <Search style={{
+          position: "absolute", left: 12, width: 14, height: 14,
+          color: DS.muted, pointerEvents: "none",
+        }} />
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={`Product ${slot}…`}
+          style={{
+            width: "100%", height: 42, padding: "0 12px 0 34px",
+            borderRadius: 12, border: `1.5px solid ${DS.hair}`,
+            background: DS.card, color: DS.ink,
+            fontSize: 14, fontFamily: DS.font, outline: "none", boxSizing: "border-box",
+            fontWeight: 600,
+          }}
+        />
+      </div>
+      <button
+        type="submit"
+        disabled={!query.trim() || loading}
+        style={{
+          height: 42, width: 42, borderRadius: 12, border: "none",
+          background: query.trim() ? accent : DS.hair,
+          color: query.trim() ? DS.card : DS.muted,
+          cursor: query.trim() ? "pointer" : "not-allowed",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          flexShrink: 0,
+        }}
+        aria-label={`Search product ${slot}`}
+      >
+        {loading
+          ? <Loader2 style={{ width: 16, height: 16, animation: "spin 0.7s linear infinite" }} />
+          : <ArrowRight style={{ width: 16, height: 16 }} />}
+      </button>
+    </form>
+  );
+}
+
+// ────────────────────────────────────────────────────────────
+// Product slot
+// ────────────────────────────────────────────────────────────
+
+function ProductSlot({
+  slot, state, outcome, onSearch, onQueryChange, onClear,
+}: {
+  slot: Slot;
+  state: SlotState;
+  outcome: "winner" | "loser" | "neutral";
+  onSearch: () => void;
+  onQueryChange: (value: string) => void;
+  onClear: () => void;
+}) {
+  const product = state.product;
+  const accent = slot === "A" ? DS.brand : DS.ink;
+  const isAccentBrand = slot === "A";
+
+  // Outcome wins over slot accent for the border / top strip color.
+  // We tint with alpha rather than slamming saturated red/green so it works
+  // in both light and dark themes without screaming.
+  const outcomeColor =
+    outcome === "winner" ? DS.good
+    : outcome === "loser" ? DS.bad
+    : null;
+
+  if (!product) {
+    return (
+      <div style={{
+        background: DS.card, borderRadius: 18, padding: 14,
+        border: `1.5px dashed ${outcomeColor ? alpha(outcomeColor, 35) : DS.hair}`,
+        display: "flex", flexDirection: "column", gap: 10,
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{
+            width: 22, height: 22, borderRadius: 999,
+            background: isAccentBrand ? alpha(DS.brand, 13) : DS.bg,
+            color: accent,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 12, fontWeight: 800, flexShrink: 0,
+          }}>
+            {slot}
+          </span>
+          <span style={{
+            fontSize: 11, fontWeight: 800, color: DS.muted,
+            letterSpacing: "0.06em", textTransform: "uppercase",
+          }}>
+            Product {slot}
+          </span>
+        </div>
+        <SearchInput
+          slot={slot}
+          query={state.query}
+          loading={state.loading}
+          onChange={onQueryChange}
+          onSubmit={onSearch}
+        />
+      </div>
+    );
+  }
+
+  const flag = getVerifiedFlagForBrand(product.brand);
+  const g = product.ecoscoreGrade?.toLowerCase();
+  const ng = product.nutriscoreGrade?.toLowerCase();
+  const co2 = product.ecoscoreData?.agribalyse?.co2_total;
+  const dataPoints = [g, ng, product.novaGroup, co2].filter((v) => v != null && v !== "").length;
+  const dataTier: "full" | "partial" | "limited" =
+    dataPoints >= 4 ? "full" : dataPoints >= 2 ? "partial" : "limited";
+
+  // Border + strip use outcome color when verdict is decided; otherwise fall
+  // back to the per-slot accent (A=brand, B=ink) so the page still feels alive.
+  const borderColor =
+    outcomeColor
+      ? alpha(outcomeColor, 55)
+      : (isAccentBrand ? alpha(DS.brand, 20) : DS.hair);
+  const stripColor = outcomeColor ?? accent;
+
   return (
     <div style={{
-      display: "flex", flexDirection: "column", alignItems: "center", gap: 4, flex: 1,
+      background: DS.card, borderRadius: 18, padding: 16,
+      boxShadow: outcomeColor
+        ? `0 4px 18px ${alpha(outcomeColor, 18)}, 0 0 0 1px ${alpha(outcomeColor, 30)} inset`
+        : "0 2px 8px rgba(0,0,0,0.06)",
+      border: `1.5px solid ${borderColor}`,
+      display: "flex", flexDirection: "column", gap: 14,
+      position: "relative", overflow: "hidden",
+      transition: "border-color 250ms ease, box-shadow 250ms ease",
     }}>
+      {/* Accent strip */}
       <div style={{
-        width: 44, height: 44, borderRadius: 12,
-        background: g ? `${color}22` : DS.bg,
-        color, fontSize: 18, fontWeight: 800,
-        display: "flex", alignItems: "center", justifyContent: "center",
-      }}>
-        {g ? g.toUpperCase() : "?"}
-      </div>
+        position: "absolute", top: 0, left: 0, right: 0, height: 3,
+        background: stripColor,
+      }} />
+
+      <button
+        onClick={onClear}
+        aria-label="Clear product"
+        style={{
+          position: "absolute", top: 12, right: 12,
+          width: 26, height: 26, borderRadius: 8, border: "none",
+          background: DS.bg, color: DS.muted, cursor: "pointer",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          zIndex: 1,
+        }}
+      >
+        <X style={{ width: 13, height: 13 }} />
+      </button>
+
       <div style={{
-        fontSize: 10, fontWeight: 700, color: DS.muted,
-        textTransform: "uppercase", letterSpacing: "0.04em",
+        display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap",
+        paddingRight: 32, // leave room for the absolute X
       }}>
-        {label}
+        <span style={{
+          width: 22, height: 22, borderRadius: 999,
+          background: outcomeColor ? alpha(outcomeColor, 18) : (isAccentBrand ? alpha(DS.brand, 13) : DS.ink),
+          color: outcomeColor ?? (isAccentBrand ? DS.brand : DS.card),
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 12, fontWeight: 800, flexShrink: 0,
+        }}>
+          {slot}
+        </span>
+        <span style={{
+          fontSize: 11, fontWeight: 800, color: DS.muted,
+          letterSpacing: "0.06em", textTransform: "uppercase",
+        }}>
+          Product {slot}
+        </span>
+        <OutcomePill outcome={outcome} />
+        <DataTierBadge tier={dataTier} />
       </div>
+
+      <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+        {product.imageUrl ? (
+          <img
+            src={product.imageUrl}
+            alt={product.productName || ""}
+            style={{
+              width: 64, height: 64, borderRadius: 12, objectFit: "contain",
+              border: `1px solid ${DS.hair}`, background: DS.bg, flexShrink: 0,
+              padding: 4, boxSizing: "border-box",
+            }}
+          />
+        ) : (
+          <div style={{
+            width: 64, height: 64, borderRadius: 12,
+            background: DS.bg, border: `1px solid ${DS.hair}`, flexShrink: 0,
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            <Package2 style={{ width: 22, height: 22, color: DS.muted }} />
+          </div>
+        )}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{
+            fontSize: 16, fontWeight: 800, color: DS.ink, lineHeight: 1.2,
+            letterSpacing: -0.3,
+          }}>
+            {product.productName || "Unknown product"}
+          </div>
+          <div style={{ fontSize: 12, color: DS.muted, marginTop: 3 }}>
+            {product.brand || "Unknown brand"}
+          </div>
+        </div>
+      </div>
+
+      {/* metrics chips */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+        <MetricChip icon={Leaf}  label="Eco"   grade={g}  color={g ? GRADE_COLOR[g] : DS.muted} />
+        <MetricChip icon={Heart} label="Nutri" grade={ng} color={ng ? GRADE_COLOR[ng] : DS.muted} />
+        {product.novaGroup != null && (
+          <span style={chipStyle()}>
+            <Cloud style={{ width: 11, height: 11, color: DS.muted }} />
+            <span style={{ color: DS.muted, fontWeight: 700, fontSize: 10 }}>NOVA</span>
+            <span style={{ color: DS.ink, fontWeight: 800 }}>{product.novaGroup}</span>
+          </span>
+        )}
+        {co2 != null && (
+          <span style={chipStyle()}>
+            <Cloud style={{ width: 11, height: 11, color: DS.muted }} />
+            <span style={{ color: DS.muted, fontWeight: 700, fontSize: 10 }}>CO2</span>
+            <span style={{ color: DS.ink, fontWeight: 800, fontFeatureSettings: "'tnum'" }}>
+              {co2.toFixed(1)}<span style={{ color: DS.muted, fontWeight: 600 }}>kg</span>
+            </span>
+          </span>
+        )}
+      </div>
+
+      <FlagBlock flag={flag} />
     </div>
+  );
+}
+
+function chipStyle(): React.CSSProperties {
+  return {
+    display: "inline-flex", alignItems: "center", gap: 4,
+    background: DS.bg, padding: "5px 9px", borderRadius: 999,
+    fontSize: 11.5, lineHeight: 1,
+    border: `1px solid ${DS.hair}`,
+  };
+}
+
+function OutcomePill({ outcome }: { outcome: "winner" | "loser" | "neutral" }) {
+  if (outcome === "neutral") return null;
+  const isWinner = outcome === "winner";
+  const c = isWinner ? DS.good : DS.bad;
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center", gap: 4,
+      background: alpha(c, 14),
+      color: c,
+      padding: "3px 9px", borderRadius: 999,
+      fontSize: 10, fontWeight: 800, lineHeight: 1,
+      letterSpacing: "0.05em", textTransform: "uppercase",
+      border: `1px solid ${alpha(c, 30)}`,
+    }}>
+      {isWinner ? (
+        <Trophy style={{ width: 10, height: 10 }} />
+      ) : (
+        <span style={{
+          width: 5, height: 5, borderRadius: 999, background: c, display: "inline-block",
+        }} />
+      )}
+      {isWinner ? "Better pick" : "Second"}
+    </span>
+  );
+}
+
+function DataTierBadge({ tier }: { tier: "full" | "partial" | "limited" }) {
+  const c =
+    tier === "full" ? DS.good
+    : tier === "partial" ? DS.warn
+    : DS.muted;
+  const label =
+    tier === "full" ? "Full data"
+    : tier === "partial" ? "Partial data"
+    : "Limited data";
+  return (
+    <span
+      title={
+        tier === "full" ? "Has eco-score, CO2, nutri-score, and NOVA group."
+        : tier === "partial" ? "Has some metrics — others are missing."
+        : "OpenFoodFacts has little scoring data on this product."
+      }
+      style={{
+        display: "inline-flex", alignItems: "center", gap: 4,
+        background: alpha(c, 12),
+        color: c,
+        padding: "3px 7px", borderRadius: 999,
+        fontSize: 9.5, fontWeight: 800, lineHeight: 1,
+        letterSpacing: "0.03em", textTransform: "uppercase",
+        border: `1px solid ${alpha(c, 22)}`,
+      }}
+    >
+      <span style={{
+        width: 5, height: 5, borderRadius: 999, background: c, flexShrink: 0,
+      }} />
+      {label}
+    </span>
+  );
+}
+
+function MetricChip({
+  icon: Icon, label, grade, color,
+}: {
+  icon: typeof Leaf; label: string; grade: string | null | undefined; color: string;
+}) {
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center", gap: 5,
+      background: grade ? alpha(color, 8) : DS.bg,
+      padding: "5px 9px", borderRadius: 999,
+      fontSize: 11.5, lineHeight: 1,
+      border: `1px solid ${grade ? alpha(color, 20) : DS.hair}`,
+    }}>
+      <Icon style={{ width: 11, height: 11, color: grade ? color : DS.muted }} />
+      <span style={{ color: DS.muted, fontWeight: 700, fontSize: 10 }}>{label}</span>
+      <span style={{ color: grade ? color : DS.muted, fontWeight: 800 }}>
+        {grade ? grade.toUpperCase() : "—"}
+      </span>
+    </span>
   );
 }
 
@@ -53,13 +450,13 @@ function FlagBlock({ flag }: { flag: BrandFlagV2 | null }) {
   if (!flag) {
     return (
       <div style={{
-        display: "flex", alignItems: "center", gap: 8,
+        display: "flex", alignItems: "center", gap: 6,
         background: DS.goodBg, color: DS.good,
-        padding: "10px 12px", borderRadius: 10,
-        fontSize: 12, fontWeight: 600,
+        padding: "8px 10px", borderRadius: 10,
+        fontSize: 12, fontWeight: 700,
       }}>
-        <CheckCircle2 style={{ width: 14, height: 14 }} />
-        No verified flags
+        <ShieldCheck style={{ width: 13, height: 13 }} />
+        Clean ethics record
       </div>
     );
   }
@@ -96,155 +493,40 @@ function FlagBlock({ flag }: { flag: BrandFlagV2 | null }) {
   );
 }
 
-function ProductCard({
-  slot, state, onSearch, onQueryChange, onClear,
-}: {
-  slot: Slot;
-  state: SlotState;
-  onSearch: () => void;
-  onQueryChange: (value: string) => void;
-  onClear: () => void;
-}) {
-  const product = state.product;
-  const flag = product ? getVerifiedFlagForBrand(product.brand) : null;
+// ────────────────────────────────────────────────────────────
+// VS divider
+// ────────────────────────────────────────────────────────────
 
+function VsDivider({ active }: { active: boolean }) {
   return (
     <div style={{
-      background: DS.card, borderRadius: 18, padding: 16,
-      boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
-      display: "flex", flexDirection: "column", gap: 12, minHeight: 320,
+      position: "relative", display: "flex", alignItems: "center",
+      justifyContent: "center", margin: "-2px 0",
     }}>
       <div style={{
-        fontSize: 10.5, fontWeight: 800, color: DS.muted,
-        letterSpacing: "0.08em", textTransform: "uppercase",
+        position: "absolute", left: 24, right: 24, top: "50%",
+        height: 1,
+        background: `linear-gradient(to right, transparent, ${DS.hair}, transparent)`,
+      }} />
+      <div style={{
+        width: 44, height: 44, borderRadius: 999,
+        background: active ? DS.ink : DS.card,
+        color: active ? DS.card : DS.muted,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontSize: 13, fontWeight: 800, letterSpacing: 0.3,
+        border: `2px solid ${DS.bg}`,
+        boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+        position: "relative", zIndex: 1,
       }}>
-        Product {slot}
+        VS
       </div>
-
-      <form onSubmit={(e) => { e.preventDefault(); onSearch(); }} style={{ display: "flex", gap: 6 }}>
-        <div style={{ flex: 1, position: "relative", display: "flex", alignItems: "center" }}>
-          <Search style={{
-            position: "absolute", left: 10, width: 13, height: 13,
-            color: DS.muted, pointerEvents: "none",
-          }} />
-          <input
-            type="text"
-            value={state.query}
-            onChange={(e) => onQueryChange(e.target.value)}
-            placeholder="e.g. Coca-Cola"
-            style={{
-              width: "100%", height: 38, padding: "0 10px 0 30px",
-              borderRadius: 10, border: `1px solid ${DS.hair}`,
-              background: DS.bg, color: DS.ink,
-              fontSize: 13, fontFamily: DS.font, outline: "none", boxSizing: "border-box",
-            }}
-          />
-        </div>
-        <button
-          type="submit"
-          disabled={!state.query.trim() || state.loading}
-          style={{
-            height: 38, padding: "0 12px", borderRadius: 10, border: "none",
-            background: state.query.trim() ? DS.ink : DS.hair,
-            color: state.query.trim() ? DS.card : DS.muted,
-            fontWeight: 700, fontSize: 12, cursor: state.query.trim() ? "pointer" : "not-allowed",
-          }}
-        >
-          {state.loading ? <Loader2 style={{ width: 13, height: 13, animation: "spin 0.7s linear infinite" }} /> : "Search"}
-        </button>
-      </form>
-
-      {!product && !state.loading && (
-        <div style={{
-          flex: 1, display: "flex", flexDirection: "column",
-          alignItems: "center", justifyContent: "center",
-          color: DS.muted, fontSize: 12, gap: 8, padding: "16px 0",
-        }}>
-          <Package2 style={{ width: 28, height: 28, opacity: 0.5 }} />
-          <span>Search a product to compare</span>
-        </div>
-      )}
-
-      {product && (
-        <>
-          <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-            {product.imageUrl ? (
-              <img
-                src={product.imageUrl}
-                alt={product.productName || ""}
-                style={{
-                  width: 52, height: 52, borderRadius: 10, objectFit: "contain",
-                  border: `1px solid ${DS.hair}`, background: DS.bg, flexShrink: 0,
-                }}
-              />
-            ) : (
-              <div style={{
-                width: 52, height: 52, borderRadius: 10,
-                background: DS.bg, border: `1px solid ${DS.hair}`, flexShrink: 0,
-                display: "flex", alignItems: "center", justifyContent: "center",
-              }}>
-                <Package2 style={{ width: 20, height: 20, color: DS.muted }} />
-              </div>
-            )}
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{
-                fontSize: 14, fontWeight: 800, color: DS.ink, lineHeight: 1.2,
-              }}>
-                {product.productName || "Unknown product"}
-              </div>
-              <div style={{ fontSize: 11.5, color: DS.muted, marginTop: 2 }}>
-                {product.brand || "Unknown brand"}
-              </div>
-            </div>
-            <button
-              onClick={onClear}
-              style={{
-                background: "none", border: "none", cursor: "pointer",
-                color: DS.muted, fontSize: 11, fontWeight: 600,
-              }}
-            >
-              Clear
-            </button>
-          </div>
-
-          <div style={{
-            display: "flex", gap: 8, background: DS.bg,
-            borderRadius: 12, padding: "10px 6px",
-          }}>
-            <GradeBadge grade={product.ecoscoreGrade} label="Eco" />
-            <GradeBadge grade={product.nutriscoreGrade} label="Nutri" />
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, flex: 1 }}>
-              <div style={{
-                width: 44, height: 44, borderRadius: 12,
-                background: product.novaGroup ? `${DS.ink}11` : DS.bg,
-                color: DS.ink, fontSize: 18, fontWeight: 800,
-                display: "flex", alignItems: "center", justifyContent: "center",
-              }}>
-                {product.novaGroup ?? "?"}
-              </div>
-              <div style={{
-                fontSize: 10, fontWeight: 700, color: DS.muted,
-                textTransform: "uppercase", letterSpacing: "0.04em",
-              }}>
-                NOVA
-              </div>
-            </div>
-          </div>
-
-          <div style={{ fontSize: 11, color: DS.muted }}>
-            CO2: <strong style={{ color: DS.ink, fontWeight: 700 }}>
-              {product.ecoscoreData?.agribalyse?.co2_total != null
-                ? `${product.ecoscoreData.agribalyse.co2_total.toFixed(2)} kg/kg`
-                : "—"}
-            </strong>
-          </div>
-
-          <FlagBlock flag={flag} />
-        </>
-      )}
     </div>
   );
 }
+
+// ────────────────────────────────────────────────────────────
+// Main page
+// ────────────────────────────────────────────────────────────
 
 export default function Compare() {
   const navigate = useNavigate();
@@ -256,92 +538,189 @@ export default function Compare() {
     else setSlotB((s) => ({ ...s, ...patch }));
   };
 
-  const runSearch = async (slot: Slot) => {
+  const runSearch = async (slot: Slot, queryOverride?: string) => {
     const state = slot === "A" ? slotA : slotB;
-    const q = state.query.trim();
+    const q = (queryOverride ?? state.query).trim();
     if (!q) return;
-    updateSlot(slot, { loading: true });
+    updateSlot(slot, { loading: true, query: q });
     try {
-      const results = await searchProducts(q, 1);
-      if (results.length === 0) {
-        toast.error(`No results for "${q}"`);
+      const match = await smartProductSearch(q);
+      if (!match.product) {
+        toast.error(`No comparable product for "${q}"`, {
+          description: "We only show products with full eco / CO2 / nutrition data so the comparison is meaningful.",
+        });
         updateSlot(slot, { loading: false });
         return;
       }
-      updateSlot(slot, { loading: false, product: results[0] });
+      updateSlot(slot, { loading: false, product: match.product });
     } catch {
       toast.error("Search failed. Try again.");
       updateSlot(slot, { loading: false });
     }
   };
 
+  const runPair = async (a: string, b: string) => {
+    updateSlot("A", { query: a, loading: true });
+    updateSlot("B", { query: b, loading: true });
+    try {
+      const [matchA, matchB] = await Promise.all([
+        smartProductSearch(a).catch(() => ({ product: null, noMatch: true } as const)),
+        smartProductSearch(b).catch(() => ({ product: null, noMatch: true } as const)),
+      ]);
+      updateSlot("A", { loading: false, product: matchA.product ?? null });
+      updateSlot("B", { loading: false, product: matchB.product ?? null });
+      if (!matchA.product) toast.error(`No good match for "${a}"`);
+      if (!matchB.product) toast.error(`No good match for "${b}"`);
+    } catch {
+      toast.error("Search failed.");
+      updateSlot("A", { loading: false });
+      updateSlot("B", { loading: false });
+    }
+  };
+
+  const both = slotA.product && slotB.product;
+  const verdict = both ? computeVerdict(slotA.product!, slotB.product!) : null;
+  const outcomeFor = (slot: Slot): "winner" | "loser" | "neutral" => {
+    if (!verdict || verdict.leader === "tie") return "neutral";
+    return verdict.leader === slot ? "winner" : "loser";
+  };
+
   return (
     <div style={{
       background: DS.bg, minHeight: "100dvh", fontFamily: DS.font, color: DS.ink,
     }}>
-      <main style={{ maxWidth: 760, margin: "0 auto", padding: "0 20px 96px" }}>
+      <main style={{ maxWidth: 720, margin: "0 auto", padding: "0 18px 110px" }}>
+        {/* Header */}
         <header style={{
-          display: "flex", alignItems: "center", gap: 8,
+          display: "flex", alignItems: "center", gap: 10,
           paddingTop: "max(24px, calc(env(safe-area-inset-top, 0px) + 16px))",
-          paddingBottom: 16,
+          paddingBottom: 14,
         }}>
           <button
             onClick={() => navigate(-1)}
             aria-label="Back"
             style={{
-              width: 36, height: 36, borderRadius: 999, border: "none",
+              width: 38, height: 38, borderRadius: 999, border: "none",
               background: DS.card, color: DS.ink, cursor: "pointer",
               display: "flex", alignItems: "center", justifyContent: "center",
+              boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
             }}
           >
-            <ChevronLeft style={{ width: 18, height: 18 }} />
+            <ChevronLeft style={{ width: 19, height: 19 }} />
           </button>
           <div style={{ flex: 1 }}>
-            <h1 style={{
-              fontSize: 22, fontWeight: 800, margin: 0, letterSpacing: -0.4,
-              display: "flex", alignItems: "center", gap: 8,
+            <div style={{
+              fontSize: 10.5, fontWeight: 800, color: DS.muted,
+              letterSpacing: "0.1em", textTransform: "uppercase",
+              display: "flex", alignItems: "center", gap: 6,
             }}>
-              <GitCompareArrows style={{ width: 20, height: 20, color: DS.ink }} />
-              Compare two products
+              <GitCompareArrows style={{ width: 12, height: 12 }} />
+              Compare
+            </div>
+            <h1 style={{
+              fontSize: 26, fontWeight: 800, margin: "2px 0 0",
+              letterSpacing: -0.7, lineHeight: 1.1,
+            }}>
+              Two products,<br />
+              <span style={{ color: DS.muted, fontWeight: 600, fontStyle: "italic" }}>
+                one honest verdict.
+              </span>
             </h1>
-            <p style={{ fontSize: 12.5, color: DS.muted, margin: "2px 0 0" }}>
-              Search a product on each side. Decide in the aisle.
-            </p>
           </div>
         </header>
 
-        <div style={{
-          display: "grid", gap: 12,
-          gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-        }}>
-          <ProductCard
+        {/* Suggestions row — only when both slots empty */}
+        {!slotA.product && !slotB.product && (
+          <section style={{ marginBottom: 14 }}>
+            <div style={{
+              fontSize: 10.5, fontWeight: 800, color: DS.muted,
+              letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8,
+              display: "flex", alignItems: "center", gap: 6,
+            }}>
+              <Sparkles style={{ width: 12, height: 12 }} />
+              Quick pairs
+            </div>
+            <div style={{
+              display: "flex", gap: 8, overflowX: "auto",
+              paddingBottom: 4, scrollbarWidth: "none",
+            }}>
+              {QUICK_PAIRS.map((p) => (
+                <button
+                  key={`${p.a}-${p.b}`}
+                  onClick={() => runPair(p.a, p.b)}
+                  style={{
+                    flexShrink: 0,
+                    background: DS.card, border: `1px solid ${DS.hair}`,
+                    borderRadius: 14, padding: "10px 14px", textAlign: "left",
+                    cursor: "pointer", fontFamily: DS.font,
+                    minWidth: 170,
+                  }}
+                >
+                  <div style={{
+                    fontSize: 10, fontWeight: 800, color: DS.muted,
+                    letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: 4,
+                  }}>
+                    {p.tag}
+                  </div>
+                  <div style={{
+                    fontSize: 13, fontWeight: 700, color: DS.ink,
+                    display: "flex", alignItems: "center", gap: 6,
+                  }}>
+                    {p.a}
+                    <span style={{ color: DS.muted, fontWeight: 600, fontSize: 10 }}>VS</span>
+                    {p.b}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Comparison grid */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <ProductSlot
             slot="A"
             state={slotA}
+            outcome={outcomeFor("A")}
             onSearch={() => runSearch("A")}
             onQueryChange={(v) => updateSlot("A", { query: v })}
             onClear={() => setSlotA({ query: "", loading: false, product: null })}
           />
-          <ProductCard
+          <VsDivider active={!!both} />
+          <ProductSlot
             slot="B"
             state={slotB}
+            outcome={outcomeFor("B")}
             onSearch={() => runSearch("B")}
             onQueryChange={(v) => updateSlot("B", { query: v })}
             onClear={() => setSlotB({ query: "", loading: false, product: null })}
           />
         </div>
 
-        {slotA.product && slotB.product && (
-          <div style={{
-            marginTop: 16, background: DS.card, borderRadius: 18, padding: 18,
-            boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
-          }}>
-            <div style={{
-              fontSize: 11, fontWeight: 800, color: DS.muted,
-              letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10,
-            }}>
-              At a glance
-            </div>
-            <Verdict a={slotA.product} b={slotB.product} />
+        {/* Verdict */}
+        {both && verdict && (
+          <Verdict a={slotA.product!} b={slotB.product!} verdict={verdict} />
+        )}
+
+        {/* Reset */}
+        {(slotA.product || slotB.product) && (
+          <div style={{ marginTop: 14, textAlign: "center" }}>
+            <button
+              onClick={() => {
+                setSlotA({ query: "", loading: false, product: null });
+                setSlotB({ query: "", loading: false, product: null });
+              }}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 6,
+                background: "transparent", border: `1px solid ${DS.hair}`,
+                borderRadius: 999, padding: "8px 16px",
+                fontSize: 12, fontWeight: 700, color: DS.muted,
+                cursor: "pointer", fontFamily: DS.font,
+              }}
+            >
+              <Plus style={{ width: 12, height: 12, transform: "rotate(45deg)" }} />
+              Start a new comparison
+            </button>
           </div>
         )}
 
@@ -352,88 +731,132 @@ export default function Compare() {
   );
 }
 
-function gradeRank(grade: string | null | undefined): number {
-  if (!grade) return 6;
-  const g = grade.toLowerCase();
-  return { a: 1, b: 2, c: 3, d: 4, e: 5 }[g] ?? 6;
-}
+// ────────────────────────────────────────────────────────────
+// Verdict card
+// ────────────────────────────────────────────────────────────
 
-function Verdict({ a, b }: { a: OpenFoodFactsResult; b: OpenFoodFactsResult }) {
-  const aFlag = getVerifiedFlagForBrand(a.brand);
-  const bFlag = getVerifiedFlagForBrand(b.brand);
-
-  const points: { label: string; winner: "A" | "B" | "tie" }[] = [];
-
-  // Eco
-  const ar = gradeRank(a.ecoscoreGrade);
-  const br = gradeRank(b.ecoscoreGrade);
-  if (ar !== br) points.push({ label: "Eco-score", winner: ar < br ? "A" : "B" });
-
-  // Nutri
-  const an = gradeRank(a.nutriscoreGrade);
-  const bn = gradeRank(b.nutriscoreGrade);
-  if (an !== bn) points.push({ label: "Nutri-score", winner: an < bn ? "A" : "B" });
-
-  // CO2
-  const aco2 = a.ecoscoreData?.agribalyse?.co2_total;
-  const bco2 = b.ecoscoreData?.agribalyse?.co2_total;
-  if (aco2 != null && bco2 != null && aco2 !== bco2) {
-    points.push({ label: "Lower CO2", winner: aco2 < bco2 ? "A" : "B" });
-  }
-
-  // Flags
-  if (!aFlag && bFlag) points.push({ label: "Clean ethics record", winner: "A" });
-  else if (aFlag && !bFlag) points.push({ label: "Clean ethics record", winner: "B" });
-
-  const aWins = points.filter((p) => p.winner === "A").length;
-  const bWins = points.filter((p) => p.winner === "B").length;
-
-  const leader = aWins > bWins ? "A" : bWins > aWins ? "B" : "tie";
+function Verdict({
+  a, b, verdict,
+}: {
+  a: OpenFoodFactsResult;
+  b: OpenFoodFactsResult;
+  verdict: VerdictResult;
+}) {
+  const { points, aWins, bWins, leader } = verdict;
   const leaderProduct = leader === "A" ? a : leader === "B" ? b : null;
+  // Leader hero color: green when a clear winner exists; muted on tie.
+  const leaderColor = leaderProduct ? DS.good : DS.muted;
 
   return (
-    <div>
-      {leaderProduct ? (
+    <section style={{
+      marginTop: 18, background: DS.card, borderRadius: 22,
+      overflow: "hidden",
+      boxShadow: "0 4px 18px rgba(0,0,0,0.08)",
+      border: `1px solid ${DS.hair}`,
+    }}>
+      {/* hero banner */}
+      <div style={{
+        background: leaderProduct
+          ? `linear-gradient(135deg, ${leaderColor}, color-mix(in srgb, ${leaderColor} 80%, black))`
+          : `linear-gradient(135deg, ${DS.muted}, color-mix(in srgb, ${DS.muted} 80%, black))`,
+        color: DS.card,
+        padding: "18px 20px 16px",
+      }}>
         <div style={{
-          background: DS.goodBg, borderRadius: 12, padding: "12px 14px",
-          fontSize: 13.5, color: DS.ink, fontWeight: 600, marginBottom: 12,
+          fontSize: 10.5, fontWeight: 800, opacity: 0.85,
+          letterSpacing: "0.1em", textTransform: "uppercase",
+          display: "flex", alignItems: "center", gap: 6,
         }}>
-          <strong style={{ fontWeight: 800 }}>{leaderProduct.productName || `Product ${leader}`}</strong> wins on{" "}
-          {Math.max(aWins, bWins)} of {points.length} measure{points.length === 1 ? "" : "s"}.
+          <Trophy style={{ width: 12, height: 12 }} />
+          Verdict
         </div>
-      ) : (
-        <div style={{
-          background: DS.bg, borderRadius: 12, padding: "12px 14px",
-          fontSize: 13.5, color: DS.ink, fontWeight: 600, marginBottom: 12,
-        }}>
-          The two products look roughly even.
-        </div>
-      )}
-
-      {points.length === 0 ? (
-        <p style={{ fontSize: 12, color: DS.muted, margin: 0 }}>
-          Not enough scored data to call a winner. Try different products.
-        </p>
-      ) : (
-        <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 6 }}>
-          {points.map((p, i) => (
-            <li key={i} style={{
-              display: "flex", justifyContent: "space-between", alignItems: "center",
-              padding: "8px 12px", background: DS.bg, borderRadius: 10,
-              fontSize: 12.5, color: DS.ink,
+        {leaderProduct ? (
+          <>
+            <div style={{
+              fontSize: 22, fontWeight: 800, marginTop: 4,
+              letterSpacing: -0.4, lineHeight: 1.2,
             }}>
-              <span>{p.label}</span>
-              <span style={{
-                fontSize: 11, fontWeight: 800, padding: "3px 9px",
-                borderRadius: 999, color: DS.card,
-                background: p.winner === "A" ? DS.good : p.winner === "B" ? DS.brand : DS.muted,
-              }}>
-                {p.winner === "tie" ? "TIE" : `Product ${p.winner}`}
-              </span>
-            </li>
-          ))}
-        </ul>
+              {leaderProduct.productName || `Product ${leader}`}
+            </div>
+            <div style={{
+              fontSize: 12.5, opacity: 0.85, marginTop: 4, fontWeight: 600,
+            }}>
+              Wins on {Math.max(aWins, bWins)} of {points.length}{" "}
+              measure{points.length === 1 ? "" : "s"}.
+            </div>
+          </>
+        ) : (
+          <>
+            <div style={{
+              fontSize: 22, fontWeight: 800, marginTop: 4,
+              letterSpacing: -0.4, lineHeight: 1.2,
+            }}>
+              {points.length === 0 ? "Not enough data" : "It's a tie"}
+            </div>
+            <div style={{ fontSize: 12.5, opacity: 0.85, marginTop: 4, fontWeight: 600 }}>
+              {points.length === 0
+                ? "We need scored data on both to call a winner."
+                : "Even split — pick based on your priority."}
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* points list */}
+      {points.length > 0 && (
+        <div style={{ padding: 14 }}>
+          <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 6 }}>
+            {points.map((p, i) => {
+              const winnerName = p.winner === "A"
+                ? (a.productName?.split(" ")[0] || "Product A")
+                : (b.productName?.split(" ")[0] || "Product B");
+              // Per-row winner is always green — the user reads "this side won this measure".
+              const wColor = DS.good;
+              return (
+                <li key={i} style={{
+                  display: "flex", alignItems: "center", gap: 10,
+                  padding: "10px 12px", background: DS.bg, borderRadius: 12,
+                }}>
+                  <div style={{
+                    width: 28, height: 28, borderRadius: 9,
+                    background: alpha(wColor, 10), color: wColor,
+                    display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                  }}>
+                    <p.icon style={{ width: 14, height: 14 }} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: DS.ink, lineHeight: 1.2 }}>
+                      {p.label}
+                    </div>
+                    {p.note && (
+                      <div style={{ fontSize: 11, color: DS.muted, marginTop: 2, fontFeatureSettings: "'tnum'" }}>
+                        {p.note}
+                      </div>
+                    )}
+                  </div>
+                  <span style={{
+                    fontSize: 11, fontWeight: 800,
+                    padding: "5px 10px", borderRadius: 999,
+                    color: wColor, background: alpha(wColor, 10),
+                    border: `1px solid ${alpha(wColor, 20)}`,
+                    display: "inline-flex", alignItems: "center", gap: 4,
+                  }}>
+                    <CheckCircle2 style={{ width: 11, height: 11 }} />
+                    {winnerName}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+          <p style={{
+            fontSize: 11, color: DS.muted, lineHeight: 1.45,
+            margin: "12px 4px 0", fontStyle: "italic",
+          }}>
+            Based on OpenFoodFacts data and our brand-flag database. Not a recommendation —
+            you decide what matters most.
+          </p>
+        </div>
       )}
-    </div>
+    </section>
   );
 }

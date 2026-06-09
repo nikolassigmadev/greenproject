@@ -1273,16 +1273,20 @@ const Scan = () => {
       }
 
       const cleanedQuery = cleanOCRQuery(rawQuery);
-      // Search order: product name alone first (most distinctive), then product+brand, then full raw
+      // Search order: lead with "Brand Product" since brand often disambiguates
+      // generic product names (e.g. "Phish Food" → "Ben & Jerry's Phish Food").
+      // Fall back to product-only, then brand-only, then progressive strips.
       const searchQueries: string[] = [];
       const addUnique = (q: string) => { if (q && !searchQueries.some(s => s.toLowerCase() === q.toLowerCase())) searchQueries.push(q); };
-      // Lead with product name — this is what OpenFoodFacts matches best
+      // Lead with combined brand + product — most specific, most accurate.
+      if (brandOnly && prodOnly) addUnique(`${brandOnly} ${prodOnly}`);
+      // Then product alone — covers brand misreads.
       if (prodOnly) addUnique(prodOnly);
-      // Then product + brand (brand helps disambiguate if product name is generic)
-      if (prodOnly && brandOnly) addUnique(`${prodOnly} ${brandOnly}`);
-      // Then full raw/cleaned as fallback
+      // Then full raw/cleaned as further fallback.
       addUnique(rawQuery);
       if (cleanedQuery !== rawQuery) addUnique(cleanedQuery);
+      // Brand alone — last resort when product name is gibberish.
+      if (brandOnly) addUnique(brandOnly);
       // Progressive strip of cleaned query (drop rightmost word each time)
       const cleanedWords = cleanedQuery.split(' ').filter(Boolean);
       for (let len = cleanedWords.length - 1; len >= 2; len--) {
