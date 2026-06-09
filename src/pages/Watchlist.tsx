@@ -11,6 +11,7 @@ import {
 } from "@/utils/watchlist";
 import { getVerifiedFlagForBrand } from "@/services/brandFlags";
 import type { BrandFlagV2 } from "@/types/brandFlag";
+import { findLaborAllegations } from "@/utils/laborCheck";
 
 function FlagRow({ flag }: { flag: BrandFlagV2 }) {
   const top = flag.sources[0];
@@ -62,7 +63,14 @@ export default function Watchlist() {
     e.preventDefault();
     const name = newBrand.trim();
     if (!name) return;
-    addToWatchlist(name);
+    
+    // Look up parent company
+    const laborRecord = findLaborAllegations(name, null);
+    const formattedName = laborRecord 
+      ? `${laborRecord.parentCompany} (${name})`
+      : name;
+    
+    addToWatchlist(formattedName);
     setNewBrand("");
   };
 

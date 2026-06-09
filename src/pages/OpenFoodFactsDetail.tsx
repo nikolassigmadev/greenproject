@@ -718,7 +718,8 @@ export default function OpenFoodFactsDetail() {
                 >
                   <Eye style={{
                     width: 22, height: 22,
-                    fill: brandWatched ? EDITORIAL.red : "transparent",
+                    color: brandWatched ? EDITORIAL.red : EDITORIAL.ink2,
+                    fill: brandWatched ? EDITORIAL.red : "none",
                   }} />
                 </button>
               )}
