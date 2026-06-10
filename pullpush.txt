@@ -26,7 +26,7 @@ a119230.
 
 npm run dev:all
 
-Step 1 — Build the web assets                                                                     
+Step 1 — Build the web assets    s                                                                 
                                                                                                     
   cd "/Users/nikolasdzhovanis/Downloads/ethical-shopper-main copy 2"                             
   npm run build                                                                                     
