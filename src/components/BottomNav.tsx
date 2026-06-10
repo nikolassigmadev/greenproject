@@ -1,5 +1,42 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Home, Clock, Info, SlidersHorizontal } from "lucide-react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  type ReactNode,
+} from "react";
+
+// ───────────────────────────────────────────────────────────────────────────
+// BottomNav is mounted ONCE inside RootLayout so it survives every page
+// navigation — no flicker, no remount. Pages that need to slide it away
+// (currently only /scan during camera capture) reach in via this context
+// and set `hidden`. On unmount the page restores `hidden = false`.
+// ───────────────────────────────────────────────────────────────────────────
+interface BottomNavContextValue {
+  hidden: boolean;
+  setHidden: (hidden: boolean) => void;
+}
+
+const BottomNavContext = createContext<BottomNavContextValue>({
+  hidden: false,
+  setHidden: () => {},
+});
+
+export function useBottomNav(): BottomNavContextValue {
+  return useContext(BottomNavContext);
+}
+
+export function BottomNavProvider({ children }: { children: ReactNode }) {
+  const [hidden, setHiddenState] = useState(false);
+  const setHidden = useCallback((next: boolean) => setHiddenState(next), []);
+  return (
+    <BottomNavContext.Provider value={{ hidden, setHidden }}>
+      {children}
+    </BottomNavContext.Provider>
+  );
+}
 
 const BRAND_GREEN = "#3DBA82";
 const ICON_IDLE = "rgba(255,255,255,0.62)";
@@ -51,13 +88,14 @@ function activePillStyle(active: boolean): React.CSSProperties {
   };
 }
 
-export function BottomNav({ hidden = false }: { hidden?: boolean }) {
+export function BottomNav() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
+  const { hidden } = useBottomNav();
 
   // When hidden, the pill slides straight down past the safe area and fades.
-  // Caller controls timing — useful on the scan page where the capture deck
-  // takes over after a brief settle-in.
+  // The /scan page controls this via useBottomNav(); every other page leaves
+  // it false so the footer reads as a fixed element across navigation.
   const hiddenTransform =
     "translate(-50%, calc(100% + env(safe-area-inset-bottom, 0px) + 28px))";
   const visibleTransform = "translateX(-50%)";
@@ -75,7 +113,9 @@ export function BottomNav({ hidden = false }: { hidden?: boolean }) {
         transition:
           "transform 540ms cubic-bezier(0.32, 0.72, 0, 1), opacity 320ms ease-out",
         bottom: "calc(env(safe-area-inset-bottom, 0px) + 22px)",
-        zIndex: 50,
+        // Sits in the document root now (rendered by RootLayout), so it has
+        // to clear page-level fixed overlays — notably /scan at z 60.
+        zIndex: 70,
         width: "calc(100% - 56px)",
         maxWidth: 360,
         height: 56,

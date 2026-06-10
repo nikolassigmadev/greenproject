@@ -5,7 +5,6 @@ import {
   CheckCircle2, ExternalLink, Package2, X, Trophy, Leaf, Heart, Cloud,
   ShieldCheck, Sparkles, Plus,
 } from "lucide-react";
-import { BottomNav } from "@/components/BottomNav";
 import { DS } from "@/styles/design-tokens";
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
 import { getVerifiedFlagForBrand } from "@/services/brandFlags";
@@ -771,7 +770,6 @@ export default function Compare() {
 
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </main>
-      <BottomNav />
     </div>
   );
 }

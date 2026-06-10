@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { BottomNav } from "@/components/BottomNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { loadPriorities, savePriorities, DEFAULT_PRIORITIES, type UserPriorities } from "@/utils/userPreferences";
 import { Leaf, Users, Heart, Apple } from "lucide-react";
@@ -213,7 +212,6 @@ export default function Preferences() {
         </div>
       </main>
 
-      <BottomNav />
     </div>
   );
 }

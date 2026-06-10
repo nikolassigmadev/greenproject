@@ -10,7 +10,6 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
-import { BottomNav } from "@/components/BottomNav";
 import { DS } from "@/styles/design-tokens";
 import { getBackendUrl } from "@/config/backend";
 
@@ -436,7 +435,6 @@ export default function SubmitFlag() {
             </div>
           </div>
         </main>
-        <BottomNav />
       </div>
     );
   }
@@ -1162,7 +1160,6 @@ export default function SubmitFlag() {
           </p>
         </form>
       </main>
-      <BottomNav />
     </div>
   );
 }

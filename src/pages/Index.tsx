@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { ChevronRight, Camera, Leaf, Shield, BarChart3, Users, Award, Zap, CheckCircle2, AlertTriangle as AlertTriangleIcon, Share, Plus, MoreVertical, X, Search } from "lucide-react";
-import { BottomNav } from "@/components/BottomNav";
 import { Logo } from "@/components/Logo";
 import { DS, scoreTone, toneColor, toneBg } from "@/styles/design-tokens";
 import { loadScanHistory, type ScanHistoryEntry } from "@/utils/userPreferences";
@@ -811,7 +810,6 @@ export default function Index() {
         </div>
       )}
 
-      <BottomNav />
     </div>
   );
 }

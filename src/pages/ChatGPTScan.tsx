@@ -1,6 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { BottomNav } from "@/components/BottomNav";
 import { DS } from "@/styles/design-tokens";
 import { getBackendUrl } from "@/config/backend";
 import {
@@ -542,7 +541,6 @@ export default function ChatGPTScan() {
         )}
       </main>
 
-      <BottomNav />
     </div>
   );
 }

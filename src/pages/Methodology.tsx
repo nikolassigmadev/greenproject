@@ -1,5 +1,4 @@
 import { useEffect } from "react";
-import { BottomNav } from "@/components/BottomNav";
 import { getMostRecentVerifiedDate } from "@/services/brandFlags";
 import { getVerifiedFlags } from "@/data/brandFlags.v2";
 import {
@@ -284,7 +283,6 @@ export default function Methodology() {
         </p>
 
       </main>
-      <BottomNav />
     </div>
   );
 }

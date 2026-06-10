@@ -1,6 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
 import { Search, SlidersHorizontal, Filter } from "lucide-react";
-import { BottomNav } from "@/components/BottomNav";
 import { ProductCard } from "@/components/ProductCard";
 import { Input } from "@/components/ui/input";
 import { calculateScore } from "@/data/products";
@@ -147,7 +146,6 @@ const Products = () => {
         </div>
       </main>
 
-      <BottomNav />
     </div>
   );
 };

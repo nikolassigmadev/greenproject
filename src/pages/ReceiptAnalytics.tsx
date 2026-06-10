@@ -3,7 +3,6 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   ChevronLeft, Receipt, Trash2, AlertTriangle, TrendingUp, Sparkles,
 } from "lucide-react";
-import { BottomNav } from "@/components/BottomNav";
 import { DS } from "@/styles/design-tokens";
 import {
   loadReceiptScans, clearReceiptScans, computeMonthlyReceiptStats,
@@ -260,7 +259,6 @@ export default function ReceiptAnalytics() {
           </>
         )}
       </main>
-      <BottomNav />
     </div>
   );
 }

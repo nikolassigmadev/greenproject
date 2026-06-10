@@ -1,5 +1,4 @@
 import { useState, useRef, useCallback } from "react";
-import { BottomNav } from "@/components/BottomNav";
 import { Link } from "react-router-dom";
 import {
   Upload, Receipt, Loader2, AlertCircle,
@@ -305,7 +304,6 @@ export default function ReceiptScanner() {
         </div>
       </main>
 
-      <BottomNav />
     </div>
   );
 }

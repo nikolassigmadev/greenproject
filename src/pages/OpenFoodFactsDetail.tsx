@@ -8,7 +8,6 @@ import {
   ScanLine, Check, Sprout, PawPrint, Search, Eye,
 } from "lucide-react";
 import { isWatched, toggleWatchlist, WATCHLIST_EVENT } from "@/utils/watchlist";
-import { BottomNav } from "@/components/BottomNav";
 import { Logo } from "@/components/Logo";
 import { lookupBarcode, searchProducts } from "@/services/openfoodfacts";
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
@@ -553,7 +552,6 @@ export default function OpenFoodFactsDetail() {
           }} />
           <p style={{ fontSize: "0.82rem", fontWeight: 600 }}>Loading product</p>
         </div>
-        <BottomNav />
         <style>{`@keyframes off-spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
@@ -573,7 +571,6 @@ export default function OpenFoodFactsDetail() {
             </div>
           </div>
         </div>
-        <BottomNav />
       </div>
     );
   }
@@ -1250,7 +1247,6 @@ export default function OpenFoodFactsDetail() {
       </main>
 
 
-      <BottomNav />
 
       <style>{`
         @keyframes off-spin { to { transform: rotate(360deg); } }

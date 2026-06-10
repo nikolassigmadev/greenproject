@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { BottomNav } from "@/components/BottomNav";
 import {
   ShoppingCart,
   Search,
@@ -444,7 +443,6 @@ export default function ShoppingList() {
         </div>
       </main>
 
-      <BottomNav />
 
       <style>{`
         @keyframes spin {

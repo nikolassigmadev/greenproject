@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from "react";
-import { BottomNav } from "@/components/BottomNav";
 import { Link } from "react-router-dom";
 import {
   loadScanHistory,
@@ -504,7 +503,6 @@ export default function Dashboard() {
         </div>
       </main>
 
-      <BottomNav />
     </div>
   );
 }

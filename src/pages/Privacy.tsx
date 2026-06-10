@@ -1,4 +1,3 @@
-import { BottomNav } from "@/components/BottomNav";
 import { Link } from "react-router-dom";
 import { ChevronLeft } from "lucide-react";
 import { DS } from "@/styles/design-tokens";
@@ -79,7 +78,6 @@ export default function Privacy() {
           </Section>
         </div>
       </main>
-      <BottomNav />
     </div>
   );
 }

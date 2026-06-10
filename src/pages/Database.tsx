@@ -1,6 +1,5 @@
 import { useState, useCallback } from "react";
 import { Search, Filter, ChevronLeft, ChevronRight, Loader2, Globe, Tag, Leaf, Apple, X } from "lucide-react";
-import { BottomNav } from "@/components/BottomNav";
 import { Input } from "@/components/ui/input";
 import { DS } from "@/styles/design-tokens";
 import { Badge } from "@/components/ui/badge";
@@ -418,7 +417,6 @@ const Database = () => {
         </div>
       </main>
 
-      <BottomNav />
 
       {/* Product Detail Dialog */}
       <Dialog open={!!selectedProduct} onOpenChange={(open) => { if (!open) setSelectedProduct(null); }}>

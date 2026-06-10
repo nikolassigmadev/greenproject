@@ -2,6 +2,7 @@ import { createBrowserRouter, Outlet, useLocation } from "react-router-dom";
 import { ScrollToTop } from "./components/ScrollToTop";
 import { HackerTransition } from "./components/HackerTransition";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { BottomNav, BottomNavProvider } from "./components/BottomNav";
 import Index from "./pages/Index";
 import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
@@ -30,7 +31,7 @@ import ReceiptAnalytics from "./pages/ReceiptAnalytics";
 function RootLayout() {
   const location = useLocation();
   return (
-    <>
+    <BottomNavProvider>
       <ScrollToTop />
       <HackerTransition />
       <ErrorBoundary key={location.pathname}>
@@ -38,7 +39,11 @@ function RootLayout() {
           <Outlet />
         </div>
       </ErrorBoundary>
-    </>
+      {/* Footer is mounted once at the layout level so it stays fixed across
+          page transitions. The /scan page reaches in via useBottomNav() to
+          control its slide-down animation; nothing else touches it. */}
+      <BottomNav />
+    </BottomNavProvider>
   );
 }
 

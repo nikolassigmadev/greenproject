@@ -3,7 +3,6 @@ import { ArrowLeft, MapPin, Truck, Leaf, AlertTriangle, Award, Package, Loader2 
 import { useQuery } from "@tanstack/react-query";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
-import { BottomNav } from "@/components/BottomNav";
 import { ScoreDisplay } from "@/components/ScoreDisplay";
 import { ProductCard } from "@/components/ProductCard";
 import { calculateScore, findAlternatives } from "@/data/products";
@@ -40,7 +39,6 @@ const ProductDetail = () => {
           </div>
         </main>
         <Footer />
-        <BottomNav />
       </div>
     );
   }
@@ -276,7 +274,6 @@ const ProductDetail = () => {
       </main>
 
       <Footer />
-      <BottomNav />
     </div>
   );
 };

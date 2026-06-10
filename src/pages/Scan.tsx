@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { lookupHardcodedBarcodes, lookupHardcodedImage } from "@/data/productBarcodeMap";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { Camera, Upload, Search, Loader2, AlertCircle, X, ScanLine, Image as ImageIcon, Plus, Leaf, BarChart3, QrCode, Settings, Users, Heart, Apple, ChevronRight, Check, Zap } from "lucide-react";
-import { BottomNav } from "@/components/BottomNav";
+import { useBottomNav } from "@/components/BottomNav";
 import { Logo } from "@/components/Logo";
 import { Input } from "@/components/ui/input";
 import { CalAIButton, ButtonGroup } from "@/components/CalAIButton";
@@ -470,6 +470,26 @@ const Scan = () => {
     const t = setTimeout(() => setChromeMode('capture'), 220);
     return () => clearTimeout(t);
   }, []);
+
+  // BottomNav lives in RootLayout; we reach into the shared context to
+  // toggle its slide-down state. On unmount we restore it so it never
+  // stays hidden for downstream pages. We compute `priorityGateUp` via
+  // hasSavedPriorities() inline so this effect doesn't depend on the
+  // later `isDefaultPriorities` const (temporal-dead-zone safety).
+  const { setHidden: setBottomNavHidden } = useBottomNav();
+  useEffect(() => {
+    const priorityGateUp = !hasSavedPriorities();
+    const shouldHide =
+      priorityGateUp
+      || (chromeMode === 'capture' && !showSearch)
+      || showManualCorrection
+      || productUnknown
+      || !!notFoundQuery;
+    setBottomNavHidden(shouldHide);
+  }, [chromeMode, showSearch, showManualCorrection, productUnknown, notFoundQuery, priorities, setBottomNavHidden]);
+  useEffect(() => {
+    return () => { setBottomNavHidden(false); };
+  }, [setBottomNavHidden]);
 
   // Auto-open manual search if ?manual=true
   useEffect(() => {
@@ -2131,19 +2151,42 @@ const Scan = () => {
       )}
 
       {/* ENRICHMENT SUBMITTED — product queued for data gathering */}
-      {/* Search full-screen overlay */}
+      {/* Search full-screen overlay — UI reserves space at the bottom for the
+          floating BottomNav (slides back up when this opens). */}
       {showSearch && (
         <div
           style={{
             position: 'absolute', inset: 0, zIndex: 40,
             background: DS.bg,
             display: 'flex', flexDirection: 'column',
-            padding: 'calc(env(safe-area-inset-top, 0px) + 52px) 20px calc(env(safe-area-inset-bottom, 0px) + 28px)',
+            // Bottom inset clears the BottomNav (22 + 56 height + 14 gap = 92)
+            // so nothing inside the panel sits underneath the floating pill.
+            padding: 'calc(env(safe-area-inset-top, 0px) + 28px) 20px calc(env(safe-area-inset-bottom, 0px) + 100px)',
             boxSizing: 'border-box',
           }}
         >
-          <p style={{ fontSize: '1.25rem', fontWeight: 800, color: DS.ink, marginBottom: 4 }}>Search manually</p>
-          <p style={{ fontSize: '0.82rem', color: DS.muted, marginBottom: 18 }}>Search by brand or product name</p>
+          {/* Header with close affordance — replaces the floating capture deck */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+            <div>
+              <p style={{ fontSize: '1.25rem', fontWeight: 800, color: DS.ink, marginBottom: 4 }}>Search manually</p>
+              <p style={{ fontSize: '0.82rem', color: DS.muted }}>Search by brand or product name</p>
+            </div>
+            <button
+              onClick={() => setShowSearch(false)}
+              aria-label="Close search"
+              style={{
+                width: 36, height: 36, borderRadius: 18,
+                background: DS.card,
+                border: `1px solid ${DS.hair}`,
+                cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0,
+                marginLeft: 12,
+              }}
+            >
+              <X size={16} style={{ color: DS.ink }} />
+            </button>
+          </div>
 
           <form onSubmit={(e) => { e.preventDefault(); if (barcodeInput.trim()) { handleProductSearch(barcodeInput); } }} style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
             <div style={{ flex: 1, minWidth: 0, position: 'relative', display: 'flex', alignItems: 'center' }}>
@@ -2217,20 +2260,6 @@ const Scan = () => {
           )}
 
           <div style={{ flex: 1 }} />
-
-          <button
-            onClick={() => setShowSearch(false)}
-            style={{
-              width: '100%', padding: '14px',
-              border: `1.5px solid ${DS.hair}`,
-              borderRadius: 14,
-              backgroundColor: DS.bg,
-              color: DS.muted, fontWeight: 600, fontSize: '0.9rem',
-              cursor: 'pointer',
-            }}
-          >
-            Cancel
-          </button>
         </div>
       )}
 
@@ -2256,22 +2285,8 @@ const Scan = () => {
         }
       `}</style>
 
-      {/* Footer navigation — greets the user on arrival, then slides down to
-          let the capture deck slide up into the same slot. The capture deck
-          and BottomNav share one position, so the user never sees them stacked.
-          When a modal sheet/overlay is up we keep BottomNav slid down so the
-          sheet is the only chrome on screen. */}
-      {!isDefaultPriorities && (
-        <BottomNav
-          hidden={
-            chromeMode === 'capture'
-            || showSearch
-            || showManualCorrection
-            || productUnknown
-            || !!notFoundQuery
-          }
-        />
-      )}
+      {/* BottomNav is rendered once in RootLayout and persists across page
+          transitions — we drive its slide animation via useBottomNav() above. */}
 
     </div>
   );

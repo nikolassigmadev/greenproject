@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ChevronLeft, Eye, Trash2, ExternalLink, AlertTriangle, CheckCircle2, Bell, BellOff } from "lucide-react";
-import { BottomNav } from "@/components/BottomNav";
 import { DS } from "@/styles/design-tokens";
 import {
   loadWatchlist,
@@ -266,7 +265,6 @@ export default function Watchlist() {
           </div>
         )}
       </main>
-      <BottomNav />
     </div>
   );
 }
