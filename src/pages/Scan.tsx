@@ -461,6 +461,16 @@ const Scan = () => {
   const [flashOn, setFlashOn] = useState(false);
   const [scanMode, setScanMode] = useState<'Scan Food' | 'Barcode' | 'Food label'>('Scan Food');
 
+  // Bottom-chrome transition: BottomNav greets you when you arrive on /scan,
+  // then it slides down and the capture deck slides up into the same slot.
+  // Starting in "nav" mode ensures the user's eye perceives the footer as
+  // sliding away rather than the capture deck dropping in from nowhere.
+  const [chromeMode, setChromeMode] = useState<'nav' | 'capture'>('nav');
+  useEffect(() => {
+    const t = setTimeout(() => setChromeMode('capture'), 220);
+    return () => clearTimeout(t);
+  }, []);
+
   // Auto-open manual search if ?manual=true
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -1554,7 +1564,7 @@ const Scan = () => {
   const BOT_BAR_H = 160;  // white bottom bar (includes safe area)
 
   return (
-    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 'calc(-1 * env(safe-area-inset-bottom, 0px))', zIndex: 60, backgroundColor: '#000', overflow: 'hidden', fontFamily: '"Inter", -apple-system, system-ui, sans-serif', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 60, backgroundColor: '#000', overflow: 'hidden', fontFamily: '"Inter", -apple-system, system-ui, sans-serif', display: 'flex', flexDirection: 'column' }}>
 
       {/* ── Priorities gate ─────────────────────────────────────────────── */}
       {isDefaultPriorities && (
@@ -1765,7 +1775,7 @@ const Scan = () => {
           }} />
         )}
 
-        {/* Scanning bracket corners */}
+        {/* Scanning bracket corners — bottom corners sit above the floating capture deck */}
         {(['tl','tr','bl','br'] as const).map(corner => {
           const isTop = corner.startsWith('t');
           const isLeft = corner.endsWith('l');
@@ -1773,8 +1783,8 @@ const Scan = () => {
           return (
             <div key={corner} style={{
               position: 'absolute',
-              top: isTop ? '12%' : undefined,
-              bottom: !isTop ? '12%' : undefined,
+              top: isTop ? '14%' : undefined,
+              bottom: !isTop ? 'calc(env(safe-area-inset-bottom, 0px) + 188px)' : undefined,
               left: isLeft ? '10%' : undefined,
               right: !isLeft ? '10%' : undefined,
               width: 28, height: 28,
@@ -1789,10 +1799,10 @@ const Scan = () => {
           );
         })}
 
-        {/* Centre label */}
+        {/* Centre label — biased upward so the floating capture deck never covers it */}
         <div style={{
           position: 'absolute',
-          top: '50%', left: '50%',
+          top: '42%', left: '50%',
           transform: 'translate(-50%, -50%)',
           zIndex: 9, pointerEvents: 'none',
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
@@ -1849,70 +1859,102 @@ const Scan = () => {
         </div>
       </div>
 
-      {/* ════════════════════ WHITE BOTTOM BAR ════════════════════ */}
-      <div style={{
-        flexShrink: 0,
-        background: DS.bg,
-        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-        zIndex: 20,
-      }}>
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          gap: 36, padding: '14px 40px 10px',
-        }}>
+      {/* ════════════════════ FLOATING CAPTURE DECK ════════════════════ */}
+      {/* Glass pill that takes BottomNav's slot once the chrome transition
+          completes. Both pills sit at the same `bottom` value; the BottomNav
+          slides down while this one slides up, giving a clean handoff with
+          no permanent stacking. Hidden whenever a modal sheet/overlay is up. */}
+      {!isDefaultPriorities && (() => {
+        const captureVisible =
+          chromeMode === 'capture'
+          && !showSearch
+          && !showManualCorrection
+          && !productUnknown
+          && !notFoundQuery;
+        const hiddenTransform =
+          'translate(-50%, calc(100% + env(safe-area-inset-bottom, 0px) + 28px))';
+        return (
+        <div
+          aria-label="Camera controls"
+          aria-hidden={!captureVisible}
+          style={{
+            position: 'fixed',
+            left: '50%',
+            transform: captureVisible ? 'translateX(-50%)' : hiddenTransform,
+            opacity: captureVisible ? 1 : 0,
+            pointerEvents: captureVisible ? 'auto' : 'none',
+            transition:
+              'transform 540ms cubic-bezier(0.32, 0.72, 0, 1), opacity 320ms ease-out',
+            // Anchored to the exact BottomNav slot — they share this slot,
+            // never appearing simultaneously.
+            bottom: 'calc(env(safe-area-inset-bottom, 0px) + 22px)',
+            zIndex: 49,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
+            width: 'calc(100% - 56px)',
+            maxWidth: 360,
+            height: 72,
+            padding: '0 16px',
+            borderRadius: 999,
+            background: 'rgba(20,20,22,0.72)',
+            backdropFilter: 'blur(28px) saturate(180%)',
+            WebkitBackdropFilter: 'blur(28px) saturate(180%)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            boxShadow:
+              '0 10px 30px rgba(0,0,0,0.32), 0 2px 8px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.06)',
+          }}
+        >
           {/* Gallery */}
           <button
-            onClick={() => { if (!isDefaultPriorities) offFileInputRef.current?.click(); }}
-            disabled={isDefaultPriorities}
+            onClick={() => offFileInputRef.current?.click()}
+            aria-label="Pick image from gallery"
             style={{
               width: 48, height: 48, borderRadius: 14,
-              backgroundColor: DS.bg,
-              border: 'none',
-              color: DS.ink,
-              cursor: isDefaultPriorities ? 'not-allowed' : 'pointer',
+              background: 'transparent', border: 'none', padding: 0,
+              cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: 'rgba(255,255,255,0.85)',
               overflow: 'hidden',
-              opacity: isDefaultPriorities ? 0.35 : 1,
-              transition: 'opacity 0.15s',
+              WebkitTapHighlightColor: 'transparent',
             }}
           >
             {offSearchImage ? (
-              <img src={offSearchImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <img src={offSearchImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 12 }} />
             ) : (
-              <ImageIcon size={20} strokeWidth={1.5} />
+              <ImageIcon size={22} strokeWidth={1.8} />
             )}
           </button>
 
-          {/* Shutter */}
+          {/* Shutter — large, glass-friendly */}
           <button
             onClick={handleShutter}
-            disabled={offSearchLoading || isDefaultPriorities}
+            disabled={offSearchLoading}
+            aria-label="Capture"
             style={{
-              width: 70, height: 70, borderRadius: '50%',
+              width: 62, height: 62, borderRadius: '50%',
               backgroundColor: 'transparent',
-              border: `3.5px solid ${isDefaultPriorities ? '#ddd' : offSearchLoading ? '#4ade80' : DS.ink}`,
-              cursor: (offSearchLoading || isDefaultPriorities) ? 'not-allowed' : 'pointer',
+              border: `3px solid ${offSearchLoading ? '#4ade80' : 'rgba(255,255,255,0.92)'}`,
+              cursor: offSearchLoading ? 'not-allowed' : 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              transition: 'all 0.15s',
               padding: 0,
+              transition: 'transform 0.12s, border-color 0.2s',
+              flexShrink: 0,
             }}
-            onTouchStart={e => { if (!isDefaultPriorities && !offSearchLoading) (e.currentTarget as HTMLButtonElement).style.transform = 'scale(0.92)'; }}
+            onTouchStart={e => { if (!offSearchLoading) (e.currentTarget as HTMLButtonElement).style.transform = 'scale(0.92)'; }}
             onTouchEnd={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)'; }}
           >
             <div style={{
-              width: 56, height: 56, borderRadius: '50%',
-              background: isDefaultPriorities
-                ? '#eee'
-                : offSearchLoading
-                  ? 'rgba(74,222,128,0.2)'
-                  : DS.ink,
+              width: 50, height: 50, borderRadius: '50%',
+              background: offSearchLoading ? 'rgba(74,222,128,0.18)' : '#fff',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               transition: 'all 0.15s',
             }}>
               {offSearchLoading ? (
                 <Loader2 size={22} style={{ color: '#4ade80', animation: 'spin 1s linear infinite' }} />
               ) : (
-                <ScanLine size={22} style={{ color: DS.card }} />
+                <ScanLine size={20} style={{ color: '#15171a' }} />
               )}
             </div>
           </button>
@@ -1920,19 +1962,21 @@ const Scan = () => {
           {/* Search */}
           <button
             onClick={() => setShowSearch(s => !s)}
+            aria-label="Search by text"
             style={{
               width: 48, height: 48, borderRadius: 14,
-              backgroundColor: DS.bg,
-              border: 'none',
-              color: DS.ink,
+              background: 'transparent', border: 'none', padding: 0,
               cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: 'rgba(255,255,255,0.85)',
+              WebkitTapHighlightColor: 'transparent',
             }}
           >
-            <Search size={20} strokeWidth={1.5} />
+            <Search size={22} strokeWidth={1.8} />
           </button>
         </div>
-      </div>
+        );
+      })()}
 
       {/* Product Unknown overlay */}
       {/* AMBIGUOUS — OpenAI couldn't identify the product */}
@@ -2211,6 +2255,23 @@ const Scan = () => {
           to   { transform: rotate(360deg); }
         }
       `}</style>
+
+      {/* Footer navigation — greets the user on arrival, then slides down to
+          let the capture deck slide up into the same slot. The capture deck
+          and BottomNav share one position, so the user never sees them stacked.
+          When a modal sheet/overlay is up we keep BottomNav slid down so the
+          sheet is the only chrome on screen. */}
+      {!isDefaultPriorities && (
+        <BottomNav
+          hidden={
+            chromeMode === 'capture'
+            || showSearch
+            || showManualCorrection
+            || productUnknown
+            || !!notFoundQuery
+          }
+        />
+      )}
 
     </div>
   );

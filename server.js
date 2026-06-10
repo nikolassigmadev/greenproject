@@ -1150,7 +1150,7 @@ app.get('/api/openfoodfacts/product/:barcode', async (req, res) => {
       return res.status(400).json({ status: 0, status_verbose: 'Invalid barcode format (8-14 digits required)' });
     }
 
-    const fields = 'code,product_name,product_name_en,brands,ecoscore_grade,ecoscore_score,ecoscore_data,nutriscore_grade,nutriscore_score,nova_group,nutriments,labels_tags,labels,categories_tags,categories,origins,ingredients_text,ingredients_text_en,image_front_url,image_url,countries_tags,carbon_footprint_percent_of_known_ingredients';
+    const fields = 'code,product_name,product_name_en,brands,ecoscore_grade,ecoscore_score,ecoscore_data,nutriscore_grade,nutriscore_score,nova_group,nutriments,labels_tags,labels,categories_tags,categories,origins,ingredients_text,ingredients_text_en,image_front_url,image_url,countries_tags,carbon_footprint_percent_of_known_ingredients,states_tags';
 
     const endpoints = [
       `https://world.openfoodfacts.org/api/v2/product/${barcode}?fields=${fields}`,
@@ -1202,7 +1202,7 @@ app.post('/api/openfoodfacts/search', async (req, res) => {
       'nutriscore_grade', 'nutriscore_score', 'nova_group',
       'nutriments', 'labels_tags', 'labels', 'categories_tags', 'categories',
       'origins', 'ingredients_text', 'ingredients_text_en',
-      'image_front_url', 'image_url', 'countries_tags',
+      'image_front_url', 'image_url', 'countries_tags', 'states_tags',
     ].join(',');
 
     const pageSize = String(Math.min(limit, 50));

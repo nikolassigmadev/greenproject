@@ -51,9 +51,16 @@ function activePillStyle(active: boolean): React.CSSProperties {
   };
 }
 
-export function BottomNav() {
+export function BottomNav({ hidden = false }: { hidden?: boolean }) {
   const { pathname } = useLocation();
   const navigate = useNavigate();
+
+  // When hidden, the pill slides straight down past the safe area and fades.
+  // Caller controls timing — useful on the scan page where the capture deck
+  // takes over after a brief settle-in.
+  const hiddenTransform =
+    "translate(-50%, calc(100% + env(safe-area-inset-bottom, 0px) + 28px))";
+  const visibleTransform = "translateX(-50%)";
 
   return (
     <nav
@@ -62,8 +69,12 @@ export function BottomNav() {
       style={{
         position: "fixed",
         left: "50%",
-        transform: "translateX(-50%)",
-        bottom: "calc(env(safe-area-inset-bottom, 0px) + 14px)",
+        transform: hidden ? hiddenTransform : visibleTransform,
+        opacity: hidden ? 0 : 1,
+        pointerEvents: hidden ? "none" : "auto",
+        transition:
+          "transform 540ms cubic-bezier(0.32, 0.72, 0, 1), opacity 320ms ease-out",
+        bottom: "calc(env(safe-area-inset-bottom, 0px) + 22px)",
         zIndex: 50,
         width: "calc(100% - 56px)",
         maxWidth: 360,

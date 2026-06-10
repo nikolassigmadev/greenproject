@@ -57,6 +57,42 @@ const ALLOWED_COUNTRY_TAGS = new Set([
   "en:indonesia",
 ]);
 
+// Eco-score grades we accept. OFF returns "unknown" / "not-applicable"
+// for unscored products; normalizeProduct() already strips those to null.
+const VALID_ECOSCORE_GRADES = new Set(['a', 'b', 'c', 'd', 'e']);
+
+/** True when the product has a real eco-score (A–E), not unknown/missing. */
+const hasEcoscore = (product: OpenFoodFactsResult): boolean => {
+  const g = product.ecoscoreGrade?.toLowerCase();
+  return !!g && VALID_ECOSCORE_GRADES.has(g);
+};
+
+/**
+ * True when the product has a community-selected front photo.
+ *
+ * OFF's `states_tags` is the source of truth for image curation. When
+ * `en:front-photo-selected` is set, a contributor has chosen a clean
+ * front-of-package shot from the uploaded images. These are far more
+ * likely to be studio-style product photos without hands, fingers, or
+ * busy backgrounds than the raw `image_url` fallback.
+ *
+ * We also require `image_front_url` to exist, since the curated state
+ * occasionally lingers after the image is removed.
+ */
+const hasCleanFrontImage = (product: OpenFoodFactsResult): boolean => {
+  if (!product.imageUrl) return false;
+  const raw = product.rawProduct;
+  if (!raw) return false;
+  if (!raw.image_front_url) return false;
+  const states = raw.states_tags;
+  if (!states || states.length === 0) return false;
+  return states.some(
+    (s) =>
+      s.toLowerCase() === 'en:front-photo-selected' ||
+      s.toLowerCase() === 'en:photos-validated',
+  );
+};
+
 /**
  * Returns true if the product is sold in an allowed region
  * (Europe, North America, or Indonesia). If no country data
@@ -278,7 +314,7 @@ const lookupBarcodeInternal = async (barcode: string): Promise<OpenFoodFactsResu
   }
 
   // Fallback: direct API call with field filtering to reduce response size
-  const fields = 'code,product_name,product_name_en,generic_name,generic_name_en,abbreviated_product_name,brands,ecoscore_grade,ecoscore_score,ecoscore_data,nutriscore_grade,nutriscore_score,nova_group,nutriments,labels_tags,labels,categories_tags,categories,origins,ingredients_text,ingredients_text_en,image_front_url,image_url,countries_tags';
+  const fields = 'code,product_name,product_name_en,generic_name,generic_name_en,abbreviated_product_name,brands,ecoscore_grade,ecoscore_score,ecoscore_data,nutriscore_grade,nutriscore_score,nova_group,nutriments,labels_tags,labels,categories_tags,categories,origins,ingredients_text,ingredients_text_en,image_front_url,image_url,countries_tags,states_tags';
 
   const endpoints = [
     `${OFF_API_BASE}/api/v2/product/${barcode}?fields=${fields}`,
@@ -410,14 +446,19 @@ const searchOneVariant = async (
 
     const allNormalized = data.products.map(normalizeProduct);
     const regionalResults = allNormalized.filter(isAllowedRegion);
-    let results = regionalResults.slice(0, limit);
+    // Only return products with an eco-score and a curated front photo.
+    // Image curation matters because raw OFF uploads often include hand-held
+    // shots; the `en:front-photo-selected` state filters those out.
+    const qualifyingResults = regionalResults
+      .filter(hasEcoscore)
+      .filter(hasCleanFrontImage);
+    let results = qualifyingResults.slice(0, limit);
 
     ocrSearchLogger.logRegionalFiltering(allNormalized.length, regionalResults.length, false);
 
-    // If we have far too few regional results, pad — but ONLY with products that
-    // share a query token (whole-word). Previously we padded with anything in
-    // the response, which is how unrelated products (Moroccan dairy on a Nutella
-    // search) leaked through. The relevance check stays cheap.
+    // If the strict filters wiped out too many results, relax the image
+    // requirement first (eco-score is the hard requirement). We still keep
+    // the relevance guard so unrelated brands don't leak in.
     if (results.length < Math.ceil(limit * 0.5)) {
       const queryWords = query
         .toLowerCase()
@@ -429,7 +470,8 @@ const searchOneVariant = async (
         const haystack = [p.productName, p.brand].filter(Boolean).join(' ').toLowerCase();
         return queryWords.some((qw) => new RegExp(`\\b${qw}\\b`, 'i').test(haystack));
       };
-      const padding = allNormalized
+      const padding = regionalResults
+        .filter(hasEcoscore)
         .slice(0, limit * 3)
         .filter((r) => isRelevant(r))
         .filter((r) => !results.some((ur) => ur.barcode === r.barcode));
@@ -593,7 +635,12 @@ const searchProductsGlobal = async (
         continue;
       }
 
-      const results = data.products.map(normalizeProduct).slice(0, limit);
+      const normalized = data.products.map(normalizeProduct);
+      // Hard requirement: eco-score must exist. Soft preference: curated
+      // front photo — fall back to eco-score-only if the strict combo is empty.
+      const strict = normalized.filter(hasEcoscore).filter(hasCleanFrontImage);
+      const fallback = strict.length > 0 ? strict : normalized.filter(hasEcoscore);
+      const results = fallback.slice(0, limit);
       console.log(`   Got ${results.length} global results for "${candidate}" (region filter disabled)`);
       cacheSet(cacheKey, results);
       return results;
@@ -649,7 +696,7 @@ export const searchBetterAlternatives = async (
         'nutriscore_grade', 'nutriscore_score', 'nova_group',
         'nutriments', 'labels_tags', 'labels', 'categories_tags', 'categories',
         'origins', 'ingredients_text', 'ingredients_text_en',
-        'image_front_url', 'image_url', 'countries_tags',
+        'image_front_url', 'image_url', 'countries_tags', 'states_tags',
       ].join(','),
     });
 
@@ -671,14 +718,20 @@ export const searchBetterAlternatives = async (
 
     if (candidates.length === 0) return [];
 
+    // Prefer products with a curated front photo. If none have one, fall
+    // back to the unfiltered list so the swap card still has something to
+    // show — partial data beats none for "greener alternative" suggestions.
+    const withCleanImage = candidates.filter(hasCleanFrontImage);
+    const finalCandidates = withCleanImage.length > 0 ? withCleanImage : candidates;
+
     // Sort by CO2 total (ascending) - prefer lowest carbon footprint
-    candidates.sort((a, b) => {
+    finalCandidates.sort((a, b) => {
       const aCO2 = a.ecoscoreData?.agribalyse?.co2_total ?? a.carbonFootprint100g ?? Infinity;
       const bCO2 = b.ecoscoreData?.agribalyse?.co2_total ?? b.carbonFootprint100g ?? Infinity;
       return aCO2 - bCO2;
     });
 
-    const results = candidates.slice(0, limit);
+    const results = finalCandidates.slice(0, limit);
     cacheSet(cacheKey, results);
     return results;
   } catch (error) {
@@ -708,7 +761,7 @@ export const browseProducts = async (options: BrowseOptions = {}): Promise<Brows
         'nutriscore_grade', 'nutriscore_score', 'nova_group',
         'nutriments', 'labels_tags', 'labels', 'categories_tags', 'categories',
         'origins', 'ingredients_text', 'ingredients_text_en',
-        'image_front_url', 'image_url', 'countries_tags',
+        'image_front_url', 'image_url', 'countries_tags', 'states_tags',
       ].join(','),
     });
 
@@ -745,9 +798,14 @@ export const browseProducts = async (options: BrowseOptions = {}): Promise<Brows
 
     const data: OpenFoodFactsSearchResponse = await response.json();
 
+    // Browse already enforces `en:front-photo-selected` server-side via the
+    // states tag filter above. Layer the eco-score and image-quality checks
+    // client-side so we never surface eco-blank cards in the database grid.
     const products = (data.products || [])
       .map(normalizeProduct)
-      .filter(isAllowedRegion);
+      .filter(isAllowedRegion)
+      .filter(hasEcoscore)
+      .filter(hasCleanFrontImage);
 
     const result: BrowseResult = {
       products,

@@ -124,6 +124,11 @@ export interface OpenFoodFactsProduct {
   image_url?: string;
   image_front_url?: string;
   image_front_small_url?: string;
+
+  // Completeness/curation state — used to identify products with a
+  // community-selected front photo (typically a clean studio shot of
+  // the package, free of hands and busy backgrounds).
+  states_tags?: string[];
 }
 
 export interface OpenFoodFactsResult {
