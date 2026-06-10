@@ -113,14 +113,15 @@ export function BottomNav() {
         transition:
           "transform 540ms cubic-bezier(0.32, 0.72, 0, 1), opacity 320ms ease-out",
         bottom: "calc(env(safe-area-inset-bottom, 0px) + 22px)",
-        // Sits in the document root now (rendered by RootLayout), so it has
-        // to clear page-level fixed overlays — notably /scan at z 60.
-        zIndex: 70,
+        // Sits ABOVE the route-transition wash (HackerTransition is z 9998)
+        // so it reads as a solid, static element across navigations instead
+        // of getting tinted/blurred along with the page underneath.
+        zIndex: 9999,
         width: "calc(100% - 56px)",
         maxWidth: 360,
         height: 56,
         borderRadius: 999,
-        background: "rgba(20,20,22,0.72)",
+        background: "rgb(20,20,22)",
         backdropFilter: "blur(28px) saturate(180%)",
         WebkitBackdropFilter: "blur(28px) saturate(180%)",
         border: "1px solid rgba(255,255,255,0.08)",

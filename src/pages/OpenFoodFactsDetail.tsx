@@ -2,11 +2,12 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import type { ReactNode } from "react";
 import {
-  ChevronLeft, Loader2, Leaf, AlertTriangle, ExternalLink,
+  Loader2, Leaf, AlertTriangle, ExternalLink,
   CheckCircle2, ChevronRight, Package, ShoppingBag, ShoppingCart, XCircle, Clock,
   BadgeCheck, Wheat, Factory, Truck, Store, UtensilsCrossed,
   ScanLine, Check, Sprout, PawPrint, Search, Eye,
 } from "lucide-react";
+import { BackButton } from "@/components/BackButton";
 import { isWatched, toggleWatchlist, WATCHLIST_EVENT } from "@/utils/watchlist";
 import { Logo } from "@/components/Logo";
 import { lookupBarcode, searchProducts } from "@/services/openfoodfacts";
@@ -661,23 +662,15 @@ export default function OpenFoodFactsDetail() {
 
         <div ref={heroRef} style={{ position: "relative", height: 280, overflow: "hidden", background: "var(--ds-hero-gradient, radial-gradient(ellipse at 50% 35%, #F4DCB8 0%, #E8C58A 45%, #D9A86A 100%))" }}>
           <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(rgba(0,0,0,0.04) 1px, transparent 1px)", backgroundSize: "3px 3px", opacity: 0.55 }} />
-          <button
-            type="button"
-            onClick={() => {
-              if (fromScan) navigate("/scan");
-              else navigate(-1);
-            }}
-            aria-label="Go back"
-            style={{
-              position: "absolute", top: "calc(env(safe-area-inset-top, 0px) + 18px)", left: 16,
-              width: 34, height: 34, borderRadius: 999, border: "none",
-              background: "rgba(26,22,20,0.55)", color: "#ffffff",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              backdropFilter: "blur(10px)", cursor: "pointer", zIndex: 2,
-            }}
-          >
-            <ChevronLeft style={{ width: 18, height: 18 }} />
-          </button>
+          <div style={{
+            position: "absolute", top: "calc(env(safe-area-inset-top, 0px) + 18px)", left: 16, zIndex: 2,
+          }}>
+            <BackButton
+              variant="overlay"
+              size={36}
+              onClick={() => { if (fromScan) navigate("/scan"); else navigate(-1); }}
+            />
+          </div>
           <div style={{
             position: "absolute", top: "calc(env(safe-area-inset-top, 0px) + 20px)", right: 16,
             background: EDITORIAL.ink, color: EDITORIAL.card, padding: "8px 13px 8px 11px",

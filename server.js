@@ -857,7 +857,7 @@ app.post('/api/chatgpt/analyze-product', openaiLimiter, largeBody, async (req, r
       return res.status(500).json({ success: false, error: 'OpenAI API key not configured' });
     }
 
-    const { query, imageBase64 } = req.body;
+    const { query, imageBase64, userContext } = req.body;
     if (!query && !imageBase64) {
       return res.status(400).json({ success: false, error: 'Provide query or imageBase64' });
     }
@@ -867,9 +867,18 @@ app.post('/api/chatgpt/analyze-product', openaiLimiter, largeBody, async (req, r
       return res.status(400).json({ success: false, error: 'Invalid or oversized image' });
     }
 
+    // Cap user context to keep prompt size reasonable
+    const safeUserContext = typeof userContext === 'string'
+      ? userContext.slice(0, 4000)
+      : null;
+
+    const personalizationBlock = safeUserContext
+      ? `\n\n=== USER CONTEXT (from their app data) ===\n${safeUserContext}\n=== END USER CONTEXT ===\n\nWhen relevant, tailor your verdict, alternatives, and "summary" to this specific user. If they've flagged a brand on their watchlist or own this product already, mention that. Heavily weight pillars they care about (high/critical priority) and de-emphasize ones they marked "none". Suggest alternatives that align with what they actually buy.`
+      : '';
+
     const systemPrompt = `You are an expert ethical-shopping analyst. Given a product name (or image), return a JSON analysis. Use your training knowledge about brands, supply chains, certifications, nutrition, and environmental impact.
 
-IMPORTANT: Be honest about certainty. If you're unsure, say so. Never invent specific numeric scores -- estimate ranges instead.
+IMPORTANT: Be honest about certainty. If you're unsure, say so. Never invent specific numeric scores -- estimate ranges instead.${personalizationBlock}
 
 Return ONLY valid JSON matching this schema:
 {

@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
-  ChevronLeft,
   Flag,
   Plus,
   Trash2,
@@ -10,6 +9,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
+import { BackButton } from "@/components/BackButton";
 import { DS } from "@/styles/design-tokens";
 import { getBackendUrl } from "@/config/backend";
 
@@ -119,8 +119,6 @@ function meetsSourcingBar(sources: SourceDraft[]): boolean {
 // ---------------------------------------------------------------------------
 
 export default function SubmitFlag() {
-  const navigate = useNavigate();
-
   const [brandName, setBrandName] = useState("");
   const [category, setCategory] = useState("");
   const [severity, setSeverity] = useState<Severity | "">("");
@@ -502,32 +500,14 @@ export default function SubmitFlag() {
           style={{
             display: "flex",
             alignItems: "center",
-            gap: 8,
+            gap: 16,
             paddingTop:
               "max(24px, calc(env(safe-area-inset-top, 0px) + 16px))",
-            paddingBottom: 16,
+            paddingBottom: 18,
           }}
         >
-          <button
-            onClick={() => navigate(-1)}
-            aria-label="Back"
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: 999,
-              border: "none",
-              background: DS.card,
-              color: DS.ink,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-            }}
-          >
-            <ChevronLeft style={{ width: 18, height: 18 }} />
-          </button>
-          <div style={{ flex: 1 }}>
+          <BackButton />
+          <div style={{ flex: 1, minWidth: 0 }}>
             <h1
               style={{
                 fontSize: 22,
@@ -539,16 +519,14 @@ export default function SubmitFlag() {
                 gap: 8,
               }}
             >
-              <Flag
-                style={{ width: 20, height: 20, color: DS.bad }}
-              />
+              <Flag style={{ width: 20, height: 20, color: DS.bad }} />
               Flag a brand
             </h1>
             <p
               style={{
                 fontSize: 12.5,
                 color: DS.muted,
-                margin: "2px 0 0",
+                margin: "4px 0 0",
               }}
             >
               Submit a brand + sources. We moderate against our sourcing bar.

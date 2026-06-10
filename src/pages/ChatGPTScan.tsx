@@ -1,10 +1,11 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { DS } from "@/styles/design-tokens";
 import { getBackendUrl } from "@/config/backend";
+import { BackButton } from "@/components/BackButton";
+import { buildAppContext, buildContextBrief } from "@/utils/appContext";
 import {
   Search, Camera, Loader2, Leaf, Users, Heart, Apple,
-  ShieldCheck, ArrowLeft, Sparkles, AlertTriangle, ChevronRight,
+  ShieldCheck, Sparkles, AlertTriangle, ChevronRight,
   BadgeCheck, Zap, ArrowRight, RotateCcw,
 } from "lucide-react";
 
@@ -118,7 +119,6 @@ function ScoreRing({ grade, size = 64 }: { grade: string; size?: number }) {
 // ── Main Component ───────────────────────────────────────────────────────────
 
 export default function ChatGPTScan() {
-  const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
@@ -132,9 +132,15 @@ export default function ChatGPTScan() {
   const analyze = useCallback(async (text?: string, imageBase64?: string) => {
     setLoading(true); setError(null); setResult(null); setMounted(false);
     try {
-      const body: Record<string, string> = {};
+      const context = buildAppContext();
+      const contextBrief = buildContextBrief(context);
+      const body: Record<string, unknown> = {};
       if (text) body.query = text;
       if (imageBase64) body.imageBase64 = imageBase64;
+      if (contextBrief) {
+        body.userContext = contextBrief;
+        body.userContextRaw = context;
+      }
       const res = await fetch(`${getBackendUrl()}/api/chatgpt/analyze-product`, {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
       });
@@ -171,13 +177,8 @@ export default function ChatGPTScan() {
 
         {/* ─── Header ─── */}
         <div style={{ padding: "max(60px, calc(env(safe-area-inset-top, 0px) + 16px)) 20px 0" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-            <button onClick={() => navigate(-1)} style={{
-              background: DS.card, border: `1px solid ${DS.hair}`, borderRadius: 12,
-              width: 38, height: 38, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
-            }}>
-              <ArrowLeft size={16} style={{ color: DS.ink }} />
-            </button>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
+            <BackButton />
             <div style={{
               display: "flex", alignItems: "center", gap: 6,
               padding: "5px 12px 5px 8px", borderRadius: 999,

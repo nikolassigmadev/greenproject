@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import {
-  ChevronLeft, Search, Loader2, GitCompareArrows, AlertTriangle,
+  Search, Loader2, GitCompareArrows, AlertTriangle,
   CheckCircle2, ExternalLink, Package2, X, Trophy, Leaf, Heart, Cloud,
   ShieldCheck, Sparkles, Plus,
 } from "lucide-react";
+import { BackButton } from "@/components/BackButton";
 import { DS } from "@/styles/design-tokens";
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
 import { getVerifiedFlagForBrand } from "@/services/brandFlags";
@@ -594,7 +594,6 @@ function VsDivider({ active }: { active: boolean }) {
 // ────────────────────────────────────────────────────────────
 
 export default function Compare() {
-  const navigate = useNavigate();
   const [slotA, setSlotA] = useState<SlotState>({ query: "", loading: false, product: null });
   const [slotB, setSlotB] = useState<SlotState>({ query: "", loading: false, product: null });
 
@@ -636,23 +635,12 @@ export default function Compare() {
       <main style={{ maxWidth: 720, margin: "0 auto", padding: "0 18px 110px" }}>
         {/* Header */}
         <header style={{
-          display: "flex", alignItems: "center", gap: 10,
+          display: "flex", alignItems: "center", gap: 16,
           paddingTop: "max(24px, calc(env(safe-area-inset-top, 0px) + 16px))",
-          paddingBottom: 14,
+          paddingBottom: 18,
         }}>
-          <button
-            onClick={() => navigate(-1)}
-            aria-label="Back"
-            style={{
-              width: 38, height: 38, borderRadius: 999, border: "none",
-              background: DS.card, color: DS.ink, cursor: "pointer",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
-            }}
-          >
-            <ChevronLeft style={{ width: 19, height: 19 }} />
-          </button>
-          <div style={{ flex: 1 }}>
+          <BackButton />
+          <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{
               fontSize: 10.5, fontWeight: 800, color: DS.muted,
               letterSpacing: "0.1em", textTransform: "uppercase",
@@ -662,7 +650,7 @@ export default function Compare() {
               Compare
             </div>
             <h1 style={{
-              fontSize: 26, fontWeight: 800, margin: "2px 0 0",
+              fontSize: 26, fontWeight: 800, margin: "4px 0 0",
               letterSpacing: -0.7, lineHeight: 1.1,
             }}>
               Two products,<br />

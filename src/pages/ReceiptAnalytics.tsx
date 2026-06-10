@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
-  ChevronLeft, Receipt, Trash2, AlertTriangle, TrendingUp, Sparkles,
+  Receipt, Trash2, AlertTriangle, TrendingUp, Sparkles,
 } from "lucide-react";
+import { BackButton } from "@/components/BackButton";
 import { DS } from "@/styles/design-tokens";
 import {
   loadReceiptScans, clearReceiptScans, computeMonthlyReceiptStats,
@@ -95,7 +96,6 @@ function MonthCard({ stats }: { stats: MonthlyReceiptStats }) {
 }
 
 export default function ReceiptAnalytics() {
-  const navigate = useNavigate();
   const [scans, setScans] = useState<ReceiptScan[]>(() => loadReceiptScans());
   const [showClear, setShowClear] = useState(false);
 
@@ -121,22 +121,12 @@ export default function ReceiptAnalytics() {
     }}>
       <main style={{ maxWidth: 560, margin: "0 auto", padding: "0 20px 96px" }}>
         <header style={{
-          display: "flex", alignItems: "center", gap: 8,
+          display: "flex", alignItems: "center", gap: 16,
           paddingTop: "max(24px, calc(env(safe-area-inset-top, 0px) + 16px))",
-          paddingBottom: 16,
+          paddingBottom: 18,
         }}>
-          <button
-            onClick={() => navigate(-1)}
-            aria-label="Back"
-            style={{
-              width: 36, height: 36, borderRadius: 999, border: "none",
-              background: DS.card, color: DS.ink, cursor: "pointer",
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}
-          >
-            <ChevronLeft style={{ width: 18, height: 18 }} />
-          </button>
-          <div style={{ flex: 1 }}>
+          <BackButton />
+          <div style={{ flex: 1, minWidth: 0 }}>
             <h1 style={{
               fontSize: 22, fontWeight: 800, margin: 0, letterSpacing: -0.4,
               display: "flex", alignItems: "center", gap: 8,
@@ -144,7 +134,7 @@ export default function ReceiptAnalytics() {
               <Receipt style={{ width: 20, height: 20, color: DS.ink }} />
               Receipt analytics
             </h1>
-            <p style={{ fontSize: 12.5, color: DS.muted, margin: "2px 0 0" }}>
+            <p style={{ fontSize: 12.5, color: DS.muted, margin: "4px 0 0" }}>
               Your monthly ethical-spend breakdown
             </p>
           </div>
@@ -154,7 +144,8 @@ export default function ReceiptAnalytics() {
               style={{
                 display: "inline-flex", alignItems: "center", gap: 6,
                 padding: "8px 12px", borderRadius: 12, fontSize: 12, fontWeight: 600,
-                color: DS.muted, background: DS.card, border: `1px solid ${DS.hair}`, cursor: "pointer",
+                color: DS.muted, background: DS.card, border: `1px solid ${DS.hair}`,
+                cursor: "pointer", flexShrink: 0,
               }}
             >
               <Trash2 style={{ width: 13, height: 13 }} />

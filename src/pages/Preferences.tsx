@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { BackButton } from "@/components/BackButton";
 import { loadPriorities, savePriorities, DEFAULT_PRIORITIES, type UserPriorities } from "@/utils/userPreferences";
-import { Leaf, Users, Heart, Apple } from "lucide-react";
+import { Leaf, Users, Heart, Apple, ArrowRight } from "lucide-react";
 import { DS } from "@/styles/design-tokens";
 
 const LEVELS = [
@@ -80,32 +81,20 @@ export default function Preferences() {
         {/* Header */}
         <div style={{
           padding: "max(60px, calc(env(safe-area-inset-top, 0px) + 16px)) 20px 20px",
+          display: "flex", alignItems: "center", gap: 16,
         }}>
-          <p style={{ fontSize: 13, fontWeight: 600, color: DS.muted, letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 4 }}>
-            Preferences
-          </p>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-            <h1 style={{ fontSize: "1.65rem", fontWeight: 800, color: DS.ink, letterSpacing: "-0.025em", lineHeight: 1.1, margin: 0 }}>
+          <BackButton />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontSize: 13, fontWeight: 600, color: DS.muted, letterSpacing: 0.5, textTransform: "uppercase", margin: "0 0 4px" }}>
+              Preferences
+            </p>
+            <h1 style={{ fontSize: "1.65rem", fontWeight: 800, color: DS.ink, letterSpacing: "-0.025em", lineHeight: 1.1, margin: "0 0 6px" }}>
               My Values
             </h1>
-            <button
-              onClick={() => { savePriorities(priorities); navigate("/scan"); }}
-              style={{
-                background: DS.ink,
-                border: "none", borderRadius: DS.radius.sm,
-                color: DS.card, fontWeight: 700, fontSize: "0.75rem",
-                padding: "8px 14px",
-                cursor: "pointer",
-                fontFamily: DS.font,
-                flexShrink: 0,
-              }}
-            >
-              Continue to scan
-            </button>
+            <p style={{ fontSize: "0.85rem", color: DS.muted, lineHeight: 1.5 }}>
+              Select what matters most. Every verdict will reflect your priorities.
+            </p>
           </div>
-          <p style={{ fontSize: "0.85rem", color: DS.muted, lineHeight: 1.5 }}>
-            Select what matters most. Every verdict will reflect your priorities.
-          </p>
         </div>
 
         <div style={{ padding: "0 16px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
@@ -208,6 +197,33 @@ export default function Preferences() {
               </div>
             ))}
           </div>
+
+          {/* Bottom Continue button */}
+          <button
+            onClick={() => { savePriorities(priorities); navigate("/scan"); }}
+            style={{
+              marginTop: 10,
+              width: "100%",
+              height: 54,
+              background: DS.ink,
+              border: "none",
+              borderRadius: DS.radius.md,
+              color: DS.card,
+              fontWeight: 800,
+              fontSize: "0.95rem",
+              letterSpacing: "-0.01em",
+              cursor: "pointer",
+              fontFamily: DS.font,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              boxShadow: "0 4px 14px rgba(0,0,0,0.18)",
+            }}
+          >
+            Continue to scan
+            <ArrowRight size={18} strokeWidth={2.4} />
+          </button>
 
         </div>
       </main>

@@ -1,5 +1,4 @@
-import { Link } from "react-router-dom";
-import { ChevronLeft } from "lucide-react";
+import { BackButton } from "@/components/BackButton";
 import { DS } from "@/styles/design-tokens";
 
 const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
@@ -15,22 +14,9 @@ export default function Privacy() {
       <main style={{ flex: 1, maxWidth: 640, margin: "0 auto", width: "100%", padding: "0 20px 110px", paddingTop: "max(60px, calc(env(safe-area-inset-top, 0px) + 16px))" }}>
         {/* Header */}
         <div style={{ marginBottom: 28 }}>
-          <Link
-            to="/about"
-            style={{
-              fontSize: 14,
-              color: DS.muted,
-              textDecoration: "none",
-              fontWeight: 500,
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 2,
-              marginBottom: 16,
-            }}
-          >
-            <ChevronLeft size={16} strokeWidth={2} />
-            Back
-          </Link>
+          <div style={{ marginBottom: 16 }}>
+            <BackButton to="/about" />
+          </div>
           <h1 style={{ fontSize: 28, fontWeight: 700, color: DS.ink, letterSpacing: -0.5, marginBottom: 4 }}>Privacy Policy</h1>
           <p style={{ fontSize: 14, color: DS.muted }}>Last updated: April 2026</p>
         </div>
