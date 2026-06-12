@@ -33,7 +33,14 @@ describe('classifyToken', () => {
     expect(classifyToken('NESTLE', DEFAULT_CONFIG)).toBe('brand');
   });
   it('identifies stop words', () => {
-    expect(classifyToken('original', DEFAULT_CONFIG)).toBe('stop');
+    expect(classifyToken('flavour', DEFAULT_CONFIG)).toBe('stop');
+    expect(classifyToken('edition', DEFAULT_CONFIG)).toBe('stop');
+  });
+  it('identifies variant tokens', () => {
+    expect(classifyToken('original', DEFAULT_CONFIG)).toBe('variant');
+    expect(classifyToken('Zero', DEFAULT_CONFIG)).toBe('variant');
+    expect(classifyToken('diet', DEFAULT_CONFIG)).toBe('variant');
+    expect(classifyToken('light', DEFAULT_CONFIG)).toBe('variant');
   });
   it('identifies distinctive tokens', () => {
     expect(classifyToken('marmite', DEFAULT_CONFIG)).toBe('distinctive');
@@ -81,6 +88,43 @@ describe('scoreRelevance', () => {
       );
       expect(result.passes).toBe(true);
       expect(result.distinctiveOverlap).toBe(2); // kitkat + chunky
+    });
+  });
+
+  describe('WRONG FLAVOR: variant mismatches must be rejected', () => {
+    it('rejects regular "Coca-Cola" for query "Coca-Cola Zero"', () => {
+      const result = scoreRelevance('Coca-Cola Zero', 'Coca-Cola');
+      expect(result.passes).toBe(false);
+      expect(result.variantTotal).toBe(1);
+      expect(result.variantOverlap).toBe(0);
+    });
+
+    it('accepts "Coca-Cola Zero" for query "Coca-Cola Zero"', () => {
+      const result = scoreRelevance('Coca-Cola Zero', 'Coca-Cola Zero');
+      expect(result.passes).toBe(true);
+      expect(result.variantOverlap).toBe(1);
+    });
+
+    it('accepts "Coca-Cola Zero" for query "Coca-Cola Zero Sugar" (same variant family)', () => {
+      const result = scoreRelevance('Coca-Cola Zero Sugar', 'Coca-Cola Zero');
+      expect(result.passes).toBe(true);
+    });
+
+    it('rejects "Pepsi" for query "Pepsi Max"', () => {
+      const result = scoreRelevance('Pepsi Max', 'Pepsi');
+      expect(result.passes).toBe(false);
+    });
+
+    it('ranks plain product above unrequested variant for a plain query', () => {
+      const plain = scoreRelevance('Coca-Cola', 'Coca-Cola');
+      const variant = scoreRelevance('Coca-Cola', 'Coca-Cola Zero');
+      expect(plain.score).toBeGreaterThan(variant.score);
+    });
+
+    it('treats "lite" and "light" as the same variant family', () => {
+      const result = scoreRelevance('Philadelphia Lite', 'Philadelphia Light');
+      expect(result.passes).toBe(true);
+      expect(result.variantOverlap).toBe(1);
     });
   });
 

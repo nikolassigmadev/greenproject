@@ -190,17 +190,20 @@ const IMAGE_TASK_PROMPTS = {
   'extract-barcode': 'Extract the barcode number or product code from this image. Return ONLY the numeric code, nothing else.',
   'extract-receipt': `This is a shopping receipt. List only the purchased product/item names, one per line. Exclude: prices, quantities, totals, subtotals, tax, store name, date, cashier, loyalty points, and any other non-product text.
 
-CRITICAL: Each line MUST include the brand name followed by the product. The brand name is REQUIRED for every item -- this output is used to query Open Food Facts and a bare product name is not searchable. Use your knowledge to infer the brand from abbreviations on the receipt when possible.
+CRITICAL: Each line MUST include the brand name followed by the product. The brand name is REQUIRED for every item -- this output is used to query Open Food Facts and a bare product name is not searchable. Use your knowledge to infer the brand from abbreviations on the receipt when possible. Also preserve any flavor/variant words shown on the receipt (e.g. "Zero", "Cool Ranch", "Light") -- they identify the exact product. Expand receipt abbreviations to full words ("CHKN" → "Chicken", "ORIG" → "Original").
 - Good: "Lays Chilli Chips", "Cadbury Dairy Milk", "Coca-Cola Zero"
 - Bad: "Chilli Chips", "Dairy Milk", "Zero"
 If you genuinely cannot determine the brand for an item, prefix that line with "UNKNOWN " (e.g. "UNKNOWN Chilli Chips") rather than omitting it. Return ONLY the item names, one per line, nothing else.`,
   'extract-brand': 'Extract ONLY the brand/manufacturer name from this product image. Return just the brand name, nothing else. If not found, return "UNKNOWN".',
   'extract-product-name': `Extract the product name from this product image.
 
-CRITICAL: The product name you return MUST include the brand name at the start. The brand name is REQUIRED -- this output is used to query Open Food Facts and a bare product name is not searchable.
-- Good: "Lays Chilli Chips", "Cadbury Dairy Milk", "Coca-Cola Zero", "Nestle KitKat Chunky"
-- Bad: "Chilli Chips", "Dairy Milk", "Zero", "KitKat Chunky"
-Return just the "Brand ProductName" string, nothing else. If the brand is unreadable or missing, return "UNKNOWN".`,
+CRITICAL rules -- this output is used to query the Open Food Facts database:
+1. The name MUST start with the brand name. A bare product name is not searchable.
+2. The name MUST include the exact flavor/variant printed on the pack (e.g. "Zero", "Cool Ranch", "Salt & Vinegar"). Without it the search returns the wrong flavor. Copy the flavor words exactly as printed -- do not paraphrase or shorten.
+3. Do NOT include size, weight, volume, count, slogans, or marketing claims.
+- Good: "Lays Chilli Chips", "Cadbury Dairy Milk Fruit & Nut", "Coca-Cola Zero Sugar", "Nestle KitKat Chunky", "Doritos Cool Ranch"
+- Bad: "Chilli Chips" (no brand), "Cadbury Chocolate" (flavor lost), "Doritos" (flavor lost), "KitKat Chunky 40g" (size included)
+Return just the "Brand ProductName Flavor" string, nothing else. If the brand is unreadable or missing, return "UNKNOWN".`,
   'extract-certifications': `Look for ethical and sustainability certifications/labels on this product:
 - Organic (USDA, EU, etc.)
 - Fair Trade
@@ -215,25 +218,28 @@ Return just the "Brand ProductName" string, nothing else. If the brand is unread
 
 Return a JSON array of found certifications. Example: ["Organic", "Fair Trade"]
 Return empty array [] if none found.`,
-  'scan-product': `Identify this product. Respond ONLY in this format:
+  'scan-product': `Identify this packaged product from the photo. Respond ONLY in this format:
 
-Product: [short product name]
+Product: [product line + exact flavor/variant]
 Brand: [brand]
 Barcode: [digits or "none"]
 
 Rules:
 - Brand is REQUIRED. We use "Brand Product" to query Open Food Facts; without the brand the search is unreliable. Always populate Brand with your best guess from the package, even if the brand text is small or partially obscured.
 - Brand = the consumer-facing brand on the package (e.g. "Ben & Jerry's", "Lay's", "Nestle", "Coca-Cola"). If the package shows both a parent and a sub-brand, prefer the SUB-brand the shopper sees (e.g. "Ben & Jerry's", not "Unilever").
-- Product = short recognizable name a shopper would use, WITHOUT the brand. E.g. "Phish Food", "KitKat Chunky", "Fanta Orange", "Doritos Cool Ranch". Do NOT include size, weight, volume, barcodes, slogans, or marketing text.
-- Good: Brand "Ben & Jerry's" + Product "Phish Food" | Brand "Lay's" + Product "Chilli" | Brand "Cadbury" + Product "Dairy Milk".
-- Bad: Brand "UNKNOWN" + Product "Phish Food" (we lose searchability) | Brand "Ben & Jerry's Phish Food" + Product "Phish Food" (brand should not duplicate product).
+- Product = the product line PLUS the exact flavor/variant/sub-type printed on the pack, WITHOUT the brand. The flavor/variant is CRITICAL: a database search for "Doritos" alone returns the wrong flavor — we need "Cool Ranch". Actively look for the flavor text; it is often smaller than the logo, near the bottom of the pack, or on a color band.
+- Copy flavor/variant words EXACTLY as printed. Do not translate, paraphrase, shorten, or generalize them ("Cool Ranch" must not become "Ranch"; "Zero Sugar" must not become "Zero" or "Sugar Free").
+- Good: Brand "Ben & Jerry's" + Product "Phish Food" | Brand "Doritos" + Product "Cool Ranch" | Brand "Coca-Cola" + Product "Zero Sugar" | Brand "Cadbury" + Product "Dairy Milk Fruit & Nut" | Brand "Walkers" + Product "Salt & Vinegar".
+- Bad: Product "Tortilla Chips" when the bag says "Nacho Cheese" (flavor lost) | Product "Ice Cream" when the tub says "Phish Food" | Brand "UNKNOWN" + Product "Phish Food" (we lose searchability) | Brand "Ben & Jerry's Phish Food" (brand must not duplicate product).
+- Do NOT include size, weight, volume, count, percentages, barcodes, slogans, or marketing claims ("New!", "Now Tastier") in Product.
+- If the pack shows multiple languages, prefer the English product/flavor name.
 - Always give your best guess. Never refuse or say you cannot read it. Only return Brand: UNKNOWN when there is literally no brand text or logo visible anywhere in the image.
 - No extra text outside the three lines.`,
 };
 
 const CHAT_TASK_PROMPTS = {
-  'clean-product-name': 'You are a product name formatter. The user will give you a raw product name from a barcode database. Return ONLY the clean, properly formatted product name (e.g. "Coca-Cola", "Nutella", "Lay\'s Classic Chips"). Remove size, weight, volume, and any descriptors that aren\'t part of the brand/product identity. Return just the name, nothing else.',
-  'fix-product-query': 'You are a product name spell-checker. The user typed a product name with possible typos or misspellings. Fix the spelling and return the correct product name. Examples: "cocacl ola" → "Coca-Cola", "nuttela" → "Nutella", "lays clasic chips" → "Lay\'s Classic Chips", "chupa chps" → "Chupa Chups". Return ONLY the corrected product name, nothing else. If the input is already correct, return it as-is with proper capitalization.',
+  'clean-product-name': 'You are a product name formatter. The user will give you a raw product name from a barcode database. Return ONLY the clean, properly formatted product name (e.g. "Coca-Cola", "Nutella", "Lay\'s Classic Chips"). Remove size, weight, volume, and pure marketing text — but KEEP flavor/variant words ("Zero", "Cool Ranch", "Salt & Vinegar", "Light"): they are part of the product identity and required for accurate matching. Return just the name, nothing else.',
+  'fix-product-query': 'You are a search-query fixer for a food product database. The user typed a product name, possibly with typos. Fix spelling and capitalization ONLY. Rules: (1) NEVER drop words — flavor/variant words like "zero", "diet", "light", "cool ranch", "salt & vinegar" identify the exact product and MUST stay; (2) NEVER add words the user did not type or clearly imply; (3) correct obvious brand misspellings to the canonical brand name. Examples: "cocacl ola zero" → "Coca-Cola Zero", "nuttela" → "Nutella", "lays clasic chips" → "Lay\'s Classic Chips", "doritos col ranch" → "Doritos Cool Ranch", "ben and jerrys fish food" → "Ben & Jerry\'s Phish Food", "chupa chps" → "Chupa Chups". Return ONLY the corrected query, nothing else. If the input is already correct, return it as-is with proper capitalization.',
 };
 
 // =====================================================
@@ -1190,6 +1196,37 @@ app.get('/api/openfoodfacts/product/:barcode', async (req, res) => {
   }
 });
 
+// =====================================================
+// OPENFOODFACTS SEARCH HELPERS
+// =====================================================
+
+// Search-a-licious (search.openfoodfacts.org) returns some fields as arrays
+// where the classic API returns comma-separated strings (notably `brands`).
+// Normalize hits to the classic shape so the client's parser works unchanged.
+// NOTE: Search-a-licious has no CORS headers, so browsers can't call it
+// directly — all access must go through this server.
+const joinIfArray = (v) => (Array.isArray(v) ? v.join(', ') : v);
+const fromSaliciousHit = (hit) => ({
+  ...hit,
+  brands: joinIfArray(hit.brands),
+  labels: joinIfArray(hit.labels),
+  categories: joinIfArray(hit.categories),
+  origins: joinIfArray(hit.origins),
+  countries: joinIfArray(hit.countries),
+});
+
+/** Slugify a display name into an OFF taxonomy tag: "United States" → "en:united-states" */
+const toOffTag = (name) => `en:${String(name).trim().toLowerCase().replace(/\s+/g, '-')}`;
+
+const OFF_SEARCH_FIELDS = [
+  'code', 'product_name', 'product_name_en', 'generic_name', 'generic_name_en', 'abbreviated_product_name', 'brands',
+  'ecoscore_grade', 'ecoscore_score', 'ecoscore_data',
+  'nutriscore_grade', 'nutriscore_score', 'nova_group',
+  'nutriments', 'labels_tags', 'labels', 'categories_tags', 'categories',
+  'origins', 'ingredients_text', 'ingredients_text_en',
+  'image_front_url', 'image_url', 'countries_tags', 'states_tags',
+].join(',');
+
 /**
  * POST /api/openfoodfacts/search
  * Search for products on OpenFoodFacts by name
@@ -1263,26 +1300,42 @@ app.post('/api/openfoodfacts/search', async (req, res) => {
     //    brand called "Ben" and Moroccan "jben" yogurt → wildly wrong + flaky).
     const isMultiWord = queryWords.length > 1;
 
-    // Strategy 1: v2 brand tag search (full slug)
-    try {
-      const brandParams = new URLSearchParams({
-        brands_tags: searchQuery,
-        fields,
-        page_size: String(Math.min(limit * 3, 100)),
-      });
-      const brandResponse = await fetch(`https://world.openfoodfacts.org/api/v2/search?${brandParams}`, {
-        signal: AbortSignal.timeout(searchTimeout),
-        headers,
-      });
-      if (brandResponse.ok) {
-        const brandData = await brandResponse.json();
-        if (brandData.products?.length > 0) {
-          sortByRelevance(brandData.products, queryWords, queryLower);
-          data = brandData;
+    /** v2 brand tag search (full slug). Returns true if it produced results. */
+    const tryBrandTagSearch = async () => {
+      try {
+        const brandParams = new URLSearchParams({
+          brands_tags: searchQuery,
+          fields,
+          page_size: String(Math.min(limit * 3, 100)),
+        });
+        const brandResponse = await fetch(`https://world.openfoodfacts.org/api/v2/search?${brandParams}`, {
+          signal: AbortSignal.timeout(searchTimeout),
+          headers,
+        });
+        if (brandResponse.ok) {
+          const brandData = await brandResponse.json();
+          if (brandData.products?.length > 0) {
+            sortByRelevance(brandData.products, queryWords, queryLower);
+            data = brandData;
+            return true;
+          }
         }
+      } catch (e) {
+        console.warn(`Brand tag search failed: ${e.message}`);
       }
-    } catch (e) {
-      console.warn(`Brand tag search failed: ${e.message}`);
+      return false;
+    };
+
+    // Strategy 1: brand tag search — but ONLY first for SINGLE-word queries.
+    // For multi-word queries the relevance-ranked full-text search (Strategy 3)
+    // must go first: OFF contributors sometimes mis-enter a full product name
+    // ("coca cola zero") in the brand field, so a brands_tags hit on a
+    // multi-word slug can surface junk entries (e.g. an apple cider vinegar
+    // whose "brand" is "Coca cola zero") ahead of the real product. Genuine
+    // multi-word brands still work — full text matches the brands field too,
+    // and Strategy 3b retries brands_tags if full text finds nothing.
+    if (!isMultiWord) {
+      await tryBrandTagSearch();
     }
 
     // Strategy 2: first-word brand_tags — ONLY for single-word queries.
@@ -1314,29 +1367,44 @@ app.post('/api/openfoodfacts/search', async (req, res) => {
       }
     }
 
-    // Strategy 3: v2 API full-text search — primary path for multi-word queries.
+    // Strategy 3: Search-a-licious full-text search — primary path for
+    // multi-word queries. This is OFF's modern Elasticsearch-backed engine
+    // with phrase boosting, so "doritos cool ranch" ranks exact-flavor
+    // matches first. (The old v2 `q` param this replaced is silently IGNORED
+    // by the v2 API — it returned random popular products and made multi-word
+    // search non-deterministic.)
     if (!data?.products?.length) {
       try {
-        const v2TextParams = new URLSearchParams({
+        const saliciousParams = new URLSearchParams({
           q: query.trim(),
-          fields,
+          langs: 'en',
           page_size: String(Math.min(limit * 2, 50)),
-          sort_by: 'unique_scans_n',
+          fields,
         });
-        const v2TextResponse = await fetch(`https://world.openfoodfacts.org/api/v2/search?${v2TextParams}`, {
+        const saliciousResponse = await fetch(`https://search.openfoodfacts.org/search?${saliciousParams}`, {
           signal: AbortSignal.timeout(searchTimeout),
           headers,
         });
-        if (v2TextResponse.ok) {
-          const v2TextData = await v2TextResponse.json();
-          if (v2TextData.products?.length > 0) {
-            sortByRelevance(v2TextData.products, queryWords, queryLower);
-            data = v2TextData;
+        if (saliciousResponse.ok) {
+          const saliciousData = await saliciousResponse.json();
+          if (saliciousData.hits?.length > 0) {
+            // Preserve Elasticsearch relevance order — it already phrase-boosts
+            // exact name matches. sortByRelevance is stable, so it only lifts
+            // exact full-query name hits and keeps ES order for ties.
+            const products = saliciousData.hits.map(fromSaliciousHit);
+            sortByRelevance(products, queryWords, queryLower);
+            data = { products, count: saliciousData.count || products.length };
           }
         }
       } catch (e) {
-        console.warn(`v2 text search failed: ${e.message}`);
+        console.warn(`Search-a-licious search failed: ${e.message}`);
       }
+    }
+
+    // Strategy 3b: brand tag search for multi-word queries — only after full
+    // text found nothing (covers genuine multi-word brand names).
+    if (!data?.products?.length && isMultiWord) {
+      await tryBrandTagSearch();
     }
 
     // Strategy 4: legacy cgi/search.pl
@@ -1422,6 +1490,152 @@ app.post('/api/openfoodfacts/search', async (req, res) => {
   } catch (error) {
     console.error('OpenFoodFacts search error:', error);
     res.status(500).json({ success: false, error: 'Failed to search OpenFoodFacts' });
+  }
+});
+
+/**
+ * POST /api/openfoodfacts/browse
+ * Browse products with an optional text query plus category/country filters.
+ * Tries the legacy cgi/search.pl first, then Search-a-licious — the legacy
+ * endpoint is frequently unavailable, and browsers cannot call
+ * Search-a-licious directly (no CORS), so this proxy is the reliable path
+ * for the Database page and "greener alternatives" lookups.
+ */
+app.post('/api/openfoodfacts/browse', async (req, res) => {
+  try {
+    const { query, category, country, page = 1, pageSize = 24 } = req.body || {};
+    const headers = { 'User-Agent': 'Scan2Source/1.0 (ethical-shopper)' };
+    const safePage = Math.max(1, parseInt(page, 10) || 1);
+    const safePageSize = Math.min(Math.max(1, parseInt(pageSize, 10) || 24), 50);
+
+    // Attempt 1: legacy cgi/search.pl with tag filters
+    try {
+      const params = new URLSearchParams({
+        action: 'process',
+        json: '1',
+        page: String(safePage),
+        page_size: String(safePageSize),
+        sort_by: 'unique_scans_n',
+        fields: OFF_SEARCH_FIELDS,
+      });
+      if (query && String(query).trim()) params.set('search_terms', String(query).trim());
+      let tagIndex = 0;
+      if (category) {
+        params.set(`tagtype_${tagIndex}`, 'categories');
+        params.set(`tag_contains_${tagIndex}`, 'contains');
+        params.set(`tag_${tagIndex}`, String(category));
+        tagIndex++;
+      }
+      if (country) {
+        params.set(`tagtype_${tagIndex}`, 'countries');
+        params.set(`tag_contains_${tagIndex}`, 'contains');
+        params.set(`tag_${tagIndex}`, String(country));
+        tagIndex++;
+      }
+      params.set(`tagtype_${tagIndex}`, 'states');
+      params.set(`tag_contains_${tagIndex}`, 'contains');
+      params.set(`tag_${tagIndex}`, 'en:front-photo-selected');
+
+      const response = await fetch(`https://world.openfoodfacts.org/cgi/search.pl?${params}`, {
+        headers,
+        signal: AbortSignal.timeout(15000),
+      });
+      // The legacy endpoint serves an HTML error page when overloaded —
+      // only trust it when it actually returns JSON.
+      if (response.ok && (response.headers.get('content-type') || '').includes('json')) {
+        const data = await response.json();
+        if (data.products?.length > 0) {
+          return res.json({
+            success: true,
+            products: data.products,
+            count: data.count || 0,
+            page: data.page || safePage,
+            page_count: data.page_count || 0,
+          });
+        }
+      }
+    } catch (e) {
+      console.warn(`Legacy browse failed: ${e.message}`);
+    }
+
+    // Attempt 2: Search-a-licious.
+    // NOTE: its Lucene parser cannot combine MULTI-WORD free text with tag
+    // filters (the text gets mangled and returns 0 hits), so:
+    //  - text queries → search by text only, over-fetch, filter tags ourselves
+    //  - filter-only queries → pure tag expression (parses fine) + popularity sort
+    const hasText = query && String(query).trim();
+    const hasCuratedPhoto = (h) => {
+      const states = h.states_tags || [];
+      return states.includes('en:front-photo-selected') || states.includes('en:photos-validated');
+    };
+
+    if (hasText) {
+      const saliciousParams = new URLSearchParams({
+        q: String(query).trim(),
+        langs: 'en',
+        page: String(safePage),
+        page_size: '50',
+        fields: OFF_SEARCH_FIELDS,
+      });
+      const saliciousResponse = await fetch(`https://search.openfoodfacts.org/search?${saliciousParams}`, {
+        headers,
+        signal: AbortSignal.timeout(15000),
+      });
+      if (saliciousResponse.ok) {
+        const saliciousData = await saliciousResponse.json();
+        if (Array.isArray(saliciousData.hits)) {
+          const catTag = category ? toOffTag(category) : null;
+          const cntTag = country ? toOffTag(country) : null;
+          const filtered = saliciousData.hits.filter((h) => {
+            if (catTag && !(h.categories_tags || []).includes(catTag)) return false;
+            if (cntTag && !(h.countries_tags || []).includes(cntTag)) return false;
+            return hasCuratedPhoto(h);
+          });
+          return res.json({
+            success: true,
+            products: filtered.slice(0, safePageSize).map(fromSaliciousHit),
+            count: filtered.length,
+            page: safePage,
+            page_count: filtered.length > 0 ? safePage : 0,
+          });
+        }
+      }
+    } else {
+      const parts = [];
+      if (category) parts.push(`categories_tags:"${toOffTag(category)}"`);
+      if (country) parts.push(`countries_tags:"${toOffTag(country)}"`);
+      parts.push('states_tags:"en:front-photo-selected"');
+
+      const saliciousParams = new URLSearchParams({
+        q: parts.join(' AND '),
+        langs: 'en',
+        page: String(safePage),
+        page_size: String(safePageSize),
+        sort_by: '-unique_scans_n',
+        fields: OFF_SEARCH_FIELDS,
+      });
+      const saliciousResponse = await fetch(`https://search.openfoodfacts.org/search?${saliciousParams}`, {
+        headers,
+        signal: AbortSignal.timeout(15000),
+      });
+      if (saliciousResponse.ok) {
+        const saliciousData = await saliciousResponse.json();
+        if (Array.isArray(saliciousData.hits)) {
+          return res.json({
+            success: true,
+            products: saliciousData.hits.map(fromSaliciousHit),
+            count: saliciousData.count || 0,
+            page: saliciousData.page || safePage,
+            page_count: saliciousData.page_count || 0,
+          });
+        }
+      }
+    }
+
+    res.json({ success: true, products: [], count: 0, page: 1, page_count: 0 });
+  } catch (error) {
+    console.error('OpenFoodFacts browse error:', error);
+    res.status(500).json({ success: false, error: 'Failed to browse OpenFoodFacts' });
   }
 });
 

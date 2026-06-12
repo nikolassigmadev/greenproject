@@ -11,6 +11,42 @@ import { ocrSearchLogger } from '../../utils/ocrSearchLogger';
 import { getProductOverride } from '../../data/productOverrides';
 
 const OFF_API_BASE = 'https://world.openfoodfacts.org';
+// OFF's modern Elasticsearch-backed search engine ("Search-a-licious").
+// Phrase-boosted relevance ranking — far more accurate for flavor/variant
+// queries than the legacy cgi/search.pl, which is also frequently down.
+const OFF_SEARCH_BASE = 'https://search.openfoodfacts.org';
+
+const joinIfArray = (v: unknown): string | undefined =>
+  Array.isArray(v) ? v.join(', ') : (v as string | undefined);
+
+/**
+ * Convert a Search-a-licious hit to the classic API product shape.
+ * Search-a-licious returns `brands` (and a few sibling fields) as arrays
+ * where the classic API returns comma-separated strings.
+ */
+const fromSaliciousHit = (hit: Record<string, unknown>): OpenFoodFactsProduct => ({
+  ...(hit as unknown as OpenFoodFactsProduct),
+  brands: joinIfArray(hit.brands),
+  labels: joinIfArray(hit.labels),
+  categories: joinIfArray(hit.categories),
+  origins: joinIfArray(hit.origins),
+});
+
+/**
+ * At least one significant query word (≥3 chars) must appear as a whole word
+ * in the product's name or brand. Guards against unrelated results leaking in
+ * when filters are relaxed.
+ */
+const isRelevantToQuery = (query: string, p: OpenFoodFactsResult): boolean => {
+  const queryWords = query
+    .toLowerCase()
+    .split(/[\s\-_,/&().]+/)
+    .filter((w) => w.length >= 3)
+    .map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  if (queryWords.length === 0) return true;
+  const haystack = [p.productName, p.brand].filter(Boolean).join(' ').toLowerCase();
+  return queryWords.some((qw) => new RegExp(`\\b${qw}\\b`, 'i').test(haystack));
+};
 
 // ---------------------------------------------------------------------------
 // Simple in-memory cache with TTL (5 minutes) to avoid duplicate API calls
@@ -457,25 +493,25 @@ const searchOneVariant = async (
     ocrSearchLogger.logRegionalFiltering(allNormalized.length, regionalResults.length, false);
 
     // If the strict filters wiped out too many results, relax the image
-    // requirement first (eco-score is the hard requirement). We still keep
-    // the relevance guard so unrelated brands don't leak in.
+    // requirement first (keep eco-score). We still keep the relevance guard
+    // so unrelated brands don't leak in.
     if (results.length < Math.ceil(limit * 0.5)) {
-      const queryWords = query
-        .toLowerCase()
-        .split(/[\s\-_,/&().]+/)
-        .filter((w) => w.length >= 3)
-        .map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-      const isRelevant = (p: OpenFoodFactsResult): boolean => {
-        if (queryWords.length === 0) return true;
-        const haystack = [p.productName, p.brand].filter(Boolean).join(' ').toLowerCase();
-        return queryWords.some((qw) => new RegExp(`\\b${qw}\\b`, 'i').test(haystack));
-      };
       const padding = regionalResults
         .filter(hasEcoscore)
         .slice(0, limit * 3)
-        .filter((r) => isRelevant(r))
+        .filter((r) => isRelevantToQuery(query, r))
         .filter((r) => !results.some((ur) => ur.barcode === r.barcode));
       results = [...results, ...padding].slice(0, limit);
+    }
+
+    // Last tier: drop the eco-score requirement entirely. Showing the RIGHT
+    // product with missing eco data beats "product not found" — many genuine
+    // OFF entries simply haven't been eco-scored yet. The relevance guard
+    // still applies so we never surface unrelated products.
+    if (results.length === 0) {
+      results = regionalResults
+        .filter((r) => isRelevantToQuery(query, r))
+        .slice(0, limit);
     }
 
     cacheSet(cacheKey, results);
@@ -601,7 +637,23 @@ const searchProductsGlobal = async (
   if (words.length > 3) candidates.push(words.slice(0, 3).join(' '));
   if (words.length > 2) candidates.push(words.slice(0, 2).join(' '));
 
-  for (const candidate of candidates) {
+  const searchFields = [
+    'code', 'product_name', 'product_name_en', 'generic_name', 'generic_name_en', 'abbreviated_product_name', 'brands',
+    'ecoscore_grade', 'ecoscore_score', 'ecoscore_data',
+    'nutriscore_grade', 'nutriscore_score', 'nova_group',
+    'nutriments', 'labels_tags', 'labels', 'categories_tags', 'categories',
+    'origins', 'ingredients_text', 'ingredients_text_en',
+    'image_front_url', 'image_url', 'countries_tags', 'states_tags',
+  ].join(',');
+
+  /**
+   * Fetch raw products for one query string. This is the LAST-RESORT path
+   * (the backend proxy already failed or returned nothing), so it talks to
+   * OFF directly. cgi/search.pl goes first because it sends CORS headers and
+   * works from the browser; Search-a-licious has no CORS so it only succeeds
+   * in non-browser contexts (tests, native shells) — still worth a try.
+   */
+  const fetchRawProducts = async (candidate: string): Promise<OpenFoodFactsProduct[]> => {
     try {
       const params = new URLSearchParams({
         search_terms: candidate,
@@ -610,46 +662,66 @@ const searchProductsGlobal = async (
         json: '1',
         page_size: String(Math.min(limit * 3, 50)),
         sort_by: 'unique_scans_n',
-        fields: [
-          'code', 'product_name', 'product_name_en', 'generic_name', 'generic_name_en', 'abbreviated_product_name', 'brands',
-          'ecoscore_grade', 'ecoscore_score', 'ecoscore_data',
-          'nutriscore_grade', 'nutriscore_score', 'nova_group',
-          'nutriments', 'labels_tags', 'labels', 'categories_tags', 'categories',
-          'origins', 'ingredients_text', 'ingredients_text_en',
-          'image_front_url', 'image_url', 'countries_tags',
-        ].join(','),
+        fields: searchFields,
       });
-
-      const response = await fetch(`${OFF_API_BASE}/cgi/search.pl?${params}`);
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      const response = await fetch(`${OFF_API_BASE}/cgi/search.pl?${params}`, {
+        signal: AbortSignal.timeout(8000),
+      });
+      // The legacy endpoint serves an HTML error page when overloaded
+      if (response.ok && (response.headers.get('content-type') || '').includes('json')) {
+        const data: OpenFoodFactsSearchResponse = await response.json();
+        if (Array.isArray(data.products) && data.products.length > 0) return data.products;
       }
-
-      const data: OpenFoodFactsSearchResponse = await response.json();
-
-      if (!data.products || data.products.length === 0) {
-        if (candidate !== candidates[candidates.length - 1]) {
-          console.warn(`   No global results for "${candidate}", trying shorter query...`);
-        }
-        continue;
-      }
-
-      const normalized = data.products.map(normalizeProduct);
-      // Hard requirement: eco-score must exist. Soft preference: curated
-      // front photo — fall back to eco-score-only if the strict combo is empty.
-      const strict = normalized.filter(hasEcoscore).filter(hasCleanFrontImage);
-      const fallback = strict.length > 0 ? strict : normalized.filter(hasEcoscore);
-      const results = fallback.slice(0, limit);
-      console.log(`   Got ${results.length} global results for "${candidate}" (region filter disabled)`);
-      cacheSet(cacheKey, results);
-      return results;
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      console.error(`OpenFoodFacts global search error for "${candidate}":`, errorMsg);
-      // Network error — no point retrying shorter queries, bail out
-      return [];
+      console.warn(`   Legacy search failed for "${candidate}": ${error instanceof Error ? error.message : error}`);
     }
+
+    try {
+      const params = new URLSearchParams({
+        q: candidate,
+        langs: 'en',
+        page_size: String(Math.min(limit * 3, 50)),
+        fields: searchFields,
+      });
+      const response = await fetch(`${OFF_SEARCH_BASE}/search?${params}`, {
+        signal: AbortSignal.timeout(8000),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (Array.isArray(data.hits) && data.hits.length > 0) {
+          return data.hits.map(fromSaliciousHit);
+        }
+      }
+    } catch (error) {
+      console.warn(`   Search-a-licious failed for "${candidate}": ${error instanceof Error ? error.message : error}`);
+    }
+    return [];
+  };
+
+  for (const candidate of candidates) {
+    const rawProducts = await fetchRawProducts(candidate);
+
+    if (rawProducts.length === 0) {
+      if (candidate !== candidates[candidates.length - 1]) {
+        console.warn(`   No global results for "${candidate}", trying shorter query...`);
+      }
+      continue;
+    }
+
+    const normalized = rawProducts.map(normalizeProduct);
+    // Tiered preference: eco-score + curated photo → eco-score only →
+    // any result relevant to the query. The right product with missing eco
+    // data beats "not found".
+    const strict = normalized.filter(hasEcoscore).filter(hasCleanFrontImage);
+    const ecoOnly = strict.length > 0 ? strict : normalized.filter(hasEcoscore);
+    const fallback = ecoOnly.length > 0
+      ? ecoOnly
+      : normalized.filter((r) => isRelevantToQuery(candidate, r));
+    const results = fallback.slice(0, limit);
+    if (results.length === 0) continue;
+    console.log(`   Got ${results.length} global results for "${candidate}" (region filter disabled)`);
+    cacheSet(cacheKey, results);
+    return results;
   }
 
   console.warn(`   No global results found for any variant of "${trimmed}"`);
@@ -700,14 +772,36 @@ export const searchBetterAlternatives = async (
       ].join(','),
     });
 
-    const response = await fetch(`${OFF_API_BASE}/cgi/search.pl?${params}`);
-    if (!response.ok) return [];
+    let rawProducts: OpenFoodFactsProduct[] = [];
+    try {
+      const response = await fetch(`${OFF_API_BASE}/cgi/search.pl?${params}`, {
+        signal: AbortSignal.timeout(10000),
+      });
+      // The legacy endpoint serves an HTML error page when overloaded
+      if (response.ok && (response.headers.get('content-type') || '').includes('json')) {
+        const data: OpenFoodFactsSearchResponse = await response.json();
+        if (Array.isArray(data.products)) rawProducts = data.products;
+      }
+    } catch {
+      // Legacy endpoint down — fall through to the backend browse proxy below
+    }
 
-    const data: OpenFoodFactsSearchResponse = await response.json();
-    if (!data.products || data.products.length === 0) return [];
+    if (rawProducts.length === 0) {
+      // Backend proxy reaches Search-a-licious (browsers can't — no CORS)
+      const browseResponse = await fetch(`${getBackendUrl()}/api/openfoodfacts/browse`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ category, pageSize: 30 }),
+        signal: AbortSignal.timeout(20000),
+      });
+      if (!browseResponse.ok) return [];
+      const browseData = await browseResponse.json();
+      if (!Array.isArray(browseData.products) || browseData.products.length === 0) return [];
+      rawProducts = browseData.products;
+    }
 
     const betterGrades = new Set(['a', 'b']);
-    const candidates = data.products
+    const candidates = rawProducts
       .filter(p => p.code !== result.barcode)
       .map(normalizeProduct)
       .filter(isAllowedRegion)
@@ -737,6 +831,46 @@ export const searchBetterAlternatives = async (
   } catch (error) {
     console.error('Error searching for alternatives:', error);
     return [];
+  }
+};
+
+/**
+ * Browse fallback via the backend proxy — used when the legacy cgi/search.pl
+ * endpoint is down (which happens regularly). The proxy reaches OFF's modern
+ * Search-a-licious engine, which browsers cannot call directly (no CORS).
+ */
+const browseProductsViaBackend = async (
+  options: BrowseOptions,
+): Promise<BrowseResult | null> => {
+  const { query, category, country, page = 1, pageSize = 24 } = options;
+
+  try {
+    const response = await fetch(`${getBackendUrl()}/api/openfoodfacts/browse`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, category, country, page, pageSize }),
+      signal: AbortSignal.timeout(20000),
+    });
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    if (!Array.isArray(data.products)) return null;
+
+    const products = (data.products as OpenFoodFactsProduct[])
+      .map(normalizeProduct)
+      .filter(isAllowedRegion)
+      .filter(hasEcoscore)
+      .filter(hasCleanFrontImage);
+
+    return {
+      products,
+      totalCount: data.count || products.length,
+      page: data.page || page,
+      pageCount: data.page_count || 0,
+    };
+  } catch (error) {
+    console.warn('Backend browse failed:', error instanceof Error ? error.message : error);
+    return null;
   }
 };
 
@@ -790,7 +924,9 @@ export const browseProducts = async (options: BrowseOptions = {}): Promise<Brows
     params.set(`tag_contains_${tagIndex}`, 'contains');
     params.set(`tag_${tagIndex}`, 'en:front-photo-selected');
 
-    const response = await fetch(`${OFF_API_BASE}/cgi/search.pl?${params}`);
+    const response = await fetch(`${OFF_API_BASE}/cgi/search.pl?${params}`, {
+      signal: AbortSignal.timeout(10000),
+    });
 
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -807,6 +943,15 @@ export const browseProducts = async (options: BrowseOptions = {}): Promise<Brows
       .filter(hasEcoscore)
       .filter(hasCleanFrontImage);
 
+    if (products.length === 0) {
+      // Legacy endpoint returned nothing usable — try the modern engine
+      const salicious = await browseProductsViaBackend(options);
+      if (salicious && salicious.products.length > 0) {
+        cacheSet(cacheKey, salicious);
+        return salicious;
+      }
+    }
+
     const result: BrowseResult = {
       products,
       totalCount: data.count || 0,
@@ -817,6 +962,13 @@ export const browseProducts = async (options: BrowseOptions = {}): Promise<Brows
     return result;
   } catch (error) {
     console.error('OpenFoodFacts browse error:', error);
+    // Legacy endpoint unreachable (it goes down regularly) — fall back to
+    // the modern Search-a-licious engine before giving up.
+    const salicious = await browseProductsViaBackend(options);
+    if (salicious) {
+      cacheSet(cacheKey, salicious);
+      return salicious;
+    }
     return { products: [], totalCount: 0, page: 1, pageCount: 0 };
   }
 };

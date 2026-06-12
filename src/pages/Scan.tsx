@@ -25,7 +25,7 @@ import { lookupBarcode, isValidBarcode, searchProducts as searchOffProducts, sea
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
 import { DS } from "@/styles/design-tokens";
 import { getBackendUrl } from "@/config/backend";
-import { pickBestMatch, validateBarcodeResult, type MatchResult } from "@/utils/productRelevance";
+import { pickBestMatch, validateBarcodeResult, scoreRelevance, type MatchResult } from "@/utils/productRelevance";
 
 /** Ask OpenAI to fix typos and clean up a user-typed product query */
 const fixProductQuery = async (raw: string): Promise<string> => {
@@ -1188,19 +1188,37 @@ const Scan = () => {
       // Ask AI to fix typos before searching
       const cleanedName = await fixProductQuery(productName.trim());
 
-      // Fetch a small pool — we navigate to the top result immediately
-      const results = await searchOffProducts(cleanedName, 5);
+      // Fetch a pool — we navigate to the top result immediately, so pull
+      // enough candidates that the exact flavor/variant is in the pool.
+      const results = await searchOffProducts(cleanedName, 10);
 
-      // Filter: product must contain at least one query word to avoid random results
-      const queryWords = cleanedName.toLowerCase().split(/[\s\-_]+/).filter(w => w.length >= 2);
-      const topResults = results.length > 0
-        ? results
-            .filter(r => resultContainsQueryWord(cleanedName, [r.productName, r.brand].filter(Boolean).join(' ')))
-            .map(r => ({ result: r, relevance: computeRelevance(r, queryWords), ecoScore: calculateEcoScore(r) }))
-            .sort((a, b) => b.relevance - a.relevance || b.ecoScore - a.ecoScore)
-            .slice(0, 5)
-            .map(s => s.result)
-        : [];
+      // Filter: product must contain at least one query word to avoid random
+      // results, then rank with the variant-aware relevance scorer so
+      // "Coca-Cola Zero" never resolves to plain "Coca-Cola".
+      // nameMatch guards against OFF data-entry junk where the full query was
+      // mis-entered in the BRAND field of an unrelated product (e.g. a vinegar
+      // whose "brand" is "Coca cola zero") — a real match has the query in its
+      // product NAME, so name-matching candidates always rank first.
+      const scored = results
+        .filter(r => resultContainsQueryWord(cleanedName, [r.productName, r.brand].filter(Boolean).join(' ')))
+        .map(r => ({
+          result: r,
+          rel: scoreRelevance(cleanedName, [r.productName, r.brand].filter(Boolean).join(' ')),
+          nameMatch: resultContainsQueryWord(cleanedName, r.productName ?? '') ? 1 : 0,
+          ecoScore: calculateEcoScore(r),
+        }))
+        .sort((a, b) =>
+          b.nameMatch - a.nameMatch
+          || b.rel.score - a.rel.score
+          || b.ecoScore - a.ecoScore);
+
+      // Prefer candidates that pass the strict relevance gate; if none do,
+      // fall back to the best word-matched candidates rather than a wrong
+      // flavor that merely shares the brand name.
+      const passing = scored.filter(s => s.rel.passes);
+      const topResults = (passing.length > 0 ? passing : scored)
+        .slice(0, 5)
+        .map(s => s.result);
 
       if (topResults.length > 0) {
         sessionStorage.setItem('scan_candidates', JSON.stringify(topResults));

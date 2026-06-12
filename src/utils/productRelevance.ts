@@ -17,6 +17,13 @@ export interface RelevanceConfig {
   brandTokens: Set<string>;
   /** Generic words that carry no product identity (lowercase, no accents). */
   stopWords: Set<string>;
+  /**
+   * Variant-defining tokens (lowercase, no accents): flavor/diet/format words
+   * like "zero", "diet", "light". These distinguish "Coca-Cola Zero" from
+   * "Coca-Cola" — a result missing the query's variant is the WRONG product,
+   * so variant mismatches are penalized instead of ignored.
+   */
+  variantTokens: Set<string>;
 }
 
 export const DEFAULT_BRAND_TOKENS = new Set([
@@ -30,17 +37,39 @@ export const DEFAULT_BRAND_TOKENS = new Set([
 ]);
 
 export const DEFAULT_STOP_WORDS = new Set([
-  'the', 'and', 'or', 'with', 'new', 'original', 'classic', 'special',
+  'the', 'and', 'or', 'with', 'new', 'special',
   'edition', 'limited', 'flavour', 'flavor', 'style', 'type', 'range',
   'product', 'food', 'drink', 'beverage', 'snack', 'organic', 'natural',
-  'free', 'lite', 'light', 'zero', 'diet', 'sugar', 'salt', 'fat',
 ]);
+
+/**
+ * Variant-defining words. Previously these were stop words, which made
+ * "Coca-Cola Zero" indistinguishable from "Coca-Cola" — the #1 source of
+ * wrong-flavor matches. They now carry weight and trigger a heavy penalty
+ * when the query's variant family is entirely absent from the result.
+ */
+export const DEFAULT_VARIANT_TOKENS = new Set([
+  'zero', 'diet', 'light', 'lite', 'max', 'sugar', 'free',
+  'original', 'classic', 'salt', 'salted', 'unsalted', 'fat',
+  'sweetened', 'unsweetened', 'decaf', 'decaffeinated', 'caffeine',
+  'mini', 'spicy', 'hot', 'mild',
+]);
+
+/** Aliases so equivalent variant spellings count as the same family. */
+const VARIANT_ALIASES: Record<string, string> = {
+  lite: 'light',
+  decaffeinated: 'decaf',
+  salted: 'salt',
+};
+
+const canonVariant = (t: string): string => VARIANT_ALIASES[t] ?? t;
 
 export const DEFAULT_CONFIG: RelevanceConfig = {
   threshold: 0.4,
   minDistinctiveOverlap: 1,
   brandTokens: DEFAULT_BRAND_TOKENS,
   stopWords: DEFAULT_STOP_WORDS,
+  variantTokens: DEFAULT_VARIANT_TOKENS,
 };
 
 // ─── Normalization ───────────────────────────────────────────────────────────
@@ -60,25 +89,28 @@ export const tokenize = (s: string): string[] =>
 
 // ─── Token Classification ────────────────────────────────────────────────────
 
-export type TokenClass = 'brand' | 'stop' | 'distinctive';
+export type TokenClass = 'brand' | 'stop' | 'variant' | 'distinctive';
 
 export const classifyToken = (token: string, config: RelevanceConfig): TokenClass => {
   const t = normalize(token);
   if (config.brandTokens.has(t)) return 'brand';
   if (config.stopWords.has(t)) return 'stop';
+  if (config.variantTokens.has(t)) return 'variant';
   return 'distinctive';
 };
 
-/** Split tokens into { brand, distinctive } sets (stop words excluded from both) */
+/** Split tokens into { brand, distinctive, variant } sets (stop words excluded from all) */
 export const classifyTokens = (tokens: string[], config: RelevanceConfig) => {
   const brand: string[] = [];
   const distinctive: string[] = [];
+  const variant: string[] = [];
   for (const t of tokens) {
     const cls = classifyToken(t, config);
     if (cls === 'brand') brand.push(t);
+    else if (cls === 'variant') variant.push(t);
     else if (cls === 'distinctive') distinctive.push(t);
   }
-  return { brand, distinctive };
+  return { brand, distinctive, variant };
 };
 
 // ─── Fuzzy Matching ──────────────────────────────────────────────────────────
@@ -130,6 +162,10 @@ export interface RelevanceScore {
   distinctiveTotal: number;
   /** Number of brand tokens that matched */
   brandOverlap: number;
+  /** Number of variant tokens (zero/diet/light/…) in the query that matched */
+  variantOverlap: number;
+  /** Total variant tokens in the query */
+  variantTotal: number;
   /** Whether only brand tokens matched (no distinctive overlap) */
   brandOnlyMatch: boolean;
   /** Whether the result passes the configured threshold + distinctive overlap */
@@ -152,10 +188,11 @@ export const scoreRelevance = (
   const resultTokens = tokenize(resultText);
 
   if (queryTokens.length === 0 || resultTokens.length === 0) {
-    return { score: 0, distinctiveOverlap: 0, distinctiveTotal: 0, brandOverlap: 0, brandOnlyMatch: false, passes: false };
+    return { score: 0, distinctiveOverlap: 0, distinctiveTotal: 0, brandOverlap: 0, variantOverlap: 0, variantTotal: 0, brandOnlyMatch: false, passes: false };
   }
 
-  const { brand: queryBrand, distinctive: queryDistinctive } = classifyTokens(queryTokens, config);
+  const { brand: queryBrand, distinctive: queryDistinctive, variant: queryVariant } =
+    classifyTokens(queryTokens, config);
 
   // Count overlaps (fuzzy)
   let distinctiveOverlap = 0;
@@ -168,12 +205,48 @@ export const scoreRelevance = (
     if (fuzzyMatch(bt, resultTokens)) brandOverlap++;
   }
 
-  // Score: weight distinctive tokens 3x, brand tokens 1x
+  // Variant overlap: alias-aware ("lite" ≡ "light"), then fuzzy as backup.
+  const resultVariantCanon = new Set(
+    resultTokens.filter((t) => config.variantTokens.has(t)).map(canonVariant),
+  );
+  const queryVariantCanon = new Set(queryVariant.map(canonVariant));
+  let variantOverlap = 0;
+  for (const vt of queryVariant) {
+    if (resultVariantCanon.has(canonVariant(vt)) || fuzzyMatch(vt, resultTokens)) variantOverlap++;
+  }
+
+  // Variant tokens the RESULT has that the query never asked for
+  // (e.g. query "Coca-Cola" but result "Coca-Cola Zero").
+  let extraVariants = 0;
+  for (const rv of resultVariantCanon) {
+    if (!queryVariantCanon.has(rv)) extraVariants++;
+  }
+
+  // Score: distinctive 3x, variant 2x, brand 1x
   const distinctiveWeight = 3;
+  const variantWeight = 2;
   const brandWeight = 1;
-  const totalWeight = queryDistinctive.length * distinctiveWeight + queryBrand.length * brandWeight;
-  const matchedWeight = distinctiveOverlap * distinctiveWeight + brandOverlap * brandWeight;
-  const score = totalWeight > 0 ? matchedWeight / totalWeight : 0;
+  const totalWeight =
+    queryDistinctive.length * distinctiveWeight +
+    queryVariant.length * variantWeight +
+    queryBrand.length * brandWeight;
+  const matchedWeight =
+    distinctiveOverlap * distinctiveWeight +
+    variantOverlap * variantWeight +
+    brandOverlap * brandWeight;
+  let score = totalWeight > 0 ? matchedWeight / totalWeight : 0;
+
+  // Variant-family rule: the query names a variant ("Zero", "Diet", …) but the
+  // result matches NONE of them → almost certainly the wrong flavor/version.
+  // One matching variant satisfies the family ("Zero Sugar" matches "Zero").
+  if (queryVariant.length > 0 && variantOverlap === 0) {
+    score *= 0.4;
+  }
+  // Mild penalty per unrequested variant in the result, so plain "Coca-Cola"
+  // outranks "Coca-Cola Zero" when the user didn't ask for a variant.
+  if (extraVariants > 0) {
+    score *= Math.pow(0.85, extraVariants);
+  }
 
   const brandOnlyMatch = distinctiveOverlap === 0 && brandOverlap > 0;
   const passes = score >= config.threshold
@@ -185,6 +258,8 @@ export const scoreRelevance = (
     distinctiveOverlap,
     distinctiveTotal: queryDistinctive.length,
     brandOverlap,
+    variantOverlap,
+    variantTotal: queryVariant.length,
     brandOnlyMatch,
     passes,
   };
