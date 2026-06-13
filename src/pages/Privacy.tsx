@@ -57,8 +57,8 @@ export default function Privacy() {
 
           <Section title="Contact">
             If you have any questions about this privacy policy, please contact us at{" "}
-            <a href="mailto:geovanis@proton.me" style={{ color: DS.ink, textDecoration: "none", fontWeight: 600 }}>
-              geovanis@proton.me
+            <a href="mailto:contact@goodscan.shop" style={{ color: DS.ink, textDecoration: "none", fontWeight: 600 }}>
+              contact@goodscan.shop
             </a>
             .
           </Section>

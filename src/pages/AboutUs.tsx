@@ -73,7 +73,7 @@ export default function AboutUs() {
           }}>Contact</h2>
           <div style={{ background: DS.card, borderRadius: DS.radius.sm, overflow: "hidden", marginBottom: 30, boxShadow: "0 2px 6px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)" }}>
             {[
-              { label: "Email", value: "geovanis@proton.me", href: "mailto:geovanis@proton.me" },
+              { label: "Email", value: "contact@goodscan.shop", href: "mailto:contact@goodscan.shop" },
               { label: "Privacy policy", value: "View", to: "/privacy" },
               { label: "Methodology", value: "View", to: "/methodology" },
             ].map((item, i) => {
@@ -112,7 +112,7 @@ export default function AboutUs() {
           </div>
 
           <div style={{ textAlign: "center", fontSize: 12, color: DS.muted, paddingBottom: 4 }}>
-            v1.0 · Made with care
+            v2.0 · Made with care
           </div>
         </div>
       </main>

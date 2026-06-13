@@ -22,7 +22,6 @@ git add .
 git commit -m "up"
 git push origin main
 
-a119230.
 
 npm run dev:all
 

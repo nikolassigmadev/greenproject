@@ -1246,7 +1246,7 @@ const Scan = () => {
   const processImageForOFF = useCallback(async (imageData: string) => {
     if (!requirePriorities()) return;
     setOffSearchLoading(true);
-    setScanStage("Extracting text from image...");
+    setScanStage("Identifying Product...");
     setScanProgress(10);
     setOffSearchResults([]);
     setOffSearchText("");

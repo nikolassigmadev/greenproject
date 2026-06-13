@@ -756,7 +756,7 @@ DATA SOURCES:
 - Labour and sourcing flags: researched and reviewed in-house against published reports and certifications.
 
 CONTACT:
-- Email: geovanis@proton.me
+- Email: contact@goodscan.shop
 - Privacy Policy: /privacy
 - Methodology page: /methodology
 
@@ -796,7 +796,7 @@ LIMITATIONS:
 - Not legal advice. Flags describe documented findings, not legal verdicts (unless the source is a court ruling).
 
 CONTACT FOR CORRECTIONS:
-Users can report issues with any flag by emailing geovanis@proton.me.
+Users can report issues with any flag by emailing contact@goodscan.shop.
 `;
 
 /**
@@ -830,7 +830,7 @@ app.post('/api/chat/aboutus', async (req, res) => {
       messages: [
         {
           role: 'system',
-          content: `You are GoodScan's friendly support assistant. Answer ONLY using the information below about the app, its mission, and its methodology. If the answer is not in the information, say: "I don't have that information -- try the contact email geovanis@proton.me." Keep replies short, plain-English, and helpful. Do not invent facts, brands, or sources.
+          content: `You are GoodScan's friendly support assistant. Answer ONLY using the information below about the app, its mission, and its methodology. If the answer is not in the information, say: "I don't have that information -- try the contact email contact@goodscan.shop." Keep replies short, plain-English, and helpful. Do not invent facts, brands, or sources.
 
 INFORMATION:
 ${ABOUT_US_KNOWLEDGE}`,
