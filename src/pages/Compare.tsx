@@ -1,15 +1,17 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   Search, Loader2, GitCompareArrows, AlertTriangle,
   CheckCircle2, ExternalLink, Package2, X, Trophy, Leaf, Heart, Cloud,
-  ShieldCheck, Sparkles, Plus,
+  ShieldCheck, Sparkles, Plus, SlidersHorizontal,
 } from "lucide-react";
 import { BackButton } from "@/components/BackButton";
 import { DS } from "@/styles/design-tokens";
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
 import { getVerifiedFlagForBrand } from "@/services/brandFlags";
-import type { BrandFlagV2 } from "@/types/brandFlag";
+import type { BrandFlagV2, FlagCategory } from "@/types/brandFlag";
 import { smartProductSearch } from "@/utils/smartProductSearch";
+import { loadPriorities, type UserPriorities } from "@/utils/userPreferences";
 import { toast } from "sonner";
 
 type Slot = "A" | "B";
@@ -48,30 +50,59 @@ function gradeRank(grade: string | null | undefined): number {
 // Shared verdict — computes who wins so card borders + verdict card stay in sync
 // ────────────────────────────────────────────────────────────
 
+// Each verdict measure maps to one of the four user-priority dimensions, so the
+// user's weighting in /preferences can amplify or mute it.
+type PriorityDim = "environment" | "laborRights" | "animalWelfare" | "nutrition";
+
+const ALL_DIMS: PriorityDim[] = ["environment", "laborRights", "animalWelfare", "nutrition"];
+
+const CATEGORY_DIMENSION: Record<FlagCategory, PriorityDim> = {
+  forced_labour: "laborRights",
+  child_labour: "laborRights",
+  wage_theft: "laborRights",
+  unsafe_conditions: "laborRights",
+  union_busting: "laborRights",
+  discrimination: "laborRights",
+  supply_chain_opacity: "laborRights",
+  boycott_listed: "laborRights",
+  animal_welfare: "animalWelfare",
+  environmental_harm: "environment",
+};
+
 interface VerdictPoint {
   label: string;
   icon: typeof Leaf;
   winner: "A" | "B" | "tie";
   note?: string;
+  dimension: PriorityDim;
+  weight: number; // priorities[dimension] / 50 → 0 (ignored) … 2 (critical)
 }
 
 interface VerdictResult {
   points: VerdictPoint[];
-  aWins: number;
+  aWins: number;   // raw measures won
   bWins: number;
+  aScore: number;  // priority-weighted
+  bScore: number;
   leader: "A" | "B" | "tie";
+  personalized: boolean; // any priority differs from the neutral default
 }
 
-function computeVerdict(a: OpenFoodFactsResult, b: OpenFoodFactsResult): VerdictResult {
+function computeVerdict(
+  a: OpenFoodFactsResult,
+  b: OpenFoodFactsResult,
+  priorities: UserPriorities,
+): VerdictResult {
   const aFlag = getVerifiedFlagForBrand(a.brand);
   const bFlag = getVerifiedFlagForBrand(b.brand);
-  const points: VerdictPoint[] = [];
+  const weightFor = (dim: PriorityDim) => priorities[dim] / 50;
+  const raw: Omit<VerdictPoint, "weight">[] = [];
 
   const ar = gradeRank(a.ecoscoreGrade);
   const br = gradeRank(b.ecoscoreGrade);
   if (ar !== br) {
-    points.push({
-      label: "Eco-score", icon: Leaf,
+    raw.push({
+      label: "Eco-score", icon: Leaf, dimension: "environment",
       winner: ar < br ? "A" : "B",
       note: `${(a.ecoscoreGrade ?? "?").toUpperCase()} vs ${(b.ecoscoreGrade ?? "?").toUpperCase()}`,
     });
@@ -80,8 +111,8 @@ function computeVerdict(a: OpenFoodFactsResult, b: OpenFoodFactsResult): Verdict
   const an = gradeRank(a.nutriscoreGrade);
   const bn = gradeRank(b.nutriscoreGrade);
   if (an !== bn) {
-    points.push({
-      label: "Nutri-score", icon: Heart,
+    raw.push({
+      label: "Nutri-score", icon: Heart, dimension: "nutrition",
       winner: an < bn ? "A" : "B",
       note: `${(a.nutriscoreGrade ?? "?").toUpperCase()} vs ${(b.nutriscoreGrade ?? "?").toUpperCase()}`,
     });
@@ -90,21 +121,49 @@ function computeVerdict(a: OpenFoodFactsResult, b: OpenFoodFactsResult): Verdict
   const aco2 = a.ecoscoreData?.agribalyse?.co2_total;
   const bco2 = b.ecoscoreData?.agribalyse?.co2_total;
   if (aco2 != null && bco2 != null && aco2 !== bco2) {
-    points.push({
-      label: "Lower CO2", icon: Cloud,
+    raw.push({
+      label: "Lower CO2", icon: Cloud, dimension: "environment",
       winner: aco2 < bco2 ? "A" : "B",
       note: `${aco2.toFixed(1)} vs ${bco2.toFixed(1)} kg`,
     });
   }
 
-  if (!aFlag && bFlag) points.push({ label: "Clean ethics record", icon: ShieldCheck, winner: "A" });
-  else if (aFlag && !bFlag) points.push({ label: "Clean ethics record", icon: ShieldCheck, winner: "B" });
+  // Ethics: the flagged side loses; the dimension follows the flag's category
+  // (labour vs animal welfare vs environmental harm).
+  if (!aFlag && bFlag) {
+    raw.push({ label: "Clean ethics record", icon: ShieldCheck, winner: "A", dimension: CATEGORY_DIMENSION[bFlag.category] ?? "laborRights" });
+  } else if (aFlag && !bFlag) {
+    raw.push({ label: "Clean ethics record", icon: ShieldCheck, winner: "B", dimension: CATEGORY_DIMENSION[aFlag.category] ?? "laborRights" });
+  }
+
+  const points: VerdictPoint[] = raw.map((p) => ({ ...p, weight: weightFor(p.dimension) }));
 
   const aWins = points.filter((p) => p.winner === "A").length;
   const bWins = points.filter((p) => p.winner === "B").length;
-  const leader: "A" | "B" | "tie" = aWins > bWins ? "A" : bWins > aWins ? "B" : "tie";
+  let aScore = points.filter((p) => p.winner === "A").reduce((s, p) => s + p.weight, 0);
+  let bScore = points.filter((p) => p.winner === "B").reduce((s, p) => s + p.weight, 0);
 
-  return { points, aWins, bWins, leader };
+  // If the user zeroed out every priority that applies here, fall back to an
+  // unweighted count so we can still call a winner.
+  if (aScore === 0 && bScore === 0 && points.length > 0) {
+    aScore = aWins;
+    bScore = bWins;
+  }
+
+  const leader: "A" | "B" | "tie" = aScore > bScore ? "A" : bScore > aScore ? "B" : "tie";
+  const personalized = ALL_DIMS.some((d) => priorities[d] !== 50);
+
+  return { points, aWins, bWins, aScore, bScore, leader, personalized };
+}
+
+/** Map a priority weight (value/50) to a short, human label for the verdict. */
+function priorityTag(weight: number): { text: string; muted: boolean } {
+  const v = weight * 50;
+  if (v <= 12) return { text: "Not counted", muted: true };
+  if (v <= 37) return { text: "Low priority", muted: false };
+  if (v <= 62) return { text: "Counts", muted: false };
+  if (v <= 87) return { text: "High priority", muted: false };
+  return { text: "Top priority", muted: false };
 }
 
 // ────────────────────────────────────────────────────────────
@@ -596,13 +655,31 @@ function VsDivider({ active }: { active: boolean }) {
 export default function Compare() {
   const [slotA, setSlotA] = useState<SlotState>({ query: "", loading: false, product: null });
   const [slotB, setSlotB] = useState<SlotState>({ query: "", loading: false, product: null });
+  // The input panel collapses (slides away) once a comparison runs, and slides
+  // back in when the user edits or starts over.
+  const [formOpen, setFormOpen] = useState(true);
+  // User priorities weight the verdict; keep them live if changed elsewhere.
+  const [priorities, setPriorities] = useState<UserPriorities>(() => loadPriorities());
+
+  useEffect(() => {
+    const handler = () => setPriorities(loadPriorities());
+    window.addEventListener("prioritiesUpdated", handler);
+    return () => window.removeEventListener("prioritiesUpdated", handler);
+  }, []);
 
   const updateSlot = (slot: Slot, patch: Partial<SlotState>) => {
     if (slot === "A") setSlotA((s) => ({ ...s, ...patch }));
     else setSlotB((s) => ({ ...s, ...patch }));
   };
 
+  const resetAll = () => {
+    setSlotA({ query: "", loading: false, product: null });
+    setSlotB({ query: "", loading: false, product: null });
+    setFormOpen(true);
+  };
+
   const runPair = async (a: string, b: string) => {
+    setFormOpen(false); // slide the input panel away as results come in
     setSlotA({ query: a, loading: true, product: null });
     setSlotB({ query: b, loading: true, product: null });
     try {
@@ -622,11 +699,14 @@ export default function Compare() {
   };
 
   const both = slotA.product && slotB.product;
-  const verdict = both ? computeVerdict(slotA.product!, slotB.product!) : null;
+  const verdict = both ? computeVerdict(slotA.product!, slotB.product!, priorities) : null;
   const outcomeFor = (slot: Slot): "winner" | "loser" | "neutral" => {
     if (!verdict || verdict.leader === "tie") return "neutral";
     return verdict.leader === slot ? "winner" : "loser";
   };
+
+  // Results exist once a comparison has been kicked off (loading or loaded).
+  const showResults = !!(slotA.product || slotB.product || slotA.loading || slotB.loading);
 
   return (
     <div style={{
@@ -661,102 +741,162 @@ export default function Compare() {
           </div>
         </header>
 
-        {/* Suggestions row — only when both slots empty */}
-        {!slotA.product && !slotB.product && (
-          <section style={{ marginBottom: 14 }}>
-            <div style={{
-              fontSize: 10.5, fontWeight: 800, color: DS.muted,
-              letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8,
-              display: "flex", alignItems: "center", gap: 6,
-            }}>
-              <Sparkles style={{ width: 12, height: 12 }} />
-              Quick pairs
-            </div>
-            <div style={{
-              display: "flex", gap: 8, overflowX: "auto",
-              paddingBottom: 4, scrollbarWidth: "none",
-            }}>
-              {QUICK_PAIRS.map((p) => (
-                <button
-                  key={`${p.a}-${p.b}`}
-                  onClick={() => runPair(p.a, p.b)}
-                  style={{
-                    flexShrink: 0,
-                    background: DS.card, border: `1px solid ${DS.hair}`,
-                    borderRadius: 14, padding: "10px 14px", textAlign: "left",
-                    cursor: "pointer", fontFamily: DS.font,
-                    minWidth: 170,
-                  }}
-                >
-                  <div style={{
-                    fontSize: 10, fontWeight: 800, color: DS.muted,
-                    letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: 4,
-                  }}>
-                    {p.tag}
-                  </div>
-                  <div style={{
-                    fontSize: 13, fontWeight: 700, color: DS.ink,
-                    display: "flex", alignItems: "center", gap: 6,
-                  }}>
-                    {p.a}
-                    <span style={{ color: DS.muted, fontWeight: 600, fontSize: 10 }}>VS</span>
-                    {p.b}
-                  </div>
-                </button>
-              ))}
-            </div>
-          </section>
-        )}
+        {/* ── Collapsible input panel — slides away once a comparison runs ── */}
+        <div
+          aria-hidden={!formOpen}
+          style={{
+            display: "grid",
+            gridTemplateRows: formOpen ? "1fr" : "0fr",
+            opacity: formOpen ? 1 : 0,
+            transform: formOpen ? "translateY(0)" : "translateY(-10px)",
+            pointerEvents: formOpen ? "auto" : "none",
+            transition:
+              "grid-template-rows 420ms cubic-bezier(0.22,1,0.36,1), " +
+              "opacity 260ms ease, transform 420ms cubic-bezier(0.22,1,0.36,1)",
+          }}
+        >
+          <div style={{ overflow: "hidden", minHeight: 0 }}>
+            {/* Quick pairs — only while there are no results to show */}
+            {!showResults && (
+              <section style={{ marginBottom: 14 }}>
+                <div style={{
+                  fontSize: 10.5, fontWeight: 800, color: DS.muted,
+                  letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8,
+                  display: "flex", alignItems: "center", gap: 6,
+                }}>
+                  <Sparkles style={{ width: 12, height: 12 }} />
+                  Quick pairs
+                </div>
+                <div style={{
+                  display: "flex", gap: 8, overflowX: "auto",
+                  paddingBottom: 4, scrollbarWidth: "none",
+                }}>
+                  {QUICK_PAIRS.map((p) => (
+                    <button
+                      key={`${p.a}-${p.b}`}
+                      onClick={() => runPair(p.a, p.b)}
+                      style={{
+                        flexShrink: 0,
+                        background: DS.card, border: `1px solid ${DS.hair}`,
+                        borderRadius: 14, padding: "10px 14px", textAlign: "left",
+                        cursor: "pointer", fontFamily: DS.font,
+                        minWidth: 170,
+                      }}
+                    >
+                      <div style={{
+                        fontSize: 10, fontWeight: 800, color: DS.muted,
+                        letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: 4,
+                      }}>
+                        {p.tag}
+                      </div>
+                      <div style={{
+                        fontSize: 13, fontWeight: 700, color: DS.ink,
+                        display: "flex", alignItems: "center", gap: 6,
+                      }}>
+                        {p.a}
+                        <span style={{ color: DS.muted, fontWeight: 600, fontSize: 10 }}>VS</span>
+                        {p.b}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            )}
 
-        {/* Single-step search form — both inputs, one Compare button. */}
-        <UnifiedCompareForm
-          initialA={slotA.query}
-          initialB={slotB.query}
-          loading={slotA.loading || slotB.loading}
-          onCompare={runPair}
-        />
-
-        {/* Result cards */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <ProductSlot
-            slot="A" state={slotA} outcome={outcomeFor("A")}
-            onClear={() => setSlotA({ query: "", loading: false, product: null })}
-          />
-          <VsDivider active={!!both} />
-          <ProductSlot
-            slot="B" state={slotB} outcome={outcomeFor("B")}
-            onClear={() => setSlotB({ query: "", loading: false, product: null })}
-          />
+            {/* Single-step search form — both inputs, one Compare button. */}
+            <UnifiedCompareForm
+              initialA={slotA.query}
+              initialB={slotB.query}
+              loading={slotA.loading || slotB.loading}
+              onCompare={runPair}
+            />
+          </div>
         </div>
 
-        {/* Verdict */}
-        {both && verdict && (
-          <Verdict a={slotA.product!} b={slotB.product!} verdict={verdict} />
+        {/* ── Compact "comparing" bar — appears once the panel has slid away ── */}
+        {!formOpen && (
+          <button
+            onClick={() => setFormOpen(true)}
+            className="cmp-editbar"
+            style={{
+              width: "100%", marginBottom: 12,
+              display: "flex", alignItems: "center", gap: 8,
+              background: DS.card, border: `1px solid ${DS.hair}`,
+              borderRadius: 14, padding: "11px 14px",
+              cursor: "pointer", fontFamily: DS.font, textAlign: "left",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+            }}
+          >
+            <GitCompareArrows style={{ width: 14, height: 14, color: DS.muted, flexShrink: 0 }} />
+            <span style={{
+              flex: 1, minWidth: 0, fontSize: 13, fontWeight: 700, color: DS.ink,
+              display: "flex", alignItems: "center", gap: 6,
+              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+            }}>
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{slotA.query || "Product A"}</span>
+              <span style={{ color: DS.muted, fontWeight: 600, fontSize: 10, flexShrink: 0 }}>VS</span>
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{slotB.query || "Product B"}</span>
+            </span>
+            <span style={{
+              flexShrink: 0, fontSize: 11.5, fontWeight: 800, color: DS.brand,
+              letterSpacing: "0.03em", textTransform: "uppercase",
+            }}>
+              Edit
+            </span>
+          </button>
         )}
 
-        {/* Reset */}
-        {(slotA.product || slotB.product) && (
-          <div style={{ marginTop: 14, textAlign: "center" }}>
-            <button
-              onClick={() => {
-                setSlotA({ query: "", loading: false, product: null });
-                setSlotB({ query: "", loading: false, product: null });
-              }}
-              style={{
-                display: "inline-flex", alignItems: "center", gap: 6,
-                background: "transparent", border: `1px solid ${DS.hair}`,
-                borderRadius: 999, padding: "8px 16px",
-                fontSize: 12, fontWeight: 700, color: DS.muted,
-                cursor: "pointer", fontFamily: DS.font,
-              }}
-            >
-              <Plus style={{ width: 12, height: 12, transform: "rotate(45deg)" }} />
-              Start a new comparison
-            </button>
+        {/* ── Result cards — only after a comparison is initiated ── */}
+        {showResults && (
+          <div className="cmp-results">
+            {/* Verdict first — lead with the answer, supporting detail below. */}
+            {both && verdict && (
+              <Verdict a={slotA.product!} b={slotB.product!} verdict={verdict} priorities={priorities} />
+            )}
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <ProductSlot
+                slot="A" state={slotA} outcome={outcomeFor("A")}
+                onClear={() => setSlotA({ query: "", loading: false, product: null })}
+              />
+              <VsDivider active={!!both} />
+              <ProductSlot
+                slot="B" state={slotB} outcome={outcomeFor("B")}
+                onClear={() => setSlotB({ query: "", loading: false, product: null })}
+              />
+            </div>
+
+            {/* Reset */}
+            <div style={{ marginTop: 14, textAlign: "center" }}>
+              <button
+                onClick={resetAll}
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 6,
+                  background: "transparent", border: `1px solid ${DS.hair}`,
+                  borderRadius: 999, padding: "8px 16px",
+                  fontSize: 12, fontWeight: 700, color: DS.muted,
+                  cursor: "pointer", fontFamily: DS.font,
+                }}
+              >
+                <Plus style={{ width: 12, height: 12, transform: "rotate(45deg)" }} />
+                Start a new comparison
+              </button>
+            </div>
           </div>
         )}
 
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        <style>{`
+          @keyframes spin { to { transform: rotate(360deg); } }
+          /* Transform-only entrances: content is always opaque, so it can never
+             get stuck invisible if the animation is skipped or frozen. */
+          @keyframes cmpIn { from { transform: translateY(14px); } to { transform: translateY(0); } }
+          @keyframes cmpFade { from { transform: translateY(-6px); } to { transform: translateY(0); } }
+          .cmp-results { animation: cmpIn 440ms cubic-bezier(0.22,1,0.36,1); }
+          .cmp-editbar { animation: cmpFade 320ms ease; }
+          @media (prefers-reduced-motion: reduce) {
+            .cmp-results, .cmp-editbar { animation: none; }
+          }
+        `}</style>
       </main>
     </div>
   );
@@ -767,20 +907,22 @@ export default function Compare() {
 // ────────────────────────────────────────────────────────────
 
 function Verdict({
-  a, b, verdict,
+  a, b, verdict, priorities,
 }: {
   a: OpenFoodFactsResult;
   b: OpenFoodFactsResult;
   verdict: VerdictResult;
+  priorities: UserPriorities;
 }) {
-  const { points, aWins, bWins, leader } = verdict;
+  const { points, aWins, bWins, leader, personalized } = verdict;
   const leaderProduct = leader === "A" ? a : leader === "B" ? b : null;
+  const leaderWins = leader === "A" ? aWins : leader === "B" ? bWins : 0;
   // Leader hero color: green when a clear winner exists; muted on tie.
   const leaderColor = leaderProduct ? DS.good : DS.muted;
 
   return (
     <section style={{
-      marginTop: 18, background: DS.card, borderRadius: 22,
+      marginBottom: 14, background: DS.card, borderRadius: 22,
       overflow: "hidden",
       boxShadow: "0 4px 18px rgba(0,0,0,0.08)",
       border: `1px solid ${DS.hair}`,
@@ -800,6 +942,15 @@ function Verdict({
         }}>
           <Trophy style={{ width: 12, height: 12 }} />
           Verdict
+          {personalized && (
+            <span style={{
+              fontSize: 9, fontWeight: 800, letterSpacing: "0.04em",
+              padding: "2px 7px", borderRadius: 999,
+              background: "rgba(255,255,255,0.22)", marginLeft: 2,
+            }}>
+              YOUR VALUES
+            </span>
+          )}
         </div>
         {leaderProduct ? (
           <>
@@ -812,8 +963,9 @@ function Verdict({
             <div style={{
               fontSize: 12.5, opacity: 0.85, marginTop: 4, fontWeight: 600,
             }}>
-              Wins on {Math.max(aWins, bWins)} of {points.length}{" "}
-              measure{points.length === 1 ? "" : "s"}.
+              {personalized
+                ? "Best match for the values you set."
+                : `Wins on ${leaderWins} of ${points.length} measure${points.length === 1 ? "" : "s"}.`}
             </div>
           </>
         ) : (
@@ -827,7 +979,7 @@ function Verdict({
             <div style={{ fontSize: 12.5, opacity: 0.85, marginTop: 4, fontWeight: 600 }}>
               {points.length === 0
                 ? "We need scored data on both to call a winner."
-                : "Even split — pick based on your priority."}
+                : "Even split on what you care about — pick either."}
             </div>
           </>
         )}
@@ -841,12 +993,16 @@ function Verdict({
               const winnerName = p.winner === "A"
                 ? (a.productName?.split(" ")[0] || "Product A")
                 : (b.productName?.split(" ")[0] || "Product B");
-              // Per-row winner is always green — the user reads "this side won this measure".
-              const wColor = DS.good;
+              const tag = priorityTag(p.weight);
+              const counted = !tag.muted;
+              // Counted measures read green; ignored ones go muted so it's clear
+              // they didn't sway the verdict.
+              const wColor = counted ? DS.good : DS.muted;
               return (
                 <li key={i} style={{
                   display: "flex", alignItems: "center", gap: 10,
                   padding: "10px 12px", background: DS.bg, borderRadius: 12,
+                  opacity: counted ? 1 : 0.65,
                 }}>
                   <div style={{
                     width: 28, height: 28, borderRadius: 9,
@@ -856,8 +1012,21 @@ function Verdict({
                     <p.icon style={{ width: 14, height: 14 }} />
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: DS.ink, lineHeight: 1.2 }}>
-                      {p.label}
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: DS.ink, lineHeight: 1.2 }}>
+                        {p.label}
+                      </span>
+                      {personalized && (
+                        <span style={{
+                          fontSize: 9, fontWeight: 800, letterSpacing: "0.02em", textTransform: "uppercase",
+                          padding: "2px 6px", borderRadius: 999,
+                          color: tag.muted ? DS.muted : DS.brand,
+                          background: tag.muted ? "transparent" : alpha(DS.brand, 10),
+                          border: `1px solid ${tag.muted ? DS.hair : alpha(DS.brand, 22)}`,
+                        }}>
+                          {tag.text}
+                        </span>
+                      )}
                     </div>
                     {p.note && (
                       <div style={{ fontSize: 11, color: DS.muted, marginTop: 2, fontFeatureSettings: "'tnum'" }}>
@@ -879,13 +1048,28 @@ function Verdict({
               );
             })}
           </ul>
-          <p style={{
-            fontSize: 11, color: DS.muted, lineHeight: 1.45,
-            margin: "12px 4px 0", fontStyle: "italic",
+
+          {/* Footer — transparency + jump to priorities */}
+          <div style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            gap: 10, flexWrap: "wrap", margin: "12px 4px 0",
           }}>
-            Based on OpenFoodFacts data and our brand-flag database. Not a recommendation —
-            you decide what matters most.
-          </p>
+            <p style={{ fontSize: 11, color: DS.muted, lineHeight: 1.45, margin: 0, fontStyle: "italic", flex: 1, minWidth: 160 }}>
+              {personalized
+                ? "Weighted by the priorities you set — not a recommendation."
+                : "Set your priorities to tailor this verdict to what matters to you."}
+            </p>
+            <Link to="/preferences" style={{
+              display: "inline-flex", alignItems: "center", gap: 5, flexShrink: 0,
+              padding: "6px 11px", borderRadius: 999,
+              background: alpha(DS.brand, 10), color: DS.brand,
+              border: `1px solid ${alpha(DS.brand, 22)}`,
+              fontSize: 11, fontWeight: 800, textDecoration: "none",
+            }}>
+              <SlidersHorizontal style={{ width: 12, height: 12 }} />
+              {personalized ? "Adjust" : "Set priorities"}
+            </Link>
+          </div>
         </div>
       )}
     </section>

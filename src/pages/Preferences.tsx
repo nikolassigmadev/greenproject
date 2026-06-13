@@ -1,32 +1,40 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { BackButton } from "@/components/BackButton";
-import { loadPriorities, savePriorities, DEFAULT_PRIORITIES, type UserPriorities } from "@/utils/userPreferences";
-import { Leaf, Users, Heart, Apple, ArrowRight } from "lucide-react";
+import {
+  loadPriorities, savePriorities, DEFAULT_PRIORITIES, type UserPriorities,
+} from "@/utils/userPreferences";
+import { Leaf, Users, Heart, ArrowRight, RotateCcw, Check } from "lucide-react";
 import { DS } from "@/styles/design-tokens";
 
+// Five discrete weights (0–100). The label + effect line do the explaining so
+// users understand what each setting actually does to a verdict.
 const LEVELS = [
-  { label: "None",     value: 0   },
-  { label: "Low",      value: 25  },
-  { label: "Medium",   value: 50  },
-  { label: "High",     value: 75  },
-  { label: "Critical", value: 100 },
-];
+  { value: 0,   label: "None",     effect: "Left out of scoring entirely" },
+  { value: 25,  label: "Low",      effect: "A small nudge on the verdict" },
+  { value: 50,  label: "Medium",   effect: "Counted the usual amount" },
+  { value: 75,  label: "High",     effect: "Weighs heavily on the verdict" },
+  { value: 100, label: "Critical", effect: "Can outweigh everything else" },
+] as const;
 
-const valueToLevel = (v: number) => {
+const levelIndex = (v: number): number => {
   if (v <= 12) return 0;
-  if (v <= 37) return 25;
-  if (v <= 62) return 50;
-  if (v <= 87) return 75;
-  return 100;
+  if (v <= 37) return 1;
+  if (v <= 62) return 2;
+  if (v <= 87) return 3;
+  return 4;
 };
+
+function alpha(color: string, pct: number): string {
+  return `color-mix(in srgb, ${color} ${pct}%, transparent)`;
+}
 
 const priorityConfig = [
   {
     key: "laborRights" as keyof UserPriorities,
     label: "Labor & Human Rights",
-    description: "Child labor, forced labor, fair wages, worker safety",
+    description: "Child & forced labor, fair wages, worker safety",
     icon: Users,
     color: DS.bad,
     bgColor: DS.badBg,
@@ -34,7 +42,7 @@ const priorityConfig = [
   {
     key: "environment" as keyof UserPriorities,
     label: "Environmental Impact",
-    description: "Carbon footprint, eco-score, packaging, sustainability",
+    description: "Carbon footprint, eco-score, packaging",
     icon: Leaf,
     color: DS.good,
     bgColor: DS.goodBg,
@@ -42,20 +50,122 @@ const priorityConfig = [
   {
     key: "animalWelfare" as keyof UserPriorities,
     label: "Animal Welfare",
-    description: "Factory farming, animal testing, cruelty-free practices",
+    description: "Factory farming, animal testing, cruelty",
     icon: Heart,
     color: "#9B7AAE",
     bgColor: "var(--ds-animal-bg, #EAE0EF)",
   },
-  {
-    key: "nutrition" as keyof UserPriorities,
-    label: "Nutrition & Health",
-    description: "Nutri-score, processing level, additives",
-    icon: Apple,
-    color: DS.warn,
-    bgColor: DS.warnBg,
-  },
+  // Nutrition is no longer user-tunable here; it stays at its Medium default
+  // (DEFAULT_PRIORITIES.nutrition = 50) and still feeds the nutri-score measure.
 ];
+
+// ── Intensity meter: 4 dots that fill as the level rises (None = empty) ──
+
+function IntensityDots({ level, color }: { level: number; color: string }) {
+  return (
+    <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+      {[1, 2, 3, 4].map((n) => (
+        <span
+          key={n}
+          style={{
+            width: 6, height: 6, borderRadius: 999,
+            background: n <= level ? color : DS.hair,
+            transition: "background 0.18s",
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+// ── Single value card ──
+
+function ValueCard({
+  config, value, onSelect,
+}: {
+  config: (typeof priorityConfig)[number];
+  value: number;
+  onSelect: (v: number) => void;
+}) {
+  const idx = levelIndex(value);
+  const level = LEVELS[idx];
+  const Icon = config.icon;
+  const isOff = idx === 0;
+
+  return (
+    <div style={{
+      background: DS.card,
+      borderRadius: 18,
+      padding: 16,
+      boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04)",
+    }}>
+      {/* Title row */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
+        <div style={{
+          width: 44, height: 44, borderRadius: 13,
+          background: config.bgColor,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          flexShrink: 0,
+        }}>
+          <Icon size={20} style={{ color: config.color }} strokeWidth={2} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: DS.ink, lineHeight: 1.2 }}>
+            {config.label}
+          </div>
+          <div style={{ fontSize: 11.5, color: DS.muted, lineHeight: 1.35, marginTop: 2 }}>
+            {config.description}
+          </div>
+        </div>
+        <div style={{ marginTop: 2, flexShrink: 0 }}>
+          <IntensityDots level={idx} color={config.color} />
+        </div>
+      </div>
+
+      {/* Segmented selector — single inset track, active pill in the category color */}
+      <div style={{
+        display: "flex", gap: 3, padding: 3,
+        background: DS.bg, borderRadius: 12,
+      }}>
+        {LEVELS.map((lvl, i) => {
+          const active = i === idx;
+          return (
+            <button
+              key={lvl.value}
+              onClick={() => onSelect(lvl.value)}
+              aria-pressed={active}
+              style={{
+                flex: 1, padding: "9px 2px", borderRadius: 9,
+                border: "none", cursor: "pointer",
+                background: active ? config.color : "transparent",
+                color: active ? "#fff" : DS.muted,
+                fontSize: 11.5, fontWeight: active ? 800 : 600,
+                fontFamily: DS.font, letterSpacing: "-0.01em",
+                transition: "background 0.15s, color 0.15s",
+              }}
+            >
+              {lvl.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Live plain-language effect */}
+      <div style={{
+        display: "flex", alignItems: "center", gap: 7,
+        marginTop: 11, paddingLeft: 2,
+      }}>
+        <span style={{
+          width: 6, height: 6, borderRadius: 999, flexShrink: 0,
+          background: isOff ? DS.muted : config.color,
+        }} />
+        <span style={{ fontSize: 12, color: DS.muted, lineHeight: 1.3 }}>
+          {level.effect}
+        </span>
+      </div>
+    </div>
+  );
+}
 
 export default function Preferences() {
   const navigate = useNavigate();
@@ -74,160 +184,128 @@ export default function Preferences() {
     savePriorities(updated);
   };
 
+  const handleReset = () => {
+    setPriorities(DEFAULT_PRIORITIES);
+    savePriorities(DEFAULT_PRIORITIES);
+  };
+
+  const customized = useMemo(
+    () => priorityConfig.some((c) => priorities[c.key] !== DEFAULT_PRIORITIES[c.key]),
+    [priorities],
+  );
+
   return (
     <div style={{ background: DS.bg, minHeight: "100dvh", fontFamily: DS.font, color: DS.ink }}>
-      <main style={{ paddingBottom: 100 }}>
+      <main style={{ paddingBottom: 110 }}>
 
         {/* Header */}
         <div style={{
-          padding: "max(60px, calc(env(safe-area-inset-top, 0px) + 16px)) 20px 20px",
-          display: "flex", alignItems: "center", gap: 16,
+          padding: "max(56px, calc(env(safe-area-inset-top, 0px) + 16px)) 20px 18px",
+          display: "flex", alignItems: "flex-start", gap: 14,
         }}>
           <BackButton />
           <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ fontSize: 13, fontWeight: 600, color: DS.muted, letterSpacing: 0.5, textTransform: "uppercase", margin: "0 0 4px" }}>
-              Preferences
-            </p>
-            <h1 style={{ fontSize: "1.65rem", fontWeight: 800, color: DS.ink, letterSpacing: "-0.025em", lineHeight: 1.1, margin: "0 0 6px" }}>
+            <p style={{
+              fontSize: 11, fontWeight: 800, color: DS.muted,
+              letterSpacing: "0.08em", textTransform: "uppercase", margin: "2px 0 4px",
+            }}>
               My Values
+            </p>
+            <h1 style={{
+              fontSize: "1.7rem", fontWeight: 800, color: DS.ink,
+              letterSpacing: "-0.03em", lineHeight: 1.1, margin: "0 0 6px",
+            }}>
+              What matters to you?
             </h1>
-            <p style={{ fontSize: "0.85rem", color: DS.muted, lineHeight: 1.5 }}>
-              Select what matters most. Every verdict will reflect your priorities.
+            <p style={{ fontSize: 13.5, color: DS.muted, lineHeight: 1.5 }}>
+              Every scan is scored around what matters to you.
             </p>
           </div>
         </div>
 
-        <div style={{ padding: "0 16px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
+        <div style={{ padding: "0 16px 16px", display: "flex", flexDirection: "column", gap: 12 }}>
 
-          {/* Priority cards */}
-          {priorityConfig.map((config) => {
-            const Icon = config.icon;
-            const currentLevel = valueToLevel(priorities[config.key]);
+          {/* Value cards */}
+          {priorityConfig.map((config) => (
+            <ValueCard
+              key={config.key}
+              config={config}
+              value={priorities[config.key]}
+              onSelect={(v) => handleChange(config.key, v)}
+            />
+          ))}
 
-            return (
-              <div key={config.key} style={{
-                background: DS.card,
-                borderRadius: DS.radius.md,
-                padding: 16,
-                boxShadow: "0 2px 6px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)",
-              }}>
-                {/* Icon + title row */}
-                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
-                  <div style={{
-                    width: 42, height: 42, borderRadius: 13,
-                    background: config.bgColor,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    flexShrink: 0,
-                  }}>
-                    <Icon size={19} style={{ color: config.color }} strokeWidth={2} />
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontSize: "0.9rem", fontWeight: 700, color: DS.ink, marginBottom: 2 }}>
-                      {config.label}
-                    </p>
-                    <p style={{ fontSize: "0.7rem", color: DS.muted, lineHeight: 1.4 }}>
-                      {config.description}
-                    </p>
-                  </div>
-                </div>
+          {/* Reset — only when something differs from the balanced default */}
+          {customized && (
+            <button
+              onClick={handleReset}
+              style={{
+                alignSelf: "center",
+                display: "inline-flex", alignItems: "center", gap: 7,
+                background: "transparent", border: `1px solid ${DS.hair}`,
+                borderRadius: 999, padding: "9px 16px",
+                fontSize: 12.5, fontWeight: 700, color: DS.muted,
+                cursor: "pointer", fontFamily: DS.font,
+              }}
+            >
+              <RotateCcw style={{ width: 13, height: 13 }} />
+              Reset to balanced
+            </button>
+          )}
 
-                {/* Level selector */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 6 }}>
-                  {LEVELS.map(level => {
-                    const isSelected = currentLevel === level.value;
-                    return (
-                      <button
-                        key={level.label}
-                        onClick={() => handleChange(config.key, level.value)}
-                        style={{
-                          padding: "9px 4px",
-                          borderRadius: 10,
-                          border: isSelected ? "none" : `1px solid ${DS.hair}`,
-                          background: isSelected ? DS.ink : DS.bg,
-                          color: isSelected ? DS.card : DS.muted,
-                          fontSize: "0.68rem",
-                          fontWeight: isSelected ? 700 : 500,
-                          cursor: "pointer",
-                          textAlign: "center",
-                          lineHeight: 1.2,
-                          transition: "all 0.15s",
-                          fontFamily: DS.font,
-                        }}
-                      >
-                        {level.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
-
-          {/* Appearance card */}
+          {/* Auto-save reassurance */}
           <div style={{
-            background: DS.card,
-            borderRadius: DS.radius.md,
-            padding: 16,
-            boxShadow: "0 2px 6px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)",
+            display: "flex", alignItems: "center", gap: 8,
+            padding: "12px 14px", borderRadius: 14,
+            background: alpha(DS.good, 8),
           }}>
-            <p style={{ fontSize: "0.9rem", fontWeight: 700, color: DS.ink, marginBottom: 4 }}>Appearance</p>
-            <p style={{ fontSize: "0.72rem", color: DS.muted, lineHeight: 1.5, marginBottom: 14 }}>
-              Choose your preferred theme
-            </p>
-            <ThemeToggle />
+            <div style={{
+              width: 22, height: 22, borderRadius: 999, flexShrink: 0,
+              background: alpha(DS.good, 16),
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              <Check style={{ width: 13, height: 13, color: DS.good }} strokeWidth={3} />
+            </div>
+            <span style={{ fontSize: 12.5, color: DS.ink, fontWeight: 500, lineHeight: 1.4 }}>
+              Saved automatically — applied to every scan and comparison.
+            </span>
           </div>
 
-          {/* Info card */}
-          <div style={{
-            background: DS.card,
-            borderRadius: DS.radius.md,
-            padding: "14px 16px",
-            boxShadow: "0 2px 6px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)",
-          }}>
-            <p style={{ fontSize: "0.8rem", fontWeight: 700, color: DS.ink, marginBottom: 8 }}>How priorities work</p>
-            {[
-              "Critical — even minor concerns heavily downgrade a result",
-              "Medium — balanced default scoring",
-              "None — no influence on verdict",
-              "Changes are saved automatically and applied to all future scans",
-            ].map(t => (
-              <div key={t} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 4 }}>
-                <span style={{ width: 5, height: 5, borderRadius: "50%", background: DS.muted, marginTop: 6, flexShrink: 0 }} />
-                <span style={{ fontSize: "0.72rem", color: DS.muted, lineHeight: 1.5 }}>{t}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Bottom Continue button */}
+          {/* Primary CTA — sticky so it stays visible above the bottom nav
+              without scrolling, then settles in flow above Appearance. */}
           <button
-            onClick={() => { savePriorities(priorities); navigate("/scan"); }}
+            onClick={() => navigate("/scan")}
             style={{
-              marginTop: 10,
-              width: "100%",
-              height: 54,
-              background: DS.ink,
-              border: "none",
-              borderRadius: DS.radius.md,
-              color: DS.card,
-              fontWeight: 800,
-              fontSize: "0.95rem",
-              letterSpacing: "-0.01em",
-              cursor: "pointer",
-              fontFamily: DS.font,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-              boxShadow: "0 4px 14px rgba(0,0,0,0.18)",
+              position: "sticky",
+              bottom: "calc(env(safe-area-inset-bottom, 0px) + 92px)",
+              zIndex: 20,
+              marginTop: 6, width: "100%", height: 54,
+              background: DS.ink, border: "none", borderRadius: 16,
+              color: DS.card, fontWeight: 800, fontSize: "0.95rem",
+              letterSpacing: "-0.01em", cursor: "pointer", fontFamily: DS.font,
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+              boxShadow: "0 8px 24px rgba(0,0,0,0.28)",
             }}
           >
             Continue to scan
             <ArrowRight size={18} strokeWidth={2.4} />
           </button>
 
+          {/* Divider */}
+          <div style={{ height: 1, background: DS.hair, margin: "8px 4px 4px" }} />
+
+          {/* Appearance */}
+          <div style={{
+            background: DS.card, borderRadius: 18, padding: 16,
+            boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04)",
+          }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: DS.ink, marginBottom: 2 }}>Appearance</div>
+            <div style={{ fontSize: 11.5, color: DS.muted, marginBottom: 14 }}>Pick your theme</div>
+            <ThemeToggle />
+          </div>
+
         </div>
       </main>
-
     </div>
   );
 }
