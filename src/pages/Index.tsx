@@ -22,22 +22,22 @@ interface DemoProduct {
 
 const DEMO_PRODUCTS: DemoProduct[] = [
   {
-    name: "Organic Oat Milk",
-    subtitle: "Oatly · 1L",
-    score: 79,
-    verdict: "BUY",
-    verdictColor: DS.good,
-    verdictBg: DS.goodBg,
-    ringColor: DS.good,
-    description: "Low carbon footprint, fair trade certified, no labour concerns.",
-    icon: "good",
-    categories: [
-      { label: "Environment", value: 82, color: DS.good },
-      { label: "Labour", value: 91, color: DS.good },
-      { label: "Nutrition", value: 65, color: DS.warn },
-      { label: "Animal welfare", value: 78, color: DS.good },
-    ],
-  },
+  name: "Niko's Lemonade",
+  subtitle: "Niko's Beverages · 500mL",
+  score: 88,
+  verdict: "BUY",
+  verdictColor: DS.good,
+  verdictBg: DS.goodBg,
+  ringColor: DS.good,
+  description: "Made with locally sourced lemons, recyclable packaging, and ethically produced ingredients.",
+  icon: "good",
+  categories: [
+    { label: "Environment", value: 90, color: DS.good },
+    { label: "Labour", value: 85, color: DS.good },
+    { label: "Nutrition", value: 82, color: DS.good },
+    { label: "Packaging", value: 94, color: DS.good },
+  ],
+},
   {
     name: "Choco Crunch Bar",
     subtitle: "MegaCorp · 45g",
