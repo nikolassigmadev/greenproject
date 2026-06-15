@@ -4,23 +4,15 @@ import { ChevronRight, Camera, Leaf, Shield, BarChart3, Users, Award, Zap, Check
 import { Logo } from "@/components/Logo";
 import { DS, scoreTone, toneColor, toneBg } from "@/styles/design-tokens";
 import { loadScanHistory, type ScanHistoryEntry } from "@/utils/userPreferences";
+import {
+  scanEntryToShowcase,
+  hasCompleteEcoData,
+  type ShowcaseProduct,
+} from "@/utils/recentScanShowcase";
 
-/* ── Animated example result card ─────────────────────────────────── */
+/* ── Animated result card (shared by the example demo and recent scan) ── */
 
-interface DemoProduct {
-  name: string;
-  subtitle: string;
-  score: number;
-  verdict: string;
-  verdictColor: string;
-  verdictBg: string;
-  ringColor: string;
-  description: string;
-  icon: "good" | "bad";
-  categories: { label: string; value: number; color: string }[];
-}
-
-const DEMO_PRODUCTS: DemoProduct[] = [
+const DEMO_PRODUCTS: ShowcaseProduct[] = [
   {
   name: "Niko's Lemonade",
   subtitle: "Niko's Beverages · 500mL",
@@ -57,7 +49,16 @@ const DEMO_PRODUCTS: DemoProduct[] = [
   },
 ];
 
-function AnimatedResultDemo() {
+interface ResultShowcaseProps {
+  /** Products to render. The demo passes several; a recent scan passes one. */
+  products: ShowcaseProduct[];
+  /** Cycle through products on a timer (only meaningful with 2+ products). */
+  cycle: boolean;
+  /** Footer content under the card (example hint, or a "view breakdown" link). */
+  footer?: React.ReactNode;
+}
+
+function ResultShowcase({ products, cycle, footer }: ResultShowcaseProps) {
   const [visible, setVisible] = useState(false);
   const [progress, setProgress] = useState(0);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -65,8 +66,10 @@ function AnimatedResultDemo() {
   const [fadePhase, setFadePhase] = useState<"in" | "out">("in");
   const ref = useRef<HTMLDivElement>(null);
 
+  const cycling = cycle && products.length > 1;
+
   // displayedIndex only updates after fade-out completes, so old product stays visible during exit
-  const product = DEMO_PRODUCTS[displayedIndex];
+  const product = products[displayedIndex] ?? products[0];
 
   // Trigger animation when scrolled into view
   useEffect(() => {
@@ -101,19 +104,19 @@ function AnimatedResultDemo() {
     return () => cancelAnimationFrame(frame);
   }, [visible]);
 
-  // Cycle between products
+  // Cycle between products (no-op for a single product, e.g. a recent scan)
   useEffect(() => {
-    if (!visible) return;
+    if (!visible || !cycling) return;
     const DISPLAY_TIME = 4700;
     const FADE_OUT_TIME = 400;
     const interval = setInterval(() => {
       setFadePhase("out");
       setTimeout(() => {
-        setActiveIndex((i) => (i + 1) % DEMO_PRODUCTS.length);
+        setActiveIndex((i) => (i + 1) % products.length);
       }, FADE_OUT_TIME);
     }, DISPLAY_TIME);
     return () => clearInterval(interval);
-  }, [visible]);
+  }, [visible, cycling, products.length]);
 
   // When activeIndex changes, swap displayed product and fade back in
   useEffect(() => {
@@ -239,24 +242,26 @@ function AnimatedResultDemo() {
         </div>
       </div>
 
-      {/* Footer hint */}
-      <p style={{
-        fontSize: 11, color: DS.muted, textAlign: "center", margin: "16px 0 0",
+      {/* Footer — example hint or a link to the real breakdown */}
+      <div style={{
+        marginTop: 16,
         opacity: visible ? 1 : 0, transition: "opacity 0.4s ease 1s",
       }}>
-        This is an example — scan any product to see its real score
-      </p>
-
-      {/* Dots indicator */}
-      <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 10 }}>
-        {DEMO_PRODUCTS.map((_, i) => (
-          <div key={i} style={{
-            width: i === displayedIndex ? 16 : 6, height: 6, borderRadius: 3,
-            background: i === displayedIndex ? DS.ink : DS.hair,
-            transition: "all 0.4s ease",
-          }} />
-        ))}
+        {footer}
       </div>
+
+      {/* Dots indicator — only when cycling through multiple products */}
+      {cycling && (
+        <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 10 }}>
+          {products.map((_, i) => (
+            <div key={i} style={{
+              width: i === displayedIndex ? 16 : 6, height: 6, borderRadius: 3,
+              background: i === displayedIndex ? DS.ink : DS.hair,
+              transition: "all 0.4s ease",
+            }} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -300,6 +305,13 @@ export default function Index() {
   const [showInstall, setShowInstall] = useState(false);
   const [showInstallBanner, setShowInstallBanner] = useState(false);
 
+  // Keep the hero in sync if a scan lands while this page stays mounted.
+  useEffect(() => {
+    const refresh = () => setHistory(loadScanHistory());
+    window.addEventListener("scanHistoryUpdated", refresh);
+    return () => window.removeEventListener("scanHistoryUpdated", refresh);
+  }, []);
+
   useEffect(() => {
     setHistory(loadScanHistory());
     // Only show on web browsers — never on native Capacitor apps or standalone PWAs
@@ -320,6 +332,10 @@ export default function Index() {
 
   const platform = getInstallPlatform();
   const recent = history.slice(0, 3);
+  // Once the user has scanned a fully eco-scored product, the hero card swaps
+  // from the rotating example to their most recent such scan — same card,
+  // same animation — with a link through to the full breakdown.
+  const recentEco = history.find(hasCompleteEcoData) ?? null;
 
   return (
     <div style={{ background: DS.bg, minHeight: "100dvh", fontFamily: DS.font, color: DS.ink }}>
@@ -378,10 +394,40 @@ export default function Index() {
           <span style={{ fontSize: 13, color: DS.muted, fontWeight: 500 }}>Or enter a product manually</span>
         </Link>
 
-        {/* Animated example result */}
+        {/* Animated result — example for new users, recent scan once they have one */}
         <section style={{ marginBottom: 28 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 14px" }}>Example result</h2>
-          <AnimatedResultDemo />
+          <h2 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 14px" }}>
+            {recentEco ? "Your most recent scan" : "Example result"}
+          </h2>
+          {recentEco ? (
+            <ResultShowcase
+              products={[scanEntryToShowcase(recentEco)]}
+              cycle={false}
+              footer={
+                <Link
+                  to={`/product-off/${recentEco.barcode}`}
+                  style={{
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                    textDecoration: "none", background: DS.bg, borderRadius: 12,
+                    padding: "11px 0", fontSize: 13, fontWeight: 700, color: DS.ink,
+                  }}
+                >
+                  View full breakdown
+                  <ChevronRight style={{ width: 15, height: 15 }} />
+                </Link>
+              }
+            />
+          ) : (
+            <ResultShowcase
+              products={DEMO_PRODUCTS}
+              cycle
+              footer={
+                <p style={{ fontSize: 11, color: DS.muted, textAlign: "center", margin: 0 }}>
+                  This is an example — scan any product to see its real score
+                </p>
+              }
+            />
+          )}
         </section>
 
         {/* How it works */}
