@@ -9,6 +9,7 @@ import type {
 import { validateAndCleanBarcode, getAlternativeFormats } from '../../utils/barcodeValidator';
 import { ocrSearchLogger } from '../../utils/ocrSearchLogger';
 import { getProductOverride } from '../../data/productOverrides';
+import { getPinnedBarcodes } from '../../data/brandSearchPins';
 
 const OFF_API_BASE = 'https://world.openfoodfacts.org';
 // OFF's modern Elasticsearch-backed search engine ("Search-a-licious").
@@ -540,6 +541,26 @@ export const searchProducts = async (
 ): Promise<OpenFoodFactsResult[]> => {
   const trimmed = query.trim();
   if (!trimmed) return [];
+
+  // Canonical brand pins. A few iconic spreads (Marmite, Vegemite) share their
+  // name with the generic ingredient "yeast extract", so the progressive
+  // query-shrink below would strip the brand word and match unrelated products
+  // ("yeast extract flatbreads"). For these we skip the text search entirely
+  // and resolve the real jar by barcode, then prefer the live record that
+  // actually carries an eco-score. See data/brandSearchPins.ts.
+  const pinnedBarcodes = getPinnedBarcodes(trimmed);
+  if (pinnedBarcodes.length > 0) {
+    const resolved = (await Promise.all(pinnedBarcodes.map(lookupBarcode)))
+      .filter((r) => r.found);
+    if (resolved.length > 0) {
+      const best = resolved.find(hasEcoscore) ?? resolved[0];
+      console.log(`📌 [SEARCH] "${trimmed}" pinned to canonical product: ${best.productName} (${best.barcode})`);
+      return [best];
+    }
+    // None of the pinned barcodes resolved (network/OFF hiccup) — fall through
+    // to the normal text search rather than returning nothing.
+    console.warn(`📌 [SEARCH] pinned barcodes for "${trimmed}" did not resolve; falling back to text search`);
+  }
 
   const variations = generateSearchVariations(trimmed);
   console.log(`🔍 [SEARCH] "${trimmed}" → trying ${variations.length} variation(s): ${variations.join(' | ')}`);
