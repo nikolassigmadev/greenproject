@@ -30,6 +30,10 @@ const gradeToScore = (grade?: string | null): number | null => {
   return GRADE_SCORE[grade.toLowerCase()] ?? null;
 };
 
+// Guards against out-of-range scores persisted in scan history before scores
+// were clamped at ingestion (e.g. an OFF eco-score of 101 saved to localStorage).
+const clampScore = (value: number): number => Math.max(0, Math.min(100, value));
+
 /**
  * A scan has "complete eco data" once Open Food Facts gave it a real
  * Eco-Score (a letter grade or a numeric score). Products without one show
@@ -56,9 +60,9 @@ const catColor = (value: number) => toneColor(scoreTone(value));
  * on {@link hasCompleteEcoData}.
  */
 export const scanEntryToShowcase = (entry: ScanHistoryEntry): ShowcaseProduct => {
-  const envScore = Math.round(
+  const envScore = clampScore(Math.round(
     entry.scores.ecoScore ?? gradeToScore(entry.scores.ecoGrade) ?? 50,
-  );
+  ));
 
   const key = (entry.verdict.label || "UNKNOWN").toUpperCase();
   const tone = VERDICT_TONE[key] ?? "warn";
@@ -90,7 +94,7 @@ export const scanEntryToShowcase = (entry: ScanHistoryEntry): ShowcaseProduct =>
   // Description — a concise factual line from whatever grades we have.
   const bits: string[] = [];
   if (entry.scores.ecoGrade) bits.push(`Eco-Score ${entry.scores.ecoGrade.toUpperCase()}`);
-  else if (entry.scores.ecoScore != null) bits.push(`Eco-Score ${entry.scores.ecoScore}/100`);
+  else if (entry.scores.ecoScore != null) bits.push(`Eco-Score ${clampScore(entry.scores.ecoScore)}/100`);
   if (entry.scores.nutriScore && gradeToScore(entry.scores.nutriScore) != null) {
     bits.push(`Nutri-Score ${entry.scores.nutriScore.toUpperCase()}`);
   }

@@ -68,6 +68,18 @@ describe('scanEntryToShowcase', () => {
     expect(s.score).toBe(61);
   });
 
+  it('clamps an out-of-range eco score to the 0-100 scale', () => {
+    // OFF eco-scores with bonuses can exceed 100 and were once persisted to
+    // history, surfacing as "101 / 100" in the home hero. Guard against it.
+    const over = scanEntryToShowcase(baseEntry({ scores: { ...baseEntry().scores, ecoGrade: null, ecoScore: 101 } }));
+    expect(over.score).toBe(100);
+    expect(over.categories.find((c) => c.label === 'Environment')?.value).toBe(100);
+    expect(over.description).toContain('Eco-Score 100/100');
+
+    const under = scanEntryToShowcase(baseEntry({ scores: { ...baseEntry().scores, ecoScore: -8 } }));
+    expect(under.score).toBe(0);
+  });
+
   it('lowers the Labour bar as allegations rise', () => {
     const clean = scanEntryToShowcase(baseEntry()).categories.find((c) => c.label === 'Labour')!.value;
     const flagged = scanEntryToShowcase(

@@ -224,7 +224,14 @@ const normalizeProduct = (p: OpenFoodFactsProduct): OpenFoodFactsResult => {
       p.ecoscore_grade && p.ecoscore_grade !== 'unknown' && p.ecoscore_grade !== 'not-applicable'
         ? p.ecoscore_grade
         : null,
-    ecoscoreScore: typeof p.ecoscore_score === 'number' ? p.ecoscore_score : null,
+    // OFF's ecoscore_score includes production bonuses (recyclable packaging,
+    // organic labels, …) that can push it above 100 — and penalties can push it
+    // below 0. Clamp to the displayed 0–100 scale so the score ring/bars don't
+    // render impossible values like "101 / 100".
+    ecoscoreScore:
+      typeof p.ecoscore_score === 'number'
+        ? Math.max(0, Math.min(100, Math.round(p.ecoscore_score)))
+        : null,
     nutriscoreGrade: p.nutriscore_grade || null,
     nutriscoreScore: typeof p.nutriscore_score === 'number' ? p.nutriscore_score : null,
     novaGroup: typeof p.nova_group === 'number' ? p.nova_group : null,
