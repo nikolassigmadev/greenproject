@@ -15,6 +15,8 @@
   --ds-muted: #8C8278;
   /* Dark scan CTA button: a deep brown in light mode; tracks --ds-card in dark. */
   --ds-scan-cta: #1A1614;
+  /* Border is invisible in light mode (the CTA already contrasts the page). */
+  --ds-scan-cta-border: transparent;
   --ds-hair: #E4DCC9;
   --ds-good: #1F6B4E;
   --ds-warn: #C0822A;
@@ -96,6 +98,8 @@
   --ds-bg: #000000;
   --ds-card: #1E1E1E;
   --ds-scan-cta: var(--ds-card);
+  /* Black outline so the CTA separates from same-colored cards it touches. */
+  --ds-scan-cta-border: #000000;
   --ds-ink: #E8E4DF;
   --ds-ink2: #A9A19A;
   --ds-muted: #6E665E;
