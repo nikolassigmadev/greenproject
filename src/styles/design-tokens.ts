@@ -15,6 +15,8 @@ export const DS = {
   badBg: 'var(--ds-bad-bg)',
   brand: 'var(--ds-brand)',
   font: '"Inter", -apple-system, system-ui, sans-serif',
+  // The single monospace stack for tabular numerics (carbon values, codes).
+  mono: 'ui-monospace, "SF Mono", Menlo, monospace',
   radius: {
     sm: 14,
     md: 16,

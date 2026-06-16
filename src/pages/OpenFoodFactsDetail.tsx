@@ -697,7 +697,7 @@ export default function OpenFoodFactsDetail() {
               <Sprout style={{ width: 72, height: 72, color: "rgba(26,22,20,0.35)" }} />
             )}
           </div>
-          <div style={{ position: "absolute", bottom: 12, left: 16, fontFamily: "ui-monospace, monospace", fontSize: 9, color: "rgba(26,22,20,0.42)", letterSpacing: 1 }}>
+          <div style={{ position: "absolute", bottom: 12, left: 16, fontFamily: DS.mono, fontSize: 9, color: "rgba(26,22,20,0.42)", letterSpacing: 1 }}>
             {product.barcode}
           </div>
         </div>
@@ -1037,7 +1037,7 @@ export default function OpenFoodFactsDetail() {
                         <div key={key} style={{ display: "flex", alignItems: "center", gap: 10 }}>
                           <Icon style={{ width: 14, height: 14, color, flexShrink: 0 }} />
                           <div style={{ flex: 1, fontSize: 13, color: EDITORIAL.ink }}>{label}</div>
-                          <div style={{ fontFamily: "ui-monospace, monospace", fontSize: 12, color: EDITORIAL.ink2, letterSpacing: 0.2 }}>{val.toFixed(2)} <span style={{ color: EDITORIAL.ink3 }}>kg</span></div>
+                          <div style={{ fontFamily: DS.mono, fontSize: 12, color: EDITORIAL.ink2, letterSpacing: 0.2 }}>{val.toFixed(2)} <span style={{ color: EDITORIAL.ink3 }}>kg</span></div>
                           <div style={{ fontSize: 11, color: EDITORIAL.ink3, width: 36, textAlign: "right" }}>{pct}%</div>
                         </div>
                       );
