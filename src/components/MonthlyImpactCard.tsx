@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ScanLine, TrendingDown, Eye, GitCompareArrows, Receipt, Flag } from "lucide-react";
+import { ScanLine, TrendingDown, Eye, GitCompareArrows, Receipt, Flag, Share2 } from "lucide-react";
 import { DS } from "@/styles/design-tokens";
 import { computeMonthlyImpact, type MonthlyImpact } from "@/utils/impactStats";
 import { WATCHLIST_EVENT, loadWatchlist } from "@/utils/watchlist";
 import { SWAP_EVENT } from "@/utils/swapTracking";
+import { shareImpactCard } from "@/utils/shareCard";
 
 function alpha(color: string, pct: number): string {
   return `color-mix(in srgb, ${color} ${pct}%, transparent)`;
@@ -80,6 +81,24 @@ export function MonthlyImpactCard() {
               : `${impact.scanCount} scan${impact.scanCount === 1 ? "" : "s"} · last ${impact.windowDays} days`}
           </div>
         </div>
+        {!empty && (
+          <button
+            onClick={() => void shareImpactCard({
+              co2SavedKg: impact.co2SavedKg,
+              scanCount: impact.scanCount,
+              swapsAccepted: impact.swapsAccepted,
+              windowLabel: "this month",
+            })}
+            aria-label="Share my impact"
+            style={{
+              width: 32, height: 32, borderRadius: 10, flexShrink: 0,
+              background: DS.bg, border: `1px solid ${DS.hair}`, cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}
+          >
+            <Share2 style={{ width: 15, height: 15, color: DS.muted }} />
+          </button>
+        )}
       </div>
 
       {!empty && (

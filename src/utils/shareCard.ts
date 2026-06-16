@@ -18,6 +18,13 @@ const INK_MUTED = '#6B5E52';
 const GREEN = '#1F6B4E';
 const GREEN_SOFT = '#E2EFE5';
 const HAIR = '#D7CFBF';
+const AMBER = '#C0822A';
+const RED = '#B23A2B';
+
+// Score → branded accent (fixed light palette; the card never follows app theme).
+function scoreAccent(score: number): string {
+  return score >= 70 ? GREEN : score >= 45 ? AMBER : RED;
+}
 
 function wrapText(
   ctx: CanvasRenderingContext2D,
@@ -201,12 +208,21 @@ function roundRect(
   ctx.closePath();
 }
 
-export async function shareSwapCard(input: SwapCardInput): Promise<'shared' | 'downloaded' | 'failed'> {
-  const dataUrl = generateSwapShareCard(input);
+export type ShareResult = 'shared' | 'downloaded' | 'failed';
+
+/**
+ * Offer a generated PNG via the Web Share API (with image file), falling back
+ * to a download when sharing files isn't supported. Shared by every card type.
+ */
+export async function shareDataUrl(
+  dataUrl: string,
+  filename: string,
+  meta: { title: string; text: string },
+): Promise<ShareResult> {
   if (!dataUrl) return 'failed';
 
   const blob = await (await fetch(dataUrl)).blob();
-  const file = new File([blob], 'goodscan-swap.png', { type: 'image/png' });
+  const file = new File([blob], filename, { type: 'image/png' });
 
   const nav = navigator as Navigator & {
     canShare?: (data: ShareData) => boolean;
@@ -215,22 +231,214 @@ export async function shareSwapCard(input: SwapCardInput): Promise<'shared' | 'd
 
   if (nav.canShare && nav.canShare({ files: [file] }) && nav.share) {
     try {
-      await nav.share({
-        files: [file],
-        title: 'I made a greener swap with GoodScan',
-        text: 'Scan any product, swap to a lower-footprint option.',
-      });
+      await nav.share({ files: [file], title: meta.title, text: meta.text });
       return 'shared';
     } catch {
-      // fall through to download
+      // user cancelled or share failed — fall through to download
     }
   }
 
   const link = document.createElement('a');
   link.href = dataUrl;
-  link.download = 'goodscan-swap.png';
+  link.download = filename;
   document.body.appendChild(link);
   link.click();
   link.remove();
   return 'downloaded';
+}
+
+export async function shareSwapCard(input: SwapCardInput): Promise<ShareResult> {
+  return shareDataUrl(generateSwapShareCard(input), 'goodscan-swap.png', {
+    title: 'I made a greener swap with GoodScan',
+    text: 'Scan any product, swap to a lower-footprint option.',
+  });
+}
+
+// ── Product score card ──────────────────────────────────────────────────────
+
+export interface ProductCardInput {
+  productName: string;
+  brand?: string | null;
+  score: number | null;   // 0-100, or null when unrated
+  verdictLabel: string;    // e.g. BUY / CONSIDER / AVOID
+}
+
+export function generateProductShareCard(input: ProductCardInput): string {
+  const canvas = document.createElement('canvas');
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return '';
+
+  ctx.fillStyle = BG;
+  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = GREEN;
+  ctx.fillRect(0, 0, W, 14);
+
+  // logo + tagline
+  ctx.textBaseline = 'top';
+  ctx.fillStyle = GREEN;
+  ctx.font = '700 38px Inter, system-ui, sans-serif';
+  ctx.fillText('GoodScan', 64, 64);
+  ctx.fillStyle = INK_MUTED;
+  ctx.font = '500 22px Inter, system-ui, sans-serif';
+  ctx.fillText('Ethical shopping, scanned.', 64, 116);
+
+  // "I scanned"
+  ctx.fillStyle = INK_MUTED;
+  ctx.font = '700 30px Inter, system-ui, sans-serif';
+  ctx.fillText('I SCANNED', 64, 220);
+
+  // product name (up to 2 lines)
+  ctx.fillStyle = INK;
+  ctx.font = '800 76px Inter, system-ui, sans-serif';
+  const nameLines = wrapText(ctx, input.productName, W - 128).slice(0, 2);
+  nameLines.forEach((line, i) => ctx.fillText(line, 64, 268 + i * 84));
+
+  // brand
+  if (input.brand) {
+    ctx.fillStyle = INK_MUTED;
+    ctx.font = '500 30px Inter, system-ui, sans-serif';
+    ctx.fillText(input.brand, 64, 268 + nameLines.length * 84 + 8);
+  }
+
+  // score ring
+  const accent = input.score != null ? scoreAccent(input.score) : INK_MUTED;
+  const cx = W / 2;
+  const cy = 760;
+  const r = 180;
+  ctx.lineWidth = 28;
+  ctx.strokeStyle = HAIR;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.stroke();
+  if (input.score != null) {
+    ctx.strokeStyle = accent;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + (Math.PI * 2 * input.score) / 100);
+    ctx.stroke();
+  }
+
+  // score number
+  ctx.fillStyle = INK;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = '800 150px Inter, system-ui, sans-serif';
+  ctx.fillText(input.score != null ? String(Math.round(input.score)) : '—', cx, cy - 6);
+  ctx.fillStyle = INK_MUTED;
+  ctx.font = '600 30px Inter, system-ui, sans-serif';
+  ctx.fillText(input.score != null ? '/ 100' : 'unrated', cx, cy + 92);
+
+  // verdict pill
+  ctx.font = '800 34px Inter, system-ui, sans-serif';
+  const label = input.verdictLabel.toUpperCase();
+  const pillW = ctx.measureText(label).width + 72;
+  const pillH = 68;
+  const pillX = cx - pillW / 2;
+  const pillY = cy + r + 36;
+  ctx.fillStyle = accent;
+  roundRect(ctx, pillX, pillY, pillW, pillH, pillH / 2);
+  ctx.fill();
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillText(label, cx, pillY + pillH / 2);
+
+  // footer
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  ctx.fillStyle = INK_MUTED;
+  ctx.font = '500 24px Inter, system-ui, sans-serif';
+  ctx.fillText('goodscan.app · scan any product', 64, H - 80);
+
+  return canvas.toDataURL('image/png');
+}
+
+export async function shareProductCard(input: ProductCardInput): Promise<ShareResult> {
+  return shareDataUrl(generateProductShareCard(input), 'goodscan-product.png', {
+    title: `${input.productName} — scored on GoodScan`,
+    text: 'See the ethics & eco score of any product.',
+  });
+}
+
+// ── Impact stat card ─────────────────────────────────────────────────────────
+
+export interface ImpactCardInput {
+  co2SavedKg: number;
+  scanCount: number;
+  swapsAccepted: number;
+  windowLabel: string; // e.g. "this week" / "this month"
+}
+
+export function generateImpactShareCard(input: ImpactCardInput): string {
+  const canvas = document.createElement('canvas');
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return '';
+
+  ctx.fillStyle = BG;
+  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = GREEN;
+  ctx.fillRect(0, 0, W, 14);
+
+  ctx.textBaseline = 'top';
+  ctx.fillStyle = GREEN;
+  ctx.font = '700 38px Inter, system-ui, sans-serif';
+  ctx.fillText('GoodScan', 64, 64);
+  ctx.fillStyle = INK_MUTED;
+  ctx.font = '500 22px Inter, system-ui, sans-serif';
+  ctx.fillText('Ethical shopping, scanned.', 64, 116);
+
+  // headline
+  ctx.fillStyle = INK;
+  ctx.font = '800 76px Inter, system-ui, sans-serif';
+  ctx.fillText('My impact', 64, 240);
+  ctx.fillStyle = INK_MUTED;
+  ctx.font = '600 34px Inter, system-ui, sans-serif';
+  ctx.fillText(input.windowLabel, 64, 330);
+
+  // hero stat — CO2 when there's a saving, else products scanned
+  const heroTop = 440;
+  if (input.co2SavedKg > 0) {
+    ctx.fillStyle = GREEN;
+    ctx.font = '800 200px Inter, system-ui, sans-serif';
+    ctx.fillText(`${input.co2SavedKg.toFixed(1)}`, 64, heroTop);
+    ctx.fillStyle = INK_MUTED;
+    ctx.font = '700 44px Inter, system-ui, sans-serif';
+    ctx.fillText('kg CO₂ avoided through swaps', 64, heroTop + 224);
+  } else {
+    ctx.fillStyle = GREEN;
+    ctx.font = '800 200px Inter, system-ui, sans-serif';
+    ctx.fillText(String(input.scanCount), 64, heroTop);
+    ctx.fillStyle = INK_MUTED;
+    ctx.font = '700 44px Inter, system-ui, sans-serif';
+    ctx.fillText('products scanned consciously', 64, heroTop + 224);
+  }
+
+  // stat row
+  const rowY = 820;
+  const drawStat = (x: number, value: string, label: string) => {
+    ctx.fillStyle = INK;
+    ctx.font = '800 64px Inter, system-ui, sans-serif';
+    ctx.fillText(value, x, rowY);
+    ctx.fillStyle = INK_MUTED;
+    ctx.font = '600 26px Inter, system-ui, sans-serif';
+    ctx.fillText(label, x, rowY + 76);
+  };
+  drawStat(64, String(input.scanCount), 'scanned');
+  drawStat(W / 2, String(input.swapsAccepted), 'greener swaps');
+
+  // footer
+  ctx.fillStyle = INK_MUTED;
+  ctx.font = '500 24px Inter, system-ui, sans-serif';
+  ctx.fillText('goodscan.app · scan any product', 64, H - 80);
+
+  return canvas.toDataURL('image/png');
+}
+
+export async function shareImpactCard(input: ImpactCardInput): Promise<ShareResult> {
+  return shareDataUrl(generateImpactShareCard(input), 'goodscan-impact.png', {
+    title: 'My impact with GoodScan',
+    text: 'Track the footprint of what you buy.',
+  });
 }

@@ -11,9 +11,12 @@ import { WATCHLIST_EVENT, loadWatchlist } from "@/utils/watchlist";
 import { SWAP_EVENT } from "@/utils/swapTracking";
 import {
   Search, ChevronRight, ShoppingBag, Trash2, ScanLine, TrendingDown,
-  Eye, GitCompareArrows, Receipt, Flag, ShoppingCart,
+  Eye, GitCompareArrows, Receipt, Flag, ShoppingCart, Share2,
 } from "lucide-react";
 import { DS, scoreTone, toneColor } from "@/styles/design-tokens";
+import { StreakMilestones } from "@/components/StreakMilestones";
+import { WeeklyRecapModal } from "@/components/WeeklyRecapModal";
+import { shareImpactCard } from "@/utils/shareCard";
 
 type Filter = "all" | "good" | "mixed" | "avoid";
 
@@ -100,18 +103,47 @@ function ScoreBadge({ entry }: { entry: ScanHistoryEntry }) {
 // ── This-month summary bar (compact, one row) ──
 
 function SummaryBar({ impact }: { impact: MonthlyImpact }) {
+  const [sharing, setSharing] = useState(false);
   const stats: { value: string; label: string; color: string }[] = [
     { value: String(impact.scanCount), label: "Scanned", color: DS.ink },
     { value: String(impact.flaggedBrandCount), label: "Flagged", color: impact.flaggedBrandCount > 0 ? DS.warn : DS.ink },
     { value: String(impact.swapsAccepted), label: "Swaps", color: impact.swapsAccepted > 0 ? DS.good : DS.ink },
   ];
 
+  const handleShare = async () => {
+    setSharing(true);
+    try {
+      await shareImpactCard({
+        co2SavedKg: impact.co2SavedKg,
+        scanCount: impact.scanCount,
+        swapsAccepted: impact.swapsAccepted,
+        windowLabel: "this month",
+      });
+    } finally {
+      setSharing(false);
+    }
+  };
+
   return (
     <div style={{
       background: DS.card, borderRadius: 18, padding: "14px 6px",
       boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04)",
-      marginBottom: 10,
+      marginBottom: 10, position: "relative",
     }}>
+      <button
+        onClick={handleShare}
+        disabled={sharing}
+        aria-label="Share my impact"
+        style={{
+          position: "absolute", top: 8, right: 8,
+          width: 32, height: 32, borderRadius: 10,
+          background: DS.bg, border: `1px solid ${DS.hair}`,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          cursor: sharing ? "default" : "pointer", opacity: sharing ? 0.6 : 1,
+        }}
+      >
+        <Share2 style={{ width: 15, height: 15, color: DS.muted }} />
+      </button>
       <div style={{ display: "flex", alignItems: "center" }}>
         {stats.map((s, i) => (
           <div key={s.label} style={{ flex: 1, textAlign: "center", position: "relative" }}>
@@ -303,6 +335,7 @@ export default function Dashboard() {
 
   return (
     <div style={{ minHeight: "100dvh", background: DS.bg, fontFamily: DS.font, color: DS.ink }}>
+      <WeeklyRecapModal />
       {/* Header */}
       <div style={{ padding: "0 20px", paddingTop: "max(56px, calc(env(safe-area-inset-top, 0px) + 14px))" }}>
         <div style={{
@@ -392,6 +425,7 @@ export default function Dashboard() {
             <>
               {/* Compact summary */}
               <SummaryBar impact={impact} />
+              <StreakMilestones />
               <CartPill basket={basket} />
               <QuickActions watchlistCount={watchlistCount} />
 

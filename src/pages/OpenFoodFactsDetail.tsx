@@ -5,8 +5,9 @@ import {
   Loader2, Leaf, AlertTriangle, ExternalLink,
   CheckCircle2, ChevronRight, Package, ShoppingBag, ShoppingCart, XCircle, Clock,
   BadgeCheck, Wheat, Factory, Truck, Store, UtensilsCrossed,
-  ScanLine, Check, Sprout, PawPrint, Search, Eye,
+  ScanLine, Check, Sprout, PawPrint, Search, Eye, Share2,
 } from "lucide-react";
+import { shareProductCard } from "@/utils/shareCard";
 import { BackButton } from "@/components/BackButton";
 import { isWatched, toggleWatchlist, WATCHLIST_EVENT } from "@/utils/watchlist";
 import { Logo } from "@/components/Logo";
@@ -673,13 +674,35 @@ export default function OpenFoodFactsDetail() {
           </div>
           <div style={{
             position: "absolute", top: "calc(env(safe-area-inset-top, 0px) + 20px)", right: 16,
-            background: EDITORIAL.ink, color: EDITORIAL.card, padding: "8px 13px 8px 11px",
-            borderRadius: 999, display: "inline-flex", alignItems: "center", gap: 7,
-            fontSize: 12, fontWeight: 800, letterSpacing: 0.3,
-            boxShadow: "0 6px 16px rgba(0,0,0,0.18)", zIndex: 2,
+            display: "inline-flex", alignItems: "center", gap: 8, zIndex: 2,
           }}>
-            <span style={{ width: 7, height: 7, borderRadius: 99, background: vc.color, boxShadow: `0 0 0 3px ${vc.color}33` }} />
-            {verdict.key}
+            <button
+              onClick={() => void shareProductCard({
+                productName: displayName,
+                brand: product.brand,
+                score: product.ecoscoreScore,
+                verdictLabel: vc.label,
+              })}
+              aria-label="Share this product"
+              style={{
+                width: 36, height: 36, borderRadius: 999,
+                background: "rgba(255,255,255,0.9)", border: "none", cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                boxShadow: "0 6px 16px rgba(0,0,0,0.18)",
+                backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
+              }}
+            >
+              <Share2 style={{ width: 17, height: 17, color: EDITORIAL.ink }} />
+            </button>
+            <div style={{
+              background: EDITORIAL.ink, color: EDITORIAL.card, padding: "8px 13px 8px 11px",
+              borderRadius: 999, display: "inline-flex", alignItems: "center", gap: 7,
+              fontSize: 12, fontWeight: 800, letterSpacing: 0.3,
+              boxShadow: "0 6px 16px rgba(0,0,0,0.18)",
+            }}>
+              <span style={{ width: 7, height: 7, borderRadius: 99, background: vc.color, boxShadow: `0 0 0 3px ${vc.color}33` }} />
+              {verdict.key}
+            </div>
           </div>
           <div style={{
             position: "absolute", left: "50%", top: "50%",
