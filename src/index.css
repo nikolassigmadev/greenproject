@@ -13,6 +13,8 @@
   --ds-ink: #1A1614;
   --ds-ink2: #5C544B;
   --ds-muted: #8C8278;
+  /* Dark scan CTA button: a deep brown in light mode; tracks --ds-card in dark. */
+  --ds-scan-cta: #1A1614;
   --ds-hair: #E4DCC9;
   --ds-good: #1F6B4E;
   --ds-warn: #C0822A;
@@ -93,6 +95,7 @@
 .dark {
   --ds-bg: #000000;
   --ds-card: #1E1E1E;
+  --ds-scan-cta: var(--ds-card);
   --ds-ink: #E8E4DF;
   --ds-ink2: #A9A19A;
   --ds-muted: #6E665E;

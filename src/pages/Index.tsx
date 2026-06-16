@@ -366,7 +366,7 @@ export default function Index() {
         }}>
         <Link to="/scan" style={{ textDecoration: "none", display: "block" }}>
           <div style={{
-            background: "#1A1614", color: "#F7F6F3", borderRadius: DS.radius.lg, padding: 22,
+            background: "var(--ds-scan-cta)", color: "#F7F6F3", borderRadius: DS.radius.lg, padding: 22,
             display: "flex", alignItems: "center", gap: 16,
             boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
           }}>
