@@ -459,6 +459,9 @@ const Scan = () => {
   const [inlineSearch, setInlineSearch] = useState("");
   const [showSearch, setShowSearch] = useState(false);
   const [flashOn, setFlashOn] = useState(false);
+  // Torch is only offered when the active camera track reports the capability
+  // (rear cameras on most phones; never on desktop webcams).
+  const [torchSupported, setTorchSupported] = useState(false);
   const [scanMode, setScanMode] = useState<'Scan Food' | 'Barcode' | 'Food label'>('Scan Food');
 
   // Bottom-chrome transition: BottomNav greets you when you arrive on /scan,
@@ -723,6 +726,16 @@ const Scan = () => {
         setCameraActive(true);
         setCameraInitializing(false);
 
+        // Detect torch/flash support on the live video track so the flash
+        // button is only shown when it can actually do something.
+        try {
+          const track = stream.getVideoTracks()[0];
+          const caps = track?.getCapabilities?.() as MediaTrackCapabilities & { torch?: boolean };
+          setTorchSupported(!!caps && 'torch' in caps && !!caps.torch);
+        } catch {
+          setTorchSupported(false);
+        }
+
         // Clean up event listener
         video.removeEventListener('canplay', onCanPlay);
 
@@ -860,7 +873,21 @@ const Scan = () => {
     }
     setCameraActive(false);
     setCameraInitializing(false);
+    setTorchSupported(false);
+    setFlashOn(false);
   }, []);
+
+  // Apply the torch constraint whenever the flash is toggled or the camera
+  // (re)starts. The button only flips `flashOn`; this is what actually drives
+  // the hardware flash via the live MediaStreamTrack.
+  useEffect(() => {
+    if (!cameraActive || !torchSupported) return;
+    const track = streamRef.current?.getVideoTracks()[0];
+    if (!track) return;
+    // `torch` isn't in the standard MediaTrackConstraints lib types yet.
+    const constraints = { advanced: [{ torch: flashOn }] } as unknown as MediaTrackConstraints;
+    track.applyConstraints(constraints).catch((err) => console.warn('Torch toggle failed:', err));
+  }, [flashOn, cameraActive, torchSupported]);
 
   // Search products with improved name-first matching
   const searchProducts = useCallback((query: string) => {
@@ -1597,10 +1624,6 @@ const Scan = () => {
     }
   };
 
-  // ── Shared chrome heights ──
-  const TOP_BAR_H = 96;   // white top bar (includes safe area)
-  const BOT_BAR_H = 160;  // white bottom bar (includes safe area)
-
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 60, backgroundColor: '#000', overflow: 'hidden', fontFamily: '"Inter", -apple-system, system-ui, sans-serif', display: 'flex', flexDirection: 'column' }}>
 
@@ -1694,74 +1717,91 @@ const Scan = () => {
       {/* Hidden canvas for photo capture */}
       <canvas ref={canvasRef} style={{ display: 'none' }} />
 
-      {/* ════════════════════ WHITE TOP BAR ════════════════════ */}
+      {/* ════════════════════ TOP CONTROLS (overlay) ════════════════════ */}
+      {/* Floats over the full-bleed camera — no solid bar, so the viewfinder
+          reaches the very top of the screen. A dark gradient scrim keeps the
+          light controls legible against any camera content. */}
       <div style={{
-        flexShrink: 0,
-        background: DS.bg,
-        paddingTop: 'env(safe-area-inset-top, 0px)',
+        position: 'absolute', top: 0, left: 0, right: 0,
         zIndex: 20,
+        paddingTop: 'env(safe-area-inset-top, 0px)',
+        background: 'linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.28) 55%, rgba(0,0,0,0) 100%)',
+        pointerEvents: 'none',
       }}>
         <div style={{
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          padding: '12px 16px 14px',
+          padding: '12px 16px 24px',
+          pointerEvents: 'auto',
         }}>
           {/* Close */}
           <Link to="/" onClick={() => stopCamera()} style={{ textDecoration: 'none' }}>
             <div style={{
-              width: 36, height: 36, borderRadius: 18,
-              backgroundColor: DS.bg,
+              width: 38, height: 38, borderRadius: 19,
+              background: 'rgba(0,0,0,0.35)',
+              backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+              border: '1px solid rgba(255,255,255,0.14)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
-              <X size={16} style={{ color: DS.ink }} />
+              <X size={17} style={{ color: '#fff' }} />
             </div>
           </Link>
 
           {/* Centre label */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, textShadow: '0 1px 6px rgba(0,0,0,0.5)' }}>
             <Logo size={22} />
-            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: DS.ink, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#fff', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
               GoodScan
             </span>
           </div>
 
-          {/* Flash */}
-          <button
-            onClick={() => setFlashOn(f => !f)}
-            style={{
-              width: 36, height: 36, borderRadius: 18,
-              backgroundColor: flashOn ? DS.warnBg : DS.hair,
-              border: 'none', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              transition: 'all 0.15s',
-            }}
-          >
-            <Zap size={16} strokeWidth={flashOn ? 2.5 : 1.8} color={flashOn ? '#F59E0B' : '#8C8278'} />
-          </button>
+          {/* Flash — only when the live camera track supports a torch */}
+          {torchSupported ? (
+            <button
+              onClick={() => setFlashOn(f => !f)}
+              aria-label={flashOn ? 'Turn flash off' : 'Turn flash on'}
+              aria-pressed={flashOn}
+              style={{
+                width: 38, height: 38, borderRadius: 19,
+                background: flashOn ? 'rgba(245,158,11,0.92)' : 'rgba(0,0,0,0.35)',
+                backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+                border: `1px solid ${flashOn ? 'rgba(245,158,11,0.5)' : 'rgba(255,255,255,0.14)'}`,
+                cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'all 0.15s',
+              }}
+            >
+              <Zap size={17} strokeWidth={flashOn ? 2.5 : 1.8} color={flashOn ? '#1A1614' : '#fff'} fill={flashOn ? '#1A1614' : 'none'} />
+            </button>
+          ) : (
+            <div style={{ width: 38, height: 38 }} />
+          )}
         </div>
 
-        {/* Status pills inside top bar */}
+        {/* Status pills */}
         {(cameraInitializing || prioritiesJustSaved) && (
           <div style={{
-            display: 'flex', justifyContent: 'center', paddingBottom: 10,
+            display: 'flex', justifyContent: 'center', paddingBottom: 14, marginTop: -10,
+            pointerEvents: 'auto',
           }}>
             <div style={{
               display: 'flex', alignItems: 'center', gap: 6,
-              background: '#E8E6E1',
+              background: 'rgba(0,0,0,0.55)',
+              backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
               borderRadius: 50,
               padding: '5px 14px',
             }}>
               {prioritiesJustSaved ? (
-                <><Check size={12} style={{ color: '#1F6B4E' }} /><span style={{ fontSize: '0.72rem', fontWeight: 600, color: DS.ink }}>Values saved — ready!</span></>
+                <><Check size={12} style={{ color: '#4ade80' }} /><span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#fff' }}>Values saved — ready!</span></>
               ) : (
-                <><Loader2 size={12} style={{ animation: 'spin 1s linear infinite', color: DS.muted }} /><span style={{ fontSize: '0.72rem', fontWeight: 600, color: DS.muted }}>Starting camera…</span></>
+                <><Loader2 size={12} style={{ animation: 'spin 1s linear infinite', color: 'rgba(255,255,255,0.8)' }} /><span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'rgba(255,255,255,0.85)' }}>Starting camera…</span></>
               )}
             </div>
           </div>
         )}
 
-        {/* Priorities CTA pill inside top bar */}
+        {/* Priorities CTA pill */}
         {isDefaultPriorities && !cameraInitializing && (
-          <div style={{ display: 'flex', justifyContent: 'center', paddingBottom: 10 }}>
+          <div style={{ display: 'flex', justifyContent: 'center', paddingBottom: 14, marginTop: -10, pointerEvents: 'auto' }}>
             <Link
               to="/preferences"
               onClick={() => stopCamera()}
@@ -1782,8 +1822,8 @@ const Scan = () => {
         )}
       </div>
 
-      {/* ════════════════════ CAMERA VIEWFINDER ════════════════════ */}
-      <div style={{ flex: 1, position: 'relative', overflow: 'hidden', borderRadius: '18px', margin: '0 4px' }}>
+      {/* ════════════════════ CAMERA VIEWFINDER (full bleed) ════════════════════ */}
+      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
         {/* Camera video */}
         <video
           ref={videoRef}
