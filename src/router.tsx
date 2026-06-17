@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { createBrowserRouter, Outlet, useLocation } from "react-router-dom";
 import { ScrollToTop } from "./components/ScrollToTop";
 import { HackerTransition } from "./components/HackerTransition";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { BottomNav, BottomNavProvider } from "./components/BottomNav";
+import { Onboarding, hasCompletedOnboarding } from "./components/Onboarding";
 import Index from "./pages/Index";
 import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
@@ -30,6 +32,9 @@ import ReceiptAnalytics from "./pages/ReceiptAnalytics";
 
 function RootLayout() {
   const location = useLocation();
+  // One-time animated onboarding (country, city, priorities). Persisted to
+  // localStorage so it only ever runs once per device.
+  const [onboarded, setOnboarded] = useState(() => hasCompletedOnboarding());
   return (
     <BottomNavProvider>
       <ScrollToTop />
@@ -43,6 +48,7 @@ function RootLayout() {
           page transitions. The /scan page reaches in via useBottomNav() to
           control its slide-down animation; nothing else touches it. */}
       <BottomNav />
+      {!onboarded && <Onboarding onComplete={() => setOnboarded(true)} />}
     </BottomNavProvider>
   );
 }
