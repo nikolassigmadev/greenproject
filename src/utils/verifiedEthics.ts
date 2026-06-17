@@ -402,3 +402,29 @@ export const CATEGORY_LABELS: Record<string, string> = {
   eggs_dairy_meat: "Eggs, Dairy & Meat",
   seafood: "Seafood",
 };
+
+// ── Swap-engine adapter ─────────────────────────────────────────────────────
+
+export type VerifiedEthicsCategory = VerifiedEthicsBrand["category"];
+
+export interface VerifiedEthicsBrandSummary {
+  brandName: string;
+  category: VerifiedEthicsCategory;
+  certifications: CertificationType[];
+  /** Short, scannable reasons drawn from the highlight labels. */
+  strengths: string[];
+}
+
+/**
+ * Flattened view of the verified-ethics database for the swap engine. Returns
+ * every brand with its unique certifications and up to three short strengths.
+ */
+export function getVerifiedEthicsBrands(): VerifiedEthicsBrandSummary[] {
+  return VERIFIED_ETHICS_DATABASE.map((r) => {
+    const certifications = [
+      ...new Set(r.highlights.map((h) => h.certification).filter((c): c is CertificationType => !!c)),
+    ];
+    const strengths = [...new Set(r.highlights.map((h) => h.label))].slice(0, 3);
+    return { brandName: r.brandName, category: r.category, certifications, strengths };
+  });
+}

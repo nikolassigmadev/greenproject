@@ -1159,7 +1159,7 @@ export default function OpenFoodFactsDetail() {
             if (ingredientFlags.length === 0) return null;
             return (
               <section style={{ opacity: mounted ? 1 : 0, transform: mounted ? "translateY(0)" : "translateY(10px)", transition: "all 0.5s ease 0.5s" }}>
-                <SectionHead num="03" title="Ingredient concerns" kicker="Detected from the ingredient list." />
+                <SectionHead num="04" title="Ingredient concerns" kicker="Detected from the ingredient list." />
                 <IngredientConcernsCard flags={ingredientFlags} />
               </section>
             );
@@ -1178,7 +1178,7 @@ export default function OpenFoodFactsDetail() {
                 opacity: mounted ? 1 : 0, transform: mounted ? "translateY(0)" : "translateY(10px)",
                 transition: "all 0.5s ease 0.55s",
               }}>
-                <SectionHead num="04" title="Threatened species" />
+                <SectionHead num="05" title="Threatened species" />
                 <div style={{ background: EDITORIAL.card, border: `1px solid ${EDITORIAL.line}`, borderRadius: 22, padding: "8px 20px 22px" }}>
                   <div style={{ display: "grid", gridTemplateColumns: "46px 1fr", gap: 14, padding: "18px 0", borderTop: `1px solid ${EDITORIAL.line}` }}>
                     <div>
@@ -1205,7 +1205,7 @@ export default function OpenFoodFactsDetail() {
           })()}
 
           <section style={{ opacity: mounted ? 1 : 0, transform: mounted ? "translateY(0)" : "translateY(10px)", transition: "all 0.5s ease 0.6s" }}>
-            <SectionHead num="05" title="Materials & logistics" />
+            <SectionHead num="06" title="Materials & logistics" />
             <div style={{ display: "grid", gap: 10 }}>
               {[
                 { icon: <Package style={{ width: 17, height: 17 }} />, label: "Packaging", value: packagingSummary(product), impact: product.ecoscoreData?.adjustments?.packaging?.value != null ? `${product.ecoscoreData.adjustments.packaging.value} pts` : "Unknown", bad: (product.ecoscoreData?.adjustments?.packaging?.value ?? 0) < 0 },

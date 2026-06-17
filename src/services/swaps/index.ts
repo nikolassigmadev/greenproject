@@ -24,6 +24,8 @@ import {
   type ConcernType,
   type SwapCategoryKey,
 } from "@/data/ethicalAlternatives";
+import { getCustomCandidates } from "@/data/customSwaps";
+import { getVerifiedEthicsCandidates } from "@/data/verifiedEthicsSwaps";
 import {
   isSoldInRegion,
   findCountry,
@@ -60,6 +62,8 @@ export interface SwapSuggestion {
   addresses: ConcernType[];
   /** Whether this option addresses the scanned product's primary concern. */
   fixesPrimary: boolean;
+  /** True when this came from the hand-curated customSwaps.json. */
+  custom: boolean;
   /** Live OFF resolution, when found. */
   product: OpenFoodFactsResult | null;
   barcode: string | null;
@@ -205,6 +209,19 @@ function sameBrand(a: string, b: string | null | undefined): boolean {
   return x.length > 2 && (x.includes(y) || y.includes(x));
 }
 
+/** Keep the first candidate per normalised brand (custom entries lead the list). */
+function dedupeByBrand(candidates: AltCandidate[]): AltCandidate[] {
+  const seen = new Set<string>();
+  const out: AltCandidate[] = [];
+  for (const c of candidates) {
+    const key = c.brand.toLowerCase().replace(/[^a-z0-9]/g, "");
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(c);
+  }
+  return out;
+}
+
 /**
  * Resolve a single catalog candidate to a live OFF product, preferring one that
  * is actually sold in the user's country (matched via OFF `countries_tags`).
@@ -253,7 +270,10 @@ function buildSuggestion(
 
   const availableInRegion = isSoldInRegion(resolved?.rawProduct?.countries_tags, region);
   const inMarket = isInMarket(c, region?.countryCode);
-  const regionAvailable = availableInRegion === true || (region != null && inMarket);
+  // Verified-ethics brands set assumeAvailable=false: we only claim local
+  // availability for them when OFF actually confirms a country tag.
+  const assume = c.assumeAvailable !== false;
+  const regionAvailable = availableInRegion === true || (region != null && inMarket && assume);
 
   // Build the availability badge text.
   const where = region?.country ?? null;
@@ -262,10 +282,12 @@ function buildSuggestion(
     availabilityLabel = "Widely available";
   } else if (availableInRegion === true) {
     availabilityLabel = `Available in ${where}`;
-  } else if (inMarket) {
+  } else if (inMarket && assume) {
     availabilityLabel = `Sold in ${where}`;
-  } else {
+  } else if (!inMarket) {
     availabilityLabel = `Limited in ${where}`;
+  } else {
+    availabilityLabel = "Check local availability";
   }
 
   return {
@@ -275,6 +297,7 @@ function buildSuggestion(
     strengths: c.strengths,
     addresses: c.addresses,
     fixesPrimary: primaryType ? c.addresses.includes(primaryType) : false,
+    custom: c.custom ?? false,
     product: resolved,
     barcode: resolved?.barcode ?? null,
     imageUrl: resolved?.imageUrl ?? null,
@@ -318,7 +341,15 @@ export async function getSwaps(
   const country = region?.countryCode ?? null;
   const countryTag = country ? findCountry(country)?.offTag ?? null : null;
 
-  let pool = getCandidates(diagnosis.categoryKey).filter((c) => !sameBrand(c.brand, product.brand));
+  // Candidate sources, in priority order (dedupe keeps the first per brand):
+  //   1. hand-curated customSwaps.json   2. built-in catalog
+  //   3. the verified-ethics database (mapped to fine categories)
+  const merged = dedupeByBrand([
+    ...getCustomCandidates(diagnosis.categoryKey),
+    ...getCandidates(diagnosis.categoryKey),
+    ...getVerifiedEthicsCandidates(diagnosis.categoryKey),
+  ]);
+  let pool = merged.filter((c) => !sameBrand(c.brand, product.brand));
 
   // Only suggest things the user can actually buy. When the user has a country
   // and we still have at least two in-market options, drop the rest entirely.
@@ -327,16 +358,22 @@ export async function getSwaps(
     if (inMarket.length >= 2) pool = inMarket;
   }
 
-  // Candidate ordering before resolution: in-market first, then ones that fix
-  // the primary concern, then richer certifications.
+  // Candidate ordering before resolution: custom picks first, then in-market,
+  // then ones that fix the primary concern, then richer certifications.
   const candidates = pool
     .sort((a, b) => {
+      if (!!a.custom !== !!b.custom) return a.custom ? -1 : 1;
       const am = isInMarket(a, country) ? 1 : 0;
       const bm = isInMarket(b, country) ? 1 : 0;
       if (am !== bm) return bm - am;
       const af = a.addresses.includes(primaryType) ? 1 : 0;
       const bf = b.addresses.includes(primaryType) ? 1 : 0;
       if (af !== bf) return bf - af;
+      // Curated/global brands (known availability) before verified-ethics
+      // brands whose market coverage we can't vouch for.
+      const ac = a.assumeAvailable === false ? 0 : 1;
+      const bc = b.assumeAvailable === false ? 0 : 1;
+      if (ac !== bc) return bc - ac;
       return b.certifications.length - a.certifications.length;
     })
     .slice(0, Math.max(limit + 2, 5)); // resolve a few extra, trim after
@@ -353,6 +390,7 @@ export async function getSwaps(
       const aAvail = (a.availableInRegion === true ? 2 : 0) + (a.regionAvailable ? 1 : 0);
       const bAvail = (b.availableInRegion === true ? 2 : 0) + (b.regionAvailable ? 1 : 0);
       if (aAvail !== bAvail) return bAvail - aAvail;
+      if (a.custom !== b.custom) return a.custom ? -1 : 1;
       const aEco = a.ecoGrade ? ECO_RANK[a.ecoGrade] ?? 0 : 0;
       const bEco = b.ecoGrade ? ECO_RANK[b.ecoGrade] ?? 0 : 0;
       if (aEco !== bEco) return bEco - aEco;

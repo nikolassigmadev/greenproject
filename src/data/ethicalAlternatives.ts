@@ -56,6 +56,15 @@ export interface AltCandidate {
   markets?: string[];
   /** Fallback eco-grade when OFF has none (rough, conservative). */
   fallbackEcoGrade?: "a" | "b" | "c" | "d" | "e";
+  /** True for hand-added entries from customSwaps.json (ranked first). */
+  custom?: boolean;
+  /**
+   * Whether we can assume the brand is sold in any market when `markets` is
+   * unset. Curated catalog brands default to true (their omission means
+   * "global"); brands pulled from the verified-ethics list set this false, so
+   * we only claim local availability when Open Food Facts confirms it.
+   */
+  assumeAvailable?: boolean;
 }
 
 export const CATEGORY_LABELS: Record<SwapCategoryKey, string> = {
@@ -213,22 +222,25 @@ export const ETHICAL_ALTERNATIVES: Record<SwapCategoryKey, AltCandidate[]> = {
 // ── Category detection ───────────────────────────────────────────────────────
 
 // Keyword → category. First match wins; order matters (specific before broad).
+// Each pattern blends generic terms with iconic brand/product names so a scan
+// resolves even when Open Food Facts' category tags are sparse (e.g. a "Kit
+// Kat" whose only name is the brand still maps to chocolate).
 const CATEGORY_KEYWORDS: { key: SwapCategoryKey; patterns: RegExp }[] = [
-  { key: "ice_cream", patterns: /ice.?cream|gelato|frozen.?dessert|frozen.?yog/i },
-  { key: "chocolate", patterns: /chocolat|cocoa|cacao|praline|truffle|chocolate.?bar/i },
-  { key: "spreads", patterns: /nutella|hazelnut.?spread|chocolate.?spread|peanut.?butter|nut.?butter|almond.?butter|cashew.?butter|\bspread\b|\bjam\b|marmalade|preserve/i },
-  { key: "snack_bars", patterns: /(?:granola|cereal|protein|energy|fruit|nut|muesli|snack)\s*bars?\b|flapjack|\bbar\b\s*(?:snack)?/i },
-  { key: "cookies", patterns: /cookie|biscuit|shortbread|digestive|oreo|wafer|cracker/i },
-  { key: "candy", patterns: /gumm|\bsweets?\b|\bcandy\b|jelly.?bean|jellies|licorice|liquorice|marshmallow|lollipop|hard.?candy|sour.?candy|skittles|starburst|haribo|wine.?gum|fruit.?pastille|toffee|fudge/i },
-  { key: "chips", patterns: /crisps?|potato.?chip|tortilla.?chip|\bchips\b|nachos|pretzel|popcorn|puffs|corn.?chip|savou?ry.?snack/i },
-  { key: "coffee", patterns: /coffee|espresso|\bcafé\b|\bcafe\b|ground.?coffee|coffee.?bean/i },
-  { key: "tea", patterns: /\btea\b|tea.?bag|chai|matcha|herbal.?infusion|rooibos/i },
-  { key: "soft_drinks", patterns: /soda|cola\b|soft.?drink|carbonated|lemonade|energy.?drink|fizzy|pop\b/i },
-  { key: "yogurt", patterns: /yog[hu]rt|yoghourt|skyr|kefir/i },
-  { key: "cheese", patterns: /\bcheese\b|cheddar|mozzarella|parmesan|brie|gouda|halloumi/i },
-  { key: "milk", patterns: /oat.?milk|almond.?milk|soy.?milk|soya.?milk|plant.?milk|coconut.?milk|\bmilk\b|oat.?drink|plant.?based.?drink/i },
+  { key: "ice_cream", patterns: /ice.?cream|gelato|frozen.?dessert|frozen.?yog|magnum|cornetto|häagen|haagen|ben\s*&?\s*jerry/i },
+  { key: "chocolate", patterns: /chocolat|cocoa|cacao|praline|truffle|chocolate.?bar|kit\s*kat|snickers|twix|mars\s*bar|bounty\b|milky\s*way|toblerone|lindt|lindor|ferrero|kinder|hershey|reese|aero\b|wispa|galaxy\b|dairy\s*milk|smarties|\bm&m|cadbury|milka|ritter|godiva|ghirardelli/i },
+  { key: "spreads", patterns: /nutella|hazelnut.?spread|chocolate.?spread|peanut.?butter|nut.?butter|almond.?butter|cashew.?butter|\bspread\b|\bjam\b|marmalade|preserve|\bjif\b|skippy|sun.?pat/i },
+  { key: "snack_bars", patterns: /(?:granola|cereal|protein|energy|fruit|nut|muesli|snack)\s*bars?\b|flapjack|clif\s*bar|kind\s*bar|nature\s*valley/i },
+  { key: "cookies", patterns: /cookie|biscuit|shortbread|digestive|oreo|wafer|cracker|hobnob|mcvitie|chips\s*ahoy/i },
+  { key: "candy", patterns: /gumm|\bsweets?\b|\bcandy\b|jelly.?bean|jellies|licorice|liquorice|marshmallow|lollipop|hard.?candy|sour.?candy|skittles|starburst|haribo|wine.?gum|fruit.?pastille|toffee|fudge|twizzler|airhead|trolli|sour\s*patch|nerds\b/i },
+  { key: "chips", patterns: /crisps?|potato.?chip|tortilla.?chip|\bchips\b|nachos|pretzel|popcorn|puffs|corn.?chip|savou?ry.?snack|lay'?s|doritos|pringles|cheetos|ruffles|walkers\b|tostitos|fritos|takis|sun\s*chips/i },
+  { key: "coffee", patterns: /coffee|espresso|\bcafé\b|\bcafe\b|ground.?coffee|coffee.?bean|nescaf|nespresso|folgers|maxwell\s*house|lavazza|\billy\b|starbucks/i },
+  { key: "tea", patterns: /\btea\b|tea.?bag|chai|matcha|herbal.?infusion|rooibos|lipton|tetley|twinings|pg\s*tips|yorkshire\s*tea/i },
+  { key: "soft_drinks", patterns: /soda|cola\b|soft.?drink|carbonated|lemonade|energy.?drink|fizzy|coca.?cola|\bcoke\b|pepsi|sprite|fanta|mountain\s*dew|dr\s*pepper|7.?up|mirinda|schweppes|gatorade|powerade/i },
+  { key: "yogurt", patterns: /yogh?urt|yoghourt|skyr|kefir/i },
+  { key: "cheese", patterns: /\bcheese\b|cheddar|mozzarella|parmesan|\bbrie\b|gouda|halloumi/i },
+  { key: "milk", patterns: /oat.?milk|almond.?milk|soy.?milk|soya.?milk|plant.?milk|coconut.?milk|\bmilk\b|oat.?drink|plant.?based.?drink|alpro|oatly/i },
   { key: "eggs", patterns: /\beggs?\b/i },
-  { key: "cereal", patterns: /cereal|granola|muesli|breakfast.?cereal|porridge|oatmeal|cornflake|\boats\b/i },
+  { key: "cereal", patterns: /cereal|granola|muesli|breakfast.?cereal|porridge|oatmeal|cornflake|\boats\b|kellogg|cheerios|weetabix|special\s*k|frosties|froot\s*loops/i },
   { key: "seafood", patterns: /tuna|salmon|seafood|\bfish\b|sardine|mackerel|shrimp|prawn|anchov/i },
   { key: "bananas", patterns: /banana/i },
 ];
@@ -254,6 +266,13 @@ export function detectSwapCategory(input: {
     if (patterns.test(haystack)) return key;
   }
   return null;
+}
+
+/** All valid category keys — used to validate hand-added customSwaps entries. */
+export const SWAP_CATEGORY_KEYS = Object.keys(ETHICAL_ALTERNATIVES) as SwapCategoryKey[];
+
+export function isSwapCategory(value: string): value is SwapCategoryKey {
+  return (SWAP_CATEGORY_KEYS as string[]).includes(value);
 }
 
 export function getCandidates(category: SwapCategoryKey): AltCandidate[] {

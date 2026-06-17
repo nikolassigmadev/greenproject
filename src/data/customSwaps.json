@@ -1,0 +1,25 @@
+{
+  "_README": "Hand-curated greener-swap products. Add your researched products to the 'products' array below. These are merged into the swap engine and RANKED FIRST (above the built-in catalog). Required fields: barcode, name, category. Everything else is optional.",
+  "_fields": {
+    "barcode": "(required) The exact Open Food Facts barcode, e.g. \"8717703716115\". Used to pull the live image, eco-score and CO2.",
+    "name": "(required) Display name, e.g. \"Tony's Chocolonely Milk\".",
+    "category": "(required) One of: chocolate, candy, chips, cookies, spreads, snack_bars, cereal, coffee, tea, soft_drinks, milk, yogurt, cheese, ice_cream, eggs, seafood, bananas.",
+    "brand": "(optional) Brand shown on the card. Defaults to 'name' if omitted.",
+    "certifications": "(optional) Any of: b_corp, fair_trade, organic, rainforest_alliance, msc, asc, certified_humane, animal_welfare_approved, gap_rated, regenerative_organic, climate_neutral, worker_coop, direct_trade.",
+    "strengths": "(optional) Up to ~3 short reasons, e.g. [\"Slavery-free cocoa\", \"Fairtrade certified\"].",
+    "addresses": "(optional) Which concerns it fixes: any of labor, boycott, animal_welfare, eco. Defaults to all four.",
+    "markets": "(optional) ISO-2 country codes where it's sold, e.g. [\"GB\",\"US\"]. Omit to mean 'available everywhere'."
+  },
+  "products": [
+    {
+      "barcode": "8717703716115",
+      "name": "Tony's Chocolonely Milk Chocolate",
+      "category": "chocolate",
+      "brand": "Tony's Chocolonely",
+      "certifications": ["fair_trade"],
+      "strengths": ["Slavery-free, fully traceable cocoa", "Pays above the Fairtrade premium"],
+      "addresses": ["labor", "boycott"],
+      "markets": ["GB", "IE", "US", "CA", "AU", "NL", "DE", "BE", "FR"]
+    }
+  ]
+}
