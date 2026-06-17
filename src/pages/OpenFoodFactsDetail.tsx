@@ -22,6 +22,7 @@ import { findLaborAllegations as findLaborAllegationsUtil, getLaborAllegationCou
 import { findVerifiedEthics, CERTIFICATION_BADGES, getPrimaryCertification, CATEGORY_LABELS, type CertificationType } from "@/utils/verifiedEthics";
 import { EnvironmentalImpactCard } from "@/components/EnvironmentalImpactCard";
 import { IngredientConcernsCard } from "@/components/IngredientConcernsCard";
+import { SwapSuggestions } from "@/components/SwapSuggestions";
 import { findIngredientFlagsInText } from "@/services/ingredientFlags";
 import { sendChatMessage } from "@/services/api/backend-client";
 import { cn } from "@/lib/utils";
@@ -1146,6 +1147,11 @@ export default function OpenFoodFactsDetail() {
               )}
               {welfare.isFlagged && <AnimalWelfareFlagBadge brand={product.brand} showDetails={true} />}
             </div>
+          </section>
+
+          {/* Better swaps — reason-aware ethical alternatives */}
+          <section style={{ opacity: mounted ? 1 : 0, transform: mounted ? "translateY(0)" : "translateY(10px)", transition: "all 0.5s ease 0.45s" }}>
+            <SwapSuggestions product={product} />
           </section>
 
           {(() => {

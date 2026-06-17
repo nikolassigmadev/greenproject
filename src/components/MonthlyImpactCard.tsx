@@ -6,6 +6,7 @@ import { computeMonthlyImpact, type MonthlyImpact } from "@/utils/impactStats";
 import { WATCHLIST_EVENT, loadWatchlist } from "@/utils/watchlist";
 import { SWAP_EVENT } from "@/utils/swapTracking";
 import { shareImpactCard } from "@/utils/shareCard";
+import { loadRegion, regionPlaceLabel } from "@/utils/userRegion";
 
 function alpha(color: string, pct: number): string {
   return `color-mix(in srgb, ${color} ${pct}%, transparent)`;
@@ -87,7 +88,9 @@ export function MonthlyImpactCard() {
               co2SavedKg: impact.co2SavedKg,
               scanCount: impact.scanCount,
               swapsAccepted: impact.swapsAccepted,
+              ethicalConcernsAvoided: impact.ethicalConcernsAvoided,
               windowLabel: "this month",
+              regionLabel: regionPlaceLabel(loadRegion()),
             })}
             aria-label="Share my impact"
             style={{
@@ -126,6 +129,12 @@ export function MonthlyImpactCard() {
               value={String(impact.swapsAccepted)}
               label="Swaps"
               color={impact.swapsAccepted > 0 ? DS.good : DS.muted}
+            />
+            <div style={{ width: 1, alignSelf: "stretch", background: DS.hair, margin: "0 6px" }} />
+            <StatCell
+              value={String(impact.ethicalConcernsAvoided)}
+              label="Flags avoided"
+              color={impact.ethicalConcernsAvoided > 0 ? DS.warn : DS.muted}
             />
           </div>
 

@@ -10,7 +10,6 @@ import { AlertBox, AlertList } from "@/components/AlertBox";
 import { StatsDisplay } from "@/components/StatsDisplay";
 import { ProductCard } from "@/components/ProductCard";
 import { OpenFoodFactsCard } from "@/components/OpenFoodFactsCard";
-import { GreenerSwapCard } from "@/components/GreenerSwapCard";
 import { EnvironmentalImpactCard } from "@/components/EnvironmentalImpactCard";
 import { ScoreBreakdownSlider } from "@/components/ScoreBreakdownSlider";
 import { useToast } from "@/hooks/use-toast";
@@ -21,7 +20,7 @@ import { recognizeImageWithOpenAI } from "@/services/ocr/openai-service";
 import { advancedProductOCR } from "@/services/ocr/advanced-openai-ocr";
 import { copySingleProductCode } from "@/utils/productExporter";
 import { loadPriorities, DEFAULT_PRIORITIES, hasSavedPriorities, type UserPriorities } from "@/utils/userPreferences";
-import { lookupBarcode, isValidBarcode, searchProducts as searchOffProducts, searchBetterAlternatives } from "@/services/openfoodfacts";
+import { lookupBarcode, isValidBarcode, searchProducts as searchOffProducts } from "@/services/openfoodfacts";
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
 import { DS } from "@/styles/design-tokens";
 import { getBackendUrl } from "@/config/backend";
@@ -444,8 +443,6 @@ const Scan = () => {
   const [manualCorrectionInput, setManualCorrectionInput] = useState("");
   const [showDetailedEnvironmental, setShowDetailedEnvironmental] = useState(false);
   const [selectedEnvironmentalResult, setSelectedEnvironmentalResult] = useState<OpenFoodFactsResult | null>(null);
-  const [offAlternatives, setOffAlternatives] = useState<OpenFoodFactsResult[]>([]);
-  const [offAlternativeLoading, setOffAlternativeLoading] = useState(false);
   const offFileInputRef = useRef<HTMLInputElement>(null);
   const [scanProgress, setScanProgress] = useState(0);
   const [scanStage, setScanStage] = useState<string>("");
@@ -576,23 +573,6 @@ const Scan = () => {
         resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }, 150);
     }
-  }, [offSearchResults, offResult]);
-
-  // Search for greener alternatives when OFF results have a poor eco-score
-  useEffect(() => {
-    setOffAlternatives([]);
-    // Check the first result (primary product) for poor eco-score
-    const primaryResult = offSearchResults[0] || offResult;
-    if (!primaryResult?.found) return;
-
-    const grade = primaryResult.ecoscoreGrade?.toLowerCase();
-    if (!grade || !['d', 'e'].includes(grade)) return;
-
-    setOffAlternativeLoading(true);
-    searchBetterAlternatives(primaryResult)
-      .then((alts) => setOffAlternatives(alts))
-      .catch(() => setOffAlternatives([]))
-      .finally(() => setOffAlternativeLoading(false));
   }, [offSearchResults, offResult]);
 
   // Start camera with improved browser and mobile compatibility

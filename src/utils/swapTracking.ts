@@ -5,6 +5,8 @@ const STORAGE_KEY = 'goodscan-accepted-swaps';
 const MAX_ENTRIES = 200;
 export const SWAP_EVENT = 'swapsUpdated';
 
+export type SwapConcernType = "labor" | "boycott" | "animal_welfare" | "eco";
+
 export interface AcceptedSwap {
   timestamp: number;
   fromBarcode: string;
@@ -14,6 +16,12 @@ export interface AcceptedSwap {
   toName: string;
   toBrand: string | null;
   co2SavedKg: number | null;
+  /** The primary concern the swap resolved (drives "concerns avoided" stats). */
+  concernAvoided?: SwapConcernType | null;
+  /** Catalog category of the swap, e.g. "chocolate". */
+  categoryKey?: string | null;
+  /** ISO country code the user shopped in, when known. */
+  regionCountry?: string | null;
 }
 
 export function loadAcceptedSwaps(): AcceptedSwap[] {

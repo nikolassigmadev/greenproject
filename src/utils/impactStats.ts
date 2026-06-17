@@ -11,6 +11,10 @@ export interface MonthlyImpact {
   uniqueBrandsScanned: number;
   swapsAccepted: number;
   co2SavedKg: number;
+  /** Swaps that replaced a labour/boycott/animal-welfare-flagged product. */
+  ethicalConcernsAvoided: number;
+  /** Subset of the above specifically tied to labour concerns. */
+  laborConcernsAvoided: number;
   topBrands: { brand: string; count: number }[];
   windowDays: number;
 }
@@ -48,12 +52,19 @@ export function computeMonthlyImpact(windowDays = 30): MonthlyImpact {
 
   const co2SavedKg = swaps.reduce((sum, s) => sum + (s.co2SavedKg ?? 0), 0);
 
+  const ethicalConcernsAvoided = swaps.filter(
+    (s) => s.concernAvoided && s.concernAvoided !== "eco",
+  ).length;
+  const laborConcernsAvoided = swaps.filter((s) => s.concernAvoided === "labor").length;
+
   return {
     scanCount: history.length,
     flaggedBrandCount,
     uniqueBrandsScanned: brandCounts.size,
     swapsAccepted: swaps.length,
     co2SavedKg: Math.round(co2SavedKg * 10) / 10,
+    ethicalConcernsAvoided,
+    laborConcernsAvoided,
     topBrands,
     windowDays,
   };

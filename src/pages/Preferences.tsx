@@ -8,6 +8,8 @@ import {
 } from "@/utils/userPreferences";
 import { Leaf, Users, Heart, ArrowRight, RotateCcw, Check } from "lucide-react";
 import { DS } from "@/styles/design-tokens";
+import { RegionPicker } from "@/components/RegionPicker";
+import { toast } from "sonner";
 
 // Five discrete weights (0–100). The label + effect line do the explaining so
 // users understand what each setting actually does to a verdict.
@@ -299,6 +301,11 @@ export default function Preferences() {
             <div style={{ fontSize: 11.5, color: DS.muted, marginBottom: 14 }}>Pick your theme</div>
             <ThemeToggle />
           </div>
+
+          {/* Location — powers region-aware swap suggestions */}
+          <RegionPicker
+            onSaved={(r) => toast.success(`Location set to ${r.city ? `${r.city}, ` : ""}${r.country}`)}
+          />
 
         </div>
       </main>

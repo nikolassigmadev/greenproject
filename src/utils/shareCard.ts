@@ -8,6 +8,12 @@ export interface SwapCardInput {
   toBrand?: string | null;
   co2SavedKg?: number | null;
   pctSaved?: number | null;
+  /** Short label of the concern the swap avoids, e.g. "child-labour cocoa". */
+  concernLabel?: string | null;
+  /** Up to ~3 certification short-labels for the new product, e.g. ["Fairtrade","B Corp"]. */
+  certifications?: string[];
+  /** Where the user shops, e.g. "Amsterdam, NL" — drives the availability line. */
+  regionLabel?: string | null;
 }
 
 const W = 1080;
@@ -20,6 +26,7 @@ const GREEN_SOFT = '#E2EFE5';
 const HAIR = '#D7CFBF';
 const AMBER = '#C0822A';
 const RED = '#B23A2B';
+const RED_SOFT = '#F6E2DD';
 
 // Score → branded accent (fixed light palette; the card never follows app theme).
 function scoreAccent(score: number): string {
@@ -47,6 +54,30 @@ function wrapText(
   return lines;
 }
 
+/** Filled, auto-width pill. Returns the x position just past its right edge. */
+function drawPill(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  text: string,
+  opts: { bg: string; fg: string; font?: string; padX?: number; height?: number },
+): number {
+  const font = opts.font ?? '700 24px Inter, system-ui, sans-serif';
+  const padX = opts.padX ?? 24;
+  const h = opts.height ?? 52;
+  ctx.font = font;
+  const w = ctx.measureText(text).width + padX * 2;
+  ctx.fillStyle = opts.bg;
+  roundRect(ctx, x, y, w, h, h / 2);
+  ctx.fill();
+  ctx.fillStyle = opts.fg;
+  const prevBaseline = ctx.textBaseline;
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, x + padX, y + h / 2 + 1);
+  ctx.textBaseline = prevBaseline;
+  return x + w;
+}
+
 export function generateSwapShareCard(input: SwapCardInput): string {
   const canvas = document.createElement('canvas');
   canvas.width = W;
@@ -54,65 +85,45 @@ export function generateSwapShareCard(input: SwapCardInput): string {
   const ctx = canvas.getContext('2d');
   if (!ctx) return '';
 
-  // background
+  // background + brand strip
   ctx.fillStyle = BG;
   ctx.fillRect(0, 0, W, H);
-
-  // brand strip
   ctx.fillStyle = GREEN;
   ctx.fillRect(0, 0, W, 14);
 
-  // logo wordmark
+  // logo wordmark + tagline
+  ctx.textBaseline = 'top';
   ctx.fillStyle = GREEN;
   ctx.font = '700 38px Inter, system-ui, sans-serif';
-  ctx.textBaseline = 'top';
   ctx.fillText('GoodScan', 64, 64);
-
-  // tagline
   ctx.fillStyle = INK_MUTED;
   ctx.font = '500 22px Inter, system-ui, sans-serif';
   ctx.fillText('Ethical shopping, scanned.', 64, 116);
 
   // headline
   ctx.fillStyle = INK;
-  ctx.font = '800 96px Inter, system-ui, sans-serif';
-  ctx.fillText('I swapped', 64, 220);
+  ctx.font = '800 92px Inter, system-ui, sans-serif';
+  ctx.fillText('I swapped', 64, 196);
 
-  // FROM card
-  const cardTop = 360;
-  const cardH = 200;
+  // FROM / TO cards
+  const cardTop = 320;
+  const cardH = 196;
   const cardW = (W - 64 * 2 - 80) / 2;
 
-  // FROM card background
+  // FROM card (red-accented, the thing being left behind)
   ctx.fillStyle = '#FFFFFF';
-  ctx.strokeStyle = HAIR;
-  ctx.lineWidth = 2;
   roundRect(ctx, 64, cardTop, cardW, cardH, 24);
   ctx.fill();
-  ctx.stroke();
-
-  ctx.fillStyle = INK_MUTED;
+  ctx.fillStyle = RED;
+  roundRect(ctx, 64, cardTop, 8, cardH, 4);
+  ctx.fill();
+  ctx.fillStyle = RED;
   ctx.font = '700 22px Inter, system-ui, sans-serif';
-  ctx.fillText('FROM', 96, cardTop + 28);
-
+  ctx.fillText('FROM', 100, cardTop + 26);
   ctx.fillStyle = INK;
-  ctx.font = '800 36px Inter, system-ui, sans-serif';
-  const fromTitle = input.fromBrand
-    ? `${input.fromBrand}`
-    : input.fromName;
-  const fromLines = wrapText(ctx, fromTitle, cardW - 64).slice(0, 2);
-  fromLines.forEach((line, i) => {
-    ctx.fillText(line, 96, cardTop + 70 + i * 44);
-  });
-
-  if (input.fromBrand && input.fromName !== input.fromBrand) {
-    ctx.fillStyle = INK_MUTED;
-    ctx.font = '500 22px Inter, system-ui, sans-serif';
-    const subLines = wrapText(ctx, input.fromName, cardW - 64).slice(0, 1);
-    subLines.forEach((line) => {
-      ctx.fillText(line, 96, cardTop + 158);
-    });
-  }
+  ctx.font = '800 38px Inter, system-ui, sans-serif';
+  wrapText(ctx, input.fromBrand || input.fromName, cardW - 72).slice(0, 2)
+    .forEach((line, i) => ctx.fillText(line, 100, cardTop + 72 + i * 46));
 
   // arrow
   ctx.strokeStyle = GREEN;
@@ -128,7 +139,7 @@ export function generateSwapShareCard(input: SwapCardInput): string {
   ctx.lineTo(ax + 4, ay + 16);
   ctx.stroke();
 
-  // TO card
+  // TO card (green-accented, the better choice)
   const toX = 64 + cardW + 80;
   ctx.fillStyle = GREEN_SOFT;
   ctx.strokeStyle = GREEN;
@@ -136,47 +147,63 @@ export function generateSwapShareCard(input: SwapCardInput): string {
   roundRect(ctx, toX, cardTop, cardW, cardH, 24);
   ctx.fill();
   ctx.stroke();
-
   ctx.fillStyle = GREEN;
   ctx.font = '700 22px Inter, system-ui, sans-serif';
-  ctx.fillText('TO', toX + 32, cardTop + 28);
-
+  ctx.fillText('TO', toX + 32, cardTop + 26);
   ctx.fillStyle = INK;
-  ctx.font = '800 36px Inter, system-ui, sans-serif';
-  const toTitle = input.toBrand ? `${input.toBrand}` : input.toName;
-  const toLines = wrapText(ctx, toTitle, cardW - 64).slice(0, 2);
-  toLines.forEach((line, i) => {
-    ctx.fillText(line, toX + 32, cardTop + 70 + i * 44);
-  });
+  ctx.font = '800 38px Inter, system-ui, sans-serif';
+  wrapText(ctx, input.toBrand || input.toName, cardW - 64).slice(0, 2)
+    .forEach((line, i) => ctx.fillText(line, toX + 32, cardTop + 72 + i * 46));
 
-  if (input.toBrand && input.toName !== input.toBrand) {
-    ctx.fillStyle = INK_MUTED;
-    ctx.font = '500 22px Inter, system-ui, sans-serif';
-    const subLines = wrapText(ctx, input.toName, cardW - 64).slice(0, 1);
-    subLines.forEach((line) => {
-      ctx.fillText(line, toX + 32, cardTop + 158);
+  let cursorY = cardTop + cardH + 44;
+
+  // concern-avoided banner
+  if (input.concernLabel) {
+    const right = drawPill(ctx, 64, cursorY, `Avoids ${input.concernLabel}`, {
+      bg: RED_SOFT, fg: RED, height: 60, padX: 28,
+      font: '700 27px Inter, system-ui, sans-serif',
     });
+    void right;
+    cursorY += 60 + 18;
   }
 
-  // impact stat
-  if (input.co2SavedKg != null && input.co2SavedKg > 0) {
-    const statTop = cardTop + cardH + 80;
-    ctx.fillStyle = INK;
-    ctx.font = '800 140px Inter, system-ui, sans-serif';
-    const co2Text = `-${input.co2SavedKg.toFixed(1)} kg`;
-    ctx.fillText(co2Text, 64, statTop);
+  // certification pills
+  if (input.certifications && input.certifications.length > 0) {
+    let x = 64;
+    for (const cert of input.certifications.slice(0, 4)) {
+      x = drawPill(ctx, x, cursorY, cert, {
+        bg: GREEN_SOFT, fg: GREEN, height: 56, padX: 24,
+        font: '700 25px Inter, system-ui, sans-serif',
+      }) + 14;
+    }
+    cursorY += 56 + 26;
+  } else {
+    cursorY += 8;
+  }
 
+  // hero CO2 stat
+  if (input.co2SavedKg != null && input.co2SavedKg > 0) {
+    ctx.fillStyle = INK;
+    ctx.font = '800 150px Inter, system-ui, sans-serif';
+    ctx.fillText(`−${input.co2SavedKg.toFixed(1)} kg`, 64, cursorY);
     ctx.fillStyle = INK_MUTED;
     ctx.font = '600 30px Inter, system-ui, sans-serif';
     const sub = input.pctSaved != null
-      ? `CO2 saved per kg · ${input.pctSaved}% lower footprint`
-      : `CO2 saved per kg of product`;
-    ctx.fillText(sub, 64, statTop + 160);
+      ? `CO₂ saved per kg · ${input.pctSaved}% lower footprint`
+      : 'CO₂ saved per kg of product';
+    ctx.fillText(sub, 64, cursorY + 168);
   } else {
-    const statTop = cardTop + cardH + 80;
-    ctx.fillStyle = INK;
-    ctx.font = '800 90px Inter, system-ui, sans-serif';
-    ctx.fillText('A greener choice.', 64, statTop);
+    ctx.fillStyle = GREEN;
+    ctx.font = '800 84px Inter, system-ui, sans-serif';
+    ctx.fillText('A cleaner', 64, cursorY);
+    ctx.fillText('supply chain.', 64, cursorY + 92);
+  }
+
+  // region availability line
+  if (input.regionLabel) {
+    ctx.fillStyle = INK_MUTED;
+    ctx.font = '600 26px Inter, system-ui, sans-serif';
+    ctx.fillText(`📍 Shopping in ${input.regionLabel}`, 64, H - 124);
   }
 
   // footer
@@ -248,9 +275,13 @@ export async function shareDataUrl(
 }
 
 export async function shareSwapCard(input: SwapCardInput): Promise<ShareResult> {
+  const to = input.toBrand || input.toName;
+  const text = input.concernLabel
+    ? `Swapped to ${to} — avoids ${input.concernLabel}.`
+    : `Swapped to ${to}, a lower-footprint choice.`;
   return shareDataUrl(generateSwapShareCard(input), 'goodscan-swap.png', {
-    title: 'I made a greener swap with GoodScan',
-    text: 'Scan any product, swap to a lower-footprint option.',
+    title: 'I made a better swap with GoodScan',
+    text,
   });
 }
 
@@ -366,7 +397,11 @@ export interface ImpactCardInput {
   co2SavedKg: number;
   scanCount: number;
   swapsAccepted: number;
+  /** Swaps that replaced a labour / boycott / animal-welfare-flagged product. */
+  ethicalConcernsAvoided?: number;
   windowLabel: string; // e.g. "this week" / "this month"
+  /** Where the user shops, e.g. "Amsterdam, NL". */
+  regionLabel?: string | null;
 }
 
 export function generateImpactShareCard(input: ImpactCardInput): string {
@@ -392,13 +427,18 @@ export function generateImpactShareCard(input: ImpactCardInput): string {
   // headline
   ctx.fillStyle = INK;
   ctx.font = '800 76px Inter, system-ui, sans-serif';
-  ctx.fillText('My impact', 64, 240);
+  ctx.fillText('My impact', 64, 232);
   ctx.fillStyle = INK_MUTED;
   ctx.font = '600 34px Inter, system-ui, sans-serif';
-  ctx.fillText(input.windowLabel, 64, 330);
+  const windowLine = input.regionLabel
+    ? `${input.windowLabel} · ${input.regionLabel}`
+    : input.windowLabel;
+  ctx.fillText(windowLine, 64, 322);
+
+  const concernsAvoided = input.ethicalConcernsAvoided ?? 0;
 
   // hero stat — CO2 when there's a saving, else products scanned
-  const heroTop = 440;
+  const heroTop = 430;
   if (input.co2SavedKg > 0) {
     ctx.fillStyle = GREEN;
     ctx.font = '800 200px Inter, system-ui, sans-serif';
@@ -415,18 +455,20 @@ export function generateImpactShareCard(input: ImpactCardInput): string {
     ctx.fillText('products scanned consciously', 64, heroTop + 224);
   }
 
-  // stat row
-  const rowY = 820;
-  const drawStat = (x: number, value: string, label: string) => {
-    ctx.fillStyle = INK;
+  // stat row — three columns
+  const rowY = 812;
+  const drawStat = (x: number, value: string, label: string, color = INK) => {
+    ctx.fillStyle = color;
     ctx.font = '800 64px Inter, system-ui, sans-serif';
     ctx.fillText(value, x, rowY);
     ctx.fillStyle = INK_MUTED;
-    ctx.font = '600 26px Inter, system-ui, sans-serif';
-    ctx.fillText(label, x, rowY + 76);
+    ctx.font = '600 25px Inter, system-ui, sans-serif';
+    wrapText(ctx, label, W / 3 - 80).slice(0, 2)
+      .forEach((line, i) => ctx.fillText(line, x, rowY + 76 + i * 30));
   };
   drawStat(64, String(input.scanCount), 'scanned');
-  drawStat(W / 2, String(input.swapsAccepted), 'greener swaps');
+  drawStat(64 + (W - 128) / 3, String(input.swapsAccepted), 'greener swaps', GREEN);
+  drawStat(64 + ((W - 128) / 3) * 2, String(concernsAvoided), 'ethics flags avoided', AMBER);
 
   // footer
   ctx.fillStyle = INK_MUTED;
@@ -437,8 +479,12 @@ export function generateImpactShareCard(input: ImpactCardInput): string {
 }
 
 export async function shareImpactCard(input: ImpactCardInput): Promise<ShareResult> {
+  const concerns = input.ethicalConcernsAvoided ?? 0;
+  const text = concerns > 0
+    ? `${input.scanCount} scans · ${input.swapsAccepted} greener swaps · ${concerns} ethics flags avoided.`
+    : 'Track the footprint of what you buy.';
   return shareDataUrl(generateImpactShareCard(input), 'goodscan-impact.png', {
     title: 'My impact with GoodScan',
-    text: 'Track the footprint of what you buy.',
+    text,
   });
 }

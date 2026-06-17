@@ -17,6 +17,7 @@ export interface WeeklyRecap {
   swapsAccepted: number;
   co2SavedKg: number;
   flaggedBrandCount: number;
+  ethicalConcernsAvoided: number;
   topBrand: string | null;
 }
 
@@ -27,6 +28,7 @@ export function getWeeklyRecap(): WeeklyRecap {
     swapsAccepted: m.swapsAccepted,
     co2SavedKg: m.co2SavedKg,
     flaggedBrandCount: m.flaggedBrandCount,
+    ethicalConcernsAvoided: m.ethicalConcernsAvoided,
     topBrand: m.topBrands[0]?.brand ?? null,
   };
 }
