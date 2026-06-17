@@ -1,49 +1,30 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import {
-  ShoppingCart,
-  Search,
-  X,
-  Trash2,
-  AlertTriangle,
-  Loader2,
-  Plus,
-  ShoppingBag,
-  AlertCircle,
-  Users,
-  ChevronRight,
-  CheckCircle2,
-  Leaf,
-  TrendingDown,
-  TrendingUp,
+  ShoppingCart, Search, X, Trash2, AlertTriangle, Loader2, Plus,
+  ShoppingBag, Users, ChevronRight, CheckCircle2, TrendingDown,
 } from "lucide-react";
 import { searchProducts as searchOffProducts } from "@/services/openfoodfacts";
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
 import { getLaborAllegationCount } from "@/utils/laborCheck";
 import {
-  loadBasket,
-  addToBasket,
-  removeFromBasket,
-  clearBasket,
-  getBasketEthicsReport,
-  type BasketItem,
+  loadBasket, addToBasket, removeFromBasket, clearBasket,
+  getBasketEthicsReport, type BasketItem,
 } from "@/utils/basketStorage";
 import { DS } from "@/styles/design-tokens";
 
 // ── helpers ────────────────────────────────────────────────────────────────
 
-const NUTRI_COLOR: Record<string, string> = {
-  a: '#00C853', b: '#84cc16', c: '#F59E0B', d: '#F97316', e: '#EF4444',
-};
+/** Map an A–E grade to the site's themed tone tokens. */
+function gradeTone(grade: string | null | undefined): { color: string; bg: string } {
+  const g = grade?.toLowerCase();
+  if (g === "a" || g === "b") return { color: DS.good, bg: DS.goodBg };
+  if (g === "c") return { color: DS.warn, bg: DS.warnBg };
+  if (g === "d" || g === "e") return { color: DS.bad, bg: DS.badBg };
+  return { color: DS.muted, bg: DS.bg };
+}
 
-const ECO_COLOR: Record<string, string> = {
-  a: '#00C853', b: '#84cc16', c: '#F59E0B', d: '#F97316', e: '#EF4444',
-};
-
-// Semantic color constants — represent data meaning, not structural tokens
-const RED = "#EF4444";
-const GREEN = "#00C853";
-const AMBER = "#F59E0B";
+const SHADOW = "0 2px 6px rgba(0,0,0,0.05), 0 0 0 1px rgba(0,0,0,0.04)";
 
 function addResultToBasket(result: OpenFoodFactsResult) {
   addToBasket({
@@ -58,6 +39,52 @@ function addResultToBasket(result: OpenFoodFactsResult) {
     co2Per100g: result.carbonFootprint100g,
   });
 }
+
+// ── small pieces ─────────────────────────────────────────────────────────────
+
+function GradePill({ grade, label }: { grade: string; label: string }) {
+  const tone = gradeTone(grade);
+  return (
+    <span style={{
+      fontSize: 10, fontWeight: 800, color: tone.color, background: tone.bg,
+      borderRadius: 6, padding: "2px 7px", whiteSpace: "nowrap",
+    }}>
+      {label}-{grade.toUpperCase()}
+    </span>
+  );
+}
+
+function Thumb({ url, size = 46 }: { url: string | null; size?: number }) {
+  if (url) {
+    return (
+      <img src={url} alt="" style={{
+        width: size, height: size, objectFit: "cover", borderRadius: 12,
+        flexShrink: 0, border: `1px solid ${DS.hair}`, background: "#fff",
+      }} />
+    );
+  }
+  return (
+    <div style={{
+      width: size, height: size, background: DS.bg, borderRadius: 12, flexShrink: 0,
+      display: "flex", alignItems: "center", justifyContent: "center",
+    }}>
+      <ShoppingBag size={size * 0.38} style={{ color: DS.muted }} />
+    </div>
+  );
+}
+
+function Stat({ value, label, color }: { value: string; label: string; color: string }) {
+  return (
+    <div style={{ flex: 1, minWidth: 0, textAlign: "center" }}>
+      <div style={{ fontSize: 20, fontWeight: 800, color, lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>
+        {value}
+      </div>
+      <div style={{ fontSize: 10.5, fontWeight: 600, color: DS.muted, marginTop: 6 }}>{label}</div>
+    </div>
+  );
+}
+
+// ── page ───────────────────────────────────────────────────────────────────
 
 export default function ShoppingList() {
   const [basket, setBasket] = useState<BasketItem[]>([]);
@@ -89,12 +116,10 @@ export default function ShoppingList() {
     addResultToBasket(result);
     setBasket(loadBasket());
   };
-
   const handleRemove = (barcode: string) => {
     removeFromBasket(barcode);
     setBasket(loadBasket());
   };
-
   const handleClear = () => {
     clearBasket();
     setBasket([]);
@@ -102,197 +127,162 @@ export default function ShoppingList() {
   };
 
   const report = getBasketEthicsReport(basket);
-  const inBasket = (barcode: string) => basket.some(b => b.barcode === barcode);
+  const inBasket = (barcode: string) => basket.some((b) => b.barcode === barcode);
+  const overallTone = gradeTone(report.overallGrade);
+  const weakest = report.weakestItem;
+  const weakestPoor = weakest && ["d", "e"].includes(weakest.ecoscoreGrade?.toLowerCase() ?? "");
+
+  const inputStyle: React.CSSProperties = {
+    width: "100%", height: 44, background: DS.bg, border: `1px solid ${DS.hair}`,
+    borderRadius: 12, color: DS.ink, fontSize: 14, paddingLeft: 38, paddingRight: 38,
+    outline: "none", fontFamily: DS.font, boxSizing: "border-box",
+  };
 
   return (
     <div style={{ background: DS.bg, minHeight: "100dvh", fontFamily: DS.font, color: DS.ink }}>
-      <main style={{ paddingBottom: 110 }}>
+      <main style={{ maxWidth: 560, margin: "0 auto", padding: "0 16px 120px" }}>
 
         {/* ── Header ── */}
-        <div style={{
-          padding: "max(60px, calc(env(safe-area-inset-top, 0px) + 16px)) 20px 16px",
-          display: "flex", justifyContent: "space-between", alignItems: "flex-end",
+        <header style={{
+          paddingTop: "max(48px, calc(env(safe-area-inset-top, 0px) + 16px))",
+          paddingBottom: 18, display: "flex", alignItems: "center", gap: 12,
         }}>
-          <div>
-            <p style={{ fontSize: 13, fontWeight: 600, color: DS.muted, letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 4 }}>
-              Shopping
-            </p>
-            <h1 style={{ fontSize: 28, fontWeight: 700, color: DS.ink, letterSpacing: -0.5, lineHeight: 1 }}>
-              My Basket
-              {basket.length > 0 && (
-                <span style={{ marginLeft: 10, fontSize: "1rem", fontWeight: 700, color: DS.muted }}>
-                  {basket.length}
-                </span>
-              )}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h1 style={{
+              fontSize: 22, fontWeight: 800, margin: 0, letterSpacing: -0.4,
+              display: "flex", alignItems: "center", gap: 8,
+            }}>
+              <ShoppingCart style={{ width: 20, height: 20, color: DS.ink, strokeWidth: 2.2 }} />
+              Basket
             </h1>
+            <p style={{ fontSize: 12.5, color: DS.muted, margin: "4px 0 0" }}>
+              {basket.length > 0
+                ? `${basket.length} item${basket.length !== 1 ? "s" : ""} you're tracking`
+                : "Build a basket to see its impact"}
+            </p>
           </div>
           {basket.length > 0 && (
             <button
               onClick={() => setShowClearConfirm(true)}
               style={{
-                display: "flex", alignItems: "center", gap: 6,
-                padding: "8px 14px", borderRadius: 10,
-                border: "none",
+                display: "inline-flex", alignItems: "center", gap: 6, flexShrink: 0,
+                padding: "8px 12px", borderRadius: 10, border: `1px solid ${DS.hair}`,
                 background: DS.card, color: DS.muted, cursor: "pointer",
-                fontSize: "0.8rem", fontWeight: 600,
+                fontSize: 12.5, fontWeight: 700, fontFamily: DS.font,
               }}
             >
-              <Trash2 size={14} /> Clear
+              <Trash2 size={13} /> Clear
             </button>
           )}
-        </div>
+        </header>
 
-        <div style={{ padding: "0 16px 16px", display: "flex", flexDirection: "column", gap: 12 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
 
           {/* ── Clear confirm ── */}
           {showClearConfirm && (
-            <div style={{
-              background: "#FFF5F5", border: `1px solid #FECACA`,
-              borderRadius: 16, padding: "16px",
-            }}>
+            <div style={{ background: DS.card, border: `1px solid ${DS.bad}40`, borderRadius: 16, padding: 16, boxShadow: SHADOW }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-                <AlertTriangle size={16} style={{ color: RED, flexShrink: 0 }} />
-                <p style={{ fontSize: "0.9rem", fontWeight: 700, color: "#7F1D1D" }}>Clear entire basket?</p>
+                <AlertTriangle size={16} style={{ color: DS.bad, flexShrink: 0 }} />
+                <p style={{ fontSize: 14, fontWeight: 700, color: DS.ink, margin: 0 }}>Clear your whole basket?</p>
               </div>
               <div style={{ display: "flex", gap: 8 }}>
-                <button onClick={handleClear} style={{ flex: 1, height: 40, borderRadius: 10, border: "none", background: RED, color: DS.card, fontWeight: 700, fontSize: "0.85rem", cursor: "pointer" }}>
+                <button onClick={handleClear} style={{ flex: 1, height: 42, borderRadius: 11, border: "none", background: DS.bad, color: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: DS.font }}>
                   Yes, clear
                 </button>
-                <button onClick={() => setShowClearConfirm(false)} style={{ flex: 1, height: 40, borderRadius: 10, border: "none", background: DS.card, color: DS.muted, fontWeight: 600, fontSize: "0.85rem", cursor: "pointer" }}>
+                <button onClick={() => setShowClearConfirm(false)} style={{ flex: 1, height: 42, borderRadius: 11, border: `1px solid ${DS.hair}`, background: DS.card, color: DS.ink, fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: DS.font }}>
                   Cancel
                 </button>
               </div>
             </div>
           )}
 
-          {/* ── Stats row ── */}
+          {/* ── Summary card (consolidated) ── */}
           {basket.length > 0 && (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-
-              {/* Labour card */}
-              <div style={{
-                background: DS.card, borderRadius: 18,
-                borderLeft: `4px solid ${report.laborFlagCount > 0 ? RED : GREEN}`,
-                padding: "14px 14px",
-              }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-                  <div style={{
-                    width: 28, height: 28, borderRadius: 8,
-                    background: report.laborFlagCount > 0 ? "#FEF2F2" : "#F0FAF1",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                  }}>
-                    <Users size={14} style={{ color: report.laborFlagCount > 0 ? RED : GREEN }} />
-                  </div>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: DS.muted }}>Labour</span>
+            <div style={{ background: DS.card, borderRadius: 18, padding: "16px 16px 14px", boxShadow: SHADOW }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{
+                  width: 46, height: 46, borderRadius: 13, flexShrink: 0,
+                  background: overallTone.bg, color: overallTone.color,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 20, fontWeight: 800,
+                }}>
+                  {report.overallGrade !== "unknown" ? report.overallGrade.toUpperCase() : "—"}
                 </div>
-                <p style={{ fontSize: "1.6rem", fontWeight: 900, color: report.laborFlagCount > 0 ? RED : GREEN, lineHeight: 1, marginBottom: 2 }}>
-                  {report.laborFlagCount > 0 ? report.laborFlagCount : report.cleanBrandCount}
-                </p>
-                <p style={{ fontSize: "0.68rem", color: report.laborFlagCount > 0 ? RED : GREEN, fontWeight: 600 }}>
-                  {report.laborFlagCount > 0 ? `flagged brand${report.laborFlagCount !== 1 ? "s" : ""}` : "clean brands"}
-                </p>
-                {report.flaggedItems.length > 0 && (
-                  <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${DS.hair}` }}>
-                    {report.flaggedItems.slice(0, 2).map(item => (
-                      <p key={item.barcode} style={{ fontSize: "0.65rem", color: DS.muted, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        · {item.brand || item.productName}
-                      </p>
-                    ))}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14.5, fontWeight: 800, color: DS.ink, lineHeight: 1.2 }}>
+                    Basket impact
                   </div>
-                )}
+                  <div style={{ fontSize: 12, color: DS.muted, marginTop: 2 }}>
+                    {report.laborFlagCount > 0
+                      ? `${report.laborFlagCount} flagged brand${report.laborFlagCount !== 1 ? "s" : ""} · avg Eco-${report.overallGrade !== "unknown" ? report.overallGrade.toUpperCase() : "?"}`
+                      : report.overallGrade !== "unknown"
+                        ? `Average Eco-Score ${report.overallGrade.toUpperCase()}`
+                        : "Scores will appear as you add products"}
+                  </div>
+                </div>
               </div>
 
-              {/* CO2 card */}
-              {report.co2ScoredCount > 0 ? (
-                <div style={{
-                  background: DS.card, borderRadius: 18,
-                  borderLeft: `4px solid ${report.co2NetKg >= 0 ? GREEN : AMBER}`,
-                  padding: "14px 14px",
+              {/* stat strip */}
+              <div style={{
+                display: "flex", alignItems: "center",
+                background: DS.bg, borderRadius: 13, padding: "12px 8px", marginTop: 14,
+              }}>
+                <Stat value={String(basket.length)} label="Items" color={DS.ink} />
+                <div style={{ width: 1, alignSelf: "stretch", background: DS.hair, margin: "0 4px" }} />
+                <Stat
+                  value={String(report.laborFlagCount)}
+                  label="Labour flags"
+                  color={report.laborFlagCount > 0 ? DS.bad : DS.good}
+                />
+                <div style={{ width: 1, alignSelf: "stretch", background: DS.hair, margin: "0 4px" }} />
+                <Stat
+                  value={report.co2ScoredCount > 0 ? `${report.co2NetKg >= 0 ? "−" : "+"}${Math.abs(report.co2NetKg)}` : "—"}
+                  label={report.co2ScoredCount > 0 ? "kg CO₂ vs avg" : "CO₂"}
+                  color={report.co2ScoredCount === 0 ? DS.muted : report.co2NetKg >= 0 ? DS.good : DS.warn}
+                />
+              </div>
+
+              {/* weakest link — quiet, actionable */}
+              {weakestPoor && weakest && (
+                <Link to={`/product-off/${weakest.barcode}`} style={{
+                  display: "flex", alignItems: "center", gap: 10, marginTop: 12,
+                  padding: "10px 12px", borderRadius: 12, background: DS.warnBg,
+                  textDecoration: "none",
                 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-                    <div style={{
-                      width: 28, height: 28, borderRadius: 8,
-                      background: report.co2NetKg >= 0 ? "#F0FAF1" : "#FFFBEB",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                    }}>
-                      {report.co2NetKg >= 0
-                        ? <TrendingDown size={14} style={{ color: GREEN }} />
-                        : <TrendingUp size={14} style={{ color: AMBER }} />}
-                    </div>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: DS.muted }}>CO₂</span>
+                  <AlertTriangle size={15} style={{ color: DS.warn, flexShrink: 0 }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{ fontSize: 12.5, color: DS.ink, fontWeight: 600 }}>
+                      Weakest: <strong style={{ fontWeight: 800 }}>{weakest.productName}</strong>
+                    </span>
+                    <span style={{ fontSize: 11.5, color: DS.muted, display: "block" }}>
+                      Eco-{weakest.ecoscoreGrade?.toUpperCase()} · tap to find a greener swap
+                    </span>
                   </div>
-                  <p style={{ fontSize: "1.6rem", fontWeight: 900, color: report.co2NetKg >= 0 ? GREEN : AMBER, lineHeight: 1, marginBottom: 2 }}>
-                    {report.co2NetKg >= 0 ? "-" : "+"}{Math.abs(report.co2NetKg)}
-                    <span style={{ fontSize: "0.8rem", fontWeight: 700 }}> kg</span>
-                  </p>
-                  <p style={{ fontSize: "0.68rem", color: report.co2NetKg >= 0 ? GREEN : AMBER, fontWeight: 600 }}>
-                    {report.co2NetKg >= 0 ? "saved vs avg" : "above avg basket"}
-                  </p>
-                </div>
-              ) : (
-                <div style={{
-                  background: DS.card, borderRadius: 18,
-                  padding: "14px 14px",
-                  display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center",
-                  gap: 6, color: DS.muted,
-                }}>
-                  <Leaf size={22} style={{ color: DS.hair }} />
-                  <p style={{ fontSize: "0.7rem", textAlign: "center", lineHeight: 1.4 }}>No eco data yet</p>
-                </div>
+                  <ChevronRight size={16} style={{ color: DS.warn, flexShrink: 0 }} />
+                </Link>
               )}
             </div>
           )}
 
-          {/* ── Weakest Link ── */}
-          {report.weakestItem && ["d", "e"].includes(report.weakestItem.ecoscoreGrade?.toLowerCase() ?? "") && (
-            <Link to={`/product-off/${report.weakestItem.barcode}`} style={{
-              display: "flex", alignItems: "center", gap: 12,
-              padding: "14px 16px",
-              background: "#FFFBEB", border: `1px solid #FDE68A`, borderRadius: 18,
-              textDecoration: "none",
-            }}>
-              <div style={{ width: 36, height: 36, borderRadius: 10, background: "#FEF3C7", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <AlertCircle size={18} style={{ color: AMBER }} />
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: "0.68rem", fontWeight: 700, color: "#92400E", marginBottom: 2 }}>Weakest link</p>
-                <p style={{ fontSize: "0.85rem", fontWeight: 700, color: DS.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {report.weakestItem.productName}
-                </p>
-                <p style={{ fontSize: "0.7rem", color: DS.muted, marginTop: 1 }}>
-                  Eco-{report.weakestItem.ecoscoreGrade?.toUpperCase()} · consider swapping
-                </p>
-              </div>
-              <ChevronRight size={16} style={{ color: AMBER, flexShrink: 0 }} />
-            </Link>
-          )}
-
-          {/* ── Search / Add ── */}
-          <div style={{ background: DS.card, borderRadius: 18, overflow: "hidden" }}>
-            <div style={{ padding: "14px 16px 0" }}>
-              <p style={{ fontSize: 13, fontWeight: 600, color: DS.muted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 10 }}>
-                Add product
+          {/* ── Add product ── */}
+          <div style={{ background: DS.card, borderRadius: 18, boxShadow: SHADOW, overflow: "hidden" }}>
+            <div style={{ padding: "14px 16px" }}>
+              <p style={{ fontSize: 11.5, fontWeight: 700, color: DS.muted, textTransform: "uppercase", letterSpacing: 0.5, margin: "0 0 10px" }}>
+                Add a product
               </p>
-              <div style={{ position: "relative", display: "flex", alignItems: "center", marginBottom: 12 }}>
-                <Search size={15} style={{ position: "absolute", left: 12, color: DS.muted, pointerEvents: "none" }} />
+              <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                <Search size={15} style={{ position: "absolute", left: 13, color: DS.muted, pointerEvents: "none" }} />
                 {searching
-                  ? <Loader2 size={14} style={{ position: "absolute", right: 12, color: DS.ink, animation: "spin 1s linear infinite" }} />
+                  ? <Loader2 size={15} style={{ position: "absolute", right: 13, color: DS.ink, animation: "spin 1s linear infinite" }} />
                   : query
-                  ? <button onClick={() => { setQuery(""); setSearchResults([]); }} style={{ position: "absolute", right: 10, background: "none", border: "none", color: DS.muted, cursor: "pointer", padding: 0 }}><X size={14} /></button>
-                  : null
-                }
+                    ? <button onClick={() => { setQuery(""); setSearchResults([]); }} style={{ position: "absolute", right: 11, background: "none", border: "none", color: DS.muted, cursor: "pointer", padding: 0, display: "flex" }}><X size={15} /></button>
+                    : null}
                 <input
                   type="text"
                   value={query}
-                  onChange={e => setQuery(e.target.value)}
+                  onChange={(e) => setQuery(e.target.value)}
                   placeholder="Search products to add…"
-                  style={{
-                    width: "100%", height: 44,
-                    background: DS.bg,
-                    border: "none", borderRadius: 12,
-                    color: DS.ink, fontSize: "0.875rem",
-                    paddingLeft: 36, paddingRight: 36, outline: "none",
-                  }}
+                  style={inputStyle}
                 />
               </div>
             </div>
@@ -300,46 +290,32 @@ export default function ShoppingList() {
             {searchResults.length > 0 && (
               <div style={{ borderTop: `1px solid ${DS.hair}` }}>
                 {searchResults.map((result, i) => {
-                  const grade = result.ecoscoreGrade?.toLowerCase();
                   const already = inBasket(result.barcode);
                   return (
                     <div key={result.barcode} style={{
-                      display: "flex", alignItems: "center", gap: 10,
-                      padding: "12px 16px",
+                      display: "flex", alignItems: "center", gap: 11, padding: "11px 16px",
                       borderBottom: i < searchResults.length - 1 ? `1px solid ${DS.hair}` : "none",
                     }}>
-                      {result.imageUrl
-                        ? <img src={result.imageUrl} alt="" style={{ width: 40, height: 40, objectFit: "cover", borderRadius: 10, flexShrink: 0, border: `1px solid ${DS.hair}` }} />
-                        : <div style={{ width: 40, height: 40, background: DS.bg, borderRadius: 10, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}><ShoppingBag size={16} style={{ color: DS.muted }} /></div>
-                      }
+                      <Thumb url={result.imageUrl} size={40} />
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ fontSize: "0.85rem", fontWeight: 700, color: DS.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 3 }}>
+                        <p style={{ fontSize: 13.5, fontWeight: 700, color: DS.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", margin: "0 0 3px" }}>
                           {result.productName || "Unknown"}
                         </p>
                         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                          {result.brand && <span style={{ fontSize: "0.7rem", color: DS.muted }}>{result.brand}</span>}
-                          {grade && (
-                            <span style={{
-                              fontSize: "0.62rem", fontWeight: 700,
-                              color: ECO_COLOR[grade] || DS.muted,
-                              background: `${ECO_COLOR[grade] || DS.muted}18`,
-                              borderRadius: 6, padding: "1px 6px",
-                            }}>
-                              Eco-{grade.toUpperCase()}
-                            </span>
-                          )}
+                          {result.brand && <span style={{ fontSize: 11.5, color: DS.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{result.brand}</span>}
+                          {result.ecoscoreGrade && <GradePill grade={result.ecoscoreGrade} label="Eco" />}
                         </div>
                       </div>
                       <button
                         onClick={() => !already && handleAdd(result)}
                         disabled={already}
+                        aria-label={already ? "Already in basket" : "Add to basket"}
                         style={{
-                          width: 34, height: 34, borderRadius: 10,
-                          border: "none",
-                          background: already ? "#F0FAF1" : DS.ink,
-                          color: already ? GREEN : DS.card,
+                          width: 34, height: 34, borderRadius: 10, border: "none", flexShrink: 0,
+                          background: already ? DS.goodBg : DS.ink,
+                          color: already ? DS.good : DS.card,
                           cursor: already ? "default" : "pointer",
-                          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                          display: "flex", alignItems: "center", justifyContent: "center",
                         }}
                       >
                         {already ? <CheckCircle2 size={16} /> : <Plus size={16} />}
@@ -351,72 +327,56 @@ export default function ShoppingList() {
             )}
 
             {searchResults.length === 0 && query.trim().length >= 2 && !searching && (
-              <div style={{ padding: "14px 16px", borderTop: `1px solid ${DS.hair}` }}>
-                <p style={{ fontSize: "0.8rem", color: DS.muted }}>No results found for "{query}"</p>
+              <div style={{ padding: "12px 16px", borderTop: `1px solid ${DS.hair}` }}>
+                <p style={{ fontSize: 13, color: DS.muted, margin: 0 }}>No results for "{query}"</p>
               </div>
             )}
           </div>
 
-          {/* ── Basket Items ── */}
+          {/* ── Items ── */}
           {basket.length === 0 ? (
-            <div style={{
-              background: DS.card, borderRadius: 18,
-              padding: "36px 20px", textAlign: "center",
-            }}>
-              <div style={{ width: 56, height: 56, borderRadius: 18, background: DS.bg, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
-                <ShoppingCart size={26} style={{ color: DS.muted }} />
+            <div style={{ background: DS.card, borderRadius: 18, padding: "40px 24px", textAlign: "center", boxShadow: SHADOW }}>
+              <div style={{ width: 56, height: 56, borderRadius: "50%", background: DS.bg, display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 14 }}>
+                <ShoppingCart size={24} style={{ color: DS.muted }} />
               </div>
-              <p style={{ fontSize: "1rem", fontWeight: 800, color: DS.ink, marginBottom: 6 }}>Your basket is empty</p>
-              <p style={{ fontSize: "0.82rem", color: DS.muted, marginBottom: 22, lineHeight: 1.5 }}>
-                Search above or scan a product to get started
+              <h2 style={{ fontSize: 16, fontWeight: 800, margin: "0 0 6px" }}>Your basket is empty</h2>
+              <p style={{ fontSize: 13, color: DS.muted, margin: "0 0 18px", lineHeight: 1.5 }}>
+                Search above or scan a product, and we'll track its ethics and footprint here.
               </p>
               <Link to="/scan" style={{
-                display: "inline-flex", alignItems: "center", gap: 8,
-                padding: "12px 24px", borderRadius: 14,
-                background: DS.ink, color: DS.card,
-                textDecoration: "none", fontWeight: 700, fontSize: "0.875rem",
+                display: "inline-flex", alignItems: "center", gap: 8, padding: "11px 22px",
+                borderRadius: 12, background: DS.ink, color: DS.card,
+                textDecoration: "none", fontWeight: 700, fontSize: 13.5,
               }}>
-                <ShoppingBag size={15} /> Start Scanning
+                <ShoppingBag size={15} /> Start scanning
               </Link>
             </div>
           ) : (
             <div>
-              <p style={{ fontSize: 13, fontWeight: 600, color: DS.muted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>
-                {basket.length} item{basket.length !== 1 ? "s" : ""} in basket
+              <p style={{ fontSize: 11.5, fontWeight: 700, color: DS.muted, textTransform: "uppercase", letterSpacing: 0.5, margin: "2px 0 8px 2px" }}>
+                In your basket
               </p>
-              <div style={{ background: DS.card, borderRadius: 18, overflow: "hidden" }}>
+              <div style={{ background: DS.card, borderRadius: 18, boxShadow: SHADOW, overflow: "hidden" }}>
                 {basket.map((item, i) => {
-                  const ecoGrade = item.ecoscoreGrade?.toLowerCase();
-                  const nutriGrade = item.nutriscoreGrade?.toLowerCase();
                   const isFlagged = item.laborAllegations > 0;
-                  const isWeakest = report.weakestItem?.barcode === item.barcode;
-
                   return (
                     <div key={item.id} style={{
-                      display: "flex", alignItems: "center", gap: 12,
-                      padding: "12px 14px",
+                      display: "flex", alignItems: "center", gap: 12, padding: "12px 14px",
                       borderBottom: i < basket.length - 1 ? `1px solid ${DS.hair}` : "none",
-                      borderLeft: `4px solid ${isFlagged ? RED : isWeakest ? AMBER : "transparent"}`,
                     }}>
                       <Link to={`/product-off/${item.barcode}`} style={{ display: "flex", alignItems: "center", gap: 12, flex: 1, minWidth: 0, textDecoration: "none" }}>
-                        {item.imageUrl
-                          ? <img src={item.imageUrl} alt="" style={{ width: 46, height: 46, objectFit: "cover", borderRadius: 12, flexShrink: 0, border: `1px solid ${DS.hair}` }} />
-                          : <div style={{ width: 46, height: 46, background: DS.bg, borderRadius: 12, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}><ShoppingBag size={18} style={{ color: DS.muted }} /></div>
-                        }
+                        <Thumb url={item.imageUrl} size={46} />
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <p style={{ fontSize: "0.875rem", fontWeight: 700, color: DS.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 4 }}>
+                          <p style={{ fontSize: 14, fontWeight: 700, color: DS.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", margin: "0 0 4px" }}>
                             {item.productName}
                           </p>
                           <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
-                            {item.brand && <span style={{ fontSize: "0.7rem", color: DS.muted }}>{item.brand}</span>}
-                            {ecoGrade
-                              ? <span style={{ fontSize: "0.62rem", fontWeight: 700, color: ECO_COLOR[ecoGrade] || DS.muted, background: `${ECO_COLOR[ecoGrade] || DS.muted}18`, borderRadius: 6, padding: "1px 6px" }}>Eco-{ecoGrade.toUpperCase()}</span>
-                              : null
-                            }
-                            {nutriGrade && <span style={{ fontSize: "0.62rem", fontWeight: 700, color: NUTRI_COLOR[nutriGrade] || DS.muted, background: `${NUTRI_COLOR[nutriGrade] || DS.muted}18`, borderRadius: 6, padding: "1px 6px" }}>Nutri-{nutriGrade.toUpperCase()}</span>}
+                            {item.brand && <span style={{ fontSize: 11.5, color: DS.muted }}>{item.brand}</span>}
+                            {item.ecoscoreGrade && <GradePill grade={item.ecoscoreGrade} label="Eco" />}
+                            {item.nutriscoreGrade && <GradePill grade={item.nutriscoreGrade} label="Nutri" />}
                             {isFlagged && (
-                              <span style={{ fontSize: "0.62rem", fontWeight: 700, color: RED, background: "#FEF2F2", borderRadius: 6, padding: "1px 6px", display: "inline-flex", alignItems: "center", gap: 3 }}>
-                                <Users size={9} /> Labour flag
+                              <span style={{ fontSize: 10, fontWeight: 800, color: DS.bad, background: DS.badBg, borderRadius: 6, padding: "2px 7px", display: "inline-flex", alignItems: "center", gap: 3 }}>
+                                <Users size={9} /> Labour
                               </span>
                             )}
                           </div>
@@ -424,11 +384,11 @@ export default function ShoppingList() {
                       </Link>
                       <button
                         onClick={() => handleRemove(item.barcode)}
+                        aria-label="Remove from basket"
                         style={{
-                          width: 32, height: 32, borderRadius: 9,
-                          border: "none", background: DS.bg,
-                          color: DS.muted, cursor: "pointer",
-                          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                          width: 32, height: 32, borderRadius: 9, border: "none", flexShrink: 0,
+                          background: DS.bg, color: DS.muted, cursor: "pointer",
+                          display: "flex", alignItems: "center", justifyContent: "center",
                         }}
                       >
                         <X size={14} />
@@ -437,19 +397,24 @@ export default function ShoppingList() {
                   );
                 })}
               </div>
+
+              {/* CO₂ positive reinforcement footer */}
+              {report.co2ScoredCount > 0 && report.co2NetKg > 0 && (
+                <div style={{
+                  display: "flex", alignItems: "center", gap: 8, marginTop: 10,
+                  padding: "10px 14px", borderRadius: 12,
+                  background: DS.goodBg, fontSize: 12.5, color: DS.ink,
+                }}>
+                  <TrendingDown size={15} style={{ color: DS.good, flexShrink: 0 }} />
+                  <span>This basket is <strong style={{ fontWeight: 800 }}>{report.co2NetKg} kg CO₂</strong> lighter than an average one.</span>
+                </div>
+              )}
             </div>
           )}
-
         </div>
       </main>
 
-
-      <style>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
