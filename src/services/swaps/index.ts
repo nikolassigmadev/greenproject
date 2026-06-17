@@ -19,12 +19,14 @@ import { DEFAULT_PRIORITIES } from "@/utils/userPreferences";
 import {
   detectSwapCategory,
   getCandidates,
+  isInMarket,
   type AltCandidate,
   type ConcernType,
   type SwapCategoryKey,
 } from "@/data/ethicalAlternatives";
 import {
   isSoldInRegion,
+  findCountry,
   type UserRegion,
 } from "@/utils/userRegion";
 
@@ -64,8 +66,14 @@ export interface SwapSuggestion {
   imageUrl: string | null;
   ecoGrade: string | null;
   co2Kg: number | null;
-  /** null = unknown (no country data), true/false otherwise. */
+  /** Live OFF country-tag check: null = unknown, true/false otherwise. */
   availableInRegion: boolean | null;
+  /** Curated: the brand is known to sell in the user's country. */
+  inMarket: boolean;
+  /** Combined signal used for ranking + the badge. */
+  regionAvailable: boolean;
+  /** Human label for the availability badge, e.g. "Available in the UK". */
+  availabilityLabel: string;
 }
 
 export interface SwapResult {
@@ -197,8 +205,14 @@ function sameBrand(a: string, b: string | null | undefined): boolean {
   return x.length > 2 && (x.includes(y) || y.includes(x));
 }
 
-/** Resolve a single catalog candidate to a live OFF product (best-effort). */
-async function resolveCandidate(c: AltCandidate): Promise<OpenFoodFactsResult | null> {
+/**
+ * Resolve a single catalog candidate to a live OFF product, preferring one that
+ * is actually sold in the user's country (matched via OFF `countries_tags`).
+ */
+async function resolveCandidate(
+  c: AltCandidate,
+  countryTag: string | null,
+): Promise<OpenFoodFactsResult | null> {
   // Try canonical barcodes first.
   for (const code of c.barcodes ?? []) {
     try {
@@ -208,11 +222,19 @@ async function resolveCandidate(c: AltCandidate): Promise<OpenFoodFactsResult | 
       // try next
     }
   }
-  // Fall back to a text search.
+  // Pull a wider set so we can pick one available in the user's country.
   try {
-    const results = await searchProducts(c.searchQuery, 2);
-    const hit = results.find((r) => r.found && (r.imageUrl || r.ecoscoreGrade)) || results[0];
-    return hit ?? null;
+    const results = await searchProducts(c.searchQuery, 8);
+    if (results.length === 0) return null;
+    const usable = results.filter((r) => r.found && (r.imageUrl || r.ecoscoreGrade));
+    const pool = usable.length > 0 ? usable : results;
+    if (countryTag) {
+      const inCountry = pool.find((r) =>
+        r.rawProduct?.countries_tags?.some((t) => t.toLowerCase() === countryTag),
+      );
+      if (inCountry) return inCountry;
+    }
+    return pool[0] ?? null;
   } catch {
     return null;
   }
@@ -228,6 +250,24 @@ function buildSuggestion(
   const liveCo2 = resolved?.ecoscoreData?.agribalyse?.co2_total
     ?? (resolved?.carbonFootprint100g != null ? resolved.carbonFootprint100g * 10 : null);
   const co2Kg = liveCo2 ?? (ecoGrade ? GRADE_CO2[ecoGrade] ?? null : null);
+
+  const availableInRegion = isSoldInRegion(resolved?.rawProduct?.countries_tags, region);
+  const inMarket = isInMarket(c, region?.countryCode);
+  const regionAvailable = availableInRegion === true || (region != null && inMarket);
+
+  // Build the availability badge text.
+  const where = region?.country ?? null;
+  let availabilityLabel: string;
+  if (!region) {
+    availabilityLabel = "Widely available";
+  } else if (availableInRegion === true) {
+    availabilityLabel = `Available in ${where}`;
+  } else if (inMarket) {
+    availabilityLabel = `Sold in ${where}`;
+  } else {
+    availabilityLabel = `Limited in ${where}`;
+  }
+
   return {
     brand: c.brand,
     productName: resolved?.productName || c.productName,
@@ -240,7 +280,10 @@ function buildSuggestion(
     imageUrl: resolved?.imageUrl ?? null,
     ecoGrade,
     co2Kg,
-    availableInRegion: isSoldInRegion(resolved?.rawProduct?.countries_tags, region),
+    availableInRegion,
+    inMarket,
+    regionAvailable,
+    availabilityLabel,
   };
 }
 
@@ -272,20 +315,33 @@ export async function getSwaps(
   }
 
   const primaryType = diagnosis.primary.type;
+  const country = region?.countryCode ?? null;
+  const countryTag = country ? findCountry(country)?.offTag ?? null : null;
 
-  // Candidate ordering before resolution: ones that fix the primary concern,
-  // then richer certifications.
-  const candidates = getCandidates(diagnosis.categoryKey)
-    .filter((c) => !sameBrand(c.brand, product.brand))
+  let pool = getCandidates(diagnosis.categoryKey).filter((c) => !sameBrand(c.brand, product.brand));
+
+  // Only suggest things the user can actually buy. When the user has a country
+  // and we still have at least two in-market options, drop the rest entirely.
+  if (country) {
+    const inMarket = pool.filter((c) => isInMarket(c, country));
+    if (inMarket.length >= 2) pool = inMarket;
+  }
+
+  // Candidate ordering before resolution: in-market first, then ones that fix
+  // the primary concern, then richer certifications.
+  const candidates = pool
     .sort((a, b) => {
+      const am = isInMarket(a, country) ? 1 : 0;
+      const bm = isInMarket(b, country) ? 1 : 0;
+      if (am !== bm) return bm - am;
       const af = a.addresses.includes(primaryType) ? 1 : 0;
       const bf = b.addresses.includes(primaryType) ? 1 : 0;
       if (af !== bf) return bf - af;
       return b.certifications.length - a.certifications.length;
     })
-    .slice(0, Math.max(limit + 1, 4)); // resolve a couple extra, trim after
+    .slice(0, Math.max(limit + 2, 5)); // resolve a few extra, trim after
 
-  const resolved = await Promise.all(candidates.map(resolveCandidate));
+  const resolved = await Promise.all(candidates.map((c) => resolveCandidate(c, countryTag)));
 
   const suggestions = candidates
     .map((c, i) => buildSuggestion(c, resolved[i], primaryType, region))
@@ -293,8 +349,9 @@ export async function getSwaps(
     .filter((s) => !s.barcode || s.barcode !== product.barcode)
     .sort((a, b) => {
       if (a.fixesPrimary !== b.fixesPrimary) return a.fixesPrimary ? -1 : 1;
-      const aAvail = a.availableInRegion === true ? 1 : 0;
-      const bAvail = b.availableInRegion === true ? 1 : 0;
+      // Confirmed sold in-country beats merely in-market beats neither.
+      const aAvail = (a.availableInRegion === true ? 2 : 0) + (a.regionAvailable ? 1 : 0);
+      const bAvail = (b.availableInRegion === true ? 2 : 0) + (b.regionAvailable ? 1 : 0);
       if (aAvail !== bAvail) return bAvail - aAvail;
       const aEco = a.ecoGrade ? ECO_RANK[a.ecoGrade] ?? 0 : 0;
       const bEco = b.ecoGrade ? ECO_RANK[b.ecoGrade] ?? 0 : 0;

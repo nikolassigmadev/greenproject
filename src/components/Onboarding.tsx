@@ -76,6 +76,14 @@ export function Onboarding({ onComplete }: OnboardingProps) {
   // Re-trigger the entrance animation each time the step changes.
   useEffect(() => { setAnimKey((k) => k + 1); }, [stepIdx]);
 
+  // Lock the page behind the overlay so focusing inputs can't scroll it; the
+  // window is reset to the top when we hand back to the app.
+  useEffect(() => {
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prevOverflow; };
+  }, []);
+
   const finish = () => {
     const match = COUNTRIES.find((c) => c.code === country);
     if (match) {
@@ -83,7 +91,11 @@ export function Onboarding({ onComplete }: OnboardingProps) {
     }
     savePriorities(priorities);
     markOnboardingComplete();
+    // Drop focus (closes mobile keyboard / native picker) and hand back to the
+    // app at the top of the page, not wherever an input nudged the viewport.
+    (document.activeElement as HTMLElement | null)?.blur?.();
     onComplete();
+    requestAnimationFrame(() => window.scrollTo(0, 0));
   };
 
   const next = () => {

@@ -14,7 +14,7 @@ import { recordSwap } from "@/utils/swapTracking";
 import { shareSwapCard } from "@/utils/shareCard";
 import { CERTIFICATION_BADGES } from "@/utils/verifiedEthics";
 import {
-  loadRegion, regionAvailabilityLabel, regionPlaceLabel,
+  loadRegion, regionPlaceLabel,
   REGION_EVENT, type UserRegion,
 } from "@/utils/userRegion";
 import { loadPriorities } from "@/utils/userPreferences";
@@ -164,6 +164,7 @@ export function SwapSuggestions({ product }: SwapSuggestionsProps) {
   const best = suggestions[0];
   const rest = suggestions.slice(1);
   const concernLabel = shortConcernLabel(primary, diagnosis.categoryKey);
+  const categoryLabel = diagnosis.categoryKey ? CATEGORY_LABELS[diagnosis.categoryKey] : null;
   const certShort = (s: SwapSuggestion) =>
     s.certifications.map((c) => CERTIFICATION_BADGES[c]?.shortLabel).filter(Boolean) as string[];
 
@@ -231,7 +232,14 @@ export function SwapSuggestions({ product }: SwapSuggestionsProps) {
           }}>
             <Sparkles style={{ width: 16, height: 16, color: DS.good }} />
           </div>
-          <div style={{ fontSize: 15, fontWeight: 800, color: DS.ink }}>Better swaps</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 15, fontWeight: 800, color: DS.ink, lineHeight: 1.15 }}>
+              {categoryLabel ? `Better ${categoryLabel}` : "Better swaps"}
+            </div>
+            <div style={{ fontSize: 11, color: DS.muted, marginTop: 1 }}>
+              {region ? `Same shelf · sold in ${region.country}` : "Same category · cleaner brands"}
+            </div>
+          </div>
         </div>
 
         {/* Why we're suggesting a swap */}
@@ -243,7 +251,8 @@ export function SwapSuggestions({ product }: SwapSuggestionsProps) {
           <TrendingDown style={{ width: 15, height: 15, color: DS.warn, flexShrink: 0, marginTop: 1 }} />
           <div style={{ fontSize: 12.5, color: DS.ink, lineHeight: 1.4 }}>
             <strong style={{ fontWeight: 800 }}>{product.brand || "This product"}</strong>{" "}
-            has {primary.label.toLowerCase()}. Here's a {diagnosis.categoryKey ? CATEGORY_LABELS[diagnosis.categoryKey].toLowerCase() : "product"} that fixes it.
+            has {primary.label.toLowerCase()}. Here {rest.length > 0 ? "are" : "is a"} better
+            {" "}{categoryLabel || "option"}{rest.length > 0 ? " options" : ""}{region ? ` you can buy in ${region.country}` : ""}.
           </div>
         </div>
 
@@ -254,9 +263,7 @@ export function SwapSuggestions({ product }: SwapSuggestionsProps) {
             fontSize: 12, color: DS.muted,
           }}>
             <MapPin style={{ width: 13, height: 13, color: DS.good }} />
-            {best.availableInRegion === true
-              ? <span>Top pick is <strong style={{ color: DS.good, fontWeight: 700 }}>{regionAvailabilityLabel(region)}</strong></span>
-              : <span>Ranked for <strong style={{ fontWeight: 700, color: DS.ink }}>{regionPlaceLabel(region)}</strong></span>}
+            <span>Top pick: <strong style={{ color: best.regionAvailable ? DS.good : DS.ink, fontWeight: 700 }}>{best.availabilityLabel}</strong></span>
             <button
               onClick={() => setShowRegionPicker((v) => !v)}
               style={{ marginLeft: "auto", background: "none", border: "none", color: DS.muted, fontSize: 11.5, fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}
@@ -333,6 +340,18 @@ export function SwapSuggestions({ product }: SwapSuggestionsProps) {
               {best.productName}
             </div>
             <CertRow certs={certShort(best)} />
+            {region && (
+              <div style={{
+                display: "inline-flex", alignItems: "center", gap: 4, marginTop: 8,
+                fontSize: 10.5, fontWeight: 700,
+                color: best.regionAvailable ? DS.good : DS.muted,
+                background: best.regionAvailable ? DS.goodBg : DS.bg,
+                border: `1px solid ${best.regionAvailable ? "transparent" : DS.hair}`,
+                padding: "2px 8px", borderRadius: 999,
+              }}>
+                <MapPin style={{ width: 11, height: 11 }} /> {best.availabilityLabel}
+              </div>
+            )}
           </div>
           {saved != null && saved > 0 && (
             <div style={{ textAlign: "right", flexShrink: 0 }}>
@@ -420,7 +439,9 @@ export function SwapSuggestions({ product }: SwapSuggestionsProps) {
                           <GradeBadge grade={s.ecoGrade} />
                         </div>
                         <div style={{ fontSize: 11, color: DS.muted, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {certShort(s).join(" · ") || s.productName}
+                          {region && s.regionAvailable
+                            ? `${certShort(s)[0] ? certShort(s)[0] + " · " : ""}${s.availabilityLabel}`
+                            : (certShort(s).join(" · ") || s.productName)}
                         </div>
                       </div>
                       {sv != null && sv > 0 && (
