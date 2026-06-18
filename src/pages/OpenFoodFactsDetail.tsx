@@ -14,6 +14,7 @@ import { Logo } from "@/components/Logo";
 import { lookupBarcode, searchProducts } from "@/services/openfoodfacts";
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
 import { loadPriorities, saveScanToHistory, loadScanHistory, type UserPriorities } from "@/utils/userPreferences";
+import { logScan } from "@/utils/scanLogger";
 import { checkBoycott } from "@/data/boycottBrands";
 import { checkAnimalWelfareFlag } from "@/utils/animalWelfareFlags";
 import { AnimalWelfareFlagBadge } from "@/components/AnimalWelfareFlagBadge";
@@ -333,6 +334,13 @@ export default function OpenFoodFactsDetail() {
       },
       carbonFootprint100g: product.carbonFootprint100g,
       labels: product.labels,
+    });
+    // Record to the global scan-analytics DB (anonymous, fire-and-forget).
+    logScan({
+      barcode: product.barcode,
+      name: product.productName || "Unknown Product",
+      brand: product.brand,
+      ecoGrade: product.ecoscoreGrade,
     });
   }, [product?.barcode]);
 

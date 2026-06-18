@@ -21,6 +21,7 @@ import bcrypt from 'bcryptjs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { existsSync, readFileSync, writeFileSync, mkdirSync, appendFileSync, chmodSync } from 'fs';
+import { createRequire } from 'module';
 
 console.log('server.js: imports loaded');
 
@@ -61,6 +62,59 @@ function logOpenAICall(productName) {
   } catch (e) {
     console.error('Failed to log OpenAI call:', e.message);
   }
+}
+
+// ── Scan analytics DB (SQLite) ──
+// Records every product a user opens, for aggregate "most-scanned" analytics.
+// Stored at data/scans.db (gitignored, outside dist, not HTTP-reachable). Loaded
+// defensively: if the native module can't load on the host, scan logging is
+// disabled but the rest of the server keeps running.
+const nodeRequire = createRequire(import.meta.url);
+let scanDb = null;
+let scanInsertStmt = null;
+try {
+  const Database = nodeRequire('better-sqlite3');
+  if (!existsSync(LOG_DIR)) mkdirSync(LOG_DIR, { recursive: true, mode: 0o700 });
+  scanDb = new Database(join(LOG_DIR, 'scans.db'));
+  scanDb.pragma('journal_mode = WAL');
+  scanDb.exec(`
+    CREATE TABLE IF NOT EXISTS scans (
+      id        INTEGER PRIMARY KEY AUTOINCREMENT,
+      barcode   TEXT,
+      name      TEXT NOT NULL,
+      brand     TEXT,
+      eco_grade TEXT,
+      country   TEXT,
+      anon_id   TEXT,
+      ts        INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_scans_barcode ON scans(barcode);
+    CREATE INDEX IF NOT EXISTS idx_scans_ts ON scans(ts);
+  `);
+  scanInsertStmt = scanDb.prepare(
+    `INSERT INTO scans (barcode, name, brand, eco_grade, country, anon_id, ts)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`
+  );
+  console.log('server.js: scan analytics DB ready');
+} catch (e) {
+  console.warn('server.js: scan analytics DB unavailable —', e.message);
+}
+
+function recordScan(rec) {
+  if (!scanInsertStmt) return;
+  const clean = (s, n = 200) =>
+    typeof s === 'string' ? (s.replace(/[\r\n\t]+/g, ' ').trim().slice(0, n) || null) : null;
+  const name = clean(rec.name);
+  if (!name) return;
+  scanInsertStmt.run(
+    clean(rec.barcode, 64),
+    name,
+    clean(rec.brand, 120),
+    clean(rec.ecoGrade, 4),
+    clean(rec.country, 4),
+    clean(rec.anonId, 64),
+    Date.now(),
+  );
 }
 
 const app = express();
@@ -516,62 +570,11 @@ app.post('/api/community-flags', communityFlagLimiter, smallBody, (req, res) => 
   }
 });
 
-/**
- * GET /api/admin/community-flags?status=pending_review|approved|rejected
- * Admin-gated -- returns matching records, newest first.
- */
-app.get('/api/admin/community-flags', requireAdmin, (req, res) => {
-  try {
-    const status = typeof req.query.status === 'string' ? req.query.status : 'pending_review';
-    if (!['pending_review', 'approved', 'rejected'].includes(status)) {
-      return res.status(400).json({ success: false, error: 'Invalid status filter' });
-    }
-    const records = readJsonlRecords(COMMUNITY_FLAGS_FILE)
-      .filter(r => r.status === status)
-      .sort((a, b) => (b.submittedAt || '').localeCompare(a.submittedAt || ''));
-    res.json({ success: true, count: records.length, records });
-  } catch (error) {
-    console.error('Community flag list error:', error);
-    res.status(500).json({ success: false, error: 'Failed to read flags' });
-  }
-});
-
-/**
- * PATCH /api/admin/community-flags/:id
- * Admin-gated -- approve or reject a pending submission.
- * Body: { status: 'approved' | 'rejected', note?: string }
- */
-app.patch('/api/admin/community-flags/:id', requireAdmin, smallBody, (req, res) => {
-  try {
-    const { id } = req.params;
-    const { status, note } = req.body || {};
-    if (!['approved', 'rejected'].includes(status)) {
-      return res.status(400).json({ success: false, error: 'status must be approved or rejected' });
-    }
-    if (note !== undefined && (typeof note !== 'string' || note.length > 500)) {
-      return res.status(400).json({ success: false, error: 'note must be a string up to 500 chars' });
-    }
-
-    const records = readJsonlRecords(COMMUNITY_FLAGS_FILE);
-    const idx = records.findIndex(r => r.id === id);
-    if (idx === -1) {
-      return res.status(404).json({ success: false, error: 'Flag not found' });
-    }
-
-    records[idx] = {
-      ...records[idx],
-      status,
-      moderatedAt: new Date().toISOString(),
-      moderatorNote: typeof note === 'string' ? note.trim() : undefined,
-    };
-
-    writeJsonlRecords(COMMUNITY_FLAGS_FILE, records);
-    res.json({ success: true, record: records[idx] });
-  } catch (error) {
-    console.error('Community flag patch error:', error);
-    res.status(500).json({ success: false, error: 'Failed to update flag' });
-  }
-});
+// NOTE: There is intentionally NO HTTP endpoint to READ user submissions. Like
+// the scan data, community-flag submissions are write-only over the web (the
+// POST above). To review them, run the owner-only script on the server —
+// `node scripts/view-submissions.js` — which reads data/community-flags.jsonl
+// directly off the filesystem. Nothing exposes submissions over the network.
 
 // =====================================================
 // WEB PUSH SUBSCRIPTION REGISTRY (stub)
@@ -1650,6 +1653,42 @@ app.get('/api/health', (req, res) => {
     openaiConfigured: !!OPENAI_API_KEY,
   });
 });
+
+// =====================================================
+// SCAN ANALYTICS
+// =====================================================
+
+const scanLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many scan logs - slow down' },
+});
+
+/**
+ * POST /api/scans — public, fire-and-forget from the client. Logs one scanned
+ * product. Body: { barcode?, name, brand?, ecoGrade?, country?, anonId? }.
+ */
+app.post('/api/scans', scanLimiter, smallBody, (req, res) => {
+  if (!scanDb) return res.status(503).json({ success: false, error: 'Scan logging unavailable' });
+  try {
+    const { barcode, name, brand, ecoGrade, country, anonId } = req.body || {};
+    if (!name || typeof name !== 'string') {
+      return res.status(400).json({ success: false, error: 'name is required' });
+    }
+    recordScan({ barcode, name, brand, ecoGrade, country, anonId });
+    res.json({ success: true });
+  } catch (e) {
+    console.error('scan log error:', e.message);
+    res.status(500).json({ success: false, error: 'Failed to log scan' });
+  }
+});
+
+// NOTE: There is intentionally NO HTTP endpoint to READ scans. The data is
+// write-only over the web (POST above). To view it, run the owner-only script
+// on the server — `node scripts/view-scans.js` — which reads data/scans.db
+// directly off the filesystem. Nothing exposes the scan list over the network.
 
 // =====================================================
 // SERVE FRONTEND (React SPA)
