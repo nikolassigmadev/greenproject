@@ -35,3 +35,7 @@ dist-ssr
 # Anchor to project root so it does NOT match src/data/ (where shipped data lives).
 /data/
 
+# Claude Code internal worktrees — accidentally tracked as submodules; never commit.
+.claude/worktrees/
+.claude/settings.local.json
+
