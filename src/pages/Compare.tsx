@@ -11,7 +11,7 @@ import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
 import { getVerifiedFlagForBrand } from "@/services/brandFlags";
 import type { BrandFlagV2, FlagCategory } from "@/types/brandFlag";
 import { smartProductSearch } from "@/utils/smartProductSearch";
-import { loadPriorities, type UserPriorities } from "@/utils/userPreferences";
+import { loadPriorities, priorityMultiplier, type UserPriorities } from "@/utils/userPreferences";
 import { toast } from "sonner";
 
 type Slot = "A" | "B";
@@ -75,7 +75,7 @@ interface VerdictPoint {
   winner: "A" | "B" | "tie";
   note?: string;
   dimension: PriorityDim;
-  weight: number; // priorities[dimension] / 50 → 0 (ignored) … 2 (critical)
+  weight: number; // priorityMultiplier(priorities[dimension]) → 0 (ignored) … 3.5 (critical)
 }
 
 interface VerdictResult {
@@ -95,7 +95,7 @@ function computeVerdict(
 ): VerdictResult {
   const aFlag = getVerifiedFlagForBrand(a.brand);
   const bFlag = getVerifiedFlagForBrand(b.brand);
-  const weightFor = (dim: PriorityDim) => priorities[dim] / 50;
+  const weightFor = (dim: PriorityDim) => priorityMultiplier(priorities[dim]);
   const raw: Omit<VerdictPoint, "weight">[] = [];
 
   const ar = gradeRank(a.ecoscoreGrade);
@@ -156,13 +156,12 @@ function computeVerdict(
   return { points, aWins, bWins, aScore, bScore, leader, personalized };
 }
 
-/** Map a priority weight (value/50) to a short, human label for the verdict. */
+/** Map a priority multiplier to a short, human label for the verdict. */
 function priorityTag(weight: number): { text: string; muted: boolean } {
-  const v = weight * 50;
-  if (v <= 12) return { text: "Not counted", muted: true };
-  if (v <= 37) return { text: "Low priority", muted: false };
-  if (v <= 62) return { text: "Counts", muted: false };
-  if (v <= 87) return { text: "High priority", muted: false };
+  if (weight <= 0) return { text: "Not counted", muted: true };
+  if (weight <= 0.5) return { text: "Low priority", muted: false };
+  if (weight <= 1.2) return { text: "Counts", muted: false };
+  if (weight <= 2.5) return { text: "High priority", muted: false };
   return { text: "Top priority", muted: false };
 }
 

@@ -17,8 +17,8 @@ const LEVELS = [
   { value: 0,   label: "None",     effect: "Left out of scoring entirely" },
   { value: 25,  label: "Low",      effect: "A small nudge on the verdict" },
   { value: 50,  label: "Medium",   effect: "Counted the usual amount" },
-  { value: 75,  label: "High",     effect: "Weighs heavily on the verdict" },
-  { value: 100, label: "Critical", effect: "Can outweigh everything else" },
+  { value: 75,  label: "High",     effect: "Can shift the verdict noticeably" },
+  { value: 100, label: "Critical", effect: "Strongly drives the final verdict" },
 ] as const;
 
 const levelIndex = (v: number): number => {

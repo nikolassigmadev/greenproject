@@ -13,6 +13,15 @@ export const DEFAULT_PRIORITIES: UserPriorities = {
   nutrition: 50,
 };
 
+/** Map a 0–100 priority to a verdict weight (0 = ignored … 3.5 = critical). */
+export function priorityMultiplier(value: number): number {
+  if (value <= 12) return 0;
+  if (value <= 37) return 0.35;
+  if (value <= 62) return 1.0;
+  if (value <= 87) return 2.0;
+  return 3.5;
+}
+
 const PRIORITIES_KEY = 'ethical-shopper-priorities';
 const PRIORITIES_SET_KEY = 'ethical-shopper-priorities-set';
 

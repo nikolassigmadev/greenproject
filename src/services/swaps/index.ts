@@ -14,8 +14,7 @@ import { checkAnimalWelfareFlag } from "@/utils/animalWelfareFlags";
 import { findVerifiedEthics } from "@/utils/verifiedEthics";
 import { getVerifiedFlagsForBrand } from "@/services/brandFlags";
 import type { CertificationType } from "@/utils/verifiedEthics";
-import type { UserPriorities } from "@/utils/userPreferences";
-import { DEFAULT_PRIORITIES } from "@/utils/userPreferences";
+import { DEFAULT_PRIORITIES, priorityMultiplier, type UserPriorities } from "@/utils/userPreferences";
 import {
   detectSwapCategory,
   getCandidates,
@@ -182,7 +181,7 @@ export function diagnoseProduct(
   let primary: ProductConcern | null = null;
   let bestScore = -1;
   for (const c of concerns) {
-    const score = SEVERITY_WEIGHT[c.severity] * (priorityWeight(c.type, priorities) / 50);
+    const score = SEVERITY_WEIGHT[c.severity] * priorityMultiplier(priorityWeight(c.type, priorities));
     const tie = primary
       && score === bestScore
       && CONCERN_ORDER.indexOf(c.type) < CONCERN_ORDER.indexOf(primary.type);

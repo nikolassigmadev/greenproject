@@ -13,7 +13,7 @@ import { isWatched, toggleWatchlist, WATCHLIST_EVENT } from "@/utils/watchlist";
 import { Logo } from "@/components/Logo";
 import { lookupBarcode, searchProducts } from "@/services/openfoodfacts";
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
-import { loadPriorities, saveScanToHistory, loadScanHistory, type UserPriorities } from "@/utils/userPreferences";
+import { loadPriorities, priorityMultiplier, saveScanToHistory, loadScanHistory, type UserPriorities } from "@/utils/userPreferences";
 import { logScan } from "@/utils/scanLogger";
 import { checkBoycott } from "@/data/boycottBrands";
 import { checkAnimalWelfareFlag } from "@/utils/animalWelfareFlags";
@@ -1318,10 +1318,13 @@ function getVerdictKey(product: OpenFoodFactsResult, priorities: UserPriorities)
 function getVerdict(product: OpenFoodFactsResult, priorities: UserPriorities) {
   const grade = product.ecoscoreGrade?.toLowerCase();
   const score = product.ecoscoreScore;
+  const nutriGrade = product.nutriscoreGrade?.toLowerCase();
   const laborRecord = findLaborAllegations(product);
   const laborCount = laborRecord?.allegations.length || 0;
-  const envWeight   = priorities.environment / 50;
-  const laborWeight = priorities.laborRights / 50;
+  const envWeight = priorityMultiplier(priorities.environment);
+  const laborWeight = priorityMultiplier(priorities.laborRights);
+  const animalWeight = priorityMultiplier(priorities.animalWelfare);
+  const nutritionWeight = priorityMultiplier(priorities.nutrition);
 
   const scoreLabel = grade
     ? `Eco-Score ${grade.toUpperCase()}`
@@ -1335,44 +1338,71 @@ function getVerdict(product: OpenFoodFactsResult, priorities: UserPriorities) {
   if (grade === "a" || grade === "b") {
     key = "BUY"; reason = `${scoreLabel} — excellent environmental credentials`;
   } else if (grade === "c") {
-    if (envWeight > 1.4) { key = "CAUTION"; reason = `${scoreLabel} (your eco priority is high)`; }
-    else                 { key = "CONSIDER"; reason = `${scoreLabel} — moderate environmental impact`; }
+    if (envWeight >= 2.0) { key = "CAUTION"; reason = `${scoreLabel} — moderate impact (environment is a top priority for you)`; }
+    else if (envWeight >= 1.0) { key = "CONSIDER"; reason = `${scoreLabel} — moderate environmental impact (eco matters to you)`; }
+    else { key = "CONSIDER"; reason = `${scoreLabel} — moderate environmental impact`; }
   } else if (grade === "d") {
-    key = "CAUTION"; reason = `${scoreLabel} — high environmental impact`;
+    if (envWeight >= 1.0) { key = "CAUTION"; reason = `${scoreLabel} — high environmental impact`; }
+    else { key = "CONSIDER"; reason = `${scoreLabel} — high environmental impact (environment is not a priority for you)`; }
   } else if (grade === "e" || grade === "f") {
-    key = "AVOID"; reason = `${scoreLabel} — very high environmental impact`;
+    if (envWeight >= 1.0) { key = "AVOID"; reason = `${scoreLabel} — very high environmental impact`; }
+    else if (envWeight >= 0.35) { key = "CAUTION"; reason = `${scoreLabel} — very high environmental impact`; }
+    else { key = "CONSIDER"; reason = `${scoreLabel} — very high environmental impact (environment is not a priority for you)`; }
   } else if (score !== null && score !== undefined) {
-    const good = 60 + (envWeight - 1) * 15;
-    const mod  = 40 + (envWeight - 1) * 10;
-    const caut = 20 + (envWeight - 1) * 5;
+    const good = 60 + (envWeight - 1) * 20;
+    const mod  = 40 + (envWeight - 1) * 15;
+    const caut = 20 + (envWeight - 1) * 10;
     if (score >= good)      { key = "BUY";     reason = `${scoreLabel} — strong eco credentials`; }
     else if (score >= mod)  { key = "CONSIDER"; reason = `${scoreLabel} — moderate impact`; }
     else if (score >= caut) { key = "CAUTION";  reason = `${scoreLabel} — elevated impact`; }
     else                    { key = "AVOID";    reason = `${scoreLabel} — very high impact`; }
   }
 
-  if (laborCount > 0) {
+  if (laborCount > 0 && laborWeight > 0) {
     const eff = laborCount * laborWeight;
-    if (eff >= 2.5 || laborCount >= 3) {
+    if (eff >= 2.0 || (laborCount >= 3 && laborWeight >= 0.35)) {
       key = "AVOID"; reason = `${laborCount} labor/human rights allegations against ${laborRecord!.parentCompany}`;
-    } else if (eff >= 1.5 && (key === "BUY" || key === "CONSIDER" || key === "UNKNOWN")) {
+    } else if (eff >= 1.0 && (key === "BUY" || key === "CONSIDER" || key === "UNKNOWN")) {
       key = "CAUTION"; reason = `${laborCount} labor allegations against ${laborRecord!.parentCompany}`;
-    } else if (eff >= 0.5 && (key === "BUY" || key === "UNKNOWN")) {
+    } else if (eff >= 0.35 && (key === "BUY" || key === "UNKNOWN")) {
       key = "CONSIDER"; reason = `${laborCount} labor allegation${laborCount > 1 ? "s" : ""} against ${laborRecord!.parentCompany}`;
     }
   }
 
   const boycott = checkBoycott(product.brand);
-  if (boycott && key === "BUY") {
-    key = "CONSIDER"; reason = `${boycott.parent} is on the BDS boycott list`;
+  if (boycott && laborWeight > 0) {
+    if (laborWeight >= 2.0 && (key === "BUY" || key === "CONSIDER")) {
+      key = "CAUTION"; reason = `${boycott.parent} is on the BDS boycott list`;
+    } else if (key === "BUY") {
+      key = "CONSIDER"; reason = `${boycott.parent} is on the BDS boycott list`;
+    }
   }
 
   const welfare = checkAnimalWelfareFlag(product.brand);
-  if (welfare.isFlagged) {
-    if (welfare.severity === "critical" && (key === "BUY" || key === "CONSIDER" || key === "UNKNOWN")) {
-      key = "CAUTION"; reason = `${welfare.company!.companyName} has critical animal welfare concerns`;
-    } else if (welfare.severity === "high" && (key === "BUY" || key === "UNKNOWN")) {
-      key = "CONSIDER"; reason = `${welfare.company!.companyName} has animal welfare concerns`;
+  if (welfare.isFlagged && animalWeight > 0) {
+    if (welfare.severity === "critical") {
+      if (animalWeight >= 2.0 && (key === "BUY" || key === "CONSIDER" || key === "UNKNOWN")) {
+        key = "AVOID"; reason = `${welfare.company!.companyName} has critical animal welfare concerns`;
+      } else if (key === "BUY" || key === "CONSIDER" || key === "UNKNOWN") {
+        key = "CAUTION"; reason = `${welfare.company!.companyName} has critical animal welfare concerns`;
+      }
+    } else if (welfare.severity === "high") {
+      if (animalWeight >= 2.0 && (key === "BUY" || key === "CONSIDER" || key === "UNKNOWN")) {
+        key = "CAUTION"; reason = `${welfare.company!.companyName} has animal welfare concerns`;
+      } else if (animalWeight >= 0.35 && (key === "BUY" || key === "UNKNOWN")) {
+        key = "CONSIDER"; reason = `${welfare.company!.companyName} has animal welfare concerns`;
+      }
+    }
+  }
+
+  if (nutriGrade && nutritionWeight > 0) {
+    const nutriLabel = `Nutri-Score ${nutriGrade.toUpperCase()}`;
+    if ((nutriGrade === "d" || nutriGrade === "e") && nutritionWeight >= 2.0 && (key === "BUY" || key === "CONSIDER" || key === "UNKNOWN")) {
+      key = "CAUTION"; reason = `${nutriLabel} — poor nutrition (nutrition is a top priority for you)`;
+    } else if ((nutriGrade === "d" || nutriGrade === "e") && nutritionWeight >= 1.0 && (key === "BUY" || key === "UNKNOWN")) {
+      key = "CONSIDER"; reason = `${nutriLabel} — poor nutrition (nutrition matters to you)`;
+    } else if (nutriGrade === "e" && nutritionWeight >= 3.0) {
+      key = "AVOID"; reason = `${nutriLabel} — very poor nutrition (nutrition is critical for you)`;
     }
   }
 

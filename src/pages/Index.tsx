@@ -445,13 +445,12 @@ export default function Index() {
                 display: "flex", gap: 14, alignItems: "flex-start",
                 boxShadow: "0 2px 6px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)",
               }}>
-                <div style={{
-                  width: 32, height: 32, borderRadius: 16, background: DS.bg,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 14, fontWeight: 800, color: DS.ink, flexShrink: 0,
+                <span style={{
+                  fontSize: 15, fontWeight: 800, color: DS.ink, flexShrink: 0,
+                  lineHeight: 1.45, minWidth: 16,
                 }}>
                   {item.step}
-                </div>
+                </span>
                 <div>
                   <p style={{ fontSize: 15, fontWeight: 600, margin: "0 0 3px" }}>{item.title}</p>
                   <p style={{ fontSize: 13, color: DS.muted, margin: 0, lineHeight: 1.45 }}>{item.desc}</p>
