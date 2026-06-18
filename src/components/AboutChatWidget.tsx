@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { MessageCircle, X, Send, Sparkles } from "lucide-react";
 import { getBackendUrl } from "@/config/backend";
@@ -76,7 +77,10 @@ export function AboutChatWidget() {
     }
   };
 
-  return (
+  // Portal to <body> so the button and full-screen panel escape the page's
+  // route-transition stacking context — otherwise the BottomNav pill (rendered
+  // outside that context) would render on top of the chat input.
+  return createPortal(
     <>
       {/* Floating button */}
       {!open && (
@@ -120,7 +124,8 @@ export function AboutChatWidget() {
             background: CARD,
             display: "flex",
             flexDirection: "column",
-            zIndex: 1000,
+            // Above BottomNav (z 9999) so the nav pill doesn't cover the input bar.
+            zIndex: 10000,
             overflow: "hidden",
             touchAction: "manipulation",
           }}
@@ -316,6 +321,7 @@ export function AboutChatWidget() {
           </div>
         </div>
       )}
-    </>
+    </>,
+    document.body,
   );
 }
