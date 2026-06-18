@@ -499,12 +499,22 @@ const Scan = () => {
     }
   }, []);
 
-  // Set html background to white while Scan is mounted (matches white chrome)
+  // Lock <html>/<body> background to black while the full-screen camera Scan page
+  // is mounted. In standalone (home-screen) PWA mode the bottom safe-area /
+  // home-indicator strip shows the page background; keeping it black (matching the
+  // camera) makes the viewfinder read as edge-to-edge instead of leaving a white
+  // strip at the bottom. Restored on unmount.
   useEffect(() => {
     const html = document.documentElement;
-    const prev = html.style.background;
-    html.style.background = '#F7F6F3';
-    return () => { html.style.background = prev; };
+    const body = document.body;
+    const prevHtml = html.style.background;
+    const prevBody = body.style.background;
+    html.style.background = '#000';
+    body.style.background = '#000';
+    return () => {
+      html.style.background = prevHtml;
+      body.style.background = prevBody;
+    };
   }, []);
 
   useEffect(() => {
