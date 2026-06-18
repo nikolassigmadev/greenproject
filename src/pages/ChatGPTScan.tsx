@@ -4,6 +4,7 @@ import { getBackendUrl } from "@/config/backend";
 import { BackButton } from "@/components/BackButton";
 import { buildAppContext, buildContextBrief } from "@/utils/appContext";
 import { getAnonId } from "@/utils/scanLogger";
+import { loadRegion } from "@/utils/userRegion";
 import {
   Search, Camera, Loader2, Leaf, Users, Heart, Apple,
   ShieldCheck, Sparkles, AlertTriangle, ChevronRight,
@@ -135,7 +136,12 @@ export default function ChatGPTScan() {
     try {
       const context = buildAppContext();
       const contextBrief = buildContextBrief(context);
-      const body: Record<string, unknown> = { anonId: getAnonId() };
+      const region = loadRegion();
+      const body: Record<string, unknown> = {
+        anonId: getAnonId(),
+        country: region?.countryCode ?? null,
+        city: region?.city ?? null,
+      };
       if (text) body.query = text;
       if (imageBase64) body.imageBase64 = imageBase64;
       if (contextBrief) {

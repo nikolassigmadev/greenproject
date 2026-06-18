@@ -49,6 +49,7 @@ export function logScan(input: ScanLogInput): void {
       brand: input.brand ?? null,
       ecoGrade: input.ecoGrade ?? null,
       country: region?.countryCode ?? null,
+      city: region?.city ?? null,
       anonId: getAnonId(),
     });
     void fetch(`${getBackendUrl()}/api/scans`, {

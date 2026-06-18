@@ -17,6 +17,8 @@ CREATE TABLE IF NOT EXISTS ai_scans (
   brand           TEXT,          -- resolved brand
   barcode         TEXT,          -- product barcode, when scanned
   eco_grade       TEXT,          -- eco grade A-E, when known
+  country         TEXT,          -- user's set region country code (from the app)
+  city            TEXT,          -- user's set region city (from the app)
   image_hash      TEXT,          -- sha256 of the submitted image (for dedupe)
   image_url       TEXT,          -- URL of a stored image, if any (reserved)
   openai_response JSONB,         -- full OpenAI response JSON

@@ -31,6 +31,8 @@ CREATE TABLE IF NOT EXISTS ai_scans (
   brand           TEXT,
   barcode         TEXT,
   eco_grade       TEXT,
+  country         TEXT,
+  city            TEXT,
   image_hash      TEXT,
   image_url       TEXT,
   openai_response JSONB,
@@ -40,6 +42,8 @@ CREATE TABLE IF NOT EXISTS ai_scans (
 -- Idempotent upgrades for tables created before these columns existed.
 ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS barcode   TEXT;
 ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS eco_grade TEXT;
+ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS country   TEXT;
+ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS city      TEXT;
 CREATE INDEX IF NOT EXISTS idx_ai_scans_created_at ON ai_scans (created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_ai_scans_user_id    ON ai_scans (user_id);
 CREATE INDEX IF NOT EXISTS idx_ai_scans_product    ON ai_scans (lower(product_name));
@@ -104,6 +108,8 @@ function clip(s, n) {
  * @param {string} [rec.brand]       resolved brand
  * @param {string} [rec.barcode]     product barcode, when scanned
  * @param {string} [rec.ecoGrade]    eco grade (A-E), when known
+ * @param {string} [rec.country]     user's set region country (code), from the app
+ * @param {string} [rec.city]        user's set region city, from the app
  * @param {string} [rec.imageBase64] raw image; hashed (not stored) for dedupe
  * @param {string} [rec.imageUrl]    URL of a stored image, if any
  * @param {object} [rec.response]    full OpenAI response JSON
@@ -124,6 +130,8 @@ export function logScan(rec = {}) {
       clip(rec.brand, 200),
       clip(rec.barcode, 64),
       clip(rec.ecoGrade, 4),
+      clip(rec.country, 64),
+      clip(rec.city, 120),
       imageHash,
       clip(rec.imageUrl, 1000),
       rec.response != null ? JSON.stringify(rec.response) : null,
@@ -133,8 +141,8 @@ export function logScan(rec = {}) {
       .query(
         `INSERT INTO ai_scans
            (user_id, source, query, ocr_text, product_name, brand, barcode,
-            eco_grade, image_hash, image_url, openai_response, model)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::jsonb,$12)`,
+            eco_grade, country, city, image_hash, image_url, openai_response, model)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13::jsonb,$14)`,
         values,
       )
       .catch((e) => console.error('scanStore: insert failed —', e.message));
