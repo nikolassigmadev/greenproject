@@ -1,12 +1,16 @@
 #!/usr/bin/env node
 /**
- * Owner-only viewer for the scan-analytics database (data/scans.db).
+ * Local viewer for the scan-analytics database (data/scans.db).
  *
- * This reads the SQLite file directly on the server — it is NOT exposed over the
- * web and there is no in-app page, so only someone with filesystem access (you)
- * can see it. The data/ directory is gitignored, so the DB never ships to users.
+ * Two private ways to see scans (both gated to you only):
+ *   1. scripts/pull-scans.sh — downloads the report over HTTPS using your admin
+ *      password (works from your Mac, no SSH). Use this for the LIVE server.
+ *   2. this script — reads a local data/scans.db file directly (handy for local
+ *      testing, or after you SFTP the production DB down).
+ * There is no in-app page and the data/ directory is gitignored, so the DB
+ * never ships to users.
  *
- * Usage (run from the project root, on the machine where the server runs):
+ * Usage (run from the project root, on a machine that has the DB file):
  *   node scripts/view-scans.js                 # top 50 most-scanned products
  *   node scripts/view-scans.js coffee          # filter by name / brand / barcode
  *   node scripts/view-scans.js --limit 200     # show more rows

@@ -570,11 +570,63 @@ app.post('/api/community-flags', communityFlagLimiter, smallBody, (req, res) => 
   }
 });
 
-// NOTE: There is intentionally NO HTTP endpoint to READ user submissions. Like
-// the scan data, community-flag submissions are write-only over the web (the
-// POST above). To review them, run the owner-only script on the server —
-// `node scripts/view-submissions.js` — which reads data/community-flags.jsonl
-// directly off the filesystem. Nothing exposes submissions over the network.
+/**
+ * GET /api/admin/community-flags?status=pending_review|approved|rejected
+ * Admin-gated (admin password) -- returns matching records, newest first.
+ * Read privately via scripts/pull-flags.sh.
+ */
+app.get('/api/admin/community-flags', requireAdmin, (req, res) => {
+  try {
+    const status = typeof req.query.status === 'string' ? req.query.status : 'pending_review';
+    if (!['pending_review', 'approved', 'rejected'].includes(status)) {
+      return res.status(400).json({ success: false, error: 'Invalid status filter' });
+    }
+    const records = readJsonlRecords(COMMUNITY_FLAGS_FILE)
+      .filter(r => r.status === status)
+      .sort((a, b) => (b.submittedAt || '').localeCompare(a.submittedAt || ''));
+    res.json({ success: true, count: records.length, records });
+  } catch (error) {
+    console.error('Community flag list error:', error);
+    res.status(500).json({ success: false, error: 'Failed to read flags' });
+  }
+});
+
+/**
+ * PATCH /api/admin/community-flags/:id
+ * Admin-gated -- approve or reject a pending submission.
+ * Body: { status: 'approved' | 'rejected', note?: string }
+ */
+app.patch('/api/admin/community-flags/:id', requireAdmin, smallBody, (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, note } = req.body || {};
+    if (!['approved', 'rejected'].includes(status)) {
+      return res.status(400).json({ success: false, error: 'status must be approved or rejected' });
+    }
+    if (note !== undefined && (typeof note !== 'string' || note.length > 500)) {
+      return res.status(400).json({ success: false, error: 'note must be a string up to 500 chars' });
+    }
+
+    const records = readJsonlRecords(COMMUNITY_FLAGS_FILE);
+    const idx = records.findIndex(r => r.id === id);
+    if (idx === -1) {
+      return res.status(404).json({ success: false, error: 'Flag not found' });
+    }
+
+    records[idx] = {
+      ...records[idx],
+      status,
+      moderatedAt: new Date().toISOString(),
+      moderatorNote: typeof note === 'string' ? note.trim() : undefined,
+    };
+
+    writeJsonlRecords(COMMUNITY_FLAGS_FILE, records);
+    res.json({ success: true, record: records[idx] });
+  } catch (error) {
+    console.error('Community flag patch error:', error);
+    res.status(500).json({ success: false, error: 'Failed to update flag' });
+  }
+});
 
 // =====================================================
 // WEB PUSH SUBSCRIPTION REGISTRY (stub)
@@ -1685,10 +1737,48 @@ app.post('/api/scans', scanLimiter, smallBody, (req, res) => {
   }
 });
 
-// NOTE: There is intentionally NO HTTP endpoint to READ scans. The data is
-// write-only over the web (POST above). To view it, run the owner-only script
-// on the server — `node scripts/view-scans.js` — which reads data/scans.db
-// directly off the filesystem. Nothing exposes the scan list over the network.
+/**
+ * GET /api/admin/scans?q=&limit= — admin-gated (admin password only, same as
+ * the OpenAI logs and flag submissions). Returns totals + most-scanned
+ * products (grouped by barcode, falling back to name). Read privately via
+ * scripts/pull-scans.sh. Read-only: never deletes or mutates any scan.
+ */
+app.get('/api/admin/scans', requireAdmin, (req, res) => {
+  if (!scanDb) return res.status(503).json({ success: false, error: 'Scan DB unavailable' });
+  try {
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 500, 1), 5000);
+    const q = typeof req.query.q === 'string' ? req.query.q.trim() : '';
+
+    const totals = scanDb
+      .prepare("SELECT COUNT(*) AS totalScans, COUNT(DISTINCT COALESCE(NULLIF(barcode, ''), name)) AS uniqueProducts FROM scans")
+      .get();
+
+    const where = q ? 'WHERE name LIKE @like OR brand LIKE @like OR barcode LIKE @like' : '';
+    const products = scanDb.prepare(`
+      SELECT COALESCE(barcode, '') AS barcode,
+             name,
+             MAX(brand)     AS brand,
+             MAX(eco_grade) AS ecoGrade,
+             COUNT(*)       AS count,
+             MAX(ts)        AS lastSeen
+      FROM scans
+      ${where}
+      GROUP BY COALESCE(NULLIF(barcode, ''), name)
+      ORDER BY count DESC, lastSeen DESC
+      LIMIT @limit
+    `).all(q ? { like: `%${q}%`, limit } : { limit });
+
+    res.json({
+      success: true,
+      totalScans: totals.totalScans,
+      uniqueProducts: totals.uniqueProducts,
+      products,
+    });
+  } catch (e) {
+    console.error('scan query error:', e.message);
+    res.status(500).json({ success: false, error: 'Failed to query scans' });
+  }
+});
 
 // =====================================================
 // SERVE FRONTEND (React SPA)
