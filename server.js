@@ -22,7 +22,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { existsSync, readFileSync, writeFileSync, mkdirSync, appendFileSync, chmodSync } from 'fs';
 import { createRequire } from 'module';
-import { initScanStore, logScan } from './db/scanStore.js';
+import { initScanStore, logScan, scanStoreReady } from './db/scanStore.js';
 
 console.log('server.js: imports loaded');
 
@@ -1741,13 +1741,19 @@ const scanLimiter = rateLimit({
  * product. Body: { barcode?, name, brand?, ecoGrade?, country?, anonId? }.
  */
 app.post('/api/scans', scanLimiter, smallBody, (req, res) => {
-  if (!scanDb) return res.status(503).json({ success: false, error: 'Scan logging unavailable' });
   try {
     const { barcode, name, brand, ecoGrade, country, anonId } = req.body || {};
     if (!name || typeof name !== 'string') {
       return res.status(400).json({ success: false, error: 'name is required' });
     }
+    // SQLite "most-scanned" counter (internally no-ops if unavailable).
     recordScan({ barcode, name, brand, ecoGrade, country, anonId });
+    // Rich Postgres log of every scan (no-ops if DATABASE_URL unset/unreachable).
+    logScan({ source: 'scan', userId: anonId, productName: name, brand, barcode, ecoGrade });
+    // Only fail if BOTH stores are unavailable.
+    if (!scanDb && !scanStoreReady()) {
+      return res.status(503).json({ success: false, error: 'Scan logging unavailable' });
+    }
     res.json({ success: true });
   } catch (e) {
     console.error('scan log error:', e.message);

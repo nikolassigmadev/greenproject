@@ -29,15 +29,21 @@ CREATE TABLE IF NOT EXISTS ai_scans (
   ocr_text        TEXT,
   product_name    TEXT,
   brand           TEXT,
+  barcode         TEXT,
+  eco_grade       TEXT,
   image_hash      TEXT,
   image_url       TEXT,
   openai_response JSONB,
   model           TEXT,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+-- Idempotent upgrades for tables created before these columns existed.
+ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS barcode   TEXT;
+ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS eco_grade TEXT;
 CREATE INDEX IF NOT EXISTS idx_ai_scans_created_at ON ai_scans (created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_ai_scans_user_id    ON ai_scans (user_id);
 CREATE INDEX IF NOT EXISTS idx_ai_scans_product    ON ai_scans (lower(product_name));
+CREATE INDEX IF NOT EXISTS idx_ai_scans_barcode    ON ai_scans (barcode);
 `;
 
 /**
@@ -96,6 +102,8 @@ function clip(s, n) {
  * @param {string} [rec.ocrText]     OCR text, when a separate OCR step ran
  * @param {string} [rec.productName] resolved product name
  * @param {string} [rec.brand]       resolved brand
+ * @param {string} [rec.barcode]     product barcode, when scanned
+ * @param {string} [rec.ecoGrade]    eco grade (A-E), when known
  * @param {string} [rec.imageBase64] raw image; hashed (not stored) for dedupe
  * @param {string} [rec.imageUrl]    URL of a stored image, if any
  * @param {object} [rec.response]    full OpenAI response JSON
@@ -114,6 +122,8 @@ export function logScan(rec = {}) {
       clip(rec.ocrText, 8000),
       clip(rec.productName, 300),
       clip(rec.brand, 200),
+      clip(rec.barcode, 64),
+      clip(rec.ecoGrade, 4),
       imageHash,
       clip(rec.imageUrl, 1000),
       rec.response != null ? JSON.stringify(rec.response) : null,
@@ -122,9 +132,9 @@ export function logScan(rec = {}) {
     pool
       .query(
         `INSERT INTO ai_scans
-           (user_id, source, query, ocr_text, product_name, brand,
-            image_hash, image_url, openai_response, model)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10)`,
+           (user_id, source, query, ocr_text, product_name, brand, barcode,
+            eco_grade, image_hash, image_url, openai_response, model)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::jsonb,$12)`,
         values,
       )
       .catch((e) => console.error('scanStore: insert failed —', e.message));

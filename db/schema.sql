@@ -15,6 +15,8 @@ CREATE TABLE IF NOT EXISTS ai_scans (
   ocr_text        TEXT,          -- OCR text, when a separate OCR step ran
   product_name    TEXT,          -- resolved product name
   brand           TEXT,          -- resolved brand
+  barcode         TEXT,          -- product barcode, when scanned
+  eco_grade       TEXT,          -- eco grade A-E, when known
   image_hash      TEXT,          -- sha256 of the submitted image (for dedupe)
   image_url       TEXT,          -- URL of a stored image, if any (reserved)
   openai_response JSONB,         -- full OpenAI response JSON
