@@ -22,6 +22,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { existsSync, readFileSync, writeFileSync, mkdirSync, appendFileSync, chmodSync } from 'fs';
 import { createRequire } from 'module';
+import { initScanStore, logScan } from './db/scanStore.js';
 
 console.log('server.js: imports loaded');
 
@@ -34,6 +35,11 @@ try { dns.setDefaultResultOrder('ipv4first'); } catch(e) { console.warn('dns.set
 // Load environment variables (check .env.local first, then .env)
 dotenv.config({ path: '.env.local' });
 dotenv.config();
+
+// Connect the Postgres scan store (Supabase/Neon/Railway via DATABASE_URL).
+// Fire-and-forget: if DATABASE_URL is unset or unreachable it stays disabled
+// and the server runs normally. Inserts are gated on its ready flag.
+initScanStore();
 
 console.log('server.js: dotenv loaded, PORT=', process.env.PORT);
 
@@ -1022,6 +1028,18 @@ Return ONLY valid JSON matching this schema:
     }
 
     logOpenAICall(parsed?.productName || query || 'image-only-product');
+
+    // Rich Postgres log: full analysis + metadata (fire-and-forget, never blocks).
+    logScan({
+      source: 'chatgpt/analyze-product',
+      userId: req.body?.anonId,
+      query,
+      productName: parsed?.productName || query || null,
+      brand: parsed?.brand || null,
+      imageBase64,
+      response: { analysis: parsed, usage: completion.usage },
+      model: completion.model || 'gpt-4o-mini',
+    });
 
     res.json({
       success: true,

@@ -3,6 +3,7 @@ import { DS } from "@/styles/design-tokens";
 import { getBackendUrl } from "@/config/backend";
 import { BackButton } from "@/components/BackButton";
 import { buildAppContext, buildContextBrief } from "@/utils/appContext";
+import { getAnonId } from "@/utils/scanLogger";
 import {
   Search, Camera, Loader2, Leaf, Users, Heart, Apple,
   ShieldCheck, Sparkles, AlertTriangle, ChevronRight,
@@ -134,7 +135,7 @@ export default function ChatGPTScan() {
     try {
       const context = buildAppContext();
       const contextBrief = buildContextBrief(context);
-      const body: Record<string, unknown> = {};
+      const body: Record<string, unknown> = { anonId: getAnonId() };
       if (text) body.query = text;
       if (imageBase64) body.imageBase64 = imageBase64;
       if (contextBrief) {

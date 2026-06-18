@@ -9,7 +9,7 @@ const ANON_KEY = "goodscan-anon-id";
 const OPTOUT_KEY = "goodscan-scan-logging-optout";
 
 /** A stable per-device anonymous id (lets us count unique scanners, no PII). */
-function getAnonId(): string {
+export function getAnonId(): string {
   try {
     let id = localStorage.getItem(ANON_KEY);
     if (!id) {
