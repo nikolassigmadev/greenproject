@@ -86,7 +86,8 @@ export function AboutChatWidget() {
           style={{
             position: "fixed",
             right: 18,
-            bottom: 90,
+            // Float clear of the BottomNav pill (bottom: safe-area + 22, 56px tall).
+            bottom: "calc(env(safe-area-inset-bottom, 0px) + 90px)",
             width: 56,
             height: 56,
             borderRadius: 28,
@@ -98,7 +99,8 @@ export function AboutChatWidget() {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            zIndex: 1000,
+            // Above BottomNav (z 9999) so it's never covered.
+            zIndex: 10000,
           }}
         >
           <MessageCircle style={{ width: 24, height: 24 }} />

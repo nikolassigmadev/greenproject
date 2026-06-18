@@ -607,7 +607,7 @@ export default function Index() {
               { title: "Search products", to: "/database" },
               { title: "Scan history", to: "/dashboard" },
               { title: "Set your values", to: "/preferences" },
-              { title: "About & methodology", to: "/about" },
+              { title: "About us", to: "/about" },
             ].map(card => (
               <Link key={card.title} to={card.to} style={{ textDecoration: "none" }}>
                 <div style={{
