@@ -20,15 +20,6 @@ import { toast } from "sonner";
 
 const GRADE_CO2: Record<string, number> = { a: 0.5, b: 1.2, c: 2.5, d: 4.0, e: 6.0 };
 
-// Theme-aware grade colours that mirror OpenFoodFactsDetail's editorial palette.
-const GRADE_STYLE: Record<string, { c: string; b: string }> = {
-  a: { c: DS.good, b: DS.goodBg },
-  b: { c: DS.good, b: DS.goodBg },
-  c: { c: DS.warn, b: DS.warnBg },
-  d: { c: "#C26544", b: "var(--ds-caution-bg, #FBE9E2)" },
-  e: { c: DS.bad, b: DS.badBg },
-};
-
 function origCo2(p: OpenFoodFactsResult): number | null {
   return (
     p.ecoscoreData?.agribalyse?.co2_total ??
@@ -67,19 +58,21 @@ function EditorialHead({ num, title, kicker }: { num: string; title: string; kic
 }
 
 function GradeSquare({ grade }: { grade: string | null }) {
-  const s = grade ? GRADE_STYLE[grade] : null;
+  // A swap is only ever surfaced because it's a better choice for the user's
+  // priorities, so its badge always reads green/positive regardless of the raw
+  // eco letter — never amber/red.
   return (
     <div style={{ textAlign: "center", flexShrink: 0 }}>
       <div style={{
         width: 38, height: 38, borderRadius: 11,
-        background: s?.b ?? DS.bg, color: s?.c ?? DS.muted,
+        background: DS.goodBg, color: DS.good,
         display: "flex", alignItems: "center", justifyContent: "center",
         fontSize: 17, fontWeight: 800,
       }}>
-        {grade ? grade.toUpperCase() : "—"}
+        {grade ? grade.toUpperCase() : "✓"}
       </div>
-      <div style={{ fontSize: 8.5, color: DS.muted, marginTop: 3, letterSpacing: 0.4, textTransform: "uppercase" }}>
-        Eco
+      <div style={{ fontSize: 8.5, color: DS.good, marginTop: 3, letterSpacing: 0.4, textTransform: "uppercase" }}>
+        Better
       </div>
     </div>
   );

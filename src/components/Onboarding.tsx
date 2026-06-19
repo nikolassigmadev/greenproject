@@ -409,32 +409,25 @@ function PrioritiesStep({
         title="What matters most to you?"
         subtitle="This shapes every verdict and swap. You can fine-tune it later in Settings."
       />
-      <div style={{ display: "grid", gap: 12 }}>
-        {PRIORITY_CONFIG.map((cfg) => {
+      <div style={{
+        background: DS.card, borderRadius: 16, padding: "2px 15px 6px",
+        boxShadow: "0 1px 3px rgba(0,0,0,0.05), 0 0 0 1px rgba(0,0,0,0.035)",
+      }}>
+        {PRIORITY_CONFIG.map((cfg, i) => {
           const Icon = cfg.icon;
-          const lvl = LEVELS[levelIndex(priorities[cfg.key])];
           return (
-            <div key={cfg.key} style={{
-              background: DS.card, borderRadius: 16, padding: "14px 15px",
-              boxShadow: "0 1px 3px rgba(0,0,0,0.05), 0 0 0 1px rgba(0,0,0,0.035)",
-            }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 11, marginBottom: 12 }}>
+            <div key={cfg.key} style={{ padding: "13px 0", borderTop: i > 0 ? `1px solid ${DS.hair}` : "none" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 11, marginBottom: 10 }}>
                 <div style={{
-                  width: 38, height: 38, borderRadius: 11, flexShrink: 0,
+                  width: 30, height: 30, borderRadius: 9, flexShrink: 0,
                   background: `color-mix(in srgb, ${cfg.color} 15%, transparent)`,
                   display: "flex", alignItems: "center", justifyContent: "center",
                 }}>
-                  <Icon style={{ width: 19, height: 19, color: cfg.color }} />
+                  <Icon style={{ width: 16, height: 16, color: cfg.color }} />
                 </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 800, color: DS.ink, lineHeight: 1.2 }}>{cfg.label}</div>
-                  <div style={{ fontSize: 11.5, color: DS.muted, marginTop: 2 }}>{cfg.desc}</div>
-                </div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: DS.ink, lineHeight: 1.2 }}>{cfg.label}</div>
               </div>
               <SegmentedLevel value={priorities[cfg.key]} color={cfg.color} onSelect={(v) => setLevel(cfg.key, v)} />
-              <div style={{ fontSize: 11.5, color: DS.muted, marginTop: 8, textAlign: "center" }}>
-                {lvl.effect}
-              </div>
             </div>
           );
         })}

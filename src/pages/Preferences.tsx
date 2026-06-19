@@ -29,10 +29,6 @@ const levelIndex = (v: number): number => {
   return 4;
 };
 
-function alpha(color: string, pct: number): string {
-  return `color-mix(in srgb, ${color} ${pct}%, transparent)`;
-}
-
 const priorityConfig = [
   {
     key: "laborRights" as keyof UserPriorities,
@@ -62,74 +58,37 @@ const priorityConfig = [
   // (DEFAULT_PRIORITIES.nutrition = 50) and still feeds the nutri-score measure.
 ];
 
-// ── Intensity meter: 4 dots that fill as the level rises (None = empty) ──
+// ── Single compact value row: icon + label + 5-level segmented control ──
 
-function IntensityDots({ level, color }: { level: number; color: string }) {
-  return (
-    <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-      {[1, 2, 3, 4].map((n) => (
-        <span
-          key={n}
-          style={{
-            width: 6, height: 6, borderRadius: 999,
-            background: n <= level ? color : DS.hair,
-            transition: "background 0.18s",
-          }}
-        />
-      ))}
-    </div>
-  );
-}
-
-// ── Single value card ──
-
-function ValueCard({
-  config, value, onSelect,
+function ValueRow({
+  config, value, onSelect, divider,
 }: {
   config: (typeof priorityConfig)[number];
   value: number;
   onSelect: (v: number) => void;
+  divider: boolean;
 }) {
   const idx = levelIndex(value);
-  const level = LEVELS[idx];
   const Icon = config.icon;
-  const isOff = idx === 0;
 
   return (
-    <div style={{
-      background: DS.card,
-      borderRadius: 18,
-      padding: 16,
-      boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04)",
-    }}>
-      {/* Title row */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
+    <div style={{ padding: "14px 0", borderTop: divider ? `1px solid ${DS.hair}` : "none" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 11, marginBottom: 11 }}>
         <div style={{
-          width: 44, height: 44, borderRadius: 13,
+          width: 32, height: 32, borderRadius: 9,
           background: config.bgColor,
           display: "flex", alignItems: "center", justifyContent: "center",
           flexShrink: 0,
         }}>
-          <Icon size={20} style={{ color: config.color }} strokeWidth={2} />
+          <Icon size={16} style={{ color: config.color }} strokeWidth={2} />
         </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: DS.ink, lineHeight: 1.2 }}>
-            {config.label}
-          </div>
-          <div style={{ fontSize: 11.5, color: DS.muted, lineHeight: 1.35, marginTop: 2 }}>
-            {config.description}
-          </div>
-        </div>
-        <div style={{ marginTop: 2, flexShrink: 0 }}>
-          <IntensityDots level={idx} color={config.color} />
+        <div style={{ fontSize: 14.5, fontWeight: 700, color: DS.ink, lineHeight: 1.2 }}>
+          {config.label}
         </div>
       </div>
 
       {/* Segmented selector — single inset track, active pill in the category color */}
-      <div style={{
-        display: "flex", gap: 3, padding: 3,
-        background: DS.bg, borderRadius: 12,
-      }}>
+      <div style={{ display: "flex", gap: 3, padding: 3, background: DS.bg, borderRadius: 11 }}>
         {LEVELS.map((lvl, i) => {
           const active = i === idx;
           return (
@@ -138,11 +97,11 @@ function ValueCard({
               onClick={() => onSelect(lvl.value)}
               aria-pressed={active}
               style={{
-                flex: 1, padding: "9px 2px", borderRadius: 9,
+                flex: 1, padding: "8px 2px", borderRadius: 8,
                 border: "none", cursor: "pointer",
                 background: active ? config.color : "transparent",
                 color: active ? "#fff" : DS.muted,
-                fontSize: 11.5, fontWeight: active ? 800 : 600,
+                fontSize: 11, fontWeight: active ? 800 : 600,
                 fontFamily: DS.font, letterSpacing: "-0.01em",
                 transition: "background 0.15s, color 0.15s",
               }}
@@ -151,20 +110,6 @@ function ValueCard({
             </button>
           );
         })}
-      </div>
-
-      {/* Live plain-language effect */}
-      <div style={{
-        display: "flex", alignItems: "center", gap: 7,
-        marginTop: 11, paddingLeft: 2,
-      }}>
-        <span style={{
-          width: 6, height: 6, borderRadius: 999, flexShrink: 0,
-          background: isOff ? DS.muted : config.color,
-        }} />
-        <span style={{ fontSize: 12, color: DS.muted, lineHeight: 1.3 }}>
-          {level.effect}
-        </span>
       </div>
     </div>
   );
@@ -241,56 +186,58 @@ export default function Preferences() {
           </div>
         </div>
 
-        <div style={{ padding: "0 16px 16px", display: "flex", flexDirection: "column", gap: 12 }}>
+        <div style={{ padding: "0 16px 16px", display: "flex", flexDirection: "column", gap: 14 }}>
 
-          {/* Value cards */}
-          {priorityConfig.map((config) => (
-            <ValueCard
-              key={config.key}
-              config={config}
-              value={priorities[config.key]}
-              onSelect={(v) => handleChange(config.key, v)}
-            />
-          ))}
-
-          {/* Reset — only when something differs from the balanced default */}
-          {customized && (
-            <button
-              onClick={handleReset}
-              style={{
-                alignSelf: "center",
-                display: "inline-flex", alignItems: "center", gap: 7,
-                background: "transparent", border: `1px solid ${DS.hair}`,
-                borderRadius: 999, padding: "9px 16px",
-                fontSize: 12.5, fontWeight: 700, color: DS.muted,
-                cursor: "pointer", fontFamily: DS.font,
-              }}
-            >
-              <RotateCcw style={{ width: 13, height: 13 }} />
-              Reset to balanced
-            </button>
-          )}
-
-          {/* Auto-save reassurance */}
+          {/* Values — one grouped card, compact rows */}
           <div style={{
-            display: "flex", alignItems: "center", gap: 8,
-            padding: "12px 14px", borderRadius: 14,
-            background: alpha(DS.good, 8),
+            background: DS.card, borderRadius: 18, padding: "2px 16px 6px",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04)",
           }}>
-            <div style={{
-              width: 22, height: 22, borderRadius: 999, flexShrink: 0,
-              background: alpha(DS.good, 16),
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}>
-              <Check style={{ width: 13, height: 13, color: DS.good }} strokeWidth={3} />
-            </div>
-            <span style={{ fontSize: 12.5, color: DS.ink, fontWeight: 500, lineHeight: 1.4 }}>
-              Saved automatically — applied to every scan and comparison.
-            </span>
+            {priorityConfig.map((config, i) => (
+              <ValueRow
+                key={config.key}
+                config={config}
+                value={priorities[config.key]}
+                onSelect={(v) => handleChange(config.key, v)}
+                divider={i > 0}
+              />
+            ))}
           </div>
 
-          {/* Divider */}
-          <div style={{ height: 1, background: DS.hair, margin: "8px 4px 4px" }} />
+          {/* Saved hint + reset, on one compact line */}
+          <div style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            padding: "0 2px", minHeight: 28,
+          }}>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: DS.muted }}>
+              <Check style={{ width: 13, height: 13, color: DS.good }} strokeWidth={3} />
+              Saved automatically
+            </span>
+            {customized && (
+              <button
+                onClick={handleReset}
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 6,
+                  background: "transparent", border: `1px solid ${DS.hair}`,
+                  borderRadius: 999, padding: "6px 12px",
+                  fontSize: 12, fontWeight: 700, color: DS.muted,
+                  cursor: "pointer", fontFamily: DS.font,
+                }}
+              >
+                <RotateCcw style={{ width: 12, height: 12 }} />
+                Reset
+              </button>
+            )}
+          </div>
+
+          {/* ── Settings (appearance + location) — separate from values ── */}
+          <p style={{
+            fontSize: 11, fontWeight: 800, color: DS.muted,
+            letterSpacing: "0.08em", textTransform: "uppercase",
+            margin: "8px 2px 0",
+          }}>
+            Settings
+          </p>
 
           {/* Appearance */}
           <div style={{

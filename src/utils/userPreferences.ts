@@ -13,13 +13,17 @@ export const DEFAULT_PRIORITIES: UserPriorities = {
   nutrition: 50,
 };
 
-/** Map a 0–100 priority to a verdict weight (0 = ignored … 3.5 = critical). */
+/**
+ * Map a 0–100 priority to a verdict weight. Aggressive curve so priorities
+ * DOMINATE scoring: "None" is fully excluded (0), and "Critical" (5) outweighs
+ * a default "Medium" (1) by 5×, letting a single top priority drive the verdict.
+ */
 export function priorityMultiplier(value: number): number {
-  if (value <= 12) return 0;
-  if (value <= 37) return 0.35;
-  if (value <= 62) return 1.0;
-  if (value <= 87) return 2.0;
-  return 3.5;
+  if (value <= 12) return 0;    // None — left out of scoring entirely
+  if (value <= 37) return 0.3;  // Low
+  if (value <= 62) return 1.0;  // Medium (default)
+  if (value <= 87) return 2.5;  // High
+  return 5.0;                    // Critical
 }
 
 const PRIORITIES_KEY = 'ethical-shopper-priorities';

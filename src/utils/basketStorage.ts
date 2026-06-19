@@ -1,3 +1,6 @@
+import { personalizedScore, gradeFromScore } from "@/utils/personalizedScore";
+import { loadPriorities, type UserPriorities } from "@/utils/userPreferences";
+
 export interface BasketItem {
   id: string;
   barcode: string;
@@ -60,16 +63,6 @@ function itemCO2PerKg(item: BasketItem): number | null {
   return g ? (GRADE_CO2_KG[g] ?? null) : null;
 }
 
-// Eco grade → numeric score
-const GRADE_SCORE: Record<string, number> = { a: 90, b: 70, c: 50, d: 30, e: 10 };
-
-const scoreToGrade = (score: number): string => {
-  if (score >= 80) return 'a';
-  if (score >= 60) return 'b';
-  if (score >= 40) return 'c';
-  if (score >= 20) return 'd';
-  return 'e';
-};
 
 export interface BasketEthicsReport {
   overallScore: number;
@@ -93,31 +86,45 @@ export interface BasketEthicsReport {
   worstCO2Item: BasketItem | null;
 }
 
-export const getBasketEthicsReport = (items: BasketItem[]): BasketEthicsReport => {
-  const scored = items.filter(i => i.ecoscoreGrade || i.ecoscoreScore !== null);
+export const getBasketEthicsReport = (
+  items: BasketItem[],
+  priorities: UserPriorities = loadPriorities(),
+): BasketEthicsReport => {
+  // Priority-weighted personalized score per item (env + nutrition + labor +
+  // animal welfare, weighted by what the user cares about).
+  const rated = items.map(item => ({
+    item,
+    ps: personalizedScore(
+      {
+        ecoGrade: item.ecoscoreGrade,
+        ecoScore: item.ecoscoreScore,
+        nutriGrade: item.nutriscoreGrade,
+        laborAllegations: item.laborAllegations,
+        brand: item.brand,
+      },
+      priorities,
+    ),
+  }));
 
-  const scores = scored.map(i =>
-    i.ecoscoreScore !== null ? i.ecoscoreScore : (GRADE_SCORE[i.ecoscoreGrade!.toLowerCase()] ?? 50)
-  );
+  const scoredRated = rated.filter(r => r.ps.score !== null);
+  const scores = scoredRated.map(r => r.ps.score as number);
 
   const overallScore = scores.length > 0
     ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
     : 0;
-  const overallGrade = scores.length > 0 ? scoreToGrade(overallScore) : 'unknown';
+  const overallGrade = scores.length > 0 ? gradeFromScore(overallScore) : 'unknown';
 
-  // Weakest item
+  // Weakest item = lowest personalized score.
   let weakestItem: BasketItem | null = null;
   let worstScore = Infinity;
-  for (const item of scored) {
-    const s = item.ecoscoreScore !== null
-      ? item.ecoscoreScore
-      : (GRADE_SCORE[item.ecoscoreGrade!.toLowerCase()] ?? 50);
-    if (s < worstScore) { worstScore = s; weakestItem = item; }
+  for (const r of scoredRated) {
+    if ((r.ps.score as number) < worstScore) { worstScore = r.ps.score as number; weakestItem = r.item; }
   }
 
-  const goodCount    = items.filter(i => ['a','b'].includes(i.ecoscoreGrade?.toLowerCase() ?? '')).length;
-  const fairCount    = items.filter(i => i.ecoscoreGrade?.toLowerCase() === 'c').length;
-  const poorCount    = items.filter(i => ['d','e'].includes(i.ecoscoreGrade?.toLowerCase() ?? '')).length;
+  // Good / fair / poor buckets by personalized grade (not raw eco grade).
+  const goodCount    = rated.filter(r => ['a','b'].includes(r.ps.grade)).length;
+  const fairCount    = rated.filter(r => r.ps.grade === 'c').length;
+  const poorCount    = rated.filter(r => ['d','e'].includes(r.ps.grade)).length;
   const unknownCount = items.length - goodCount - fairCount - poorCount;
 
   const laborFlagCount  = items.filter(i => i.laborAllegations > 0).length;
@@ -151,7 +158,7 @@ export const getBasketEthicsReport = (items: BasketItem[]): BasketEthicsReport =
     overallScore,
     overallGrade,
     itemCount: items.length,
-    scoredCount: scored.length,
+    scoredCount: scoredRated.length,
     weakestItem,
     goodCount,
     fairCount,

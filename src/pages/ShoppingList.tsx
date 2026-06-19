@@ -213,11 +213,11 @@ export default function ShoppingList() {
                     Basket impact
                   </div>
                   <div style={{ fontSize: 12, color: DS.muted, marginTop: 2 }}>
-                    {report.laborFlagCount > 0
-                      ? `${report.laborFlagCount} flagged brand${report.laborFlagCount !== 1 ? "s" : ""} · avg Eco-${report.overallGrade !== "unknown" ? report.overallGrade.toUpperCase() : "?"}`
-                      : report.overallGrade !== "unknown"
-                        ? `Average Eco-Score ${report.overallGrade.toUpperCase()}`
-                        : "Scores will appear as you add products"}
+                    {report.overallGrade !== "unknown"
+                      ? report.laborFlagCount > 0
+                        ? `${report.overallScore}/100 for your values · ${report.laborFlagCount} flagged brand${report.laborFlagCount !== 1 ? "s" : ""}`
+                        : `${report.overallScore}/100 — matched to your values`
+                      : "Scores will appear as you add products"}
                   </div>
                 </div>
               </div>
