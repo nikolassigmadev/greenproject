@@ -490,7 +490,9 @@ app.post('/api/community-flags', communityFlagLimiter, smallBody, (req, res) => 
       summary,
       sources,
       submitterEmail,
-      honeypot,
+      // The client posts the honeypot under its realistic field name
+      // (`company_website`); map it to `honeypot` for the check below.
+      company_website: honeypot,
     } = body;
 
     // Honeypot: legitimate clients leave this empty. Bots fill every field.
