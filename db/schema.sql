@@ -11,8 +11,6 @@ CREATE TABLE IF NOT EXISTS ai_scans (
   id              BIGSERIAL PRIMARY KEY,
   user_id         TEXT,          -- stable anon/device id from the client
   source          TEXT,          -- which endpoint produced the row
-  query           TEXT,          -- raw text the user searched
-  ocr_text        TEXT,          -- OCR text, when a separate OCR step ran
   product_name    TEXT,          -- resolved product name
   brand           TEXT,          -- resolved brand
   barcode         TEXT,          -- product barcode, when scanned

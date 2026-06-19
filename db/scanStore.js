@@ -122,8 +122,6 @@ function clip(s, n) {
  * @param {object} rec
  * @param {string} [rec.userId]      stable anon/device id (acts as user_id)
  * @param {string} [rec.source]      which endpoint produced this row
- * @param {string} [rec.query]       raw text the user searched
- * @param {string} [rec.ocrText]     OCR text, when a separate OCR step ran
  * @param {string} [rec.productName] resolved product name
  * @param {string} [rec.brand]       resolved brand
  * @param {string} [rec.barcode]     product barcode, when scanned
@@ -139,8 +137,6 @@ export function logScan(rec = {}) {
     const values = [
       clip(rec.userId, 64),
       clip(rec.source, 64),
-      clip(rec.query, 2000),
-      clip(rec.ocrText, 8000),
       clip(rec.productName, 300),
       clip(rec.brand, 200),
       barcode,
@@ -152,9 +148,9 @@ export function logScan(rec = {}) {
     pool
       .query(
         `INSERT INTO ai_scans
-           (user_id, source, query, ocr_text, product_name, brand, barcode,
+           (user_id, source, product_name, brand, barcode,
             eco_grade, country, city, off_url)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
         values,
       )
       .catch((e) => console.error('scanStore: insert failed —', e.message));
