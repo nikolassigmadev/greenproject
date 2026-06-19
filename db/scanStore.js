@@ -24,8 +24,6 @@ CREATE TABLE IF NOT EXISTS ai_scans (
   id              BIGSERIAL PRIMARY KEY,
   user_id         TEXT,
   source          TEXT,
-  query           TEXT,
-  ocr_text        TEXT,
   product_name    TEXT,
   brand           TEXT,
   barcode         TEXT,
@@ -46,6 +44,8 @@ ALTER TABLE ai_scans DROP COLUMN IF EXISTS image_hash;
 ALTER TABLE ai_scans DROP COLUMN IF EXISTS image_url;
 ALTER TABLE ai_scans DROP COLUMN IF EXISTS openai_response;
 ALTER TABLE ai_scans DROP COLUMN IF EXISTS model;
+ALTER TABLE ai_scans DROP COLUMN IF EXISTS query;
+ALTER TABLE ai_scans DROP COLUMN IF EXISTS ocr_text;
 CREATE INDEX IF NOT EXISTS idx_ai_scans_created_at ON ai_scans (created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_ai_scans_user_id    ON ai_scans (user_id);
 CREATE INDEX IF NOT EXISTS idx_ai_scans_product    ON ai_scans (lower(product_name));
