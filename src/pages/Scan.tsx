@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { lookupHardcodedBarcodes, lookupHardcodedImage } from "@/data/productBarcodeMap";
 import { useNavigate, useLocation, Link } from "react-router-dom";
-import { Camera, Upload, Search, Loader2, AlertCircle, X, ScanLine, Image as ImageIcon, Plus, Leaf, BarChart3, QrCode, Settings, Users, Heart, Apple, ChevronRight, Check, Zap } from "lucide-react";
+import { Camera, Upload, Search, Loader2, AlertCircle, AlertTriangle, RefreshCw, X, ScanLine, Image as ImageIcon, Plus, Leaf, BarChart3, QrCode, Settings, Users, Heart, Apple, ChevronRight, Check, Zap } from "lucide-react";
 import { useBottomNav } from "@/components/BottomNav";
 import { Logo } from "@/components/Logo";
 import { Input } from "@/components/ui/input";
@@ -424,6 +424,9 @@ const Scan = () => {
   const [cameraActive, setCameraActive] = useState(false);
   const [frozenFrame, setFrozenFrame] = useState<string | null>(null);
   const [cameraInitializing, setCameraInitializing] = useState(false);
+  // Camera-access failure (permission denied, no device, in use…). When set, the
+  // viewfinder shows a clean error card instead of a throwaway destructive toast.
+  const [cameraError, setCameraError] = useState<{ title: string; suggestion: string } | null>(null);
   const [extractedText, setExtractedText] = useState("");
   const [ocrMessage, setOcrMessage] = useState<string | null>(null);
   const [manualSearch, setManualSearch] = useState("");
@@ -594,6 +597,7 @@ const Scan = () => {
         timeoutIdRef.current = null;
       }
 
+      setCameraError(null);
       setCameraInitializing(true);
       cameraInitializingRef.current = true;
 
@@ -833,13 +837,11 @@ const Scan = () => {
         suggestion = "Use Chrome, Firefox, Safari, or Edge.";
       }
 
-      toast({
-        title: errorMessage,
-        description: suggestion,
-        variant: "destructive",
-      });
+      // Surface camera failures as an in-viewfinder card (see render) rather
+      // than a destructive toast that vanishes and leaves a black screen.
+      setCameraError({ title: errorMessage, suggestion });
     }
-  }, [toast]);
+  }, []);
 
   // Stop camera
   const stopCamera = useCallback(() => {
@@ -1908,7 +1910,7 @@ const Scan = () => {
                 </div>
               </div>
             </>
-          ) : !cameraActive && !frozenFrame && !offSearchImage && !cameraInitializing ? (
+          ) : !cameraActive && !frozenFrame && !offSearchImage && !cameraInitializing && !cameraError ? (
             <div style={{
               textAlign: 'center',
               background: 'rgba(0,0,0,0.5)',
@@ -1925,6 +1927,48 @@ const Scan = () => {
             </div>
           ) : null}
         </div>
+
+        {/* Camera-access error card — replaces the old destructive toast. Same
+            language as the shelf-scan error state, themed via DS tokens. */}
+        {cameraError && (
+          <div style={{
+            position: 'absolute', inset: 0, zIndex: 20,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: 24,
+            background: 'rgba(0,0,0,0.6)',
+            backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
+          }}>
+            <div style={{
+              width: '100%', maxWidth: 360,
+              background: DS.card, borderRadius: 22, padding: 24, textAlign: 'center',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.45), 0 0 0 1px rgba(0,0,0,0.2)',
+            }}>
+              <div style={{
+                width: 56, height: 56, borderRadius: 16, margin: '0 auto 14px',
+                background: DS.badBg, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <AlertTriangle style={{ width: 26, height: 26, color: DS.bad }} />
+              </div>
+              <p style={{ fontSize: 17, fontWeight: 800, color: DS.ink, margin: '0 0 6px', letterSpacing: '-0.01em' }}>
+                {cameraError.title}
+              </p>
+              <p style={{ fontSize: 13.5, color: DS.muted, margin: '0 0 18px', lineHeight: 1.5 }}>
+                {cameraError.suggestion}
+              </p>
+              <button
+                onClick={() => { setCameraError(null); startCamera(); }}
+                style={{
+                  width: '100%', height: 52, borderRadius: 14, border: 'none',
+                  background: DS.ink, color: DS.card, fontWeight: 800, fontSize: 15,
+                  fontFamily: DS.font, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                }}
+              >
+                <RefreshCw size={17} strokeWidth={2.2} /> Try again
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ════════════════════ FLOATING CAPTURE DECK ════════════════════ */}

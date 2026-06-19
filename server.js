@@ -295,6 +295,27 @@ Rules:
 - If the pack shows multiple languages, prefer the English product/flavor name.
 - Always give your best guess. Never refuse or say you cannot read it. Only return Brand: UNKNOWN when there is literally no brand text or logo visible anywhere in the image.
 - No extra text outside the three lines.`,
+  'scan-shelf': `You are looking at a photo of a store shelf holding MULTIPLE packaged products. Identify each DISTINCT product facing you can confidently read.
+
+Return ONLY a JSON array — no prose, no markdown code fences. Each element MUST be exactly:
+{"brand": "<brand>", "product": "<product line + exact flavor/variant, WITHOUT the brand>"}
+
+Apply our single-product scanner's rules to EVERY item:
+- Brand is REQUIRED for every item. We query Open Food Facts with "Brand Product"; without the brand the search is unreliable. Always populate "brand" with your best guess from the package, even if the brand text is small or partially obscured.
+- "brand" = the consumer-facing brand on the package (e.g. "Cadbury", "Tony's Chocolonely", "Lindt", "Nestle"). If the pack shows both a parent and a sub-brand, prefer the SUB-brand the shopper sees (e.g. "Ben & Jerry's", not "Unilever").
+- "product" = the product line PLUS the exact flavor/variant/sub-type printed on the pack, WITHOUT the brand. The flavor/variant is CRITICAL: "Dairy Milk" alone is ambiguous — distinguish "Dairy Milk Whole Nut" from "Dairy Milk Caramel". Actively look for the flavor text; it is often smaller than the logo, near the bottom of the pack, or on a colour band.
+- Copy flavor/variant words EXACTLY as printed. Do NOT translate, paraphrase, shorten, or generalize them ("Whole Nut" must not become "Nut"; "Zero Sugar" must not become "Zero"). DO include a cocoa/strength percentage when shown (e.g. "Excellence Dark 70%") — it distinguishes variants.
+- Do NOT include size, weight, volume, count, multipack numbers, slogans, or marketing claims ("New!", "Now Tastier") in "product".
+- If a pack shows multiple languages, prefer the English product/flavor name.
+
+Shelf-specific:
+- Include AT MOST 8 products — the clearest, most prominent facings. A shelf usually repeats the same product across several facings: list each distinct product ONCE.
+- Only include products whose brand AND flavor you can actually read. Skip blurry, edge, or background items rather than guessing a flavor you cannot see. Never invent products that are not visible.
+- If you cannot confidently read any product, return [].
+
+Good: [{"brand":"Cadbury","product":"Dairy Milk Whole Nut"},{"brand":"Tony's Chocolonely","product":"Milk Caramel Sea Salt"},{"brand":"Lindt","product":"Excellence Dark 70%"}]
+Bad:  [{"brand":"Cadbury","product":"Dairy Milk"}] when the bar clearly says "Whole Nut" (flavor lost)
+Bad:  [{"brand":"UNKNOWN","product":"Caramel"}] (brand missing → not searchable)`,
 };
 
 const CHAT_TASK_PROMPTS = {
@@ -1115,13 +1136,13 @@ app.post('/api/openai/analyze-image', openaiLimiter, largeBody, async (req, res)
                 type: 'image_url',
                 image_url: {
                   url: `data:image/jpeg;base64,${imageBase64}`,
-                  detail: 'low',
+                  detail: task === 'scan-shelf' ? 'high' : 'low',
                 },
               },
             ],
           },
         ],
-        max_tokens: task === 'scan-product' ? 60 : 300,
+        max_tokens: task === 'scan-product' ? 60 : task === 'scan-shelf' ? 700 : 300,
       }),
     });
 

@@ -24,6 +24,7 @@ import Watchlist from "./pages/Watchlist";
 import Compare from "./pages/Compare";
 import SubmitFlag from "./pages/SubmitFlag";
 import ReceiptAnalytics from "./pages/ReceiptAnalytics";
+import ShelfScan from "./pages/ShelfScan";
 
 // Import admin components - uncomment to enable
 // import Admin from "./pages/Admin";
@@ -92,6 +93,10 @@ export const router = createBrowserRouter([
       {
         path: "/basket",
         element: <ShoppingList />,
+      },
+      {
+        path: "/shelf",
+        element: <ShelfScan />,
       },
       {
         path: "/about",

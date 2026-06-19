@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { ChevronRight, Camera, Leaf, Shield, BarChart3, Users, Award, Zap, CheckCircle2, AlertTriangle as AlertTriangleIcon, Share, Plus, MoreVertical, X, Search } from "lucide-react";
+import { ChevronRight, Camera, Leaf, Shield, BarChart3, Users, Award, Zap, CheckCircle2, AlertTriangle as AlertTriangleIcon, Share, Plus, MoreVertical, X, Search, GitCompareArrows, ScanLine, Eye, Receipt } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { DS, scoreTone, toneColor, toneBg } from "@/styles/design-tokens";
 import { loadScanHistory, type ScanHistoryEntry } from "@/utils/userPreferences";
@@ -429,6 +429,44 @@ export default function Index() {
               }
             />
           )}
+        </section>
+
+        {/* Do more — high-visibility tools row, placed above the explainer content */}
+        <section style={{ marginBottom: 28 }}>
+          <div style={{ marginBottom: 14 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>Do more</h2>
+            <p style={{ fontSize: 13, color: DS.muted, margin: "4px 0 0", lineHeight: 1.45 }}>
+              Beyond scanning — compare products, track brands, and review your impact.
+            </p>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            {[
+              { icon: ScanLine, title: "Scan a shelf", desc: "We pick the best-rated product", to: "/shelf", color: DS.good },
+              { icon: GitCompareArrows, title: "Compare", desc: "Put two products head-to-head", to: "/compare", color: DS.warn },
+              { icon: Eye, title: "Watchlist", desc: "Track brands you're watching", to: "/watchlist", color: "#9B7AAE" },
+              { icon: Receipt, title: "Receipt insights", desc: "Your monthly shopping impact", to: "/receipts", color: "#2E5A7A" },
+            ].map((tool) => (
+              <Link key={tool.to} to={tool.to} style={{ textDecoration: "none" }}>
+                <div style={{
+                  background: DS.card, borderRadius: DS.radius.md, padding: 14, height: "100%",
+                  boxShadow: "0 2px 6px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)",
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                    <div style={{
+                      width: 34, height: 34, borderRadius: 10,
+                      background: `color-mix(in srgb, ${tool.color} 15%, transparent)`,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                    }}>
+                      <tool.icon style={{ width: 18, height: 18, color: tool.color }} />
+                    </div>
+                    <ChevronRight style={{ width: 16, height: 16, color: DS.muted }} />
+                  </div>
+                  <p style={{ fontSize: 14, fontWeight: 600, margin: "0 0 4px", color: DS.ink }}>{tool.title}</p>
+                  <p style={{ fontSize: 12, color: DS.muted, margin: 0, lineHeight: 1.4 }}>{tool.desc}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
         </section>
 
         {/* How it works */}
