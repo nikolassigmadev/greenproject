@@ -1045,9 +1045,6 @@ Return ONLY valid JSON matching this schema:
       brand: parsed?.brand || null,
       country: req.body?.country,
       city: req.body?.city,
-      imageBase64,
-      response: { analysis: parsed, usage: completion.usage },
-      model: completion.model || 'gpt-4o-mini',
     });
 
     res.json({

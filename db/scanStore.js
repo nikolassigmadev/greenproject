@@ -13,7 +13,6 @@
 // automatically on startup; db/schema.sql mirrors it for manual setup.
 
 import pkg from 'pg';
-import crypto from 'crypto';
 
 const { Pool } = pkg;
 
@@ -33,10 +32,7 @@ CREATE TABLE IF NOT EXISTS ai_scans (
   eco_grade       TEXT,
   country         TEXT,
   city            TEXT,
-  image_hash      TEXT,
-  image_url       TEXT,
-  openai_response JSONB,
-  model           TEXT,
+  off_url         TEXT,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 -- Idempotent upgrades for tables created before these columns existed.
@@ -44,6 +40,12 @@ ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS barcode   TEXT;
 ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS eco_grade TEXT;
 ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS country   TEXT;
 ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS city      TEXT;
+ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS off_url   TEXT;
+-- Drop columns we no longer store.
+ALTER TABLE ai_scans DROP COLUMN IF EXISTS image_hash;
+ALTER TABLE ai_scans DROP COLUMN IF EXISTS image_url;
+ALTER TABLE ai_scans DROP COLUMN IF EXISTS openai_response;
+ALTER TABLE ai_scans DROP COLUMN IF EXISTS model;
 CREATE INDEX IF NOT EXISTS idx_ai_scans_created_at ON ai_scans (created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_ai_scans_user_id    ON ai_scans (user_id);
 CREATE INDEX IF NOT EXISTS idx_ai_scans_product    ON ai_scans (lower(product_name));
@@ -128,17 +130,12 @@ function clip(s, n) {
  * @param {string} [rec.ecoGrade]    eco grade (A-E), when known
  * @param {string} [rec.country]     user's set region country (code), from the app
  * @param {string} [rec.city]        user's set region city, from the app
- * @param {string} [rec.imageBase64] raw image; hashed (not stored) for dedupe
- * @param {string} [rec.imageUrl]    URL of a stored image, if any
- * @param {object} [rec.response]    full OpenAI response JSON
- * @param {string} [rec.model]       model id used
  */
 export function logScan(rec = {}) {
   if (!ready || !pool) return;
   try {
-    const imageHash = rec.imageBase64
-      ? crypto.createHash('sha256').update(String(rec.imageBase64)).digest('hex')
-      : null;
+    const barcode = clip(rec.barcode, 64);
+    const offUrl = barcode ? `https://world.openfoodfacts.org/product/${barcode}` : null;
     const values = [
       clip(rec.userId, 64),
       clip(rec.source, 64),
@@ -146,21 +143,18 @@ export function logScan(rec = {}) {
       clip(rec.ocrText, 8000),
       clip(rec.productName, 300),
       clip(rec.brand, 200),
-      clip(rec.barcode, 64),
+      barcode,
       clip(rec.ecoGrade, 4),
       clip(rec.country, 64),
       clip(rec.city, 120),
-      imageHash,
-      clip(rec.imageUrl, 1000),
-      rec.response != null ? JSON.stringify(rec.response) : null,
-      clip(rec.model, 64),
+      offUrl,
     ];
     pool
       .query(
         `INSERT INTO ai_scans
            (user_id, source, query, ocr_text, product_name, brand, barcode,
-            eco_grade, country, city, image_hash, image_url, openai_response, model)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13::jsonb,$14)`,
+            eco_grade, country, city, off_url)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
         values,
       )
       .catch((e) => console.error('scanStore: insert failed —', e.message));
