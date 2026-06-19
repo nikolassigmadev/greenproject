@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { browseProducts, lookupBarcode, type BrowseResult } from "@/services/openfoodfacts";
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
 import { EnvironmentalImpactCard } from "@/components/EnvironmentalImpactCard";
+import { SwapSuggestions } from "@/components/SwapSuggestions";
 import { cn } from "@/lib/utils";
 import { getVerifiedFlagForBrand } from "@/services/brandFlags";
 import { LaborFlagBanner } from "@/components/LaborFlagBanner";
@@ -431,7 +432,12 @@ const Database = () => {
             </div>
           )}
           {selectedProduct && (
-            <EnvironmentalImpactCard result={selectedProduct} />
+            <>
+              <EnvironmentalImpactCard result={selectedProduct} />
+              <div style={{ marginTop: 24 }}>
+                <SwapSuggestions product={selectedProduct} sectionNumber="02" />
+              </div>
+            </>
           )}
         </DialogContent>
       </Dialog>
