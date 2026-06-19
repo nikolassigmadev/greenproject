@@ -22,7 +22,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { existsSync, readFileSync, writeFileSync, mkdirSync, appendFileSync, chmodSync } from 'fs';
 import { createRequire } from 'module';
-import { initScanStore, logScan, scanStoreReady } from './db/scanStore.js';
+import { initScanStore, logScan, scanStoreReady, logCommunityFlag, updateCommunityFlagStatus } from './db/scanStore.js';
 
 console.log('server.js: imports loaded');
 
@@ -569,6 +569,9 @@ app.post('/api/community-flags', communityFlagLimiter, smallBody, (req, res) => 
     appendFileSync(COMMUNITY_FLAGS_FILE, JSON.stringify(record) + '\n');
     try { chmodSync(COMMUNITY_FLAGS_FILE, 0o600); } catch {}
 
+    // Also send straight to Postgres/Supabase (fire-and-forget; JSONL is backup).
+    logCommunityFlag(record);
+
     res.json({ success: true, id: record.id });
   } catch (error) {
     console.error('Community flag submission error:', error);
@@ -627,6 +630,10 @@ app.patch('/api/admin/community-flags/:id', requireAdmin, smallBody, (req, res) 
     };
 
     writeJsonlRecords(COMMUNITY_FLAGS_FILE, records);
+
+    // Keep the Postgres/Supabase row in sync with the moderation decision.
+    updateCommunityFlagStatus(id, status, typeof note === 'string' ? note.trim() : undefined);
+
     res.json({ success: true, record: records[idx] });
   } catch (error) {
     console.error('Community flag patch error:', error);

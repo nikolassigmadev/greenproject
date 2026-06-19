@@ -48,6 +48,24 @@ CREATE INDEX IF NOT EXISTS idx_ai_scans_created_at ON ai_scans (created_at DESC)
 CREATE INDEX IF NOT EXISTS idx_ai_scans_user_id    ON ai_scans (user_id);
 CREATE INDEX IF NOT EXISTS idx_ai_scans_product    ON ai_scans (lower(product_name));
 CREATE INDEX IF NOT EXISTS idx_ai_scans_barcode    ON ai_scans (barcode);
+
+CREATE TABLE IF NOT EXISTS community_flags (
+  id                 TEXT PRIMARY KEY,
+  status             TEXT NOT NULL DEFAULT 'pending_review',
+  brand_name         TEXT NOT NULL,
+  category           TEXT,
+  severity           TEXT,
+  summary            TEXT,
+  sources            JSONB,
+  submitter_email    TEXT,
+  meets_sourcing_bar BOOLEAN,
+  ip_hash            TEXT,
+  moderator_note     TEXT,
+  submitted_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+  moderated_at       TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_community_flags_status ON community_flags (status);
+CREATE INDEX IF NOT EXISTS idx_community_flags_brand  ON community_flags (lower(brand_name));
 `;
 
 /**
@@ -148,5 +166,62 @@ export function logScan(rec = {}) {
       .catch((e) => console.error('scanStore: insert failed —', e.message));
   } catch (e) {
     console.error('scanStore: logScan error —', e.message);
+  }
+}
+
+/**
+ * Insert one user-submitted community flag into Postgres. Fire-and-forget; the
+ * JSONL file remains the on-disk backup. Idempotent on id.
+ *
+ * @param {object} record the same record written to community-flags.jsonl
+ */
+export function logCommunityFlag(record = {}) {
+  if (!ready || !pool) return;
+  try {
+    const sub = record.submission || {};
+    pool
+      .query(
+        `INSERT INTO community_flags
+           (id, status, brand_name, category, severity, summary, sources,
+            submitter_email, meets_sourcing_bar, ip_hash, submitted_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9,$10,$11)
+         ON CONFLICT (id) DO NOTHING`,
+        [
+          clip(record.id, 64),
+          clip(record.status, 32) || 'pending_review',
+          clip(sub.brandName, 80),
+          clip(sub.category, 64),
+          clip(sub.severity, 32),
+          clip(sub.summary, 300),
+          sub.sources != null ? JSON.stringify(sub.sources) : null,
+          clip(sub.submitterEmail, 200),
+          typeof record.meetsSourcingBar === 'boolean' ? record.meetsSourcingBar : null,
+          clip(record.ipHash, 128),
+          record.submittedAt || new Date().toISOString(),
+        ],
+      )
+      .catch((e) => console.error('scanStore: community flag insert failed —', e.message));
+  } catch (e) {
+    console.error('scanStore: logCommunityFlag error —', e.message);
+  }
+}
+
+/**
+ * Reflect a moderation decision (approve/reject) onto the Postgres row so the
+ * DB stays in sync with the JSONL. Fire-and-forget.
+ */
+export function updateCommunityFlagStatus(id, status, note) {
+  if (!ready || !pool) return;
+  try {
+    pool
+      .query(
+        `UPDATE community_flags
+            SET status = $2, moderator_note = $3, moderated_at = now()
+          WHERE id = $1`,
+        [clip(id, 64), clip(status, 32), note != null ? clip(note, 500) : null],
+      )
+      .catch((e) => console.error('scanStore: community flag update failed —', e.message));
+  } catch (e) {
+    console.error('scanStore: updateCommunityFlagStatus error —', e.message);
   }
 }
