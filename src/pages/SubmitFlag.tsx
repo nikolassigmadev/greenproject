@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   ExternalLink,
+  Copy,
 } from "lucide-react";
 import { toast } from "sonner";
 import { BackButton } from "@/components/BackButton";
@@ -112,6 +113,28 @@ function meetsSourcingBar(sources: SourceDraft[]): boolean {
   if (tier2.length >= 1 && tier3.length >= 2) return true;
 
   return false;
+}
+
+/**
+ * Turn a raw flag id (`cf_<ms>_<hex>`) into display-friendly parts: a tidy
+ * uppercase reference, the submission date, and the full id (kept for copy so
+ * support can still trace the exact record). Returns null for anything that
+ * doesn't match (e.g. the honeypot's "—"), so the UI just hides the block.
+ */
+function parseFlagRef(
+  rawId: string,
+): { ref: string; date: string | null; fullId: string } | null {
+  const m = /^cf_(\d+)_([0-9a-f]+)$/i.exec(rawId);
+  if (!m) return null;
+  const ms = Number(m[1]);
+  const date = Number.isFinite(ms)
+    ? new Date(ms).toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      })
+    : null;
+  return { ref: `CF-${m[2].toUpperCase()}`, date, fullId: rawId };
 }
 
 // ---------------------------------------------------------------------------
@@ -315,6 +338,14 @@ export default function SubmitFlag() {
   // ----- Success view -------------------------------------------------------
 
   if (success) {
+    const flagRef = parseFlagRef(String(success.id));
+    const copyRef = () => {
+      if (!flagRef) return;
+      navigator.clipboard
+        ?.writeText(flagRef.fullId)
+        .then(() => toast.success("Reference copied"))
+        .catch(() => toast.error("Couldn't copy — note it down manually"));
+    };
     return (
       <div
         style={{
@@ -373,20 +404,129 @@ export default function SubmitFlag() {
                 letterSpacing: -0.4,
               }}
             >
-              Thanks — submission #{String(success.id)} is in our queue.
+              Submission received
             </h1>
             <p
               style={{
                 fontSize: 13.5,
                 color: DS.muted,
-                margin: "0 0 24px",
+                margin: "0 0 20px",
                 lineHeight: 1.6,
               }}
             >
-              Our team reviews against the same tier-1/2/3 sourcing bar that
-              powers verified flags. You'll see it on the brand page if it
-              clears.
+              Thanks — your flag is in our review queue. We check it against the
+              same tier-1/2/3 sourcing bar that powers verified flags, and you'll
+              see it on the brand page if it clears.
             </p>
+
+            {flagRef && (
+              <div
+                style={{
+                  border: `1px solid ${DS.hair}`,
+                  borderRadius: 14,
+                  background: DS.bg,
+                  padding: "4px 16px",
+                  margin: "0 0 24px",
+                  textAlign: "left",
+                }}
+              >
+                {/* Reference code */}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 12,
+                    padding: "12px 0",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      letterSpacing: 0.5,
+                      textTransform: "uppercase",
+                      color: DS.muted,
+                    }}
+                  >
+                    Reference
+                  </span>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      minWidth: 0,
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontFamily: DS.mono,
+                        fontSize: 13,
+                        fontWeight: 700,
+                        color: DS.ink,
+                        letterSpacing: 0.3,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {flagRef.ref}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={copyRef}
+                      aria-label="Copy reference"
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        width: 28,
+                        height: 28,
+                        borderRadius: 8,
+                        border: `1px solid ${DS.hair}`,
+                        background: DS.card,
+                        color: DS.muted,
+                        cursor: "pointer",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <Copy style={{ width: 14, height: 14 }} />
+                    </button>
+                  </div>
+                </div>
+                {/* Submitted date */}
+                {flagRef.date && (
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 12,
+                      padding: "12px 0",
+                      borderTop: `1px solid ${DS.hair}`,
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 700,
+                        letterSpacing: 0.5,
+                        textTransform: "uppercase",
+                        color: DS.muted,
+                      }}
+                    >
+                      Submitted
+                    </span>
+                    <span
+                      style={{ fontSize: 13, fontWeight: 600, color: DS.ink2 }}
+                    >
+                      {flagRef.date}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div
               style={{
