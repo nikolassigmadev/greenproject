@@ -11,7 +11,7 @@ import { WATCHLIST_EVENT, loadWatchlist } from "@/utils/watchlist";
 import { SWAP_EVENT } from "@/utils/swapTracking";
 import {
   Search, ChevronRight, ShoppingBag, Trash2, ScanLine, TrendingDown,
-  Eye, GitCompareArrows, Receipt, Flag, ShoppingCart, Share2,
+  Eye, GitCompareArrows, Flag, ShoppingCart, Share2,
 } from "lucide-react";
 import { DS, scoreTone, toneColor } from "@/styles/design-tokens";
 import { StreakMilestones } from "@/components/StreakMilestones";
@@ -230,7 +230,6 @@ function QuickActions({ watchlistCount }: { watchlistCount: number }) {
   const actions = [
     { to: "/watchlist", icon: Eye, label: "Watchlist", badge: watchlistCount },
     { to: "/compare", icon: GitCompareArrows, label: "Compare" },
-    { to: "/receipts", icon: Receipt, label: "Receipts" },
     { to: "/submit-flag", icon: Flag, label: "Flag" },
   ];
   return (

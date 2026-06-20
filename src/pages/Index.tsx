@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { ChevronRight, Camera, Leaf, Shield, BarChart3, Users, Award, Zap, CheckCircle2, AlertTriangle as AlertTriangleIcon, Share, Plus, MoreVertical, X, Search, GitCompareArrows, ScanLine, Eye, Receipt } from "lucide-react";
+import { ChevronRight, Camera, Leaf, Shield, BarChart3, Users, Award, Zap, CheckCircle2, AlertTriangle as AlertTriangleIcon, Share, Plus, MoreVertical, X, Search, GitCompareArrows, ScanLine, Eye } from "lucide-react";
 import { Logo, Wordmark } from "@/components/Logo";
 import { DS, scoreTone, toneColor, toneBg } from "@/styles/design-tokens";
 import { loadScanHistory, type ScanHistoryEntry } from "@/utils/userPreferences";
@@ -442,7 +442,6 @@ export default function Index() {
               { icon: ScanLine, title: "Scan a shelf", desc: "We pick the best-rated product", to: "/shelf", color: DS.good },
               { icon: GitCompareArrows, title: "Compare", desc: "Put two products head-to-head", to: "/compare", color: DS.warn },
               { icon: Eye, title: "Watchlist", desc: "Track brands you're watching", to: "/watchlist", color: "#9B7AAE" },
-              { icon: Receipt, title: "Receipt insights", desc: "Your monthly shopping impact", to: "/receipts", color: "#2E5A7A" },
             ].map((tool) => (
               <Link key={tool.to} to={tool.to} style={{ textDecoration: "none" }}>
                 <div style={{

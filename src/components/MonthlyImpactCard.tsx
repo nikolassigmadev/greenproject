@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ScanLine, TrendingDown, Eye, GitCompareArrows, Receipt, Flag, Share2 } from "lucide-react";
+import { ScanLine, TrendingDown, Eye, GitCompareArrows, Flag, Share2 } from "lucide-react";
 import { DS } from "@/styles/design-tokens";
 import { computeMonthlyImpact, type MonthlyImpact } from "@/utils/impactStats";
 import { WATCHLIST_EVENT, loadWatchlist } from "@/utils/watchlist";
@@ -163,7 +163,6 @@ export function MonthlyImpactCard() {
       }}>
         <ActionChip to="/watchlist" icon={<Eye style={{ width: 13, height: 13 }} />} label="Watchlist" badge={watchlistCount} />
         <ActionChip to="/compare" icon={<GitCompareArrows style={{ width: 13, height: 13 }} />} label="Compare" />
-        <ActionChip to="/receipts" icon={<Receipt style={{ width: 13, height: 13 }} />} label="Receipts" />
         <ActionChip to="/submit-flag" icon={<Flag style={{ width: 13, height: 13 }} />} label="Flag" />
       </div>
     </div>

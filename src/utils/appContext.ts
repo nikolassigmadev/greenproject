@@ -6,7 +6,6 @@
 import { loadPriorities, loadScanHistory, getHistoryStats, type ScanHistoryEntry } from "./userPreferences";
 import { loadWatchlist } from "./watchlist";
 import { loadBasket, getBasketEthicsReport } from "./basketStorage";
-import { loadReceiptScans, computeMonthlyReceiptStats } from "./receiptStorage";
 
 export interface AppContext {
   priorities: {
@@ -30,11 +29,6 @@ export interface AppContext {
     caution: number;
     avoid: number;
     recent: { name: string; brand: string | null; verdict: string }[];
-  };
-  receipts: {
-    monthCount: number;
-    latestMonthEthicalPct: number | null;
-    topFlaggedBrands: string[];
   };
 }
 
@@ -79,9 +73,6 @@ export function buildAppContext(): AppContext {
   const basketReport = getBasketEthicsReport(basket);
   const history = loadScanHistory();
   const stats = getHistoryStats(history);
-  const receipts = loadReceiptScans();
-  const monthly = computeMonthlyReceiptStats(receipts);
-  const latestMonth = monthly[0];
 
   return {
     priorities: {
@@ -115,13 +106,6 @@ export function buildAppContext(): AppContext {
         brand: h.brand,
         verdict: h.verdict.label,
       })),
-    },
-    receipts: {
-      monthCount: monthly.length,
-      latestMonthEthicalPct: latestMonth?.ethicalSpendPct ?? null,
-      topFlaggedBrands: (latestMonth?.flaggedBrands ?? [])
-        .slice(0, 5)
-        .map((f) => f.brand),
     },
   };
 }
@@ -168,16 +152,6 @@ export function buildContextBrief(ctx: AppContext): string {
         .join("; ");
       lines.push(`Recent scans: ${recent}.`);
     }
-  }
-
-  if (ctx.receipts.monthCount > 0 && ctx.receipts.latestMonthEthicalPct !== null) {
-    lines.push(
-      `Receipts: last month was ${ctx.receipts.latestMonthEthicalPct}% ethical spend.${
-        ctx.receipts.topFlaggedBrands.length
-          ? ` Top flagged brands on receipts: ${ctx.receipts.topFlaggedBrands.join(", ")}.`
-          : ""
-      }`,
-    );
   }
 
   return lines.join("\n");

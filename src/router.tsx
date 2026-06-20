@@ -16,6 +16,7 @@ import Preferences from "./pages/Preferences";
 import Dashboard from "./pages/Dashboard";
 import ShoppingList from "./pages/ShoppingList";
 import AboutUs from "./pages/AboutUs";
+import SupplyChain from "./pages/SupplyChain";
 import Methodology from "./pages/Methodology";
 import Privacy from "./pages/Privacy";
 import { CalAIShowcase } from "./components/CalAIShowcase";
@@ -23,7 +24,6 @@ import ChatGPTScan from "./pages/ChatGPTScan";
 import Watchlist from "./pages/Watchlist";
 import Compare from "./pages/Compare";
 import SubmitFlag from "./pages/SubmitFlag";
-import ReceiptAnalytics from "./pages/ReceiptAnalytics";
 import ShelfScan from "./pages/ShelfScan";
 
 // Import admin components - uncomment to enable
@@ -103,6 +103,10 @@ export const router = createBrowserRouter([
         element: <AboutUs />,
       },
       {
+        path: "/supply-chain",
+        element: <SupplyChain />,
+      },
+      {
         path: "/methodology",
         element: <Methodology />,
       },
@@ -125,10 +129,6 @@ export const router = createBrowserRouter([
       {
         path: "/submit-flag",
         element: <SubmitFlag />,
-      },
-      {
-        path: "/receipts",
-        element: <ReceiptAnalytics />,
       },
       {
         path: "/design-system",

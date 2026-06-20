@@ -79,41 +79,6 @@ export const extractProductCode = async (imageDataUrl: string): Promise<string> 
 };
 
 /**
- * Extract product names from a receipt image using OpenAI Vision.
- */
-export const extractReceiptProducts = async (file: File): Promise<string[]> => {
-  const base64Image = await new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      resolve(result.includes(',') ? result.split(',')[1] : result);
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-
-  const response = await fetch(`${getBackendUrl()}/api/openai/analyze-image`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ imageBase64: base64Image, task: 'extract-receipt' }),
-  });
-
-  if (!response.ok) {
-    const errData = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
-    throw new Error(errData.error || `Backend error: ${response.status}`);
-  }
-
-  const data = await response.json();
-  const text: string = data.content || '';
-
-  return text
-    .split('\n')
-    .map((l: string) => l.replace(/^[\d\-.*]+\s*/, '').trim())
-    .filter((l: string) => l.length >= 3)
-    .slice(0, 15);
-};
-
-/**
  * Health check - verify API connection via backend
  */
 export const checkOpenAIConnection = async (): Promise<boolean> => {

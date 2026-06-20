@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Home, Clock, Info, SlidersHorizontal } from "lucide-react";
+import { Home, Clock, Globe, SlidersHorizontal } from "lucide-react";
 import {
   createContext,
   useContext,
@@ -49,7 +49,7 @@ const NAV_LEFT = [
 
 const NAV_RIGHT = [
   { path: "/preferences", label: "Values", icon: SlidersHorizontal },
-  { path: "/about",       label: "About",  icon: Info              },
+  { path: "/supply-chain", label: "Global", icon: Globe             },
 ];
 
 function ScanIcon({ color, size = 23 }: { color: string; size?: number }) {

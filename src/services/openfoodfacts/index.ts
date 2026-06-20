@@ -536,7 +536,7 @@ const searchOneVariant = async (
  *
  * Internally generates candidate queries via generateSearchVariations() and
  * tries each in order until one returns results. This means every caller —
- * manual search, OCR flow, shopping list, receipt scanner — automatically
+ * manual search, OCR flow, shopping list — automatically
  * benefits from progressive query simplification without any extra logic.
  *
  * "Doritos Cool Ranch" → tries "Doritos Cool Ranch" → "Doritos Cool"

@@ -32,7 +32,7 @@ interface ChatResponse {
 
 /**
  * Analyzes product image using a registered server-side task.
- * Valid tasks: extract-text, extract-barcode, extract-receipt,
+ * Valid tasks: extract-text, extract-barcode,
  *   extract-brand, extract-product-name, extract-certifications, scan-product
  */
 export const analyzeProductImage = async (
