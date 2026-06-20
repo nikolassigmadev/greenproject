@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS ai_scans (
   city            TEXT,
   off_url         TEXT,
   openai_response TEXT,
+  bought          TEXT,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 -- Idempotent upgrades for tables created before these columns existed.
@@ -42,6 +43,8 @@ ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS city            TEXT;
 ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS off_url         TEXT;
 -- Raw string OpenAI identified the product as, e.g. "Cadbury Dairy Milk Caramel".
 ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS openai_response TEXT;
+-- Did the user buy the product or skip it? 'YES' (bought) / 'NO' (skipped) / null.
+ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS bought          TEXT;
 -- Drop columns we no longer store.
 ALTER TABLE ai_scans DROP COLUMN IF EXISTS image_hash;
 ALTER TABLE ai_scans DROP COLUMN IF EXISTS image_url;
@@ -131,12 +134,14 @@ function clip(s, n) {
  * @param {string} [rec.country]     user's set region country (code), from the app
  * @param {string} [rec.city]        user's set region city, from the app
  * @param {string} [rec.openaiResponse] raw product string OpenAI identified (brand + product)
+ * @param {string} [rec.bought]        'YES' if the user bought it, 'NO' if skipped, else null
  */
 export function logScan(rec = {}) {
   if (!ready || !pool) return;
   try {
     const barcode = clip(rec.barcode, 64);
     const offUrl = barcode ? `https://world.openfoodfacts.org/product/${barcode}` : null;
+    const bought = rec.bought === 'YES' || rec.bought === 'NO' ? rec.bought : null;
     const values = [
       clip(rec.userId, 64),
       clip(rec.source, 64),
@@ -148,13 +153,14 @@ export function logScan(rec = {}) {
       clip(rec.city, 120),
       offUrl,
       clip(rec.openaiResponse, 500),
+      bought,
     ];
     pool
       .query(
         `INSERT INTO ai_scans
            (user_id, source, product_name, brand, barcode,
-            eco_grade, country, city, off_url, openai_response)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+            eco_grade, country, city, off_url, openai_response, bought)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
         values,
       )
       .catch((e) => console.error('scanStore: insert failed —', e.message));

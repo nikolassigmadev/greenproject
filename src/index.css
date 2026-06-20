@@ -32,6 +32,11 @@
   --ds-hero-gradient: radial-gradient(ellipse at 50% 35%, #F4DCB8 0%, #E8C58A 45%, #D9A86A 100%);
   --ds-brand: #1A1614;
 
+  /* GoodScan logo — exact brand colors for the scan-frame mark + wordmark.
+     Light: ink-black brackets, deep green check/"scan". */
+  --gs-bracket: #0B0B0B;
+  --gs-green: #1F7A4D;
+
   /* Brand — editorial product-results palette */
   --brand-ink: #1A1614;
   --brand-good: #1F6B4E;
@@ -117,6 +122,10 @@
   --ds-sticky-bg: rgba(18,18,18,0.94);
   --ds-hero-gradient: radial-gradient(ellipse at 50% 35%, #3A2E1E 0%, #2E2418 45%, #1E1812 100%);
   --ds-brand: #E8E4DF;
+
+  /* GoodScan logo — dark: white brackets, bright green check/"scan". */
+  --gs-bracket: #FFFFFF;
+  --gs-green: #3FD089;
 
   --brand-ink: #E8E4DF;
   --brand-good: #3DBA82;

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { ChevronRight, Camera, Leaf, Shield, BarChart3, Users, Award, Zap, CheckCircle2, AlertTriangle as AlertTriangleIcon, Share, Plus, MoreVertical, X, Search, GitCompareArrows, ScanLine, Eye, Receipt } from "lucide-react";
-import { Logo } from "@/components/Logo";
+import { Logo, Wordmark } from "@/components/Logo";
 import { DS, scoreTone, toneColor, toneBg } from "@/styles/design-tokens";
 import { loadScanHistory, type ScanHistoryEntry } from "@/utils/userPreferences";
 import {
@@ -345,9 +345,7 @@ export default function Index() {
         <div style={{ paddingTop: "max(60px, calc(env(safe-area-inset-top, 0px) + 16px))", marginBottom: 24 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "0 0 6px" }}>
             <Logo size={28} />
-            <p style={{ fontSize: 13, fontWeight: 600, color: DS.good, margin: 0, letterSpacing: 0.3 }}>
-              GoodScan
-            </p>
+            <Wordmark fontSize={16} />
           </div>
           <h1 style={{ fontSize: 30, fontWeight: 800, margin: 0, letterSpacing: -0.5, lineHeight: 1.15 }}>
             Shop with your <span style={{ color: DS.good }}>Values</span>.

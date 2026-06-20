@@ -350,9 +350,9 @@ export default function OpenFoodFactsDetail() {
     });
     // Record to the global scan-analytics DB (anonymous, fire-and-forget).
     // When we arrived from a camera scan, attach exactly what OpenAI identified
-    // the product as — consume-once so it never leaks to a later, unrelated view.
+    // the product as. Left in sessionStorage (not consumed) so the Decision bar
+    // can attach it to the buy/skip row too; a fresh scan clears it.
     const openaiResponse = fromScan ? sessionStorage.getItem("scan_openai_response") : null;
-    if (openaiResponse) sessionStorage.removeItem("scan_openai_response");
     logScan({
       barcode: product.barcode,
       name: product.productName || "Unknown Product",
@@ -1292,7 +1292,12 @@ export default function OpenFoodFactsDetail() {
       </main>
 
       {/* Fixed buy/skip decision — the page's primary call to action. */}
-      <DecisionBar product={product} verdictKey={verdict.key} onSeeBetter={scrollToSwaps} />
+      <DecisionBar
+        product={product}
+        verdictKey={verdict.key}
+        onSeeBetter={scrollToSwaps}
+        openaiResponse={fromScan ? sessionStorage.getItem("scan_openai_response") : null}
+      />
 
       <style>{`
         @keyframes off-spin { to { transform: rotate(360deg); } }

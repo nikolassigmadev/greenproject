@@ -1,5 +1,5 @@
 import { AboutChatWidget } from "@/components/AboutChatWidget";
-import { Logo } from "@/components/Logo";
+import { Logo, Wordmark } from "@/components/Logo";
 import { Link } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
 import { DS } from "@/styles/design-tokens";
@@ -14,7 +14,7 @@ export default function AboutUs() {
           <div style={{ padding: "8px 0 22px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 30, fontWeight: 800, letterSpacing: -0.6 }}>
               <Logo size={40} />
-              GoodScan
+              <Wordmark fontSize={30} />
             </div>
             <div style={{ fontSize: 16, color: DS.muted, marginTop: 6, lineHeight: 1.4 }}>
               Making ethical shopping simple — scan a product and instantly understand its impact.

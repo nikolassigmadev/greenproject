@@ -22,6 +22,7 @@ const BG = '#F1EBDD';
 const INK = '#1A1614';
 const INK_MUTED = '#6B5E52';
 const GREEN = '#1F6B4E';
+const LOGO_GREEN = '#1F7A4D'; // exact brand green for the logo mark + wordmark
 const GREEN_SOFT = '#E2EFE5';
 const HAIR = '#D7CFBF';
 const AMBER = '#C0822A';
@@ -78,6 +79,52 @@ function drawPill(
   return x + w;
 }
 
+/** Draws the GoodScan scan-frame mark on a 48-unit grid scaled to `px` pixels. */
+function drawLogoMark(ctx: CanvasRenderingContext2D, x: number, y: number, px: number): void {
+  const s = px / 48;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(s, s);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  // Corner brackets (ink on the light share card)
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 2.4;
+  ctx.beginPath();
+  ctx.moveTo(5, 13.4); ctx.lineTo(5, 8); ctx.quadraticCurveTo(5, 5, 8, 5); ctx.lineTo(13.4, 5);
+  ctx.moveTo(34.6, 5); ctx.lineTo(40, 5); ctx.quadraticCurveTo(43, 5, 43, 8); ctx.lineTo(43, 13.4);
+  ctx.moveTo(43, 34.6); ctx.lineTo(43, 40); ctx.quadraticCurveTo(43, 43, 40, 43); ctx.lineTo(34.6, 43);
+  ctx.moveTo(13.4, 43); ctx.lineTo(8, 43); ctx.quadraticCurveTo(5, 43, 5, 40); ctx.lineTo(5, 34.6);
+  ctx.stroke();
+  // Checkmark (brand green)
+  ctx.strokeStyle = LOGO_GREEN;
+  ctx.lineWidth = 4.6;
+  ctx.beginPath();
+  ctx.moveTo(12.8, 24.5); ctx.lineTo(21.2, 33.4); ctx.lineTo(35.7, 17.4);
+  ctx.stroke();
+  ctx.restore();
+}
+
+/** Draws the full brand lockup (mark + two-tone "goodscan" wordmark + tagline). */
+function drawBrandHeader(ctx: CanvasRenderingContext2D): void {
+  const markPx = 56;
+  drawLogoMark(ctx, 64, 52, markPx);
+  const wx = 64 + markPx + 18;
+  // Wordmark: "good" (ink) + "scan" (green), baseline centered on the mark
+  ctx.textBaseline = 'alphabetic';
+  ctx.font = '800 44px Inter, system-ui, sans-serif';
+  ctx.fillStyle = INK;
+  ctx.fillText('good', wx, 52 + markPx / 2 + 16);
+  const goodW = ctx.measureText('good').width;
+  ctx.fillStyle = LOGO_GREEN;
+  ctx.fillText('scan', wx + goodW, 52 + markPx / 2 + 16);
+  // Tagline under the lockup, aligned to the page margin
+  ctx.textBaseline = 'top';
+  ctx.fillStyle = INK_MUTED;
+  ctx.font = '500 22px Inter, system-ui, sans-serif';
+  ctx.fillText('Ethical shopping, scanned.', 64, 52 + markPx + 14);
+}
+
 export function generateSwapShareCard(input: SwapCardInput): string {
   const canvas = document.createElement('canvas');
   canvas.width = W;
@@ -91,14 +138,8 @@ export function generateSwapShareCard(input: SwapCardInput): string {
   ctx.fillStyle = GREEN;
   ctx.fillRect(0, 0, W, 14);
 
-  // logo wordmark + tagline
-  ctx.textBaseline = 'top';
-  ctx.fillStyle = GREEN;
-  ctx.font = '700 38px Inter, system-ui, sans-serif';
-  ctx.fillText('GoodScan', 64, 64);
-  ctx.fillStyle = INK_MUTED;
-  ctx.font = '500 22px Inter, system-ui, sans-serif';
-  ctx.fillText('Ethical shopping, scanned.', 64, 116);
+  // logo lockup + tagline
+  drawBrandHeader(ctx);
 
   // headline
   ctx.fillStyle = INK;
@@ -306,14 +347,8 @@ export function generateProductShareCard(input: ProductCardInput): string {
   ctx.fillStyle = GREEN;
   ctx.fillRect(0, 0, W, 14);
 
-  // logo + tagline
-  ctx.textBaseline = 'top';
-  ctx.fillStyle = GREEN;
-  ctx.font = '700 38px Inter, system-ui, sans-serif';
-  ctx.fillText('GoodScan', 64, 64);
-  ctx.fillStyle = INK_MUTED;
-  ctx.font = '500 22px Inter, system-ui, sans-serif';
-  ctx.fillText('Ethical shopping, scanned.', 64, 116);
+  // logo lockup + tagline
+  drawBrandHeader(ctx);
 
   // "I scanned"
   ctx.fillStyle = INK_MUTED;
@@ -416,13 +451,8 @@ export function generateImpactShareCard(input: ImpactCardInput): string {
   ctx.fillStyle = GREEN;
   ctx.fillRect(0, 0, W, 14);
 
-  ctx.textBaseline = 'top';
-  ctx.fillStyle = GREEN;
-  ctx.font = '700 38px Inter, system-ui, sans-serif';
-  ctx.fillText('GoodScan', 64, 64);
-  ctx.fillStyle = INK_MUTED;
-  ctx.font = '500 22px Inter, system-ui, sans-serif';
-  ctx.fillText('Ethical shopping, scanned.', 64, 116);
+  // logo lockup + tagline
+  drawBrandHeader(ctx);
 
   // headline
   ctx.fillStyle = INK;

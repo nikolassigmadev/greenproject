@@ -3,7 +3,7 @@ import { Camera, Home, ShoppingCart, BarChart3, Settings, Info } from "lucide-re
 import { useState, useEffect } from "react";
 import { loadBasket } from "@/utils/basketStorage";
 import { ThemeToggleCompact } from "@/components/ThemeToggle";
-import { Logo } from "@/components/Logo";
+import { Logo, Wordmark } from "@/components/Logo";
 import { DS } from "@/styles/design-tokens";
 
 const navItems = [
@@ -52,7 +52,7 @@ export function Header() {
       <div className="md:hidden" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 16px", height: 48 }}>
         <Link to="/" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none" }}>
           <Logo size={26} />
-          <span style={{ fontWeight: 700, fontSize: 16, color: DS.ink }}>GoodScan</span>
+          <Wordmark fontSize={17} />
         </Link>
         <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
           <ThemeToggleCompact />
@@ -100,7 +100,7 @@ export function Header() {
       <div className="hidden md:flex" style={{ maxWidth: 1200, margin: "0 auto", alignItems: "center", justifyContent: "space-between", height: 56, padding: "0 24px" }}>
         <Link to="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
           <Logo size={30} />
-          <span style={{ fontWeight: 700, fontSize: 18, color: DS.ink }}>GoodScan</span>
+          <Wordmark fontSize={19} />
         </Link>
         <nav style={{ display: "flex", alignItems: "center", gap: 4 }} aria-label="Main navigation">
           {navItems.filter(i => i.path !== "/scan").map((item) => {

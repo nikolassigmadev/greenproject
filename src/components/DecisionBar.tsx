@@ -7,6 +7,7 @@ import { getLaborAllegationCount } from "@/utils/laborCheck";
 import {
   recordDecision, getDecision, clearDecision, DECISIONS_EVENT, type DecisionOutcome,
 } from "@/utils/decisions";
+import { logScan } from "@/utils/scanLogger";
 import { toast } from "sonner";
 
 type Lean = "buy" | "skip" | "neutral";
@@ -48,9 +49,11 @@ interface DecisionBarProps {
   verdictKey: string;
   /** Scroll the page to the "better swaps" section. */
   onSeeBetter: () => void;
+  /** What OpenAI identified the product as, when arrived from a camera scan. */
+  openaiResponse?: string | null;
 }
 
-export function DecisionBar({ product, verdictKey, onSeeBetter }: DecisionBarProps) {
+export function DecisionBar({ product, verdictKey, onSeeBetter, openaiResponse }: DecisionBarProps) {
   const [decision, setDecision] = useState(() => getDecision(product.barcode));
   const { lean, color, headline } = meaning(verdictKey);
 
@@ -70,6 +73,15 @@ export function DecisionBar({ product, verdictKey, onSeeBetter }: DecisionBarPro
       verdict: verdictKey,
       ecoGrade: product.ecoscoreGrade,
     });
+    // Log the buy/skip decision to the backend (Supabase ai_scans.bought = YES/NO).
+    logScan({
+      barcode: product.barcode,
+      name: product.productName || "Unknown Product",
+      brand: product.brand,
+      ecoGrade: product.ecoscoreGrade,
+      openaiResponse,
+      bought: outcome === "bought" ? "YES" : "NO",
+    });
     if (outcome === "bought") {
       addToBasket({
         barcode: product.barcode,
@@ -82,7 +94,7 @@ export function DecisionBar({ product, verdictKey, onSeeBetter }: DecisionBarPro
         laborAllegations: getLaborAllegationCount(product.brand, product.productName),
         co2Per100g: product.carbonFootprint100g ?? null,
       });
-      toast.success("Added to your cart");
+      // No toast — the bar itself confirms with "In your cart".
     } else {
       removeFromBasket(product.barcode);
       toast("Skipped — see a cleaner pick below", { icon: "👇" });

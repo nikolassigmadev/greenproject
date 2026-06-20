@@ -251,12 +251,11 @@ function WelcomeStep() {
   return (
     <div style={{ textAlign: "center", paddingTop: 18 }}>
       <div style={{
-        width: 92, height: 92, borderRadius: 28, margin: "0 auto 22px",
-        background: DS.card, display: "flex", alignItems: "center", justifyContent: "center",
-        boxShadow: "0 12px 36px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.04)",
+        width: 92, height: 92, margin: "0 auto 22px",
+        display: "flex", alignItems: "center", justifyContent: "center",
         animation: "ob-pop 0.6s cubic-bezier(0.22,1,0.36,1) both",
       }}>
-        <Logo size={52} />
+        <Logo size={68} />
       </div>
       <StaggerItem delay={120}>
         <h1 style={{ fontSize: 30, fontWeight: 800, letterSpacing: "-0.03em", margin: "0 0 8px", lineHeight: 1.1 }}>

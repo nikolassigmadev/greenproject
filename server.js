@@ -1768,19 +1768,20 @@ const scanLimiter = rateLimit({
 /**
  * POST /api/scans — public, fire-and-forget from the client. Logs one scanned
  * product. Body: { barcode?, name, brand?, ecoGrade?, country?, anonId?,
- * openaiResponse? }. openaiResponse is the raw string the OpenAI scan identified
- * the product as (brand + product), stored in ai_scans.openai_response.
+ * openaiResponse?, bought? }. openaiResponse is the raw string the OpenAI scan
+ * identified the product as; bought is 'YES' (user bought it) or 'NO' (skipped),
+ * stored in ai_scans.openai_response / ai_scans.bought.
  */
 app.post('/api/scans', scanLimiter, smallBody, (req, res) => {
   try {
-    const { barcode, name, brand, ecoGrade, country, city, anonId, openaiResponse } = req.body || {};
+    const { barcode, name, brand, ecoGrade, country, city, anonId, openaiResponse, bought } = req.body || {};
     if (!name || typeof name !== 'string') {
       return res.status(400).json({ success: false, error: 'name is required' });
     }
     // SQLite "most-scanned" counter (internally no-ops if unavailable).
     recordScan({ barcode, name, brand, ecoGrade, country, anonId });
     // Rich Postgres log of every scan (no-ops if DATABASE_URL unset/unreachable).
-    logScan({ source: 'scan', userId: anonId, productName: name, brand, barcode, ecoGrade, country, city, openaiResponse });
+    logScan({ source: bought ? 'decision' : 'scan', userId: anonId, productName: name, brand, barcode, ecoGrade, country, city, openaiResponse, bought });
     // Only fail if BOTH stores are unavailable.
     if (!scanDb && !scanStoreReady()) {
       return res.status(503).json({ success: false, error: 'Scan logging unavailable' });

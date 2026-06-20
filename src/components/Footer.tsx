@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Logo } from "@/components/Logo";
+import { Logo, Wordmark } from "@/components/Logo";
 import { DS } from "@/styles/design-tokens";
 
 export function Footer() {
@@ -17,7 +17,7 @@ export function Footer() {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 24 }}>
           <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <Logo size={22} />
-            <span style={{ fontWeight: 700, color: DS.ink }}>GoodScan</span>
+            <Wordmark fontSize={16} />
           </span>
           <nav style={{ display: "flex", alignItems: "center", gap: 24 }} aria-label="Footer navigation">
             {[
