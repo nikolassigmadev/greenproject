@@ -36,6 +36,8 @@ export interface ScanLogInput {
   name: string;
   brand?: string | null;
   ecoGrade?: string | null;
+  /** Raw string OpenAI identified the product as (brand + product), when scanned via the camera. */
+  openaiResponse?: string | null;
 }
 
 export function logScan(input: ScanLogInput): void {
@@ -48,6 +50,7 @@ export function logScan(input: ScanLogInput): void {
       name: input.name,
       brand: input.brand ?? null,
       ecoGrade: input.ecoGrade ?? null,
+      openaiResponse: input.openaiResponse ?? null,
       country: region?.countryCode ?? null,
       city: region?.city ?? null,
       anonId: getAnonId(),

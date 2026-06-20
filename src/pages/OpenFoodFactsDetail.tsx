@@ -24,6 +24,8 @@ import { findVerifiedEthics, CERTIFICATION_BADGES, getPrimaryCertification, CATE
 import { EnvironmentalImpactCard } from "@/components/EnvironmentalImpactCard";
 import { IngredientConcernsCard } from "@/components/IngredientConcernsCard";
 import { SwapSuggestions } from "@/components/SwapSuggestions";
+import { DecisionBar } from "@/components/DecisionBar";
+import { useBottomNav } from "@/components/BottomNav";
 import { findIngredientFlagsInText } from "@/services/ingredientFlags";
 import { sendChatMessage } from "@/services/api/backend-client";
 import { cn } from "@/lib/utils";
@@ -248,8 +250,19 @@ export default function OpenFoodFactsDetail() {
   const [cleanName, setCleanName]           = useState<string | null>(null);
   const [mounted, setMounted]               = useState(false);
   const heroRef = useRef<HTMLDivElement>(null);
+  const swapsRef = useRef<HTMLDivElement>(null);
+  const { setHidden: setBottomNavHidden } = useBottomNav();
+  const scrollToSwaps = () => swapsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
 
   useEffect(() => { if (barcode) loadProduct(barcode); }, [barcode]);
+
+  // Focused decision context: hide the floating bottom nav while a product is
+  // shown so the fixed Decision bar owns the bottom. Restored when we leave.
+  useEffect(() => {
+    if (!product) return;
+    setBottomNavHidden(true);
+    return () => setBottomNavHidden(false);
+  }, [product, setBottomNavHidden]);
 
   useEffect(() => {
     if (fromScan) {
@@ -336,11 +349,16 @@ export default function OpenFoodFactsDetail() {
       labels: product.labels,
     });
     // Record to the global scan-analytics DB (anonymous, fire-and-forget).
+    // When we arrived from a camera scan, attach exactly what OpenAI identified
+    // the product as — consume-once so it never leaks to a later, unrelated view.
+    const openaiResponse = fromScan ? sessionStorage.getItem("scan_openai_response") : null;
+    if (openaiResponse) sessionStorage.removeItem("scan_openai_response");
     logScan({
       barcode: product.barcode,
       name: product.productName || "Unknown Product",
       brand: product.brand,
       ecoGrade: product.ecoscoreGrade,
+      openaiResponse,
     });
   }, [product?.barcode]);
 
@@ -420,13 +438,25 @@ export default function OpenFoodFactsDetail() {
   const loadProduct = async (code: string) => {
     setLoading(true);
     setMounted(false);
+    setError(null);
+    // A transient failure (backend proxy hiccup, OFF timeout/rate-limit) comes
+    // back as a network-ish error — NOT a genuine "not found". Retry those a
+    // couple of times so a one-off blip doesn't masquerade as "doesn't exist".
+    const isTransient = (e?: string | null) =>
+      !!e && /tim(e|ed)\s*out|timeout|network|abort|fetch|unreachable|signal|failed to/i.test(e);
     try {
-      const result = await lookupBarcode(code);
+      let result = await lookupBarcode(code);
+      for (let attempt = 0; !result.found && isTransient(result.error) && attempt < 2; attempt++) {
+        await new Promise((r) => setTimeout(r, 600 * (attempt + 1)));
+        result = await lookupBarcode(code);
+      }
       if (result.found) {
         setProduct(result);
       } else {
         const cached = loadScanHistory().find(h => h.barcode === code);
         if (cached) setProduct(buildFromCache(cached));
+        else if (isTransient(result.error))
+          setError("Couldn't reach OpenFoodFacts. Check your connection and try again.");
         else setError("Product not found in OpenFoodFacts database");
       }
     } catch {
@@ -668,7 +698,7 @@ export default function OpenFoodFactsDetail() {
         </div>
       </div>
 
-      <main style={{ paddingBottom: 96, maxWidth: 560, margin: "0 auto", background: EDITORIAL.paper, minHeight: "100dvh" }}>
+      <main style={{ paddingBottom: 150, maxWidth: 560, margin: "0 auto", background: EDITORIAL.paper, minHeight: "100dvh" }}>
 
         <div ref={heroRef} style={{ position: "relative", height: 280, overflow: "hidden", background: "var(--ds-hero-gradient, radial-gradient(ellipse at 50% 35%, #F4DCB8 0%, #E8C58A 45%, #D9A86A 100%))" }}>
           <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(rgba(0,0,0,0.04) 1px, transparent 1px)", backgroundSize: "3px 3px", opacity: 0.55 }} />
@@ -1158,7 +1188,7 @@ export default function OpenFoodFactsDetail() {
           </section>
 
           {/* Better swaps — reason-aware ethical alternatives */}
-          <section style={{ opacity: mounted ? 1 : 0, transform: mounted ? "translateY(0)" : "translateY(10px)", transition: "all 0.5s ease 0.45s" }}>
+          <section ref={swapsRef} style={{ scrollMarginTop: 80, opacity: mounted ? 1 : 0, transform: mounted ? "translateY(0)" : "translateY(10px)", transition: "all 0.5s ease 0.45s" }}>
             <SwapSuggestions product={product} />
           </section>
 
@@ -1246,22 +1276,7 @@ export default function OpenFoodFactsDetail() {
             </div>
           </div>
 
-          {/* Add to cart */}
-          <button
-            onClick={handleCartToggle}
-            style={{
-              width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-              padding: "14px 0", borderRadius: 14, marginBottom: 16,
-              background: inBasket ? EDITORIAL.greenSoft : EDITORIAL.card,
-              color: inBasket ? EDITORIAL.green : EDITORIAL.ink2,
-              border: `1.5px solid ${inBasket ? EDITORIAL.green : EDITORIAL.line}`,
-              fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: DS.font,
-              transition: "all 0.2s ease",
-            }}
-          >
-            {inBasket ? <Check style={{ width: 16, height: 16 }} /> : <ShoppingCart style={{ width: 16, height: 16 }} />}
-            {inBasket ? "Saved to cart" : "Add to cart"}
-          </button>
+          {/* The Buy/Skip decision now lives in the fixed DecisionBar below. */}
 
           {/* Disclaimer */}
           <div style={{
@@ -1276,7 +1291,8 @@ export default function OpenFoodFactsDetail() {
         </div>
       </main>
 
-
+      {/* Fixed buy/skip decision — the page's primary call to action. */}
+      <DecisionBar product={product} verdictKey={verdict.key} onSeeBetter={scrollToSwaps} />
 
       <style>{`
         @keyframes off-spin { to { transform: rotate(360deg); } }

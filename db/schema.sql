@@ -18,8 +18,12 @@ CREATE TABLE IF NOT EXISTS ai_scans (
   country         TEXT,          -- user's set region country code (from the app)
   city            TEXT,          -- user's set region city (from the app)
   off_url         TEXT,          -- Open Food Facts product page URL (from barcode)
+  openai_response TEXT,          -- raw string OpenAI identified the product as
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- If your table predates this column, add it idempotently:
+ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS openai_response TEXT;
 
 CREATE INDEX IF NOT EXISTS idx_ai_scans_created_at ON ai_scans (created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_ai_scans_user_id    ON ai_scans (user_id);

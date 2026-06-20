@@ -841,7 +841,7 @@ const Scan = () => {
       // than a destructive toast that vanishes and leaves a black screen.
       setCameraError({ title: errorMessage, suggestion });
     }
-  }, []);
+  }, [toast]);
 
   // Stop camera
   const stopCamera = useCallback(() => {
@@ -1273,8 +1273,9 @@ const Scan = () => {
     setProductUnknown(false);
     setNotFoundQuery(null);
     setShowManualCorrection(false);
-    // Clear stale OCR name from previous scan
+    // Clear stale OCR name / OpenAI identification from a previous scan
     sessionStorage.removeItem('ocr_product_name');
+    sessionStorage.removeItem('scan_openai_response');
 
     try {
       // Step 1: OpenAI identifies the product
@@ -1295,6 +1296,13 @@ const Scan = () => {
       if (ocrProductName) {
         sessionStorage.setItem('ocr_product_name', ocrProductName);
       }
+      // The full string OpenAI identified (brand + product). Carried to the
+      // detail page so the scan log records exactly what the model saw
+      // (Supabase ai_scans.openai_response).
+      const openaiIdentified = [identified.brandName, identified.productName]
+        .filter((s) => s && !isUnknownResponse(s)).join(' ').trim();
+      if (openaiIdentified) sessionStorage.setItem('scan_openai_response', openaiIdentified);
+      else sessionStorage.removeItem('scan_openai_response');
 
       // Step 1b: Check hardcoded barcode map before anything else
       setScanStage("Checking local product database...");
@@ -1505,6 +1513,8 @@ const Scan = () => {
         if (topResults.length > 0) {
           console.log(`✅ [manual] Found results for: "${query}"`);
           sessionStorage.removeItem('ocr_product_name');
+          // Manual search isn't an OpenAI identification — don't carry one over.
+          sessionStorage.removeItem('scan_openai_response');
           sessionStorage.setItem('scan_candidates', JSON.stringify(topResults));
           setShowSearch(false);
           navigate(`/product-off/${topResults[0].barcode}?from=scan`);

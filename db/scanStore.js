@@ -31,18 +31,20 @@ CREATE TABLE IF NOT EXISTS ai_scans (
   country         TEXT,
   city            TEXT,
   off_url         TEXT,
+  openai_response TEXT,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 -- Idempotent upgrades for tables created before these columns existed.
-ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS barcode   TEXT;
-ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS eco_grade TEXT;
-ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS country   TEXT;
-ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS city      TEXT;
-ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS off_url   TEXT;
+ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS barcode         TEXT;
+ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS eco_grade       TEXT;
+ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS country         TEXT;
+ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS city            TEXT;
+ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS off_url         TEXT;
+-- Raw string OpenAI identified the product as, e.g. "Cadbury Dairy Milk Caramel".
+ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS openai_response TEXT;
 -- Drop columns we no longer store.
 ALTER TABLE ai_scans DROP COLUMN IF EXISTS image_hash;
 ALTER TABLE ai_scans DROP COLUMN IF EXISTS image_url;
-ALTER TABLE ai_scans DROP COLUMN IF EXISTS openai_response;
 ALTER TABLE ai_scans DROP COLUMN IF EXISTS model;
 ALTER TABLE ai_scans DROP COLUMN IF EXISTS query;
 ALTER TABLE ai_scans DROP COLUMN IF EXISTS ocr_text;
@@ -128,6 +130,7 @@ function clip(s, n) {
  * @param {string} [rec.ecoGrade]    eco grade (A-E), when known
  * @param {string} [rec.country]     user's set region country (code), from the app
  * @param {string} [rec.city]        user's set region city, from the app
+ * @param {string} [rec.openaiResponse] raw product string OpenAI identified (brand + product)
  */
 export function logScan(rec = {}) {
   if (!ready || !pool) return;
@@ -144,13 +147,14 @@ export function logScan(rec = {}) {
       clip(rec.country, 64),
       clip(rec.city, 120),
       offUrl,
+      clip(rec.openaiResponse, 500),
     ];
     pool
       .query(
         `INSERT INTO ai_scans
            (user_id, source, product_name, brand, barcode,
-            eco_grade, country, city, off_url)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+            eco_grade, country, city, off_url, openai_response)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
         values,
       )
       .catch((e) => console.error('scanStore: insert failed —', e.message));
