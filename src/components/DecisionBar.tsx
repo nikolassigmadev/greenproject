@@ -52,11 +52,13 @@ interface DecisionBarProps {
   verdictKey: string;
   /** Scroll the page to the "better swaps" section. */
   onSeeBetter: () => void;
+  /** Whether the "Better swaps" section actually has picks to scroll to. */
+  hasSwaps?: boolean;
   /** What OpenAI identified the product as, when arrived from a camera scan. */
   openaiResponse?: string | null;
 }
 
-export function DecisionBar({ product, verdictKey, onSeeBetter, openaiResponse }: DecisionBarProps) {
+export function DecisionBar({ product, verdictKey, onSeeBetter, hasSwaps = false, openaiResponse }: DecisionBarProps) {
   const [decision, setDecision] = useState(() => getDecision(product.barcode));
   const { lean, color, headline } = meaning(verdictKey);
 
@@ -110,8 +112,13 @@ export function DecisionBar({ product, verdictKey, onSeeBetter, openaiResponse }
       // No toast — the bar itself confirms with "In your cart".
     } else {
       removeFromBasket(product.barcode);
-      toast("Skipped — see a cleaner pick below", { icon: "👇" });
-      onSeeBetter();
+      // Only point to "cleaner picks below" when some actually rendered.
+      if (hasSwaps) {
+        toast("Skipped — see a cleaner pick below", { icon: "👇" });
+        onSeeBetter();
+      } else {
+        toast("Skipped");
+      }
     }
   };
 
@@ -150,7 +157,7 @@ export function DecisionBar({ product, verdictKey, onSeeBetter, openaiResponse }
               <RotateCcw style={{ width: 11, height: 11 }} /> Undo
             </button>
           </div>
-          {!bought && (
+          {!bought && hasSwaps && (
             <button
               onClick={onSeeBetter}
               style={{

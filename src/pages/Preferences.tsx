@@ -239,7 +239,12 @@ export default function Preferences() {
             Settings
           </p>
 
-          {/* Appearance */}
+          {/* Location — powers region-aware swap suggestions */}
+          <RegionPicker
+            onSaved={(r) => toast.success(`Location set to ${r.city ? `${r.city}, ` : ""}${r.country}`)}
+          />
+
+          {/* Appearance — below the location picker */}
           <div style={{
             background: DS.card, borderRadius: 18, padding: 16,
             boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04)",
@@ -248,11 +253,6 @@ export default function Preferences() {
             <div style={{ fontSize: 11.5, color: DS.muted, marginBottom: 14 }}>Pick your theme</div>
             <ThemeToggle />
           </div>
-
-          {/* Location — powers region-aware swap suggestions */}
-          <RegionPicker
-            onSaved={(r) => toast.success(`Location set to ${r.city ? `${r.city}, ` : ""}${r.country}`)}
-          />
 
         </div>
       </main>

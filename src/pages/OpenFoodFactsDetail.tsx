@@ -251,6 +251,9 @@ export default function OpenFoodFactsDetail() {
   const [stickyVisible, setStickyVisible]   = useState(false);
   const [cleanName, setCleanName]           = useState<string | null>(null);
   const [mounted, setMounted]               = useState(false);
+  // Whether the "Better swaps" section actually renders any picks (null = still
+  // resolving). Drives whether the DecisionBar promises "see a cleaner pick".
+  const [swapsAvailable, setSwapsAvailable] = useState<boolean | null>(null);
   const heroRef = useRef<HTMLDivElement>(null);
   const swapsRef = useRef<HTMLDivElement>(null);
   const { setHidden: setBottomNavHidden } = useBottomNav();
@@ -1184,14 +1187,19 @@ export default function OpenFoodFactsDetail() {
             )}
             <div style={{ marginTop: 14, display: "grid", gap: 10 }}>
               {boycottMatch && (
-                <div style={{ padding: "14px 16px", background: EDITORIAL.card, border: `1px solid ${EDITORIAL.amberSoft}`, borderLeft: `4px solid ${EDITORIAL.amber}`, borderRadius: 14, display: "flex", alignItems: "center", gap: 12 }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: EDITORIAL.ink }}>{boycottMatch.parent} - Boycott listed</div>
-                    <div style={{ fontSize: 11.5, color: EDITORIAL.ink2, marginTop: 2 }}>{boycottMatch.reason}</div>
+                <div style={{ background: EDITORIAL.card, border: `1px solid ${EDITORIAL.line}`, borderRadius: 22, padding: "18px 20px", display: "grid", gridTemplateColumns: "46px 1fr", gap: 14, alignItems: "start" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <div style={{ width: 36, height: 36, borderRadius: 10, background: EDITORIAL.amberSoft, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <AlertTriangle style={{ width: 20, height: 20, color: EDITORIAL.amber }} />
+                    </div>
                   </div>
-                  <a href="https://boycott-israel.org/boycott.html" target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: EDITORIAL.amber, fontWeight: 800, display: "flex", alignItems: "center", gap: 4, textDecoration: "none" }}>
-                    Read <span>→</span>
-                  </a>
+                  <div>
+                    <div style={{ fontSize: 19, lineHeight: 1.15, color: EDITORIAL.ink, letterSpacing: -0.3, fontWeight: 700 }}>{boycottMatch.parent} — Boycott listed</div>
+                    <div style={{ fontSize: 12.5, color: EDITORIAL.ink2, marginTop: 6, lineHeight: 1.45 }}>{boycottMatch.reason}</div>
+                    <a href="https://boycott-israel.org/boycott.html" target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: EDITORIAL.amber, marginTop: 8, display: "flex", alignItems: "center", gap: 4, fontWeight: 700, textDecoration: "none" }}>
+                      <ExternalLink style={{ width: 10, height: 10 }} /> Read more
+                    </a>
+                  </div>
                 </div>
               )}
               {welfare.isFlagged && <AnimalWelfareFlagBadge brand={product.brand} showDetails={true} />}
@@ -1200,7 +1208,7 @@ export default function OpenFoodFactsDetail() {
 
           {/* Better swaps — reason-aware ethical alternatives */}
           <section ref={swapsRef} style={{ scrollMarginTop: 80, opacity: mounted ? 1 : 0, transform: mounted ? "translateY(0)" : "translateY(10px)", transition: "all 0.5s ease 0.45s" }}>
-            <SwapSuggestions product={product} />
+            <SwapSuggestions product={product} onAvailabilityChange={setSwapsAvailable} />
           </section>
 
           {(() => {
@@ -1307,6 +1315,7 @@ export default function OpenFoodFactsDetail() {
         product={product}
         verdictKey={verdict.key}
         onSeeBetter={scrollToSwaps}
+        hasSwaps={swapsAvailable === true}
         openaiResponse={fromScan ? sessionStorage.getItem("scan_openai_response") : null}
       />
 
@@ -1367,7 +1376,15 @@ function getVerdict(product: OpenFoodFactsResult, priorities: UserPriorities) {
   let key = "UNKNOWN";
   let reason = "No eco-score data available";
 
-  if (grade === "a" || grade === "b") {
+  // Environment only shapes the verdict to the extent the user prioritises it.
+  // When environment is "None" (envWeight === 0) it is excluded entirely — a
+  // poor eco-grade must never drag the verdict down for someone who doesn't
+  // care about it. We start from a clean BUY and let the concerns they *do*
+  // prioritise (labour, boycott, animal welfare, nutrition) adjust it below.
+  if (envWeight <= 0) {
+    key = "BUY";
+    reason = "Meets your priorities — you haven't prioritised environmental impact";
+  } else if (grade === "a" || grade === "b") {
     key = "BUY"; reason = `${scoreLabel} — excellent environmental credentials`;
   } else if (grade === "c") {
     if (envWeight >= 2.0) { key = "CAUTION"; reason = `${scoreLabel} — moderate impact (environment is a top priority for you)`; }

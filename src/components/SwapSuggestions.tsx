@@ -135,9 +135,15 @@ interface SwapSuggestionsProps {
   product: OpenFoodFactsResult;
   /** Editorial section number, e.g. "03". */
   sectionNumber?: string;
+  /**
+   * Reports whether any cleaner picks actually render. Lets the parent (and the
+   * DecisionBar) avoid promising "see a cleaner pick below" when there are none.
+   * null = still resolving.
+   */
+  onAvailabilityChange?: (hasSwaps: boolean | null) => void;
 }
 
-export function SwapSuggestions({ product, sectionNumber = "03" }: SwapSuggestionsProps) {
+export function SwapSuggestions({ product, sectionNumber = "03", onAvailabilityChange }: SwapSuggestionsProps) {
   const navigate = useNavigate();
   const [result, setResult] = useState<SwapResult | null>(null);
   const [loading, setLoading] = useState(true);
@@ -161,6 +167,14 @@ export function SwapSuggestions({ product, sectionNumber = "03" }: SwapSuggestio
     window.addEventListener(REGION_EVENT, sync);
     return () => window.removeEventListener(REGION_EVENT, sync);
   }, []);
+
+  // Tell the parent whether any cleaner picks will actually render. Mirrors the
+  // exact render condition below (null returns nothing). null while loading.
+  useEffect(() => {
+    if (loading) { onAvailabilityChange?.(null); return; }
+    const hasSwaps = !!(result && result.diagnosis.primary && result.suggestions.length > 0);
+    onAvailabilityChange?.(hasSwaps);
+  }, [loading, result, onAvailabilityChange]);
 
   const origC = useMemo(() => origCo2(product), [product]);
   const co2SavedFor = (s: SwapSuggestion): number | null => {
