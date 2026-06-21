@@ -32,12 +32,11 @@ export interface AppContext {
   };
 }
 
+// Three levels only — mirrors priorityMultiplier()'s buckets.
 const levelLabel = (v: number): string => {
-  if (v >= 88) return "critical";
-  if (v >= 63) return "high";
-  if (v >= 38) return "medium";
-  if (v >= 13) return "low";
-  return "none";
+  if (v <= 37) return "low";
+  if (v <= 62) return "medium";
+  return "critical";
 };
 
 const buildPrioritySummary = (p: {
@@ -52,12 +51,12 @@ const buildPrioritySummary = (p: {
     ["animal welfare", p.animalWelfare],
     ["nutrition", p.nutrition],
   ];
-  const top = entries.filter(([, v]) => v >= 63).map(([k]) => k);
-  const skip = entries.filter(([, v]) => v <= 12).map(([k]) => k);
-  if (top.length === 0 && skip.length === 0) return "balanced (all priorities at medium).";
+  const top = entries.filter(([, v]) => v >= 63).map(([k]) => k);   // critical
+  const low = entries.filter(([, v]) => v <= 37).map(([k]) => k);   // low
+  if (top.length === 0 && low.length === 0) return "balanced (all priorities at medium).";
   const bits: string[] = [];
   if (top.length) bits.push(`strongly cares about ${top.join(", ")}`);
-  if (skip.length) bits.push(`does not weight ${skip.join(", ")}`);
+  if (low.length) bits.push(`only lightly weights ${low.join(", ")}`);
   return bits.join("; ") + ".";
 };
 

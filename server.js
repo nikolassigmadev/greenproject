@@ -964,7 +964,7 @@ app.post('/api/chatgpt/analyze-product', openaiLimiter, largeBody, async (req, r
       : null;
 
     const personalizationBlock = safeUserContext
-      ? `\n\n=== USER CONTEXT (from their app data) ===\n${safeUserContext}\n=== END USER CONTEXT ===\n\nWhen relevant, tailor your verdict, alternatives, and "summary" to this specific user. If they've flagged a brand on their watchlist or own this product already, mention that. Heavily weight pillars they care about (high/critical priority) and de-emphasize ones they marked "none". Suggest alternatives that align with what they actually buy.`
+      ? `\n\n=== USER CONTEXT (from their app data) ===\n${safeUserContext}\n=== END USER CONTEXT ===\n\nWhen relevant, tailor your verdict, alternatives, and "summary" to this specific user. If they've flagged a brand on their watchlist or own this product already, mention that. Heavily weight pillars they marked "critical", weight "medium" pillars normally, and only lightly weight ones marked "low". Suggest alternatives that align with what they actually buy.`
       : '';
 
     const systemPrompt = `You are an expert ethical-shopping analyst. Given a product name (or image), return a JSON analysis. Use your training knowledge about brands, supply chains, certifications, nutrition, and environmental impact.

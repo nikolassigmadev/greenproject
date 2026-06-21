@@ -32,19 +32,15 @@ function markOnboardingComplete(): void {
 
 // ── Priority levels (mirrors the Preferences page) ──
 const LEVELS = [
-  { value: 0,   label: "None",     effect: "Left out of scoring" },
   { value: 25,  label: "Low",      effect: "A small nudge on the verdict" },
   { value: 50,  label: "Medium",   effect: "Counted the usual amount" },
-  { value: 75,  label: "High",     effect: "Weighs heavily on the verdict" },
   { value: 100, label: "Critical", effect: "Can outweigh everything else" },
 ] as const;
 
 const levelIndex = (v: number): number => {
-  if (v <= 12) return 0;
-  if (v <= 37) return 1;
-  if (v <= 62) return 2;
-  if (v <= 87) return 3;
-  return 4;
+  if (v <= 37) return 0;
+  if (v <= 62) return 1;
+  return 2;
 };
 
 const PRIORITY_CONFIG = [

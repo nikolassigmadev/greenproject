@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS ai_scans (
   openai_response TEXT,
   bought          TEXT,
   carbon_footprint_100g REAL,    -- CO2e grams per 100g, from Open Food Facts
-  priorities      JSONB,         -- snapshot of the user's concern weights at scan time
+  priorities      JSONB,         -- snapshot of the user's concern weights at scan time (3-level scale: Low=25 / Medium=50 / Critical=100)
   category        TEXT,          -- swap-catalog category (e.g. "chocolate")
   verdict         TEXT,          -- BUY | CONSIDER | CAUTION | AVOID | UNKNOWN shown to the user
   primary_concern TEXT,          -- labor | boycott | animal_welfare | eco (worst concern), or null

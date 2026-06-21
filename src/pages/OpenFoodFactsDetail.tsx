@@ -1377,14 +1377,11 @@ function getVerdict(product: OpenFoodFactsResult, priorities: UserPriorities) {
   let reason = "No eco-score data available";
 
   // Environment only shapes the verdict to the extent the user prioritises it.
-  // When environment is "None" (envWeight === 0) it is excluded entirely — a
-  // poor eco-grade must never drag the verdict down for someone who doesn't
-  // care about it. We start from a clean BUY and let the concerns they *do*
-  // prioritise (labour, boycott, animal welfare, nutrition) adjust it below.
-  if (envWeight <= 0) {
-    key = "BUY";
-    reason = "Meets your priorities — you haven't prioritised environmental impact";
-  } else if (grade === "a" || grade === "b") {
+  // The lowest level is "Low" (weight 0.3), so a poor eco-grade is softened to a
+  // gentle nudge for those users (see the grade branches below) rather than
+  // sinking the verdict; the concerns they *do* prioritise (labour, boycott,
+  // animal welfare, nutrition) adjust it afterwards.
+  if (grade === "a" || grade === "b") {
     key = "BUY"; reason = `${scoreLabel} — excellent environmental credentials`;
   } else if (grade === "c") {
     if (envWeight >= 2.0) { key = "CAUTION"; reason = `${scoreLabel} — moderate impact (environment is a top priority for you)`; }

@@ -75,7 +75,7 @@ interface VerdictPoint {
   winner: "A" | "B" | "tie";
   note?: string;
   dimension: PriorityDim;
-  weight: number; // priorityMultiplier(priorities[dimension]) → 0 (ignored) … 3.5 (critical)
+  weight: number; // priorityMultiplier(priorities[dimension]) → 0.3 (low) … 5.0 (critical)
 }
 
 interface VerdictResult {

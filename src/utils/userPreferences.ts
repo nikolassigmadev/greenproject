@@ -14,15 +14,16 @@ export const DEFAULT_PRIORITIES: UserPriorities = {
 };
 
 /**
- * Map a 0–100 priority to a verdict weight. Aggressive curve so priorities
- * DOMINATE scoring: "None" is fully excluded (0), and "Critical" (5) outweighs
- * a default "Medium" (1) by 5×, letting a single top priority drive the verdict.
+ * Map a 0–100 priority to a verdict weight. Three levels only — Low / Medium /
+ * Critical — with an aggressive curve so priorities DOMINATE scoring: "Critical"
+ * (5) outweighs a default "Medium" (1) by 5×, letting a single top priority drive
+ * the verdict, while "Low" (0.3) only nudges it. Every pillar with data still
+ * counts at least a little (there is no "off"). Legacy values fold into the
+ * nearest level: ≤37 → Low, ≤62 → Medium, the rest → Critical.
  */
 export function priorityMultiplier(value: number): number {
-  if (value <= 12) return 0;    // None — left out of scoring entirely
   if (value <= 37) return 0.3;  // Low
   if (value <= 62) return 1.0;  // Medium (default)
-  if (value <= 87) return 2.5;  // High
   return 5.0;                    // Critical
 }
 

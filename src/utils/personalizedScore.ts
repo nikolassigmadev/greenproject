@@ -1,9 +1,10 @@
 // Shared, priority-weighted product scorer — the single source of truth for the
 // "overall score / impact" shown across the app (cart, product cards, etc.).
 //
-// Priorities DOMINATE: a pillar the user set to "None" is excluded entirely, and
-// a pillar set to High/Critical can single-handedly drive the result down (a bad
-// top-priority pillar caps the whole score). See priorityMultiplier().
+// Priorities DOMINATE: a pillar set to "Critical" can single-handedly drive the
+// result down (a bad top-priority pillar caps the whole score). Every pillar with
+// data still counts at least a little — the lowest level is "Low", not off. See
+// priorityMultiplier().
 
 import { priorityMultiplier, type UserPriorities } from "@/utils/userPreferences";
 import { checkAnimalWelfareFlag } from "@/utils/animalWelfareFlags";
@@ -102,7 +103,7 @@ export function personalizedScore(
   const totalWeight = active.reduce((a, p) => a + p.weight, 0);
   let score = active.reduce((a, p) => a + p.sub * p.weight, 0) / totalWeight;
 
-  // Domination: a High/Critical pillar (weight ≥ 2.5) that scores badly (≤ 30)
+  // Domination: a Critical pillar (weight ≥ 2.5) that scores badly (≤ 30)
   // drags the whole verdict down to it — a top priority can sink a product alone.
   for (const p of active) {
     if (p.weight >= 2.5 && p.sub <= 30) score = Math.min(score, p.sub);

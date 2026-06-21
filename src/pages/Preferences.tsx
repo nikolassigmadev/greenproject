@@ -11,22 +11,18 @@ import { DS } from "@/styles/design-tokens";
 import { RegionPicker } from "@/components/RegionPicker";
 import { toast } from "sonner";
 
-// Five discrete weights (0–100). The label + effect line do the explaining so
+// Three discrete weights (0–100). The label + effect line do the explaining so
 // users understand what each setting actually does to a verdict.
 const LEVELS = [
-  { value: 0,   label: "None",     effect: "Left out of scoring entirely" },
   { value: 25,  label: "Low",      effect: "A small nudge on the verdict" },
   { value: 50,  label: "Medium",   effect: "Counted the usual amount" },
-  { value: 75,  label: "High",     effect: "Can shift the verdict noticeably" },
   { value: 100, label: "Critical", effect: "Strongly drives the final verdict" },
 ] as const;
 
 const levelIndex = (v: number): number => {
-  if (v <= 12) return 0;
-  if (v <= 37) return 1;
-  if (v <= 62) return 2;
-  if (v <= 87) return 3;
-  return 4;
+  if (v <= 37) return 0;
+  if (v <= 62) return 1;
+  return 2;
 };
 
 const priorityConfig = [
@@ -58,7 +54,7 @@ const priorityConfig = [
   // (DEFAULT_PRIORITIES.nutrition = 50) and still feeds the nutri-score measure.
 ];
 
-// ── Single compact value row: icon + label + 5-level segmented control ──
+// ── Single compact value row: icon + label + 3-level segmented control ──
 
 function ValueRow({
   config, value, onSelect, divider,
