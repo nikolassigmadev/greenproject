@@ -219,11 +219,6 @@ export function SwapSuggestions({ product, sectionNumber = "03" }: SwapSuggestio
       categoryKey: diagnosis.categoryKey,
       regionCountry: region?.countryCode ?? null,
     });
-    toast.success(`Switched to ${s.brand}`, {
-      description: primary.type === "eco"
-        ? "Logged as a greener swap."
-        : `Logged — you avoided ${concernLabel}.`,
-    });
     if (s.barcode) navigate(`/product-off/${s.barcode}`);
   };
 
