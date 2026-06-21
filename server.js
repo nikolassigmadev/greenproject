@@ -1768,14 +1768,23 @@ const scanLimiter = rateLimit({
  */
 app.post('/api/scans', scanLimiter, smallBody, (req, res) => {
   try {
-    const { barcode, name, brand, ecoGrade, country, city, anonId, openaiResponse, bought } = req.body || {};
+    const {
+      barcode, name, brand, ecoGrade, country, city, anonId, openaiResponse, bought,
+      carbonFootprint100g, priorities, category, verdict, primaryConcern, swapAvailable,
+    } = req.body || {};
     if (!name || typeof name !== 'string') {
       return res.status(400).json({ success: false, error: 'name is required' });
     }
     // SQLite "most-scanned" counter (internally no-ops if unavailable).
     recordScan({ barcode, name, brand, ecoGrade, country, anonId });
     // Rich Postgres log of every scan (no-ops if DATABASE_URL unset/unreachable).
-    logScan({ source: bought ? 'decision' : 'scan', userId: anonId, productName: name, brand, barcode, ecoGrade, country, city, openaiResponse, bought });
+    // logScan() sanitises/clamps every field, so the raw body passes through.
+    logScan({
+      source: bought ? 'decision' : 'scan',
+      userId: anonId, productName: name, brand, barcode, ecoGrade, country, city,
+      openaiResponse, bought,
+      carbonFootprint100g, priorities, category, verdict, primaryConcern, swapAvailable,
+    });
     // Only fail if BOTH stores are unavailable.
     if (!scanDb && !scanStoreReady()) {
       return res.status(503).json({ success: false, error: 'Scan logging unavailable' });

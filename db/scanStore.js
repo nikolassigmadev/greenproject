@@ -33,6 +33,12 @@ CREATE TABLE IF NOT EXISTS ai_scans (
   off_url         TEXT,
   openai_response TEXT,
   bought          TEXT,
+  carbon_footprint_100g REAL,    -- CO2e grams per 100g, from Open Food Facts
+  priorities      JSONB,         -- snapshot of the user's concern weights at scan time
+  category        TEXT,          -- swap-catalog category (e.g. "chocolate")
+  verdict         TEXT,          -- BUY | CONSIDER | CAUTION | AVOID | UNKNOWN shown to the user
+  primary_concern TEXT,          -- labor | boycott | animal_welfare | eco (worst concern), or null
+  swap_available  BOOLEAN,       -- was a region-available ethical alternative on offer? null = N/A
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 -- Idempotent upgrades for tables created before these columns existed.
@@ -45,6 +51,13 @@ ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS off_url         TEXT;
 ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS openai_response TEXT;
 -- Did the user buy the product or skip it? 'YES' (bought) / 'NO' (skipped) / null.
 ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS bought          TEXT;
+-- Carbon + personalisation + the signals that power the unmet-demand heatmap.
+ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS carbon_footprint_100g REAL;
+ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS priorities      JSONB;
+ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS category        TEXT;
+ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS verdict         TEXT;
+ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS primary_concern TEXT;
+ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS swap_available  BOOLEAN;
 -- Drop columns we no longer store.
 ALTER TABLE ai_scans DROP COLUMN IF EXISTS image_hash;
 ALTER TABLE ai_scans DROP COLUMN IF EXISTS image_url;
@@ -55,6 +68,32 @@ CREATE INDEX IF NOT EXISTS idx_ai_scans_created_at ON ai_scans (created_at DESC)
 CREATE INDEX IF NOT EXISTS idx_ai_scans_user_id    ON ai_scans (user_id);
 CREATE INDEX IF NOT EXISTS idx_ai_scans_product    ON ai_scans (lower(product_name));
 CREATE INDEX IF NOT EXISTS idx_ai_scans_barcode    ON ai_scans (barcode);
+-- Speeds up the unmet-demand heatmap (filters/groups on these).
+CREATE INDEX IF NOT EXISTS idx_ai_scans_demand
+  ON ai_scans (country, category, primary_concern)
+  WHERE primary_concern IS NOT NULL AND swap_available IS NOT TRUE;
+
+-- ── Live heatmap of unmet ethical demand ──
+-- One row per place × category × concern where shoppers met an ethically
+-- flagged product and we had NO region-available alternative to offer them.
+-- demand_signals = every such encounter; rejected = the subset the shopper
+-- actually skipped (acute unmet demand — they wanted out and had nowhere to go).
+CREATE OR REPLACE VIEW unmet_ethical_demand AS
+SELECT
+  country,
+  city,
+  category,
+  primary_concern,
+  count(*)                                AS demand_signals,
+  count(*) FILTER (WHERE bought = 'NO')   AS rejected,
+  count(DISTINCT user_id)                 AS distinct_users,
+  max(created_at)                         AS last_seen
+FROM ai_scans
+WHERE category IS NOT NULL
+  AND primary_concern IS NOT NULL    -- the product carried an ethical concern
+  AND swap_available IS NOT TRUE     -- ...and we couldn't offer a real alternative
+GROUP BY country, city, category, primary_concern
+ORDER BY rejected DESC, demand_signals DESC;
 
 CREATE TABLE IF NOT EXISTS community_flags (
   id                 TEXT PRIMARY KEY,
@@ -120,6 +159,34 @@ function clip(s, n) {
   return cleaned || null;
 }
 
+// One of a fixed set, else null. Keeps junk out of the heatmap dimensions.
+function oneOf(s, allowed) {
+  const v = clip(s, 32);
+  return v && allowed.has(v) ? v : null;
+}
+
+const VERDICTS = new Set(['BUY', 'CONSIDER', 'CAUTION', 'AVOID', 'UNKNOWN']);
+const CONCERNS = new Set(['labor', 'boycott', 'animal_welfare', 'eco']);
+const PRIORITY_KEYS = ['environment', 'laborRights', 'animalWelfare', 'nutrition'];
+
+// A finite, non-negative number within range, else null.
+function num(v, max) {
+  const n = typeof v === 'number' ? v : Number(v);
+  return Number.isFinite(n) && n >= 0 && n <= max ? n : null;
+}
+
+// Accept only a plain {key: 0-100} priorities object; return a JSON string for
+// the ::jsonb cast, or null. Never stores free-text — no PII can leak in here.
+function priorityJson(p) {
+  if (!p || typeof p !== 'object') return null;
+  const out = {};
+  for (const k of PRIORITY_KEYS) {
+    const n = num(p[k], 100);
+    if (n !== null) out[k] = Math.round(n);
+  }
+  return Object.keys(out).length ? JSON.stringify(out) : null;
+}
+
 /**
  * Fire-and-forget insert of one AI analysis. Never awaited by the caller; any
  * failure is logged and swallowed so a DB hiccup never breaks a scan.
@@ -135,6 +202,12 @@ function clip(s, n) {
  * @param {string} [rec.city]        user's set region city, from the app
  * @param {string} [rec.openaiResponse] raw product string OpenAI identified (brand + product)
  * @param {string} [rec.bought]        'YES' if the user bought it, 'NO' if skipped, else null
+ * @param {number} [rec.carbonFootprint100g] CO2e grams per 100g, from Open Food Facts
+ * @param {object} [rec.priorities]    the user's concern weights {environment,laborRights,animalWelfare,nutrition}
+ * @param {string} [rec.category]      swap-catalog category, e.g. "chocolate"
+ * @param {string} [rec.verdict]       BUY|CONSIDER|CAUTION|AVOID|UNKNOWN shown to the user
+ * @param {string} [rec.primaryConcern] worst concern: labor|boycott|animal_welfare|eco, or null
+ * @param {boolean} [rec.swapAvailable] was a region-available ethical alternative on offer?
  */
 export function logScan(rec = {}) {
   if (!ready || !pool) return;
@@ -142,6 +215,7 @@ export function logScan(rec = {}) {
     const barcode = clip(rec.barcode, 64);
     const offUrl = barcode ? `https://world.openfoodfacts.org/product/${barcode}` : null;
     const bought = rec.bought === 'YES' || rec.bought === 'NO' ? rec.bought : null;
+    const swapAvailable = typeof rec.swapAvailable === 'boolean' ? rec.swapAvailable : null;
     const values = [
       clip(rec.userId, 64),
       clip(rec.source, 64),
@@ -154,13 +228,22 @@ export function logScan(rec = {}) {
       offUrl,
       clip(rec.openaiResponse, 500),
       bought,
+      num(rec.carbonFootprint100g, 100000),
+      priorityJson(rec.priorities),
+      clip(rec.category, 64),
+      oneOf(rec.verdict, VERDICTS),
+      oneOf(rec.primaryConcern, CONCERNS),
+      swapAvailable,
     ];
     pool
       .query(
         `INSERT INTO ai_scans
            (user_id, source, product_name, brand, barcode,
-            eco_grade, country, city, off_url, openai_response, bought)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+            eco_grade, country, city, off_url, openai_response, bought,
+            carbon_footprint_100g, priorities, category, verdict,
+            primary_concern, swap_available)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,
+                 $12,$13::jsonb,$14,$15,$16,$17)`,
         values,
       )
       .catch((e) => console.error('scanStore: insert failed —', e.message));

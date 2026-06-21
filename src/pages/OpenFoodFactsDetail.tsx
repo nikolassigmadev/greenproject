@@ -15,6 +15,8 @@ import { lookupBarcode, searchProducts } from "@/services/openfoodfacts";
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
 import { loadPriorities, priorityMultiplier, saveScanToHistory, loadScanHistory, type UserPriorities } from "@/utils/userPreferences";
 import { logScan } from "@/utils/scanLogger";
+import { assessUnmetDemand } from "@/services/swaps";
+import { loadRegion } from "@/utils/userRegion";
 import { checkBoycott } from "@/data/boycottBrands";
 import { checkAnimalWelfareFlag } from "@/utils/animalWelfareFlags";
 import { AnimalWelfareFlagBadge } from "@/components/AnimalWelfareFlagBadge";
@@ -353,12 +355,21 @@ export default function OpenFoodFactsDetail() {
     // the product as. Left in sessionStorage (not consumed) so the Decision bar
     // can attach it to the buy/skip row too; a fresh scan clears it.
     const openaiResponse = fromScan ? sessionStorage.getItem("scan_openai_response") : null;
+    // Capture the unmet-demand signals at scan time too (not just on decision):
+    // category, worst concern, and whether an in-market alternative exists.
+    const demand = assessUnmetDemand(product, priorities, loadRegion()?.countryCode);
     logScan({
       barcode: product.barcode,
       name: product.productName || "Unknown Product",
       brand: product.brand,
       ecoGrade: product.ecoscoreGrade,
       openaiResponse,
+      carbonFootprint100g: product.carbonFootprint100g ?? null,
+      verdict: verdictKey,
+      priorities,
+      category: demand.category,
+      primaryConcern: demand.primaryConcern,
+      swapAvailable: demand.swapAvailable,
     });
   }, [product?.barcode]);
 

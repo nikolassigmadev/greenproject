@@ -8,6 +8,9 @@ import {
   recordDecision, getDecision, clearDecision, DECISIONS_EVENT, type DecisionOutcome,
 } from "@/utils/decisions";
 import { logScan } from "@/utils/scanLogger";
+import { assessUnmetDemand } from "@/services/swaps";
+import { loadPriorities } from "@/utils/userPreferences";
+import { loadRegion } from "@/utils/userRegion";
 import { toast } from "sonner";
 
 type Lean = "buy" | "skip" | "neutral";
@@ -73,7 +76,11 @@ export function DecisionBar({ product, verdictKey, onSeeBetter, openaiResponse }
       verdict: verdictKey,
       ecoGrade: product.ecoscoreGrade,
     });
-    // Log the buy/skip decision to the backend (Supabase ai_scans.bought = YES/NO).
+    // Log the buy/skip decision to the backend (Supabase ai_scans.bought = YES/NO),
+    // plus the signals that power the unmet-ethical-demand heatmap: the product's
+    // category, its worst concern, and whether we had an in-market alternative.
+    const priorities = loadPriorities();
+    const demand = assessUnmetDemand(product, priorities, loadRegion()?.countryCode);
     logScan({
       barcode: product.barcode,
       name: product.productName || "Unknown Product",
@@ -81,6 +88,12 @@ export function DecisionBar({ product, verdictKey, onSeeBetter, openaiResponse }
       ecoGrade: product.ecoscoreGrade,
       openaiResponse,
       bought: outcome === "bought" ? "YES" : "NO",
+      carbonFootprint100g: product.carbonFootprint100g ?? null,
+      verdict: verdictKey,
+      priorities,
+      category: demand.category,
+      primaryConcern: demand.primaryConcern,
+      swapAvailable: demand.swapAvailable,
     });
     if (outcome === "bought") {
       addToBasket({

@@ -4,6 +4,7 @@
 
 import { getBackendUrl } from "@/config/backend";
 import { loadRegion } from "@/utils/userRegion";
+import { loadPriorities, type UserPriorities } from "@/utils/userPreferences";
 
 const ANON_KEY = "goodscan-anon-id";
 const OPTOUT_KEY = "goodscan-scan-logging-optout";
@@ -31,6 +32,8 @@ export function isScanLoggingOptedOut(): boolean {
   }
 }
 
+export type PrimaryConcern = "labor" | "boycott" | "animal_welfare" | "eco";
+
 export interface ScanLogInput {
   barcode?: string | null;
   name: string;
@@ -40,6 +43,18 @@ export interface ScanLogInput {
   openaiResponse?: string | null;
   /** 'YES' if the user bought the product, 'NO' if they skipped it. */
   bought?: "YES" | "NO" | null;
+  /** CO2e grams per 100g (Open Food Facts), when known. */
+  carbonFootprint100g?: number | null;
+  /** Swap-catalog category, e.g. "chocolate". */
+  category?: string | null;
+  /** Verdict shown to the user: BUY | CONSIDER | CAUTION | AVOID | UNKNOWN. */
+  verdict?: string | null;
+  /** The product's worst ethical concern, when flagged. */
+  primaryConcern?: PrimaryConcern | null;
+  /** Was a region-available ethical alternative on offer? Drives the unmet-demand heatmap. */
+  swapAvailable?: boolean | null;
+  /** Concern-weight snapshot; defaults to the user's current saved priorities. */
+  priorities?: UserPriorities | null;
 }
 
 export function logScan(input: ScanLogInput): void {
@@ -47,6 +62,9 @@ export function logScan(input: ScanLogInput): void {
     if (isScanLoggingOptedOut()) return;
     if (!input.name) return;
     const region = loadRegion();
+    // Snapshot the user's concern weights with every scan (unless a caller
+    // passed an explicit set). Aggregate, no PII — the server clamps it.
+    const priorities = input.priorities ?? loadPriorities();
     const body = JSON.stringify({
       barcode: input.barcode ?? null,
       name: input.name,
@@ -57,6 +75,12 @@ export function logScan(input: ScanLogInput): void {
       country: region?.countryCode ?? null,
       city: region?.city ?? null,
       anonId: getAnonId(),
+      carbonFootprint100g: input.carbonFootprint100g ?? null,
+      priorities: priorities ?? null,
+      category: input.category ?? null,
+      verdict: input.verdict ?? null,
+      primaryConcern: input.primaryConcern ?? null,
+      swapAvailable: input.swapAvailable ?? null,
     });
     void fetch(`${getBackendUrl()}/api/scans`, {
       method: "POST",

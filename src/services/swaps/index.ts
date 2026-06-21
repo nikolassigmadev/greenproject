@@ -200,6 +200,53 @@ export function diagnoseProduct(
   return { concerns, primary, categoryKey, selfEthical };
 }
 
+/** The three signals that power the unmet-ethical-demand heatmap. */
+export interface DemandSignal {
+  /** Swap-catalog category, e.g. "chocolate" (null if we couldn't classify it). */
+  category: SwapCategoryKey | null;
+  /** The product's worst concern, or null when it's clean. */
+  primaryConcern: ConcernType | null;
+  /**
+   * Whether a curated alternative that addresses the primary concern is sold in
+   * the user's market. null when there's no concern to address. Deliberately
+   * conservative — entries we can only confirm via a live OFF lookup are not
+   * counted, so we never hide a genuine gap behind an unverifiable "available".
+   */
+  swapAvailable: boolean | null;
+}
+
+/**
+ * Synchronous, network-free read of the unmet-demand signals for a product:
+ * its category, its worst concern, and whether we actually have an in-market
+ * ethical alternative to offer. Cheap enough to call on the buy/skip path —
+ * it reuses the same detectors as the full swap engine, minus the OFF I/O.
+ */
+export function assessUnmetDemand(
+  product: OpenFoodFactsResult,
+  priorities: UserPriorities = DEFAULT_PRIORITIES,
+  countryCode?: string | null,
+): DemandSignal {
+  const { primary, categoryKey } = diagnoseProduct(product, priorities);
+  if (!primary) {
+    return { category: categoryKey, primaryConcern: null, swapAvailable: null };
+  }
+  let swapAvailable = false;
+  if (categoryKey) {
+    const candidates = [
+      ...getCandidates(categoryKey),
+      ...getCustomCandidates(categoryKey),
+      ...getVerifiedEthicsCandidates(categoryKey),
+    ];
+    swapAvailable = candidates.some(
+      (c) =>
+        c.addresses.includes(primary.type) &&
+        c.assumeAvailable !== false && // unverifiable-availability entries don't count
+        isInMarket(c, countryCode),
+    );
+  }
+  return { category: categoryKey, primaryConcern: primary.type, swapAvailable };
+}
+
 function sameBrand(a: string, b: string | null | undefined): boolean {
   if (!b) return false;
   const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
