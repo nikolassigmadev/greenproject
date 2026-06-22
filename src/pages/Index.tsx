@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { ChevronRight, Camera, Leaf, Shield, BarChart3, Users, Award, Zap, CheckCircle2, AlertTriangle as AlertTriangleIcon, Plus, X, Search, GitCompareArrows, ScanLine, Eye } from "lucide-react";
+import { ChevronRight, Camera, Leaf, Shield, BarChart3, Users, Award, Zap, CheckCircle2, AlertTriangle as AlertTriangleIcon, Search, GitCompareArrows, ScanLine, Eye } from "lucide-react";
 import { Logo, Wordmark } from "@/components/Logo";
-import { AddToHomeScreen } from "@/components/AddToHomeScreen";
 import { DS, scoreTone, toneColor, toneBg } from "@/styles/design-tokens";
 import { loadScanHistory, type ScanHistoryEntry } from "@/utils/userPreferences";
 import {
@@ -281,30 +280,8 @@ function ScoreBadge({ score }: { score: number }) {
   );
 }
 
-function isStandalone(): boolean {
-  if ((navigator as any).standalone) return true; // iOS Safari
-  if (window.matchMedia("(display-mode: standalone)").matches) return true;
-  if (window.matchMedia("(display-mode: fullscreen)").matches) return true;
-  return false;
-}
-
-function isNativeApp(): boolean {
-  return !!(window as any).Capacitor;
-}
-
-function getInstallPlatform(): "ios" | "android" | null {
-  const ua = navigator.userAgent;
-  if (/iPad|iPhone|iPod/.test(ua)) return "ios";
-  if (/Android/i.test(ua)) return "android";
-  return null;
-}
-
-const INSTALL_DISMISSED_KEY = "gs_install_dismissed";
-
 export default function Index() {
   const [history, setHistory] = useState<ScanHistoryEntry[]>([]);
-  const [showInstall, setShowInstall] = useState(false);
-  const [showInstallBanner, setShowInstallBanner] = useState(false);
 
   // Keep the hero in sync if a scan lands while this page stays mounted.
   useEffect(() => {
@@ -315,23 +292,8 @@ export default function Index() {
 
   useEffect(() => {
     setHistory(loadScanHistory());
-    // Only show on web browsers — never on native Capacitor apps or standalone PWAs
-    if (!isStandalone() && !isNativeApp()) {
-      const dismissed = localStorage.getItem(INSTALL_DISMISSED_KEY);
-      if (dismissed) {
-        setShowInstallBanner(true);
-      } else {
-        setShowInstall(true);
-      }
-    }
   }, []);
 
-  const handleDismissInstall = () => {
-    localStorage.setItem(INSTALL_DISMISSED_KEY, "1");
-    setShowInstall(false);
-  };
-
-  const platform = getInstallPlatform();
   const recent = history.slice(0, 3);
   // Once the user has scanned a fully eco-scored product, the hero card swaps
   // from the rotating example to their most recent such scan — same card,
@@ -660,61 +622,6 @@ export default function Index() {
         </section>
 
       </main>
-
-      {/* Dedicated full-screen "Add to Home Screen" prompt for browser visitors */}
-      {showInstall && <AddToHomeScreen onContinue={handleDismissInstall} />}
-
-      {/* ── Small reminder banner (shown after first dismissal) ── */}
-      {showInstallBanner && (
-        <div
-          style={{
-            position: "fixed",
-            top: "env(safe-area-inset-top, 0px)",
-            left: 0, right: 0,
-            zIndex: 100,
-            padding: "0 12px",
-          }}
-        >
-          <div
-            style={{
-              display: "flex", alignItems: "center", gap: 10,
-              background: DS.card, borderRadius: 14,
-              padding: "10px 14px",
-              margin: "8px auto", maxWidth: 480,
-              boxShadow: "0 4px 20px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.06)",
-            }}
-          >
-            <Plus style={{ width: 18, height: 18, color: DS.good, flexShrink: 0 }} />
-            <p style={{ flex: 1, fontSize: 13, color: DS.ink2, margin: 0, lineHeight: 1.35 }}>
-              <strong style={{ color: DS.ink }}>Add to Home Screen</strong> for the full experience
-            </p>
-            <button
-              onClick={() => {
-                setShowInstallBanner(false);
-                setShowInstall(true);
-              }}
-              style={{
-                background: DS.ink, color: DS.card, border: "none",
-                borderRadius: 8, padding: "6px 12px", fontSize: 12,
-                fontWeight: 700, cursor: "pointer", flexShrink: 0,
-                fontFamily: DS.font,
-              }}
-            >
-              Show me
-            </button>
-            <button
-              onClick={() => setShowInstallBanner(false)}
-              aria-label="Dismiss"
-              style={{
-                background: "none", border: "none", cursor: "pointer",
-                padding: 4, color: DS.muted, flexShrink: 0,
-              }}
-            >
-              <X style={{ width: 16, height: 16 }} />
-            </button>
-          </div>
-        </div>
-      )}
 
     </div>
   );

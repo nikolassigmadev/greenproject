@@ -37,11 +37,16 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 interface Props {
-  /** Proceed to the onboarding animations. */
-  onContinue: () => void;
+  /**
+   * Called only when the app is *genuinely* installed — i.e. the native install
+   * prompt is accepted or the `appinstalled` event fires. There is intentionally
+   * no "skip"/"continue" escape: in a regular browser the user must add the app
+   * to their Home Screen (or use a bypass URL) before they can use it.
+   */
+  onInstalled?: () => void;
 }
 
-export function AddToHomeScreen({ onContinue }: Props) {
+export function AddToHomeScreen({ onInstalled }: Props) {
   const { resolvedTheme } = useTheme();
   const theme = resolvedTheme === "light" ? "light" : "dark";
 
@@ -67,25 +72,25 @@ export function AddToHomeScreen({ onContinue }: Props) {
       e.preventDefault();
       setDeferred(e as BeforeInstallPromptEvent);
     };
-    const onInstalled = () => onContinue();
+    const onAppInstalled = () => onInstalled?.();
     window.addEventListener("beforeinstallprompt", onBIP);
-    window.addEventListener("appinstalled", onInstalled);
+    window.addEventListener("appinstalled", onAppInstalled);
     return () => {
       window.removeEventListener("beforeinstallprompt", onBIP);
-      window.removeEventListener("appinstalled", onInstalled);
+      window.removeEventListener("appinstalled", onAppInstalled);
     };
-  }, [onContinue]);
+  }, [onInstalled]);
 
   const install = async () => {
     if (!deferred) return;
     try {
       await deferred.prompt();
-      await deferred.userChoice;
+      const choice = await deferred.userChoice;
+      if (choice.outcome === "accepted") onInstalled?.();
     } catch {
       /* ignore */
     }
     setDeferred(null);
-    onContinue();
   };
 
   const mode: "prompt" | "ios" | "generic" = deferred ? "prompt" : isIOS ? "ios" : "generic";
@@ -166,22 +171,14 @@ export function AddToHomeScreen({ onContinue }: Props) {
           )}
         </div>
 
-        <div className="footer">
-          {mode === "prompt" ? (
-            <>
-              <button type="button" className="skip" onClick={onContinue}>Maybe later</button>
-              <button type="button" className="cta" onClick={install}>
-                Add to Home Screen
-                <ArrowRight />
-              </button>
-            </>
-          ) : (
-            <button type="button" className="cta" onClick={onContinue}>
-              Continue
+        {mode === "prompt" && (
+          <div className="footer">
+            <button type="button" className="cta" onClick={install}>
+              Add to Home Screen
               <ArrowRight />
             </button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>,
     document.body,
