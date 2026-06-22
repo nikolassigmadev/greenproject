@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useTheme } from "next-themes";
 import { ArrowRight, Check, Maximize, WifiOff, Zap, MoreVertical } from "lucide-react";
 import { Logo } from "@/components/Logo";
@@ -54,6 +55,13 @@ export function AddToHomeScreen({ onContinue }: Props) {
 
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
 
+  // Lock the page behind the overlay so it can't scroll underneath.
+  useEffect(() => {
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prevOverflow; };
+  }, []);
+
   useEffect(() => {
     const onBIP = (e: Event) => {
       e.preventDefault();
@@ -82,7 +90,10 @@ export function AddToHomeScreen({ onContinue }: Props) {
 
   const mode: "prompt" | "ios" | "generic" = deferred ? "prompt" : isIOS ? "ios" : "generic";
 
-  return (
+  // Rendered through a portal to document.body so the fixed full-screen overlay
+  // sits in the root stacking context — otherwise the page's `.page-transition`
+  // animation traps its z-index and the BottomNav paints over the CTA.
+  return createPortal(
     <div className="gs-ob" data-theme={theme} role="dialog" aria-modal="true">
       <style>{OB_CSS}</style>
 
@@ -172,6 +183,7 @@ export function AddToHomeScreen({ onContinue }: Props) {
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
