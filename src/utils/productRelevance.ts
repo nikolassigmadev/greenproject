@@ -291,6 +291,7 @@ export const pickBestMatch = <T extends { productName: string | null; brand: str
   originalOcrQuery: string,
   matchedQuery: string,
   config: RelevanceConfig = DEFAULT_CONFIG,
+  expectedBrand?: string | null,
 ): MatchResult<T> => {
   const noMatch: MatchResult<T> = {
     product: null, confidence: 0, matchedQuery: null,
@@ -299,10 +300,26 @@ export const pickBestMatch = <T extends { productName: string | null; brand: str
 
   if (candidates.length === 0) return noMatch;
 
+  // Brand gate — this app identifies *products*, not loose text. When the OCR
+  // pass named a brand, a genuine match must carry that brand. Without this a
+  // brand-stripped query ("Hazelnut Crisp") can land on a *different* company's
+  // product that merely shares the generic product words. Any candidate whose
+  // name/brand contains none of the expected brand's distinctive tokens is
+  // dropped before scoring, so a wrong-brand product can never be auto-accepted.
+  const brandTokens = expectedBrand
+    ? tokenize(expectedBrand).filter(t => t.length >= 3 && classifyToken(t, config) !== 'stop')
+    : [];
+  const carriesBrand = (c: T): boolean => {
+    if (brandTokens.length === 0) return true; // no brand known → no constraint
+    const resultTokens = tokenize([c.productName, c.brand].filter(Boolean).join(' '));
+    return brandTokens.some(bt => fuzzyMatch(bt, resultTokens));
+  };
+  const eligible = candidates.filter(carriesBrand);
+
   let bestProduct: T | null = null;
   let bestScore: RelevanceScore | null = null;
 
-  for (const candidate of candidates) {
+  for (const candidate of eligible) {
     const resultText = [candidate.productName, candidate.brand].filter(Boolean).join(' ');
     const rel = scoreRelevance(originalOcrQuery, resultText, config);
 
@@ -325,7 +342,7 @@ export const pickBestMatch = <T extends { productName: string | null; brand: str
 
   // No result passed the strict gate. Check if there's a brand-only match
   // (return it but mark as low-confidence, NOT auto-accepted).
-  for (const candidate of candidates) {
+  for (const candidate of eligible) {
     const resultText = [candidate.productName, candidate.brand].filter(Boolean).join(' ');
     const rel = scoreRelevance(originalOcrQuery, resultText, config);
     if (rel.brandOnlyMatch) {

@@ -209,4 +209,32 @@ describe('pickBestMatch', () => {
     expect(match.product).toBeNull();
     expect(match.passedRelevanceGate).toBe(false);
   });
+
+  describe('brand gate (expectedBrand)', () => {
+    // Regression: scanning "Theo Hazelnut Crisp" must NOT auto-accept a different
+    // company's "Hazelnut Crisp" just because the brand was stripped from the query.
+    const hazelnutCandidates = [
+      { productName: 'Hazelnut Crisp Cereal', brand: 'Some Other Co', barcode: 'A1' },
+      { productName: 'Hazelnut Crisp 70% Cocoa', brand: 'Theo Chocolate', barcode: 'A2' },
+    ];
+
+    it('rejects a wrong-brand product that only shares generic product words', () => {
+      const onlyWrongBrand = [hazelnutCandidates[0]];
+      const match = pickBestMatch(onlyWrongBrand, 'Theo Hazelnut Crisp', 'Hazelnut Crisp', undefined, 'Theo');
+      expect(match.passedRelevanceGate).toBe(false);
+      expect(match.product).toBeNull();
+    });
+
+    it('still matches the right-brand product when the brand is present', () => {
+      const match = pickBestMatch(hazelnutCandidates, 'Theo Hazelnut Crisp', 'Hazelnut Crisp', undefined, 'Theo');
+      expect(match.passedRelevanceGate).toBe(true);
+      expect(match.product?.barcode).toBe('A2');
+    });
+
+    it('without an expectedBrand, behaviour is unchanged (text match still accepted)', () => {
+      const onlyWrongBrand = [hazelnutCandidates[0]];
+      const match = pickBestMatch(onlyWrongBrand, 'Theo Hazelnut Crisp', 'Hazelnut Crisp');
+      expect(match.passedRelevanceGate).toBe(true);
+    });
+  });
 });

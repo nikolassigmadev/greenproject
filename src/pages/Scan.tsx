@@ -1418,8 +1418,10 @@ const Scan = () => {
           continue;
         }
 
-        // Score against the ORIGINAL OCR query to prevent brand-only fallback winning
-        const match = pickBestMatch(topResults, rawQuery, q);
+        // Score against the ORIGINAL OCR query to prevent brand-only fallback winning.
+        // Pass the OCR-identified brand so a brand-stripped query can't auto-accept a
+        // different company's product (e.g. "Theo Hazelnut Crisp" → random "Hazelnut Crisp").
+        const match = pickBestMatch(topResults, rawQuery, q, undefined, brandOnly || undefined);
         console.log(`   [relevance] query="${q}" → passed=${match.passedRelevanceGate}, brandOnly=${match.brandOnlyFallback}, confidence=${match.confidence.toFixed(2)}`);
 
         if (match.passedRelevanceGate && match.product) {
