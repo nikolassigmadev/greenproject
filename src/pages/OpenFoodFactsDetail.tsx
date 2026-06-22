@@ -1307,11 +1307,23 @@ export default function OpenFoodFactsDetail() {
 
           {(() => {
             const ingredientFlags = findIngredientFlagsInText(product.ingredientsText);
-            if (ingredientFlags.length === 0) return null;
+            // Brands with a strong, verified ethical rating already account for
+            // responsible sourcing of their headline commodity, so a generic
+            // commodity-level warning their rating directly contradicts would be
+            // misleading. Chocolate Scorecard "leader"/"better" brands and
+            // verified-ethics chocolate brands suppress the cocoa concern.
+            const ethicalChocolateLeader =
+              verifiedEthics?.category === "chocolate" ||
+              chocolateEntry?.verdict === "leader" ||
+              chocolateEntry?.verdict === "better";
+            const visibleFlags = ethicalChocolateLeader
+              ? ingredientFlags.filter(f => f.id !== "cocoa-child-labour-west-africa")
+              : ingredientFlags;
+            if (visibleFlags.length === 0) return null;
             return (
               <section style={{ opacity: mounted ? 1 : 0, transform: mounted ? "translateY(0)" : "translateY(10px)", transition: "all 0.5s ease 0.5s" }}>
                 <SectionHead num="04" title="Ingredient concerns" kicker="Detected from the ingredient list." />
-                <IngredientConcernsCard flags={ingredientFlags} />
+                <IngredientConcernsCard flags={visibleFlags} />
               </section>
             );
           })()}
