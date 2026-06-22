@@ -5,6 +5,7 @@ import { HackerTransition } from "./components/HackerTransition";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { BottomNav, BottomNavProvider } from "./components/BottomNav";
 import { Onboarding, hasCompletedOnboarding } from "./components/Onboarding";
+import { isStandalonePWA } from "./components/AddToHomeScreen";
 import Index from "./pages/Index";
 import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
@@ -31,11 +32,28 @@ import ShelfScan from "./pages/ShelfScan";
 // import AdminLogin from "./pages/AdminLogin";
 
 
+// Onboarding (country, city, priorities) is part of the *installed* experience.
+// It must only appear once the app is launched from the Home Screen — i.e. a
+// standalone PWA, fullscreen display, or the native app — never in a regular
+// browser tab (where the user is instead nudged to add it to their Home Screen).
+function isInstalledExperience(): boolean {
+  if ((window as { Capacitor?: unknown }).Capacitor) return true;
+  try {
+    if (window.matchMedia?.("(display-mode: fullscreen)").matches) return true;
+  } catch {
+    /* ignore */
+  }
+  return isStandalonePWA();
+}
+
 function RootLayout() {
   const location = useLocation();
   // One-time animated onboarding (country, city, priorities). Persisted to
-  // localStorage so it only ever runs once per device.
-  const [onboarded, setOnboarded] = useState(() => hasCompletedOnboarding());
+  // localStorage so it only ever runs once per device, and gated so it only
+  // ever runs inside the Home-Screen / installed app.
+  const [showOnboarding, setShowOnboarding] = useState(
+    () => isInstalledExperience() && !hasCompletedOnboarding(),
+  );
   return (
     <BottomNavProvider>
       <ScrollToTop />
@@ -49,7 +67,7 @@ function RootLayout() {
           page transitions. The /scan page reaches in via useBottomNav() to
           control its slide-down animation; nothing else touches it. */}
       <BottomNav />
-      {!onboarded && <Onboarding onComplete={() => setOnboarded(true)} />}
+      {showOnboarding && <Onboarding onComplete={() => setShowOnboarding(false)} />}
     </BottomNavProvider>
   );
 }

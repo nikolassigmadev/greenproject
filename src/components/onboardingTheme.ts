@@ -22,7 +22,7 @@ export const OB_CSS = `
   --text:#F3F5F3; --text-2:#A7AEAB; --text-3:#6E7572;
   --eyebrow:#2FD18C;
   --cta-bg:#EDEBE3; --cta-text:#11140F;
-  --back-bg:#1B1F1D; --back-text:#E6EAE7;
+  --back-bg:#272D2A; --back-text:#E6EAE7;
   --seg-track:#0C0E0D; --field-bg:#141716;
   --icon-tile-bg:rgba(47,209,140,0.13);
 }
@@ -85,7 +85,7 @@ export const OB_CSS = `
   background:var(--cta-bg); color:var(--cta-text);
   height:clamp(52px,6.8svh,60px); border-radius:18px;
   display:inline-flex; align-items:center; justify-content:center; gap:10px;
-  box-shadow:0 14px 30px -16px rgba(0,0,0,0.55);
+  box-shadow:0 8px 22px -14px rgba(0,0,0,0.5);
   transition:transform .12s ease, filter .2s ease, opacity .2s ease;
 }
 .gs-ob .cta:hover { filter:brightness(1.04); }
@@ -96,9 +96,9 @@ export const OB_CSS = `
   flex:none; width:clamp(52px,6.8svh,60px); height:clamp(52px,6.8svh,60px); border-radius:18px;
   border:1px solid var(--border-strong); cursor:pointer;
   background:var(--back-bg); color:var(--back-text);
-  display:grid; place-items:center; transition:background .2s ease;
+  display:grid; place-items:center; transition:background .2s ease, border-color .2s ease;
 }
-.gs-ob .iconbtn:hover { background:color-mix(in srgb, var(--back-bg) 80%, var(--text)); }
+.gs-ob .iconbtn:hover { background:color-mix(in srgb, var(--back-bg) 84%, var(--text)); border-color:color-mix(in srgb, var(--text) 24%, transparent); }
 .gs-ob .iconbtn svg { width:21px; height:21px; }
 .gs-ob .skip {
   flex:none; appearance:none; border:0; background:transparent; cursor:pointer;
