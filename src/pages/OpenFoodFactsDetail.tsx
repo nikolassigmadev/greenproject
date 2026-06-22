@@ -23,6 +23,7 @@ import { AnimalWelfareFlagBadge } from "@/components/AnimalWelfareFlagBadge";
 import { addToBasket, removeFromBasket, loadBasket } from "@/utils/basketStorage";
 import { findLaborAllegations as findLaborAllegationsUtil, getLaborAllegationCount } from "@/utils/laborCheck";
 import { findVerifiedEthics, CERTIFICATION_BADGES, getPrimaryCertification, CATEGORY_LABELS, type CertificationType } from "@/utils/verifiedEthics";
+import { findChocolateEntry, VERDICT_META, type ChocolateVerdict } from "@/data/chocolateDirectory";
 import { EnvironmentalImpactCard } from "@/components/EnvironmentalImpactCard";
 import { IngredientConcernsCard } from "@/components/IngredientConcernsCard";
 import { SwapSuggestions } from "@/components/SwapSuggestions";
@@ -642,6 +643,7 @@ export default function OpenFoodFactsDetail() {
   const boycottMatch    = checkBoycott(product.brand);
   const welfare         = checkAnimalWelfareFlag(product.brand);
   const verifiedEthics  = findVerifiedEthics(product.brand, product.productName);
+  const chocolateEntry  = findChocolateEntry(product.brand, product.productName);
   const ecoGrade     = product.ecoscoreGrade?.toLowerCase();
   const nutriGrade   = product.nutriscoreGrade?.toLowerCase();
 
@@ -1188,6 +1190,43 @@ export default function OpenFoodFactsDetail() {
                 </div>
               </div>
             )}
+            {chocolateEntry && (() => {
+              const tone: Record<ChocolateVerdict, { color: string; soft: string }> = {
+                avoid:   { color: EDITORIAL.red,   soft: EDITORIAL.redSoft },
+                caution: { color: EDITORIAL.amber, soft: EDITORIAL.amberSoft },
+                better:  { color: EDITORIAL.green, soft: EDITORIAL.greenSoft },
+                leader:  { color: EDITORIAL.green, soft: EDITORIAL.greenSoft },
+              };
+              const t = tone[chocolateEntry.verdict];
+              const positive = chocolateEntry.verdict === "better" || chocolateEntry.verdict === "leader";
+              return (
+                <div style={{ marginTop: 14, background: EDITORIAL.card, border: `1px solid ${EDITORIAL.line}`, borderRadius: 22, padding: "18px 20px", display: "grid", gridTemplateColumns: "46px 1fr", gap: 14, alignItems: "start" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <div style={{ width: 36, height: 36, borderRadius: 10, background: t.soft, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      {positive
+                        ? <CheckCircle2 style={{ width: 20, height: 20, color: t.color }} />
+                        : <AlertTriangle style={{ width: 20, height: 20, color: t.color }} />}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                      <span style={{ fontSize: 19, lineHeight: 1.15, color: EDITORIAL.ink, letterSpacing: -0.3, fontWeight: 700 }}>{chocolateEntry.name}</span>
+                      <span style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase", color: t.color, background: t.soft, border: `1px solid ${t.color}`, borderRadius: 999, padding: "2px 9px" }}>
+                        {VERDICT_META[chocolateEntry.verdict].label}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: 11, color: EDITORIAL.ink3, marginTop: 4, letterSpacing: 0.3 }}>Chocolate Scorecard verdict</div>
+                    <div style={{ fontSize: 12.5, color: EDITORIAL.ink2, marginTop: 8, lineHeight: 1.45 }}>{chocolateEntry.note}</div>
+                    <div style={{ fontSize: 12, color: EDITORIAL.ink3, marginTop: 8, lineHeight: 1.45 }}>
+                      <span style={{ fontWeight: 700, color: EDITORIAL.ink2 }}>Cocoa sourcing: </span>{chocolateEntry.sourcing}
+                    </div>
+                    <button onClick={() => navigate("/chocolate")} style={{ background: "transparent", border: "none", padding: 0, cursor: "pointer", fontSize: 11, color: t.color, marginTop: 10, display: "flex", alignItems: "center", gap: 4, fontWeight: 700, fontFamily: DS.font }}>
+                      View the full Chocolate Directory →
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
             <div style={{ marginTop: 14, display: "grid", gap: 10 }}>
               {boycottMatch && (
                 <div style={{ background: EDITORIAL.card, border: `1px solid ${EDITORIAL.line}`, borderRadius: 22, padding: "18px 20px", display: "grid", gridTemplateColumns: "46px 1fr", gap: 14, alignItems: "start" }}>
