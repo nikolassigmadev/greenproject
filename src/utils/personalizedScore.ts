@@ -9,6 +9,8 @@
 import { priorityMultiplier, type UserPriorities } from "@/utils/userPreferences";
 import { checkAnimalWelfareFlag } from "@/utils/animalWelfareFlags";
 import { checkBoycott } from "@/data/boycottBrands";
+import { findVerifiedEthics } from "@/utils/verifiedEthics";
+import { findChocolateEntry } from "@/data/chocolateDirectory";
 
 export interface ScoreInput {
   ecoGrade?: string | null;
@@ -16,8 +18,10 @@ export interface ScoreInput {
   nutriGrade?: string | null;
   /** Count of labor/human-rights allegations against the brand (0 = clean). */
   laborAllegations?: number | null;
-  /** Brand name — powers boycott + animal-welfare pillars. */
+  /** Brand name — powers boycott + animal-welfare + verified-ethics pillars. */
   brand?: string | null;
+  /** Product name — sharpens verified-ethics / chocolate-leader lookups. */
+  productName?: string | null;
 }
 
 export type Verdict = "BUY" | "CONSIDER" | "CAUTION" | "AVOID" | "UNKNOWN";
@@ -51,13 +55,32 @@ function envSubScore(input: ScoreInput): number | null {
   return gradeToScore(input.ecoGrade);
 }
 
-/** Labor 0–100 from allegation count + boycott status. */
+/**
+ * Ethics / labor 0–100 from allegation count, boycott status, AND positive
+ * ethical standing. Verified ethical leaders (e.g. Tony's Chocolonely, a
+ * Chocolate Scorecard "leader") earn a score ABOVE the neutral "no allegations"
+ * 90, so a shopper who prioritises ethics can see a great-ethics product rise
+ * even when its carbon/eco-score is poor.
+ */
 function laborSubScore(input: ScoreInput): number | null {
   const hasBrand = !!input.brand;
   const count = typeof input.laborAllegations === "number" ? input.laborAllegations : null;
   if (count === null && !hasBrand) return null; // nothing to judge
-  let score = count && count > 0 ? Math.max(5, 90 - count * 30) : 90;
-  if (checkBoycott(input.brand)) score = Math.min(score, 25);
+
+  // Negative signals first — allegations / boycott sink the score.
+  const hasAllegation = !!(count && count > 0);
+  let score = hasAllegation ? Math.max(5, 90 - count! * 30) : 90;
+  const boycotted = !!checkBoycott(input.brand);
+  if (boycotted) score = Math.min(score, 25);
+
+  // Positive ethics — only credited when there is no live concern, so a
+  // boycott or fresh allegation always wins over a legacy certification.
+  if (hasBrand && !hasAllegation && !boycotted) {
+    const verified = findVerifiedEthics(input.brand, input.productName ?? null);
+    const choc = findChocolateEntry(input.brand, input.productName ?? null);
+    if (verified || choc?.verdict === "leader") score = 100;
+    else if (choc?.verdict === "better") score = 95;
+  }
   return score;
 }
 
@@ -103,8 +126,15 @@ export function personalizedScore(
   const totalWeight = active.reduce((a, p) => a + p.weight, 0);
   let score = active.reduce((a, p) => a + p.sub * p.weight, 0) / totalWeight;
 
-  // Domination: a Critical pillar (weight ≥ 2.5) that scores badly (≤ 30)
-  // drags the whole verdict down to it — a top priority can sink a product alone.
+  // Domination is symmetric: a Critical pillar (weight ≥ 2.5) drives the whole
+  // verdict toward itself. A great top priority LIFTS the score (so excellent
+  // ethics can carry a poor-carbon product when ethics is what you care about);
+  // a bad top priority SINKS it. Lift first, then sink — so a genuine critical
+  // concern (a boycott, a critical allegation) always has the final say and can
+  // never be masked by a strength elsewhere.
+  for (const p of active) {
+    if (p.weight >= 2.5 && p.sub >= 70) score = Math.max(score, p.sub - 8);
+  }
   for (const p of active) {
     if (p.weight >= 2.5 && p.sub <= 30) score = Math.min(score, p.sub);
   }

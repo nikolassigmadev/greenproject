@@ -153,12 +153,12 @@ function ResultShowcase({ products, cycle, footer }: ResultShowcaseProps) {
           transition: "all 0.4s ease 0.1s",
         }}>
           <div style={{
-            width: 44, height: 44, borderRadius: 12, background: product.icon === "good" ? DS.goodBg : DS.badBg,
+            width: 44, height: 44, borderRadius: 12, background: product.verdictBg,
             display: "flex", alignItems: "center", justifyContent: "center",
           }}>
             {product.icon === "good"
-              ? <Leaf style={{ width: 20, height: 20, color: DS.good }} />
-              : <AlertTriangleIcon style={{ width: 20, height: 20, color: DS.bad }} />
+              ? <Leaf style={{ width: 20, height: 20, color: product.verdictColor }} />
+              : <AlertTriangleIcon style={{ width: 20, height: 20, color: product.verdictColor }} />
             }
           </div>
           <div>

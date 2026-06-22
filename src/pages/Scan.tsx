@@ -2008,6 +2008,18 @@ const Scan = () => {
               >
                 <RefreshCw size={17} strokeWidth={2.2} /> Try again
               </button>
+              <button
+                onClick={() => { setCameraError(null); stopCamera(); navigate('/'); }}
+                style={{
+                  width: '100%', height: 48, borderRadius: 14,
+                  border: `1px solid ${DS.hair}`, background: 'transparent',
+                  color: DS.ink, fontWeight: 700, fontSize: 14.5,
+                  fontFamily: DS.font, cursor: 'pointer', marginTop: 10,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                }}
+              >
+                <X size={17} strokeWidth={2.2} /> Exit
+              </button>
             </div>
           </div>
         )}

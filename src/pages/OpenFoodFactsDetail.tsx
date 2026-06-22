@@ -670,7 +670,22 @@ export default function OpenFoodFactsDetail() {
     if (ocrWords.length > 0 && !ocrWords.some(w => prodBrandText.includes(w))) return null;
     return ocrNameRaw;
   })();
-  const displayName = ocrName || cleanName || product.productName || "Unknown product";
+  // When we arrived from a scan, the title is the exact query OpenAI handed to
+  // Open Food Facts (brand + product) — shorter and truer to what was scanned
+  // than OFF's often-verbose product_name. The brand is already shown in the
+  // meta line above the title, so strip a leading brand to avoid repeating it.
+  const openaiQuery = fromScan ? (sessionStorage.getItem("scan_openai_response") || "").trim() : "";
+  const displayName = (() => {
+    if (openaiQuery) {
+      const brand = (product.brand || "").trim();
+      if (brand && openaiQuery.toLowerCase().startsWith(brand.toLowerCase())) {
+        const stripped = openaiQuery.slice(brand.length).trim();
+        if (stripped) return stripped;
+      }
+      return openaiQuery;
+    }
+    return ocrName || cleanName || product.productName || "Unknown product";
+  })();
 
   const hasScores = !!(ecoGrade || nutriGrade || product.novaGroup);
   const hasEthicsConcerns = !!(laborRecord || boycottMatch || welfare.isFlagged);
@@ -1532,10 +1547,31 @@ function getVerdict(product: OpenFoodFactsResult, priorities: UserPriorities) {
     }
   }
 
-  // Verified ethical brands can upgrade UNKNOWN → BUY
+  // Positive ethics is a real UPWARD force — symmetric to the penalties above.
+  // A verified ethical brand or a Chocolate Scorecard "leader"/"better" (e.g.
+  // Tony's Chocolonely) lifts the verdict in proportion to how much the shopper
+  // prioritises ethics, so a great-ethics / poor-carbon product isn't stranded
+  // at AVOID when ethics is exactly what they care about. Only applied when no
+  // live concern fired (a boycott or real allegation always wins).
   const ethics = findVerifiedEthics(product.brand, product.productName);
-  if (ethics && key === "UNKNOWN") {
-    key = "BUY"; reason = `${ethics.brandName} has verified ethical certifications (${ethics.certifications.map(c => CERTIFICATION_BADGES[c].shortLabel).join(", ")})`;
+  const choc = findChocolateEntry(product.brand, product.productName);
+  const ethicalLeader = !!ethics || choc?.verdict === "leader" || choc?.verdict === "better";
+  const cleanRecord = laborCount === 0 && !boycott && !(welfare.isFlagged && (welfare.severity === "critical" || welfare.severity === "high"));
+  if (ethicalLeader && cleanRecord && laborWeight > 0) {
+    const who = ethics?.brandName || choc?.name || product.brand || "This brand";
+    // A full verb phrase so every reason reads naturally.
+    const standing = ethics
+      ? "has verified ethical certifications"
+      : `is a Chocolate Scorecard ${choc?.verdict === "leader" ? "leader" : "standout"}`;
+    if (laborWeight >= 5) {
+      // Ethics is the shopper's top priority — let it carry the verdict.
+      key = "BUY"; reason = `${who} ${standing} — your top priority`;
+    } else if (laborWeight >= 1) {
+      if (key === "AVOID" || key === "CAUTION") { key = "CONSIDER"; reason = `${who} ${standing} (offsets a weak eco-score)`; }
+      else if (key === "CONSIDER" || key === "UNKNOWN") { key = "BUY"; reason = `${who} ${standing}`; }
+    } else if (key === "AVOID") {
+      key = "CAUTION"; reason = `${who} ${standing}, though environmental impact is high`;
+    }
   }
 
   return { key, reason };
