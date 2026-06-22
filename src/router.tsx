@@ -19,6 +19,7 @@ import ShoppingList from "./pages/ShoppingList";
 import AboutUs from "./pages/AboutUs";
 import SupplyChain from "./pages/SupplyChain";
 import Methodology from "./pages/Methodology";
+import ChocolateDirectory from "./pages/ChocolateDirectory";
 import Privacy from "./pages/Privacy";
 import { CalAIShowcase } from "./components/CalAIShowcase";
 import ChatGPTScan from "./pages/ChatGPTScan";
@@ -166,6 +167,10 @@ export const router = createBrowserRouter([
       {
         path: "/methodology",
         element: <Methodology />,
+      },
+      {
+        path: "/chocolate",
+        element: <ChocolateDirectory />,
       },
       {
         path: "/privacy",

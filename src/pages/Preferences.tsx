@@ -1,12 +1,10 @@
 import { useState, useEffect, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { BackButton } from "@/components/BackButton";
-import { useBottomNav } from "@/components/BottomNav";
 import {
   loadPriorities, savePriorities, DEFAULT_PRIORITIES, type UserPriorities,
 } from "@/utils/userPreferences";
-import { Leaf, Users, Heart, ArrowRight, RotateCcw, Check } from "lucide-react";
+import { Leaf, Users, Heart, RotateCcw, Check } from "lucide-react";
 import { DS } from "@/styles/design-tokens";
 import { RegionPicker } from "@/components/RegionPicker";
 import { toast } from "sonner";
@@ -112,23 +110,7 @@ function ValueRow({
 }
 
 export default function Preferences() {
-  const navigate = useNavigate();
   const [priorities, setPriorities] = useState<UserPriorities>(DEFAULT_PRIORITIES);
-
-  // Landing on the Values tab swaps the floating bottom nav for the primary
-  // "Continue to scan" CTA: the footer slides away (its own hidden animation)
-  // while the button animates up into its place, reading as one morph.
-  const { setHidden: setBottomNavHidden } = useBottomNav();
-  const [ctaIn, setCtaIn] = useState(false);
-  useEffect(() => {
-    setBottomNavHidden(true);
-    // Wait one frame so the entrance transition runs from the hidden state.
-    const raf = requestAnimationFrame(() => setCtaIn(true));
-    return () => {
-      cancelAnimationFrame(raf);
-      setBottomNavHidden(false);
-    };
-  }, [setBottomNavHidden]);
 
   useEffect(() => {
     setPriorities(loadPriorities());
@@ -252,33 +234,6 @@ export default function Preferences() {
 
         </div>
       </main>
-
-      {/* Primary CTA — fixed where the bottom nav sits, so as the footer slides
-          away on entry this button animates up into its place. */}
-      <button
-        onClick={() => navigate("/scan")}
-        style={{
-          position: "fixed",
-          left: "50%",
-          bottom: "calc(env(safe-area-inset-bottom, 0px) + 22px)",
-          transform: ctaIn
-            ? "translateX(-50%) translateY(0)"
-            : "translateX(-50%) translateY(16px)",
-          opacity: ctaIn ? 1 : 0,
-          transition:
-            "transform 480ms cubic-bezier(0.32, 0.72, 0, 1) 120ms, opacity 320ms ease-out 120ms",
-          zIndex: 9999,
-          width: "calc(100% - 40px)", maxWidth: 380, height: 56,
-          background: DS.ink, border: "none", borderRadius: 16,
-          color: DS.card, fontWeight: 800, fontSize: "0.95rem",
-          letterSpacing: "-0.01em", cursor: "pointer", fontFamily: DS.font,
-          display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-          boxShadow: "0 10px 30px rgba(0,0,0,0.32), 0 2px 8px rgba(0,0,0,0.22)",
-        }}
-      >
-        Continue to scan
-        <ArrowRight size={18} strokeWidth={2.4} />
-      </button>
     </div>
   );
 }

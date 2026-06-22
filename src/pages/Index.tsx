@@ -603,6 +603,7 @@ export default function Index() {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             {[
               { title: "Search products", to: "/database" },
+              { title: "Chocolate directory", to: "/chocolate" },
               { title: "Scan history", to: "/dashboard" },
               { title: "Set your values", to: "/preferences" },
               { title: "About us", to: "/about" },

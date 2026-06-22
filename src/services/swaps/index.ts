@@ -25,6 +25,7 @@ import {
 } from "@/data/ethicalAlternatives";
 import { getCustomCandidates } from "@/data/customSwaps";
 import { getVerifiedEthicsCandidates } from "@/data/verifiedEthicsSwaps";
+import { getChocolateDirectoryCandidates } from "@/data/chocolateDirectorySwaps";
 import {
   isSoldInRegion,
   findCountry,
@@ -236,6 +237,7 @@ export function assessUnmetDemand(
       ...getCandidates(categoryKey),
       ...getCustomCandidates(categoryKey),
       ...getVerifiedEthicsCandidates(categoryKey),
+      ...getChocolateDirectoryCandidates(categoryKey),
     ];
     swapAvailable = candidates.some(
       (c) =>
@@ -394,6 +396,7 @@ export async function getSwaps(
     ...getCustomCandidates(diagnosis.categoryKey),
     ...getCandidates(diagnosis.categoryKey),
     ...getVerifiedEthicsCandidates(diagnosis.categoryKey),
+    ...getChocolateDirectoryCandidates(diagnosis.categoryKey),
   ]);
   let pool = merged.filter((c) => !sameBrand(c.brand, product.brand));
 

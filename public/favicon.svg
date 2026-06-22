@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="GoodScan">
-  <rect width="100" height="100" rx="22" fill="#0B0B0B"/>
+  <rect width="100" height="100" rx="22" fill="#1F7A4D"/>
   <g transform="translate(24.8,24.8) scale(1.05)">
     <g fill="none" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
       <path d="M5 13.4 L5 8 Q5 5 8 5 L13.4 5"/>
@@ -7,6 +7,6 @@
       <path d="M43 34.6 L43 40 Q43 43 40 43 L34.6 43"/>
       <path d="M13.4 43 L8 43 Q5 43 5 40 L5 34.6"/>
     </g>
-    <path d="M12.8 24.5 L21.2 33.4 L35.7 17.4" fill="none" stroke="#3FD089" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M12.8 24.5 L21.2 33.4 L35.7 17.4" fill="none" stroke="#FFFFFF" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round"/>
   </g>
 </svg>
