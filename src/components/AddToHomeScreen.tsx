@@ -257,8 +257,9 @@ function buildInstallGuide(): InstallGuide {
       return {
         browser: "Chrome",
         steps: [
-          { text: <>Tap the <Ic><MoreVertical /></Ic> menu (top-right).</> },
-          { text: <>Tap <b>Install app</b> or <b>Add to Home screen</b>.</> },
+          { text: <>Tap the <Ic><MoreVertical /></Ic> menu (top-right of the address bar).</> },
+          { text: <>Tap <b>Install app</b> — or <b>Add to Home screen</b> if that's what you see.</> },
+          { text: <>In the pop-up, tap <b>Install</b> (then <b>Add</b> if asked).</> },
           launch,
         ],
       };
@@ -308,9 +309,10 @@ function buildInstallGuide(): InstallGuide {
     return {
       browser: "Chrome",
       steps: [
-        { text: <>Click the <Ic><MonitorDown /></Ic> <b>Install</b> icon at the end of the address bar.</> },
-        { text: <>Or open <Ic><MoreVertical /></Ic> → <b>Install GoodScan…</b></> },
-        launchDesktop,
+        { text: <>Look for the <Ic><MonitorDown /></Ic> <b>Install</b> icon at the right end of the address bar and click it.</> },
+        { text: <>No icon there? Open the <Ic><MoreVertical /></Ic> menu (top-right) → <b>Cast, save, and share</b> → <b>Install page as app…</b></> },
+        { text: <>Click <b>Install</b> in the pop-up that appears.</> },
+        { done: true, text: <>GoodScan opens in its own window — reopen it anytime from your apps.</> },
       ],
     };
   }
@@ -347,6 +349,16 @@ export function AddToHomeScreen({ onInstalled }: Props) {
   const guide = useMemo(() => buildInstallGuide(), []);
 
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
+
+  // First-run choreography (guide mode only): after a beat, the intro text
+  // collapses up into the logo, the steps rise to the top, and the bottom
+  // "Add to Home Screen" sign slides in.
+  const [collapsed, setCollapsed] = useState(false);
+  useEffect(() => {
+    if (deferred) return; // prompt mode has its own native CTA — skip the choreography
+    const t = setTimeout(() => setCollapsed(true), 1300);
+    return () => clearTimeout(t);
+  }, [deferred]);
 
   // Lock the page behind the overlay so it can't scroll underneath.
   useEffect(() => {
@@ -392,13 +404,18 @@ export function AddToHomeScreen({ onInstalled }: Props) {
       <style>{OB_CSS}</style>
 
       <div className="screen">
-        <div className="anim a2hs">
+        <div className={`anim a2hs${mode === "guide" && collapsed ? " collapsed" : ""}`}>
           <div className="hero-mark"><Logo size={76} /></div>
-          <h1 className="title">Add GoodScan to your Home&nbsp;Screen</h1>
-          <p className="sub">
-            Install it for a full-screen, app-like experience — with faster, offline-ready scans
-            and one-tap access.
-          </p>
+
+          <div className="intro-text">
+            <div className="intro-inner">
+              <h1 className="title">Add GoodScan to your Home&nbsp;Screen</h1>
+              <p className="sub">
+                Install it for a full-screen, app-like experience — with faster, offline-ready scans
+                and one-tap access.
+              </p>
+            </div>
+          </div>
 
           {mode === "guide" && (
             <>
@@ -438,6 +455,7 @@ export function AddToHomeScreen({ onInstalled }: Props) {
               </div>
             </div>
           )}
+
         </div>
 
         {mode === "prompt" && (

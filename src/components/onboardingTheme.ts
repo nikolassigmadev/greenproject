@@ -183,6 +183,43 @@ export const OB_CSS = `
 .gs-ob .a2hs .hero-mark { margin:clamp(4px,1svh,14px) auto clamp(14px,3svh,26px); }
 .gs-ob .a2hs h1.title { text-align:center; }
 .gs-ob .a2hs p.sub { text-align:center; margin:0 auto; }
+
+/* ── First-run choreography (guide mode) ── */
+/* The content is one vertically-centered group (logo · steps · sign). When the
+   intro text folds away the group recenters, gliding up — and the sign stays
+   tucked right under the steps, so there's no dead space between them. */
+/* Intro text collapses its height (grid 1fr→0fr) while scaling/fading up into
+   the logo above it. */
+.gs-ob .a2hs .intro-text { display:grid; grid-template-rows:1fr; transition:grid-template-rows .6s cubic-bezier(.5,0,.2,1); }
+.gs-ob .a2hs .intro-inner { overflow:hidden; min-height:0; transform-origin:top center; transition:opacity .45s ease, transform .6s cubic-bezier(.5,0,.2,1); }
+.gs-ob .a2hs.collapsed .intro-text { grid-template-rows:0fr; }
+.gs-ob .a2hs.collapsed .intro-inner { opacity:0; transform:translateY(-22px) scale(.34); }
+/* The logo gives a little pop as the text "lands" in it. */
+.gs-ob .a2hs.collapsed .hero-mark { animation:gs-logo-pop .6s ease .12s; }
+@keyframes gs-logo-pop { 0%{transform:scale(1)} 42%{transform:scale(1.1)} 100%{transform:scale(1)} }
+/* Bottom sign slides up + softly pulses once the intro has folded. */
+.gs-ob .reminder-bar {
+  flex:none; overflow:hidden; max-height:0; opacity:0; margin-top:0;
+  display:flex; align-items:center; justify-content:center; gap:11px;
+  padding:0 18px; border-radius:18px; background:var(--cta-bg); color:var(--cta-text);
+  font-weight:800; font-size:16px; letter-spacing:-0.01em;
+  box-shadow:0 10px 26px -16px rgba(0,0,0,0.55);
+  transition:max-height .55s cubic-bezier(.5,0,.2,1), opacity .4s ease .12s, margin-top .5s ease;
+}
+.gs-ob .reminder-bar.in {
+  max-height:90px; opacity:1; padding:15px 18px; margin-top:clamp(12px,2svh,18px);
+  animation:gs-rem-glow 2.6s ease-in-out .8s infinite;
+}
+.gs-ob .reminder-bar .reminder-ic { width:24px; height:24px; flex:none; display:grid; place-items:center; }
+.gs-ob .reminder-bar .reminder-ic svg { width:100%; height:100%; }
+@keyframes gs-rem-glow {
+  0%,100% { box-shadow:0 10px 26px -16px rgba(0,0,0,0.55); }
+  50% { box-shadow:0 0 0 4px var(--green-soft), 0 10px 26px -16px rgba(0,0,0,0.55); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gs-ob .a2hs .intro-text, .gs-ob .a2hs .intro-inner, .gs-ob .reminder-bar { transition:none; }
+  .gs-ob .a2hs.collapsed .hero-mark, .gs-ob .reminder-bar.in { animation:none; }
+}
 .gs-ob .a2hs .for-browser {
   display:flex; align-items:center; justify-content:center; gap:8px;
   font-size:12.5px; font-weight:800; letter-spacing:0.1em;
