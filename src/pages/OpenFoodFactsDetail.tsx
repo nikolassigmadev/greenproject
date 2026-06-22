@@ -358,6 +358,8 @@ export default function OpenFoodFactsDetail() {
     // the product as. Left in sessionStorage (not consumed) so the Decision bar
     // can attach it to the buy/skip row too; a fresh scan clears it.
     const openaiResponse = fromScan ? sessionStorage.getItem("scan_openai_response") : null;
+    // The COMPLETE raw OpenAI response (before it was trimmed to the OFF search).
+    const fullOpenaiResponse = fromScan ? sessionStorage.getItem("scan_full_openai_response") : null;
     // Capture the unmet-demand signals at scan time too (not just on decision):
     // category, worst concern, and whether an in-market alternative exists.
     const demand = assessUnmetDemand(product, priorities, loadRegion()?.countryCode);
@@ -367,6 +369,7 @@ export default function OpenFoodFactsDetail() {
       brand: product.brand,
       ecoGrade: product.ecoscoreGrade,
       openaiResponse,
+      fullOpenaiResponse,
       carbonFootprint100g: product.carbonFootprint100g ?? null,
       verdict: verdictKey,
       priorities,
@@ -1317,6 +1320,7 @@ export default function OpenFoodFactsDetail() {
         onSeeBetter={scrollToSwaps}
         hasSwaps={swapsAvailable === true}
         openaiResponse={fromScan ? sessionStorage.getItem("scan_openai_response") : null}
+        fullOpenaiResponse={fromScan ? sessionStorage.getItem("scan_full_openai_response") : null}
       />
 
       <style>{`

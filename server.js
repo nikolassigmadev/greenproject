@@ -1062,6 +1062,8 @@ Return ONLY valid JSON matching this schema:
       brand: parsed?.brand || null,
       country: req.body?.country,
       city: req.body?.city,
+      // The complete model output, before we parsed/trimmed it down.
+      fullOpenaiResponse: raw,
     });
 
     res.json({
@@ -1762,14 +1764,16 @@ const scanLimiter = rateLimit({
 /**
  * POST /api/scans — public, fire-and-forget from the client. Logs one scanned
  * product. Body: { barcode?, name, brand?, ecoGrade?, country?, anonId?,
- * openaiResponse?, bought? }. openaiResponse is the raw string the OpenAI scan
- * identified the product as; bought is 'YES' (user bought it) or 'NO' (skipped),
- * stored in ai_scans.openai_response / ai_scans.bought.
+ * openaiResponse?, fullOpenaiResponse?, bought? }. openaiResponse is the trimmed
+ * brand+product string the OpenAI scan identified; fullOpenaiResponse is the
+ * COMPLETE raw model response before that trimming; bought is 'YES' (user bought
+ * it) or 'NO' (skipped). Stored in ai_scans.openai_response /
+ * ai_scans.full_openai_response / ai_scans.bought.
  */
 app.post('/api/scans', scanLimiter, smallBody, (req, res) => {
   try {
     const {
-      barcode, name, brand, ecoGrade, country, city, anonId, openaiResponse, bought,
+      barcode, name, brand, ecoGrade, country, city, anonId, openaiResponse, fullOpenaiResponse, bought,
       carbonFootprint100g, priorities, category, verdict, primaryConcern, swapAvailable,
     } = req.body || {};
     if (!name || typeof name !== 'string') {
@@ -1782,7 +1786,7 @@ app.post('/api/scans', scanLimiter, smallBody, (req, res) => {
     logScan({
       source: bought ? 'decision' : 'scan',
       userId: anonId, productName: name, brand, barcode, ecoGrade, country, city,
-      openaiResponse, bought,
+      openaiResponse, fullOpenaiResponse, bought,
       carbonFootprint100g, priorities, category, verdict, primaryConcern, swapAvailable,
     });
     // Only fail if BOTH stores are unavailable.

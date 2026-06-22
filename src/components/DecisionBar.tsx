@@ -54,11 +54,13 @@ interface DecisionBarProps {
   onSeeBetter: () => void;
   /** Whether the "Better swaps" section actually has picks to scroll to. */
   hasSwaps?: boolean;
-  /** What OpenAI identified the product as, when arrived from a camera scan. */
+  /** What OpenAI identified the product as (trimmed brand+product), when arrived from a camera scan. */
   openaiResponse?: string | null;
+  /** The COMPLETE raw OpenAI response, before it was trimmed to the OFF search. */
+  fullOpenaiResponse?: string | null;
 }
 
-export function DecisionBar({ product, verdictKey, onSeeBetter, hasSwaps = false, openaiResponse }: DecisionBarProps) {
+export function DecisionBar({ product, verdictKey, onSeeBetter, hasSwaps = false, openaiResponse, fullOpenaiResponse }: DecisionBarProps) {
   const [decision, setDecision] = useState(() => getDecision(product.barcode));
   const { lean, color, headline } = meaning(verdictKey);
 
@@ -89,6 +91,7 @@ export function DecisionBar({ product, verdictKey, onSeeBetter, hasSwaps = false
       brand: product.brand,
       ecoGrade: product.ecoscoreGrade,
       openaiResponse,
+      fullOpenaiResponse,
       bought: outcome === "bought" ? "YES" : "NO",
       carbonFootprint100g: product.carbonFootprint100g ?? null,
       verdict: verdictKey,

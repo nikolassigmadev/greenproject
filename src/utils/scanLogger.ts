@@ -39,8 +39,10 @@ export interface ScanLogInput {
   name: string;
   brand?: string | null;
   ecoGrade?: string | null;
-  /** Raw string OpenAI identified the product as (brand + product), when scanned via the camera. */
+  /** Trimmed string OpenAI identified the product as (brand + product), when scanned via the camera. */
   openaiResponse?: string | null;
+  /** The COMPLETE raw OpenAI response, before it's trimmed to the brand+product OFF search. */
+  fullOpenaiResponse?: string | null;
   /** 'YES' if the user bought the product, 'NO' if they skipped it. */
   bought?: "YES" | "NO" | null;
   /** CO2e grams per 100g (Open Food Facts), when known. */
@@ -71,6 +73,7 @@ export function logScan(input: ScanLogInput): void {
       brand: input.brand ?? null,
       ecoGrade: input.ecoGrade ?? null,
       openaiResponse: input.openaiResponse ?? null,
+      fullOpenaiResponse: input.fullOpenaiResponse ?? null,
       bought: input.bought ?? null,
       country: region?.countryCode ?? null,
       city: region?.city ?? null,

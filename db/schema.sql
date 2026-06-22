@@ -18,7 +18,8 @@ CREATE TABLE IF NOT EXISTS ai_scans (
   country         TEXT,          -- user's set region country code (from the app)
   city            TEXT,          -- user's set region city (from the app)
   off_url         TEXT,          -- Open Food Facts product page URL (from barcode)
-  openai_response TEXT,          -- raw string OpenAI identified the product as
+  openai_response TEXT,          -- raw string OpenAI identified the product as (trimmed brand+product)
+  full_openai_response TEXT,     -- the COMPLETE raw OpenAI response, before it's trimmed to the OFF search
   bought          TEXT,          -- 'YES' bought / 'NO' skipped / null (no decision)
   carbon_footprint_100g REAL,    -- CO2e grams per 100g, from Open Food Facts
   priorities      JSONB,         -- user's concern weights at scan time {environment,laborRights,animalWelfare,nutrition}; each 0-100 on a 3-level scale (Low=25 / Medium=50 / Critical=100)
@@ -31,6 +32,7 @@ CREATE TABLE IF NOT EXISTS ai_scans (
 
 -- If your table predates these columns, add them idempotently:
 ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS openai_response TEXT;
+ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS full_openai_response TEXT;
 ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS bought          TEXT;
 ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS carbon_footprint_100g REAL;
 ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS priorities      JSONB;

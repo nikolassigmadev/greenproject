@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS ai_scans (
   city            TEXT,
   off_url         TEXT,
   openai_response TEXT,
+  full_openai_response TEXT,      -- the COMPLETE raw OpenAI response, before it's trimmed to a brand+product OFF search
   bought          TEXT,
   carbon_footprint_100g REAL,    -- CO2e grams per 100g, from Open Food Facts
   priorities      JSONB,         -- snapshot of the user's concern weights at scan time (3-level scale: Low=25 / Medium=50 / Critical=100)
@@ -49,6 +50,9 @@ ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS city            TEXT;
 ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS off_url         TEXT;
 -- Raw string OpenAI identified the product as, e.g. "Cadbury Dairy Milk Caramel".
 ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS openai_response TEXT;
+-- The COMPLETE raw OpenAI response (e.g. "Product: ... Brand: ... Barcode: ..."),
+-- captured before it's trimmed to the brand+product query sent to Open Food Facts.
+ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS full_openai_response TEXT;
 -- Did the user buy the product or skip it? 'YES' (bought) / 'NO' (skipped) / null.
 ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS bought          TEXT;
 -- Carbon + personalisation + the signals that power the unmet-demand heatmap.
@@ -159,6 +163,20 @@ function clip(s, n) {
   return cleaned || null;
 }
 
+// Like clip(), but keeps newlines so a full multi-line model response stays
+// legible. Collapses runs of spaces/tabs, caps blank-line runs, trims, then
+// caps length. Used for full_openai_response where we want the raw text intact.
+function clipRaw(s, n) {
+  if (typeof s !== 'string') return null;
+  const cleaned = s
+    .replace(/\r\n?/g, '\n')      // normalise CRLF → LF
+    .replace(/[^\S\n]+/g, ' ')    // collapse spaces/tabs, keep newlines
+    .replace(/\n{3,}/g, '\n\n')   // cap long blank-line runs
+    .trim()
+    .slice(0, n);
+  return cleaned || null;
+}
+
 // One of a fixed set, else null. Keeps junk out of the heatmap dimensions.
 function oneOf(s, allowed) {
   const v = clip(s, 32);
@@ -201,6 +219,7 @@ function priorityJson(p) {
  * @param {string} [rec.country]     user's set region country (code), from the app
  * @param {string} [rec.city]        user's set region city, from the app
  * @param {string} [rec.openaiResponse] raw product string OpenAI identified (brand + product)
+ * @param {string} [rec.fullOpenaiResponse] the COMPLETE raw OpenAI response, before trimming to the OFF search
  * @param {string} [rec.bought]        'YES' if the user bought it, 'NO' if skipped, else null
  * @param {number} [rec.carbonFootprint100g] CO2e grams per 100g, from Open Food Facts
  * @param {object} [rec.priorities]    the user's concern weights {environment,laborRights,animalWelfare,nutrition}
@@ -227,6 +246,7 @@ export function logScan(rec = {}) {
       clip(rec.city, 120),
       offUrl,
       clip(rec.openaiResponse, 500),
+      clipRaw(rec.fullOpenaiResponse, 20000),
       bought,
       num(rec.carbonFootprint100g, 100000),
       priorityJson(rec.priorities),
@@ -239,11 +259,13 @@ export function logScan(rec = {}) {
       .query(
         `INSERT INTO ai_scans
            (user_id, source, product_name, brand, barcode,
-            eco_grade, country, city, off_url, openai_response, bought,
+            eco_grade, country, city, off_url, openai_response,
+            full_openai_response, bought,
             carbon_footprint_100g, priorities, category, verdict,
             primary_concern, swap_available)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,
-                 $12,$13::jsonb,$14,$15,$16,$17)`,
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,
+                 $11,$12,
+                 $13,$14::jsonb,$15,$16,$17,$18)`,
         values,
       )
       .catch((e) => console.error('scanStore: insert failed —', e.message));

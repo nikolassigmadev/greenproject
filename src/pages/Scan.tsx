@@ -1276,6 +1276,7 @@ const Scan = () => {
     // Clear stale OCR name / OpenAI identification from a previous scan
     sessionStorage.removeItem('ocr_product_name');
     sessionStorage.removeItem('scan_openai_response');
+    sessionStorage.removeItem('scan_full_openai_response');
 
     try {
       // Step 1: OpenAI identifies the product
@@ -1296,13 +1297,19 @@ const Scan = () => {
       if (ocrProductName) {
         sessionStorage.setItem('ocr_product_name', ocrProductName);
       }
-      // The full string OpenAI identified (brand + product). Carried to the
+      // The trimmed string OpenAI identified (brand + product). Carried to the
       // detail page so the scan log records exactly what the model saw
       // (Supabase ai_scans.openai_response).
       const openaiIdentified = [identified.brandName, identified.productName]
         .filter((s) => s && !isUnknownResponse(s)).join(' ').trim();
       if (openaiIdentified) sessionStorage.setItem('scan_openai_response', openaiIdentified);
       else sessionStorage.removeItem('scan_openai_response');
+      // The COMPLETE raw model response, before we trimmed it to the brand+product
+      // search above. Carried alongside so the scan log captures the full picture
+      // of what OpenAI returned (Supabase ai_scans.full_openai_response).
+      const fullOpenaiResponse = identified.rawExtraction?.trim();
+      if (fullOpenaiResponse) sessionStorage.setItem('scan_full_openai_response', fullOpenaiResponse);
+      else sessionStorage.removeItem('scan_full_openai_response');
 
       // Step 1b: Check hardcoded barcode map before anything else
       setScanStage("Checking local product database...");
@@ -1515,6 +1522,7 @@ const Scan = () => {
           sessionStorage.removeItem('ocr_product_name');
           // Manual search isn't an OpenAI identification — don't carry one over.
           sessionStorage.removeItem('scan_openai_response');
+          sessionStorage.removeItem('scan_full_openai_response');
           sessionStorage.setItem('scan_candidates', JSON.stringify(topResults));
           setShowSearch(false);
           navigate(`/product-off/${topResults[0].barcode}?from=scan`);

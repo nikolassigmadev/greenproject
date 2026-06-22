@@ -179,10 +179,23 @@ export const OB_CSS = `
 .gs-ob .prio.c3 .seg button.on { background:var(--violet); color:#fff; box-shadow:0 6px 14px -6px var(--violet); }
 
 /* ===== Add to Home Screen ===== */
-.gs-ob .a2hs { display:flex; flex-direction:column; flex:1; min-height:0; }
+.gs-ob .a2hs { display:flex; flex-direction:column; flex:1; min-height:0; justify-content:center; }
 .gs-ob .a2hs .hero-mark { margin:clamp(4px,1svh,14px) auto clamp(14px,3svh,26px); }
 .gs-ob .a2hs h1.title { text-align:center; }
 .gs-ob .a2hs p.sub { text-align:center; margin:0 auto; }
+.gs-ob .a2hs .for-browser {
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  font-size:12.5px; font-weight:800; letter-spacing:0.1em;
+  text-transform:uppercase; color:var(--eyebrow);
+  margin:clamp(16px,3.4svh,38px) 0 clamp(9px,1.5svh,14px);
+}
+.gs-ob .a2hs .for-browser .browser-logo { width:22px; height:22px; flex:none; display:block; }
+.gs-ob .a2hs .for-browser .browser-logo svg { width:100%; height:100%; display:block; }
+.gs-ob .a2hs .for-browser + .steps { margin-top:0; }
+.gs-ob .a2hs .note {
+  text-align:center; font-size:13.5px; line-height:1.45; font-weight:500;
+  color:var(--text-2); margin:clamp(12px,2svh,18px) auto 0; max-width:34ch;
+}
 .gs-ob .steps {
   margin-top:clamp(16px,3.4svh,40px); display:flex; flex-direction:column; gap:clamp(9px,1.5svh,13px);
 }
