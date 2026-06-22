@@ -1392,6 +1392,12 @@ const Scan = () => {
       let bestMatch: MatchResult<OpenFoodFactsResult> | null = null;
       let allCandidates: OpenFoodFactsResult[] = [];
 
+      // Record every OFF search variation we send and how it resolved, so the
+      // scan log captures the full match-finding trail (see append below).
+      const searchAttempts: string[] = [];
+      const recordAttempt = (q: string, outcome: string) =>
+        searchAttempts.push(`${searchAttempts.length + 1}. "${q}" → ${outcome}`);
+
       for (let qi = 0; qi < searchQueries.length; qi++) {
         const q = searchQueries[qi];
         setScanStage(`Searching "${q}"...`);
@@ -1400,12 +1406,14 @@ const Scan = () => {
 
         const results = await searchOffProducts(q, 20);
         if (results.length === 0) {
+          recordAttempt(q, "0 results");
           console.warn(`   ↪ No results for "${q}"`);
           continue;
         }
 
         const topResults = filterBestProducts(results, q);
         if (topResults.length === 0) {
+          recordAttempt(q, `${results.length} results, none relevant`);
           console.warn(`   ↪ Results for "${q}" filtered out by relevance`);
           continue;
         }
@@ -1415,6 +1423,7 @@ const Scan = () => {
         console.log(`   [relevance] query="${q}" → passed=${match.passedRelevanceGate}, brandOnly=${match.brandOnlyFallback}, confidence=${match.confidence.toFixed(2)}`);
 
         if (match.passedRelevanceGate && match.product) {
+          recordAttempt(q, `matched "${match.product.productName}"${match.product.brand ? ` by ${match.product.brand}` : ""} [${match.product.barcode}]`);
           bestMatch = match;
           allCandidates = topResults;
           console.log(`✅ Matched: "${match.product.productName}" by ${match.product.brand} (query="${q}", confidence=${match.confidence.toFixed(2)})`);
@@ -1423,8 +1432,21 @@ const Scan = () => {
 
         // A brand-only fallback is never auto-accepted — log and continue trying
         if (match.brandOnlyFallback) {
+          recordAttempt(q, `${topResults.length} results, brand-only fallback (not accepted)`);
           console.warn(`   ↪ Brand-only fallback for "${q}" — not auto-accepting`);
+        } else {
+          recordAttempt(q, `${topResults.length} results, no confident match`);
         }
+      }
+
+      // Persist every variation we tried into the existing full OpenAI response
+      // field carried to the detail page (Supabase ai_scans.full_openai_response).
+      // Appended after the raw model output so one row shows what OpenAI saw AND
+      // every query variation it drove into Open Food Facts, with each outcome.
+      if (searchAttempts.length > 0) {
+        const base = sessionStorage.getItem('scan_full_openai_response') || fullOpenaiResponse || '';
+        const block = `OFF search variations tried (${searchAttempts.length}):\n${searchAttempts.join('\n')}`;
+        sessionStorage.setItem('scan_full_openai_response', base ? `${base}\n\n${block}` : block);
       }
 
       if (!bestMatch || !bestMatch.product) {

@@ -858,25 +858,37 @@ export default function OpenFoodFactsDetail() {
               </div>
             </div>
           )}
-          <div style={{
-            background: "var(--ds-caution-bg, #FBE9E2)", borderRadius: 14, padding: "14px 16px",
-            display: "flex", gap: 12, alignItems: "flex-start",
-            border: `1px solid ${EDITORIAL.redSoft}`,
-          }}>
-            <div style={{
-              width: 22, height: 22, borderRadius: 99, background: vc.color, color: EDITORIAL.card,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontStyle: "italic", fontSize: 16, flexShrink: 0, marginTop: 1,
-            }}>!</div>
-            <div>
-              <div style={{ fontSize: 13.5, fontWeight: 800, color: EDITORIAL.ink, lineHeight: 1.3 }}>
-                {primaryAlert}
+          {(() => {
+            // The headline verdict callout takes its colour from the verdict itself,
+            // so a positive "Buy" reads green (matching the rest of the site) instead
+            // of the caution-brown it used to hard-code for every verdict.
+            const VIcon = vc.Icon;
+            return (
+              <div style={{
+                background: vc.bg, borderRadius: 14, padding: "14px 16px",
+                display: "flex", gap: 12, alignItems: "flex-start",
+                border: `1px solid ${vc.color}33`,
+              }}>
+                <div style={{
+                  width: 22, height: 22, borderRadius: 99, background: vc.color, color: EDITORIAL.card,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  flexShrink: 0, marginTop: 1,
+                }}>
+                  <VIcon style={{ width: 13, height: 13 }} />
+                </div>
+                <div>
+                  <div style={{ fontSize: 13.5, fontWeight: 800, color: EDITORIAL.ink, lineHeight: 1.3 }}>
+                    {primaryAlert}
+                  </div>
+                  {verdict.reason !== primaryAlert && (
+                    <div style={{ fontSize: 12, color: EDITORIAL.ink2, marginTop: 3, lineHeight: 1.4 }}>
+                      {verdict.reason}
+                    </div>
+                  )}
+                </div>
               </div>
-              <div style={{ fontSize: 12, color: EDITORIAL.ink2, marginTop: 3, lineHeight: 1.4 }}>
-                {verdict.reason}
-              </div>
-            </div>
-          </div>
+            );
+          })()}
           {verifiedEthics && (() => {
             const categoryLabel = CATEGORY_LABELS[verifiedEthics.category] || verifiedEthics.category;
             const certText = verifiedEthics.certifications.map(c => CERTIFICATION_BADGES[c].shortLabel).join(", ");
@@ -904,6 +916,31 @@ export default function OpenFoodFactsDetail() {
               </div>
             );
           })()}
+          {chocolateEntry && (chocolateEntry.verdict === "leader" || chocolateEntry.verdict === "better") && (
+            // Surface a strong ethical performer (Chocolate Scorecard leader/better)
+            // right up top, next to the verdict — not buried in the Ethics section.
+            <div style={{
+              background: EDITORIAL.greenSoft, borderRadius: 14, padding: "14px 16px",
+              display: "flex", gap: 12, alignItems: "flex-start",
+              border: `1px solid rgba(31,107,78,0.2)`,
+            }}>
+              <div style={{
+                width: 22, height: 22, borderRadius: 99, background: EDITORIAL.green, color: EDITORIAL.card,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                flexShrink: 0, marginTop: 1,
+              }}>
+                <Check style={{ width: 13, height: 13 }} />
+              </div>
+              <div>
+                <div style={{ fontSize: 13.5, fontWeight: 800, color: EDITORIAL.ink, lineHeight: 1.3 }}>
+                  {chocolateEntry.name} — Chocolate Scorecard {VERDICT_META[chocolateEntry.verdict].label}
+                </div>
+                <div style={{ fontSize: 12, color: EDITORIAL.ink2, marginTop: 3, lineHeight: 1.4 }}>
+                  {chocolateEntry.note}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {fromScan && (
