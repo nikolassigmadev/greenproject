@@ -719,7 +719,7 @@ export default function OpenFoodFactsDetail() {
 
       <main style={{ paddingBottom: 150, maxWidth: 560, margin: "0 auto", background: EDITORIAL.paper, minHeight: "100dvh" }}>
 
-        <div ref={heroRef} style={{ position: "relative", height: 280, overflow: "hidden", background: "var(--ds-hero-gradient, radial-gradient(ellipse at 50% 35%, #F4DCB8 0%, #E8C58A 45%, #D9A86A 100%))" }}>
+        <div ref={heroRef} style={{ position: "relative", height: 280, overflow: "hidden", background: `radial-gradient(ellipse at 50% 35%, color-mix(in srgb, ${vc.color} 26%, transparent) 0%, color-mix(in srgb, ${vc.color} 10%, transparent) 45%, ${EDITORIAL.page} 100%)` }}>
           <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(rgba(0,0,0,0.04) 1px, transparent 1px)", backgroundSize: "3px 3px", opacity: 0.55 }} />
           <div style={{
             position: "absolute", top: "calc(env(safe-area-inset-top, 0px) + 18px)", left: 16, zIndex: 2,
@@ -758,7 +758,7 @@ export default function OpenFoodFactsDetail() {
               fontSize: 12, fontWeight: 800, letterSpacing: 0.3,
               boxShadow: "0 6px 16px rgba(0,0,0,0.18)",
             }}>
-              <span style={{ width: 7, height: 7, borderRadius: 99, background: vc.color, boxShadow: `0 0 0 3px ${vc.color}33` }} />
+              <span style={{ width: 7, height: 7, borderRadius: 99, background: vc.color, boxShadow: `0 0 0 3px color-mix(in srgb, ${vc.color} 22%, transparent)` }} />
               {verdict.key}
             </div>
           </div>
@@ -768,12 +768,12 @@ export default function OpenFoodFactsDetail() {
             width: 178, height: 218, borderRadius: 22,
             background: "rgba(255,255,255,0.18)",
             display: "flex", alignItems: "center", justifyContent: "center",
-            boxShadow: "0 30px 50px rgba(120,40,15,0.28), inset 0 1px 0 rgba(255,255,255,0.35)",
+            boxShadow: `0 30px 50px color-mix(in srgb, ${vc.color} 22%, transparent), inset 0 1px 0 rgba(255,255,255,0.35)`,
             opacity: mounted ? 1 : 0,
             transition: "opacity 0.5s ease, transform 0.5s ease",
           }}>
             {product.imageUrl ? (
-              <img src={product.imageUrl} alt={displayName} style={{ maxWidth: "88%", maxHeight: "88%", objectFit: "contain", filter: "drop-shadow(0 18px 24px rgba(70,31,10,0.28))" }} />
+              <img src={product.imageUrl} alt={displayName} style={{ maxWidth: "88%", maxHeight: "88%", objectFit: "contain", filter: "drop-shadow(0 18px 24px rgba(0,0,0,0.30))" }} />
             ) : (
               <Sprout style={{ width: 72, height: 72, color: "rgba(26,22,20,0.35)" }} />
             )}
@@ -847,7 +847,7 @@ export default function OpenFoodFactsDetail() {
             <div style={{
               background: EDITORIAL.redSoft, borderRadius: 14, padding: "12px 14px",
               display: "flex", gap: 10, alignItems: "center",
-              border: `1px solid ${EDITORIAL.red}33`,
+              border: `1px solid color-mix(in srgb, ${EDITORIAL.red} 22%, transparent)`,
             }}>
               <Eye style={{
                 width: 18, height: 18, color: EDITORIAL.red,
@@ -867,7 +867,7 @@ export default function OpenFoodFactsDetail() {
               <div style={{
                 background: vc.bg, borderRadius: 14, padding: "14px 16px",
                 display: "flex", gap: 12, alignItems: "flex-start",
-                border: `1px solid ${vc.color}33`,
+                border: `1px solid color-mix(in srgb, ${vc.color} 22%, transparent)`,
               }}>
                 <div style={{
                   width: 22, height: 22, borderRadius: 99, background: vc.color, color: EDITORIAL.card,
