@@ -13,6 +13,7 @@ import { ScoreBreakdownSlider } from "@/components/ScoreBreakdownSlider";
 import { lookupBarcode, isValidBarcode } from "@/services/openfoodfacts";
 import { OpenFoodFactsCard } from "@/components/OpenFoodFactsCard";
 import { EggChickenWelfareCard } from "@/components/EggChickenWelfareCard";
+import { computeAnimalWelfareScore } from "@/utils/animalWelfareScore";
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -45,6 +46,12 @@ const ProductDetail = () => {
   }
 
   const score = calculateScore(product);
+  const welfareScore = computeAnimalWelfareScore({
+    brand: product.brand,
+    productName: product.name,
+    categories: product.category,
+    labels: product.certifications,
+  });
   const alternatives = findAlternatives(product, products);
 
   const offQuery = useQuery({
@@ -106,12 +113,23 @@ const ProductDetail = () => {
 
             {/* Score + breakdown card */}
             <div className="bg-card rounded-2xl border border-border/60 shadow-elevated p-5">
-              <div className="flex items-center gap-5">
-                <ScoreDisplay score={score} size="lg" />
+              <div className="flex items-center gap-4">
+                <div className="flex flex-col items-center gap-1">
+                  <ScoreDisplay score={score} size="lg" />
+                  <span className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">Overall</span>
+                </div>
+                {welfareScore.score !== null && (
+                  <div className="flex flex-col items-center gap-1">
+                    <ScoreDisplay score={welfareScore.score} size="md" />
+                    <span className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">Welfare</span>
+                  </div>
+                )}
                 <div className="flex-1 min-w-0">
                   <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">Sustainability Score</p>
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    Based on labor practices, carbon footprint, transport, and certifications.
+                    {welfareScore.score !== null
+                      ? "Overall covers labor, carbon, transport & certifications. Welfare rates how farmed animals were treated."
+                      : "Based on labor practices, carbon footprint, transport, and certifications."}
                   </p>
                 </div>
               </div>

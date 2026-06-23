@@ -21,6 +21,7 @@ import { checkBoycott } from "@/data/boycottBrands";
 import { checkAnimalWelfareFlag } from "@/utils/animalWelfareFlags";
 import { AnimalWelfareFlagBadge } from "@/components/AnimalWelfareFlagBadge";
 import { EggChickenWelfareCard } from "@/components/EggChickenWelfareCard";
+import { computeAnimalWelfareScore, welfareScoreColor } from "@/utils/animalWelfareScore";
 import { addToBasket, removeFromBasket, loadBasket } from "@/utils/basketStorage";
 import { findLaborAllegations as findLaborAllegationsUtil, getLaborAllegationCount } from "@/utils/laborCheck";
 import { findVerifiedEthics, CERTIFICATION_BADGES, getPrimaryCertification, CATEGORY_LABELS, type CertificationType } from "@/utils/verifiedEthics";
@@ -647,6 +648,13 @@ export default function OpenFoodFactsDetail() {
   const chocolateEntry  = findChocolateEntry(product.brand, product.productName);
   const ecoGrade     = product.ecoscoreGrade?.toLowerCase();
   const nutriGrade   = product.nutriscoreGrade?.toLowerCase();
+  const welfareScore = computeAnimalWelfareScore({
+    brand: product.brand,
+    productName: product.productName,
+    categories: product.categories,
+    labels: product.labels,
+    ingredientsText: product.ingredientsText,
+  });
 
   const co2Values = CO2_BARS
     .map(b => agri?.[b.key as keyof typeof agri] as number | undefined)
@@ -688,7 +696,7 @@ export default function OpenFoodFactsDetail() {
     return ocrName || cleanName || product.productName || "Unknown product";
   })();
 
-  const hasScores = !!(ecoGrade || nutriGrade || product.novaGroup);
+  const hasScores = !!(ecoGrade || nutriGrade || product.novaGroup || welfareScore.score !== null);
   const hasEthicsConcerns = !!(laborRecord || boycottMatch || welfare.isFlagged);
   const title = titleParts(displayName);
   const category = shortCategory(product);
@@ -1125,6 +1133,16 @@ export default function OpenFoodFactsDetail() {
                   label="NOVA"
                   sublabel={NOVA_LABEL[product.novaGroup!]}
                   delay={300}
+                />
+              )}
+              {welfareScore.score !== null && (
+                <ScoreGauge
+                  value={String(welfareScore.score)}
+                  color={welfareScoreColor(welfareScore.score)}
+                  percent={welfareScore.score / 100}
+                  label="Welfare"
+                  sublabel={welfareScore.band ?? undefined}
+                  delay={450}
                 />
               )}
             </div>

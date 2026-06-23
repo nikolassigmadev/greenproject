@@ -93,6 +93,7 @@ This section is a standalone product knowledge base. Products are manually enter
 | File | Role |
 |------|------|
 | `src/utils/animalWelfareFlags.ts` | Flags products from low-BBFAW companies and adjusts scores — `checkAnimalWelfareFlag()`, `adjustScoreForAnimalWelfareFlag()` |
+| `src/utils/animalWelfareScore.ts` | Computes the 0–100 **Animal Welfare Score** (shown as a circle next to Eco/Nutri/NOVA). Detects animal-product type, then blends producer welfare records, audited certifications, and corporate BBFAW records — `computeAnimalWelfareScore()`, `welfareBand()`, `welfareScoreColor()` |
 
 ### Pages
 
