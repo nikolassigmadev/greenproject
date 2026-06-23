@@ -20,6 +20,7 @@ import { loadRegion } from "@/utils/userRegion";
 import { checkBoycott } from "@/data/boycottBrands";
 import { checkAnimalWelfareFlag } from "@/utils/animalWelfareFlags";
 import { AnimalWelfareFlagBadge } from "@/components/AnimalWelfareFlagBadge";
+import { EggChickenWelfareCard } from "@/components/EggChickenWelfareCard";
 import { addToBasket, removeFromBasket, loadBasket } from "@/utils/basketStorage";
 import { findLaborAllegations as findLaborAllegationsUtil, getLaborAllegationCount } from "@/utils/laborCheck";
 import { findVerifiedEthics, CERTIFICATION_BADGES, getPrimaryCertification, CATEGORY_LABELS, type CertificationType } from "@/utils/verifiedEthics";
@@ -1297,6 +1298,7 @@ export default function OpenFoodFactsDetail() {
                 </div>
               )}
               {welfare.isFlagged && <AnimalWelfareFlagBadge brand={product.brand} showDetails={true} />}
+              <EggChickenWelfareCard brand={product.brand} />
             </div>
           </section>
 

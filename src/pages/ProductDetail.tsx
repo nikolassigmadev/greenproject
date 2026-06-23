@@ -12,6 +12,7 @@ import { DS } from "@/styles/design-tokens";
 import { ScoreBreakdownSlider } from "@/components/ScoreBreakdownSlider";
 import { lookupBarcode, isValidBarcode } from "@/services/openfoodfacts";
 import { OpenFoodFactsCard } from "@/components/OpenFoodFactsCard";
+import { EggChickenWelfareCard } from "@/components/EggChickenWelfareCard";
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -118,6 +119,9 @@ const ProductDetail = () => {
                 <ScoreBreakdownSlider product={product} />
               </div>
             </div>
+
+            {/* Egg & chicken producer welfare findings (renders only on a match) */}
+            <EggChickenWelfareCard brand={product.brand} />
 
             {/* Product info card */}
             <div className="bg-card rounded-2xl border border-border/60 shadow-soft p-4">

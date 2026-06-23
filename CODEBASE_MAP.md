@@ -78,6 +78,7 @@ This section is a standalone product knowledge base. Products are manually enter
 | `src/data/boycottBrands.ts` | Brand-level boycott data (BDS list, companies with operations flagged for ethical concerns) — `checkBoycott(brand)` |
 | `src/data/brandFlags.ts` | Labor allegations database mapped by brand name. Sources: U.S. DOL, HRW, Washington Post. Severity: critical / high / medium |
 | `src/data/poorAnimalWelfareCompanies.ts` | BBFAW (Business Benchmark on Farm Animal Welfare) rated companies with poor scores |
+| `src/data/eggChickenWelfare.ts` | Egg & chicken producer/brand welfare database (USA & EU). Ownership tracing, certifications, documented issues, pledge status, label-integrity/verification scores, label decoder, greenwashing red flags — `getWelfareProducerByBrand()`, `getLabelInfo()`, `welfareScoreTone()` |
 
 ### Database & Storage
 
@@ -112,6 +113,7 @@ This section is a standalone product knowledge base. Products are manually enter
 | `src/components/ScoreBreakdownSlider.tsx` | Factor-by-factor score breakdown bars (labor, animal welfare, carbon, etc.) |
 | `src/components/ProductCard.tsx` | Product card for local database listings |
 | `src/components/AnimalWelfareFlagBadge.tsx` | BBFAW animal welfare flag badge |
+| `src/components/EggChickenWelfareCard.tsx` | Producer/brand-level egg & chicken welfare findings card (renders only when the brand matches a known producer) |
 | `src/components/LaborFlagBanner.tsx` | Labor allegations banner |
 
 ### Admin Auth
