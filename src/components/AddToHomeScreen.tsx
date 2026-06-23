@@ -201,10 +201,11 @@ function buildInstallGuide(): InstallGuide {
       };
     }
     // Safari — and any other iOS browser — use the canonical share-sheet flow.
+    // On newer iOS the Share action lives behind the ⋯ More button in the toolbar.
     return {
       browser: "Safari",
       steps: [
-        { text: <>Tap the <Ic><ShareGlyph /></Ic> <b>Share</b> button in the toolbar.</> },
+        { text: <>Tap the <Ic><MoreHorizontal /></Ic> <b>More</b> button in the toolbar, then tap <Ic><ShareGlyph /></Ic> <b>Share</b>.</> },
         { text: <>Scroll down and tap <Ic><PlusSquareGlyph /></Ic> <b>Add to Home Screen</b>.</> },
         launch,
       ],
