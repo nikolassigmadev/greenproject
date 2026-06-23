@@ -7,8 +7,14 @@
  * known egg or chicken producer.
  *
  * Renders nothing when the brand has no welfare record.
+ *
+ * Styling mirrors the other cards in the product verdict page's "Ethics &
+ * labour" section: a hairline-bordered card with a 46px / 1fr header (soft
+ * icon tile + 19px title), editorial body copy and a footnote — so it reads as
+ * one of the page, not a bespoke widget.
  */
 
+import { AlertTriangle } from 'lucide-react';
 import {
   getWelfareProducerByBrand,
   welfareScoreTone,
@@ -27,19 +33,20 @@ const CONFIDENCE_COPY: Record<WelfareProducer['confidence'], string> = {
   UNVERIFIED: 'Unverified — company claim only / supplier opacity',
 };
 
-function ScoreDot({ label, value }: { label: string; value: number }) {
+/** A single 1–5 sub-score, shown as a tinted tile + caption (matches the page's icon tiles). */
+function ScoreStat({ label, value }: { label: string; value: number }) {
   const tone = value >= 4 ? 'good' : value === 3 ? 'warn' : 'bad';
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
       <div
         style={{
-          width: 34,
-          height: 34,
+          width: 36,
+          height: 36,
           borderRadius: 10,
           background: toneBg(tone),
           color: toneColor(tone),
           fontWeight: 800,
-          fontSize: 15,
+          fontSize: 16,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -56,11 +63,11 @@ function ScoreDot({ label, value }: { label: string; value: number }) {
 function Field({ label, value }: { label: string; value: string }) {
   if (!value || value === 'n/a') return null;
   return (
-    <div style={{ marginBottom: 8 }}>
-      <span style={{ fontSize: 11, fontWeight: 700, color: DS.muted, textTransform: 'uppercase', letterSpacing: 0.4 }}>
+    <div style={{ marginBottom: 12 }}>
+      <div style={{ fontSize: 10.5, fontWeight: 700, color: DS.muted, textTransform: 'uppercase', letterSpacing: 0.6 }}>
         {label}
-      </span>
-      <p style={{ fontSize: 13, color: DS.ink2, margin: '2px 0 0', lineHeight: 1.45 }}>{value}</p>
+      </div>
+      <p style={{ fontSize: 13, color: DS.ink2, margin: '3px 0 0', lineHeight: 1.45 }}>{value}</p>
     </div>
   );
 }
@@ -77,26 +84,56 @@ export function EggChickenWelfareCard({ brand }: EggChickenWelfareCardProps) {
     <div
       style={{
         background: DS.card,
-        border: `2px solid ${color}`,
-        borderRadius: DS.radius.md,
-        padding: '1rem',
-        marginBottom: '1.5rem',
+        border: `1px solid ${DS.hair}`,
+        borderRadius: 22,
+        padding: '18px 20px',
       }}
     >
-      {/* Header */}
-      <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start', marginBottom: 12 }}>
-        <div style={{ fontSize: '1.5rem', flexShrink: 0 }}>{icon}</div>
-        <div style={{ flex: 1 }}>
-          <h3 style={{ fontWeight: 800, color: DS.ink, margin: 0, fontSize: 16, lineHeight: 1.2 }}>
-            {record.producer}
-          </h3>
-          <p style={{ fontSize: 12.5, color: DS.muted, margin: '3px 0 0' }}>
-            {record.region} · {record.productType}
-          </p>
+      {/* Header — 46px icon tile / 1fr, matching the section's other cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: '46px 1fr', gap: 14, alignItems: 'start' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 10,
+              background: toneBg(tone),
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 19,
+            }}
+          >
+            {icon}
+          </div>
         </div>
-        {/* Suggested overall score */}
-        <div style={{ flexShrink: 0 }}>
-          <ScoreDot label="Overall" value={record.suggestedOverall} />
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 19, lineHeight: 1.15, color: DS.ink, letterSpacing: -0.3, fontWeight: 700 }}>
+              {record.producer}
+            </span>
+            <span
+              style={{
+                fontSize: 10.5,
+                fontWeight: 800,
+                letterSpacing: '0.06em',
+                textTransform: 'uppercase',
+                color,
+                background: toneBg(tone),
+                border: `1px solid ${color}`,
+                borderRadius: 999,
+                padding: '2px 9px',
+              }}
+            >
+              Overall {record.suggestedOverall}/5
+            </span>
+          </div>
+          <div style={{ fontSize: 11, color: DS.muted, marginTop: 4, letterSpacing: 0.3 }}>
+            {record.region} · {record.productType}
+          </div>
+          <div style={{ fontSize: 12.5, color: DS.ink2, marginTop: 8, lineHeight: 1.45 }}>
+            {CONFIDENCE_COPY[record.confidence]} · {record.sourceTier}
+          </div>
         </div>
       </div>
 
@@ -104,68 +141,82 @@ export function EggChickenWelfareCard({ brand }: EggChickenWelfareCardProps) {
       <div
         style={{
           display: 'flex',
-          gap: 16,
-          padding: '10px 0',
+          gap: 20,
+          alignItems: 'center',
+          marginTop: 16,
+          paddingTop: 16,
           borderTop: `1px solid ${DS.hair}`,
-          borderBottom: `1px solid ${DS.hair}`,
-          marginBottom: 12,
         }}
       >
-        <ScoreDot label="Label integrity" value={record.labelIntegrity} />
-        <ScoreDot label="Verification" value={record.verification} />
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center' }}>
-          <span style={{ fontSize: 11.5, color: DS.muted, lineHeight: 1.4 }}>
-            Overall = the weaker of "does the label mean anything" and "how independently verified".
-          </span>
-        </div>
-      </div>
-
-      {/* Confidence */}
-      <div
-        style={{
-          display: 'inline-block',
-          fontSize: 11,
-          fontWeight: 700,
-          color,
-          background: toneBg(tone),
-          padding: '3px 8px',
-          borderRadius: 999,
-          marginBottom: 12,
-        }}
-      >
-        {CONFIDENCE_COPY[record.confidence]} · {record.sourceTier}
+        <ScoreStat label="Label integrity" value={record.labelIntegrity} />
+        <ScoreStat label="Verification" value={record.verification} />
+        <span style={{ flex: 1, fontSize: 11.5, color: DS.muted, lineHeight: 1.4 }}>
+          Overall = the weaker of "does the label mean anything" and "how independently verified".
+        </span>
       </div>
 
       {/* Detail fields */}
-      <Field label="Parent / holding co" value={record.parent} />
-      {record.privateLabel && <Field label="Private label" value={record.privateLabel} />}
-      <Field label="Welfare claims on pack" value={record.welfareClaims} />
-      <Field label="Housing system (documented)" value={record.housingSystem} />
-      <Field label="Certifications (audited)" value={record.certifications} />
-      <Field label="Pledge status" value={`${record.pledges} — ${record.pledgeStatus}`} />
-      <Field label="Documented issues" value={record.documentedIssues} />
+      <div style={{ marginTop: 16, paddingTop: 16, borderTop: `1px solid ${DS.hair}` }}>
+        <Field label="Parent / holding co" value={record.parent} />
+        {record.privateLabel && <Field label="Private label" value={record.privateLabel} />}
+        <Field label="Welfare claims on pack" value={record.welfareClaims} />
+        <Field label="Housing system (documented)" value={record.housingSystem} />
+        <Field label="Certifications (audited)" value={record.certifications} />
+        <Field label="Pledge status" value={`${record.pledges} — ${record.pledgeStatus}`} />
+        <Field label="Documented issues" value={record.documentedIssues} />
+      </div>
 
       {/* Red flags */}
       {record.redFlags && (
         <div
           style={{
-            background: DS.warnBg,
-            borderRadius: DS.radius.sm,
-            padding: '8px 10px',
+            display: 'grid',
+            gridTemplateColumns: '46px 1fr',
+            gap: 14,
+            alignItems: 'start',
             marginTop: 4,
+            paddingTop: 16,
+            borderTop: `1px solid ${DS.hair}`,
           }}
         >
-          <span style={{ fontSize: 11, fontWeight: 700, color: DS.warn, textTransform: 'uppercase', letterSpacing: 0.4 }}>
-            ⚑ Red flags
-          </span>
-          <p style={{ fontSize: 12.5, color: DS.ink2, margin: '3px 0 0', lineHeight: 1.45 }}>{record.redFlags}</p>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 10,
+                background: DS.warnBg,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <AlertTriangle style={{ width: 20, height: 20, color: DS.warn }} />
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize: 10.5, fontWeight: 800, color: DS.warn, textTransform: 'uppercase', letterSpacing: 0.6 }}>
+              Red flags
+            </div>
+            <p style={{ fontSize: 12.5, color: DS.ink2, margin: '4px 0 0', lineHeight: 1.45 }}>{record.redFlags}</p>
+          </div>
         </div>
       )}
 
-      <p style={{ fontSize: 10.5, color: DS.muted, fontStyle: 'italic', margin: '10px 0 0' }}>
+      <div
+        style={{
+          fontStyle: 'italic',
+          fontSize: 12,
+          color: DS.muted,
+          marginTop: 16,
+          lineHeight: 1.4,
+          borderTop: `1px solid ${DS.hair}`,
+          paddingTop: 14,
+        }}
+      >
         Source: Egg &amp; Chicken Welfare Database · last verified {record.lastVerified}. Allegations are described by
         status, not as proof of guilt.
-      </p>
+      </div>
     </div>
   );
 }
