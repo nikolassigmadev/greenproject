@@ -21,6 +21,9 @@ import { checkBoycott } from "@/data/boycottBrands";
 import { checkAnimalWelfareFlag } from "@/utils/animalWelfareFlags";
 import { AnimalWelfareFlagBadge } from "@/components/AnimalWelfareFlagBadge";
 import { EggChickenWelfareCard } from "@/components/EggChickenWelfareCard";
+import { BeefWelfareCard } from "@/components/BeefWelfareCard";
+import { SugarIndustryCard } from "@/components/SugarIndustryCard";
+import { CommoditySupplyChainCard } from "@/components/CommoditySupplyChainCard";
 import { computeAnimalWelfareScore, welfareScoreColor } from "@/utils/animalWelfareScore";
 import { addToBasket, removeFromBasket, loadBasket } from "@/utils/basketStorage";
 import { findLaborAllegations as findLaborAllegationsUtil, getLaborAllegationCount } from "@/utils/laborCheck";
@@ -1317,6 +1320,9 @@ export default function OpenFoodFactsDetail() {
               )}
               {welfare.isFlagged && <AnimalWelfareFlagBadge brand={product.brand} showDetails={true} />}
               <EggChickenWelfareCard brand={product.brand} />
+              <BeefWelfareCard brand={product.brand} />
+              <SugarIndustryCard brand={product.brand} />
+              <CommoditySupplyChainCard brand={product.brand} />
             </div>
           </section>
 
