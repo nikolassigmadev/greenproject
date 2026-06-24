@@ -6,6 +6,7 @@ import {
   normalize,
   tokenize,
   classifyToken,
+  hasUsableBrandAnchor,
   DEFAULT_CONFIG,
 } from './productRelevance';
 
@@ -236,5 +237,80 @@ describe('pickBestMatch', () => {
       const match = pickBestMatch(onlyWrongBrand, 'Theo Hazelnut Crisp', 'Hazelnut Crisp');
       expect(match.passedRelevanceGate).toBe(true);
     });
+  });
+
+  // Real production failures pulled from the ai_scans log (2026-06-24).
+  // These are the exact "brand drift" wrong-matches the fix must prevent.
+  describe('brand drift regressions (real ai_scans failures)', () => {
+    it('Cookie Pop "Popcorn Oreo" must NOT drift to "POPCORN CARAMEL" by Movies pop', () => {
+      // The product-only fallback "Popcorn Oreo" returned this wrong-brand,
+      // wrong-flavour product. The shared short token "pop" (Cookie *Pop* vs
+      // Movies *pop*) must not be enough to anchor the brand.
+      const wrong = [
+        { productName: 'POPCORN CARAMEL', brand: 'Movies pop', barcode: '3760018850581' },
+      ];
+      const match = pickBestMatch(wrong, 'Cookie Pop Popcorn Oreo', 'Popcorn Oreo', undefined, 'Cookie Pop');
+      expect(match.passedRelevanceGate).toBe(false);
+      expect(match.product).toBeNull();
+    });
+
+    it('Grandpapa\'s "Pizza Puffs" must NOT drift to "Llama Puffs Pizza" by Organix Kids', () => {
+      const wrong = [
+        { productName: 'Llama Puffs Pizza', brand: 'Organix Kids', barcode: '7310100694843' },
+      ];
+      const match = pickBestMatch(wrong, "Grandpapa's Pizza Puffs", 'Pizza Puffs', undefined, "Grandpapa's");
+      expect(match.passedRelevanceGate).toBe(false);
+      expect(match.product).toBeNull();
+    });
+
+    it('still accepts the genuine same-brand product (Cookie Pop in result)', () => {
+      const right = [
+        { productName: 'Cookie Pop Popcorn Oreo', brand: 'Cookie Pop', barcode: 'C1' },
+        { productName: 'POPCORN CARAMEL', brand: 'Movies pop', barcode: 'C2' },
+      ];
+      const match = pickBestMatch(right, 'Cookie Pop Popcorn Oreo', 'Popcorn Oreo', undefined, 'Cookie Pop');
+      expect(match.passedRelevanceGate).toBe(true);
+      expect(match.product?.barcode).toBe('C1');
+    });
+
+    it('still accepts single-token brands (Milo Chocolate -> Milo)', () => {
+      const cands = [
+        { productName: 'Milo Chocolate Malt', brand: 'Milo', barcode: 'M1' },
+        { productName: 'Chocolate Drink', brand: 'Nesquik', barcode: 'M2' },
+      ];
+      const match = pickBestMatch(cands, 'Milo Chocolate Drink', 'Chocolate Drink', undefined, 'Milo');
+      expect(match.passedRelevanceGate).toBe(true);
+      expect(match.product?.brand).toBe('Milo');
+    });
+  });
+});
+
+describe('hasUsableBrandAnchor', () => {
+  // Real 128-product battery failures: an unreadable brand let a product-only
+  // query drift to a different company's same-category product. The scan flow
+  // must refuse to auto-match (→ manual entry) when this returns false.
+  it('rejects blank / missing brands (Sponser, tea cases)', () => {
+    expect(hasUsableBrandAnchor('')).toBe(false);
+    expect(hasUsableBrandAnchor('   ')).toBe(false);
+    expect(hasUsableBrandAnchor(null)).toBe(false);
+    expect(hasUsableBrandAnchor(undefined)).toBe(false);
+  });
+
+  it('rejects non-Latin-script brands (Arabic Jaouda / water cases)', () => {
+    expect(hasUsableBrandAnchor('جولد')).toBe(false);
+    expect(hasUsableBrandAnchor('أيَانس')).toBe(false);
+    expect(hasUsableBrandAnchor('日本')).toBe(false);
+  });
+
+  it('accepts real brands incl. short and accented (no false rejections)', () => {
+    for (const b of ['Tuc', "Lay's", 'Gerblé', 'Häagen-Dazs', 'Côte d’Or', 'S’MORET', 'Super Bock', 'Cookie Pop', "Grandpapa's"]) {
+      expect(hasUsableBrandAnchor(b)).toBe(true);
+    }
+  });
+
+  it('rejects brands with only 1-2 Latin letters or pure symbols', () => {
+    expect(hasUsableBrandAnchor('X')).toBe(false);
+    expect(hasUsableBrandAnchor('A1')).toBe(false);
+    expect(hasUsableBrandAnchor('—')).toBe(false);
   });
 });

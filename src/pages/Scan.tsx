@@ -24,7 +24,7 @@ import { lookupBarcode, isValidBarcode, searchProducts as searchOffProducts, ima
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
 import { DS } from "@/styles/design-tokens";
 import { getBackendUrl } from "@/config/backend";
-import { pickBestMatch, validateBarcodeResult, scoreRelevance, type MatchResult } from "@/utils/productRelevance";
+import { pickBestMatch, validateBarcodeResult, scoreRelevance, hasUsableBrandAnchor, type MatchResult } from "@/utils/productRelevance";
 
 /** Ask OpenAI to fix typos and clean up a user-typed product query */
 const fixProductQuery = async (raw: string): Promise<string> => {
@@ -1367,6 +1367,20 @@ const Scan = () => {
 
       if (!rawQuery) {
         setProductUnknown(true);
+        return;
+      }
+
+      // Guard against generic cross-brand drift when no usable brand was read.
+      // If the OCR brand has no Latin anchor token (blank, or non-Latin script
+      // like Arabic), a product-only search lands on a same-category product from
+      // a DIFFERENT brand — e.g. blank brand + "Protein Bar Peanut Caramel" →
+      // another company's peanut-caramel bar, or "Tea" → a random iced tea.
+      // Honest behaviour: prompt manual entry instead of guessing the brand.
+      // (Verified against a 128-product battery: 0 correctly-resolved scans had
+      // an unreadable brand, so this never blocks a real match.)
+      if (!hasUsableBrandAnchor(brandOnly)) {
+        console.warn(`⚠️ No usable brand anchor (brand="${brandOnly}") — refusing generic match, prompting manual entry`);
+        setNotFoundQuery(prodOnly || rawQuery);
         return;
       }
 

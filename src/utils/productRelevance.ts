@@ -87,6 +87,21 @@ export const normalize = (s: string): string =>
 export const tokenize = (s: string): string[] =>
   normalize(s).split(/[\s\-]+/).filter(w => w.length >= 2);
 
+/**
+ * Does this brand string carry a usable Latin anchor token (>= 3 Latin letters)?
+ *
+ * Scans identify *branded* products, so the matcher needs a brand to verify a
+ * result against. A blank brand, or one written only in a non-Latin script
+ * (e.g. Arabic "جولد"), gives the matcher nothing to anchor on — a product-only
+ * search then drifts to a DIFFERENT company's same-category product
+ * (blank brand + "Protein Bar Peanut Caramel" → another brand's peanut-caramel
+ * bar; "Tea" → a random iced tea). Callers should refuse to auto-match and
+ * prompt manual entry when this returns false. Accented Latin brands
+ * (Gerblé, Häagen-Dazs, Côte d'Or) still pass — diacritics are stripped first.
+ */
+export const hasUsableBrandAnchor = (brand: string | null | undefined): boolean =>
+  !!brand && /[a-z]{3,}/i.test(brand.normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
+
 // ─── Token Classification ────────────────────────────────────────────────────
 
 export type TokenClass = 'brand' | 'stop' | 'variant' | 'distinctive';
@@ -302,17 +317,31 @@ export const pickBestMatch = <T extends { productName: string | null; brand: str
 
   // Brand gate — this app identifies *products*, not loose text. When the OCR
   // pass named a brand, a genuine match must carry that brand. Without this a
-  // brand-stripped query ("Hazelnut Crisp") can land on a *different* company's
-  // product that merely shares the generic product words. Any candidate whose
-  // name/brand contains none of the expected brand's distinctive tokens is
-  // dropped before scoring, so a wrong-brand product can never be auto-accepted.
-  const brandTokens = expectedBrand
+  // brand-stripped query ("Popcorn Oreo") can land on a *different* company's
+  // product that merely shares the generic product words.
+  //
+  // The anchor uses the brand's STRONG tokens only: >= 4 chars AND not a generic
+  // parent-company name (Nestlé, Unilever…). Two failure modes this guards against,
+  // both pulled from the real ai_scans log:
+  //   • short shared tokens — "Cookie Pop" must not anchor on "pop" matching
+  //     "Movies pop" (→ wrong-brand "POPCORN CARAMEL").
+  //   • parent-company tokens — those are shared across many sibling products, so
+  //     they never carry product identity on their own.
+  // When a brand has no strong token (only short/parent words), ALL of its tokens
+  // must be present, so one common short word can't anchor an unrelated product.
+  const allBrandTokens = expectedBrand
     ? tokenize(expectedBrand).filter(t => t.length >= 3 && classifyToken(t, config) !== 'stop')
     : [];
+  const strongBrandTokens = allBrandTokens.filter(
+    t => t.length >= 4 && !config.brandTokens.has(normalize(t)),
+  );
   const carriesBrand = (c: T): boolean => {
-    if (brandTokens.length === 0) return true; // no brand known → no constraint
+    if (allBrandTokens.length === 0) return true; // no brand known → no constraint
     const resultTokens = tokenize([c.productName, c.brand].filter(Boolean).join(' '));
-    return brandTokens.some(bt => fuzzyMatch(bt, resultTokens));
+    if (strongBrandTokens.length > 0) {
+      return strongBrandTokens.some(bt => fuzzyMatch(bt, resultTokens));
+    }
+    return allBrandTokens.every(bt => fuzzyMatch(bt, resultTokens));
   };
   const eligible = candidates.filter(carriesBrand);
 

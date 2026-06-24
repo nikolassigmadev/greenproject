@@ -20,9 +20,15 @@ export interface AdvancedOCRResult {
 }
 
 /**
- * Downscale image to max 512px on longest side and re-encode as JPEG 0.6
+ * Downscale the image before sending it to the Vision model.
+ *
+ * The backend requests `detail: 'low'`, which makes OpenAI internally resize the
+ * image to ~512px and bill a FLAT ~85 image tokens regardless of input size. So
+ * shrinking below 512px (the old 256px @ q0.4) threw away OCR legibility — small
+ * flavor/variant text, angled shelf shots, glare — for ZERO token saving. We now
+ * send 512px @ q0.72: same cost, materially better identification on hard photos.
  */
-const compressImage = (dataUrl: string, maxSize = 256): Promise<string> =>
+const compressImage = (dataUrl: string, maxSize = 512): Promise<string> =>
   new Promise((resolve) => {
     const fallback = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
     const timer = setTimeout(() => resolve(fallback), 5000);
@@ -36,7 +42,7 @@ const compressImage = (dataUrl: string, maxSize = 256): Promise<string> =>
       c.width = w;
       c.height = h;
       c.getContext('2d')!.drawImage(img, 0, 0, w, h);
-      resolve(c.toDataURL('image/jpeg', 0.4).split(',')[1]);
+      resolve(c.toDataURL('image/jpeg', 0.72).split(',')[1]);
     };
     img.onerror = () => {
       clearTimeout(timer);
