@@ -862,8 +862,11 @@ const GENERIC_TOKENS = new Set([
   'brand', 'brands', 'beef', 'meat', 'meats',
 ]);
 
+/** Strip diacritics so accented brand names match plain-ASCII queries. */
+const strip = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+
 function tokenMatch(token: string, query: string): boolean {
-  const t = token.toLowerCase().trim();
+  const t = strip(token);
   if (t.length < 4 || GENERIC_TOKENS.has(t)) return false;
   return query.includes(t);
 }
@@ -876,13 +879,13 @@ export function getBeefCompanyByBrand(
   brand: string | null | undefined,
 ): BeefCompany | undefined {
   if (!brand) return undefined;
-  const query = brand.toLowerCase().trim();
+  const query = strip(brand);
   if (!query) return undefined;
 
   // Pass 1: on-pack brand names (most specific).
   for (const record of ALL_BEEF_COMPANIES) {
     for (const b of record.brands) {
-      if (b.toLowerCase() === query) return record;
+      if (strip(b) === query) return record;
       if (b.split(/[/;,]/).some((part) => tokenMatch(part, query))) return record;
     }
   }

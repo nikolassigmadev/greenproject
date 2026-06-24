@@ -406,8 +406,11 @@ const GENERIC_TOKENS = new Set([
   'white', 'great', 'big', 'crystal', 'van',
 ]);
 
+/** Strip diacritics so accented brand names match plain-ASCII queries. */
+const strip = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+
 function tokenMatch(token: string, query: string): boolean {
-  const t = token.toLowerCase().trim();
+  const t = strip(token);
   if (t.length < 3 || GENERIC_TOKENS.has(t)) return false;
   return query.includes(t);
 }
@@ -420,13 +423,13 @@ export function getSugarCompanyByBrand(
   brand: string | null | undefined,
 ): SugarCompany | undefined {
   if (!brand) return undefined;
-  const query = brand.toLowerCase().trim();
+  const query = strip(brand);
   if (!query) return undefined;
 
   // Pass 1: exact brand name match.
   for (const record of ALL_SUGAR_COMPANIES) {
     for (const b of record.brands) {
-      if (b.toLowerCase() === query) return record;
+      if (strip(b) === query) return record;
     }
   }
 

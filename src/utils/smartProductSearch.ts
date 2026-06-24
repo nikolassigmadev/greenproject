@@ -11,7 +11,7 @@
  */
 
 import { getBackendUrl } from '@/config/backend';
-import { searchProducts as searchOff } from '@/services/openfoodfacts';
+import { searchProducts as searchOff, imageQualityTier } from '@/services/openfoodfacts';
 import type { OpenFoodFactsResult } from '@/services/openfoodfacts/types';
 import { pickBestMatch } from './productRelevance';
 
@@ -72,7 +72,9 @@ function dataRichness(r: OpenFoodFactsResult): number {
   if (r.nutriscoreGrade) s += 10;
   if (r.novaGroup != null) s += 5;
   if (r.ecoscoreData?.agribalyse?.co2_total != null) s += 25;
-  if (r.imageUrl) s += 5;
+  // Reward image *quality* (curated front photo > raw upload), not mere presence,
+  // so an equally-relevant product with a clean front-of-pack shot wins.
+  s += imageQualityTier(r) * 4;
   if (r.brand) s += 10;
   return s;
 }

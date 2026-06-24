@@ -481,8 +481,11 @@ const GENERIC_TOKENS = new Set([
   'food', 'oil', 'palm', 'coffee', 'soy', 'sea', 'fish', 'bee',
 ]);
 
+/** Strip diacritics so "Nescafé" matches "nescafe". */
+const strip = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+
 function tokenMatch(token: string, query: string): boolean {
-  const t = token.toLowerCase().trim();
+  const t = strip(token);
   if (t.length < 3 || GENERIC_TOKENS.has(t)) return false;
   return query.includes(t);
 }
@@ -496,7 +499,7 @@ export function getCommodityRecordsByBrand(
   brand: string | null | undefined,
 ): CommodityCompany[] {
   if (!brand) return [];
-  const query = brand.toLowerCase().trim();
+  const query = strip(brand);
   if (!query) return [];
 
   const matched = new Set<string>();
@@ -505,7 +508,7 @@ export function getCommodityRecordsByBrand(
   // Pass 1: exact brand name.
   for (const record of ALL_COMMODITY_COMPANIES) {
     for (const b of record.brands) {
-      if (b.toLowerCase() === query && !matched.has(record.id)) {
+      if (strip(b) === query && !matched.has(record.id)) {
         matched.add(record.id);
         results.push(record);
       }

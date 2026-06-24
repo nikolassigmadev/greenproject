@@ -20,7 +20,7 @@ import { recognizeImageWithOpenAI } from "@/services/ocr/openai-service";
 import { advancedProductOCR } from "@/services/ocr/advanced-openai-ocr";
 import { copySingleProductCode } from "@/utils/productExporter";
 import { loadPriorities, DEFAULT_PRIORITIES, hasSavedPriorities, type UserPriorities } from "@/utils/userPreferences";
-import { lookupBarcode, isValidBarcode, searchProducts as searchOffProducts } from "@/services/openfoodfacts";
+import { lookupBarcode, isValidBarcode, searchProducts as searchOffProducts, imageQualityTier } from "@/services/openfoodfacts";
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
 import { DS } from "@/styles/design-tokens";
 import { getBackendUrl } from "@/config/backend";
@@ -255,11 +255,18 @@ const filterBestProducts = (results: OpenFoodFactsResult[], query?: string): Ope
       });
 
       if (charFiltered.length > 0) {
-        // Preserve API order (popularity/scans) — the first result from OFF
-        // is typically the most relevant. Only break ties by relevance score.
+        // Rank by relevance first (bucketed, so near-equal matches tie), then
+        // prefer a clean front image and richer data. This stops a sparse entry
+        // with an ugly photo from winning over an equally-relevant complete one
+        // just because the API happened to return it first.
         charFiltered.sort((a, b) => {
-          if (b.relevance !== a.relevance) return b.relevance - a.relevance;
-          return 0; // preserve original API order for equal relevance
+          const relA = Math.round(a.relevance * 10);
+          const relB = Math.round(b.relevance * 10);
+          if (relB !== relA) return relB - relA;
+          const imgA = imageQualityTier(a.result);
+          const imgB = imageQualityTier(b.result);
+          if (imgB !== imgA) return imgB - imgA;
+          return b.ecoScore - a.ecoScore; // data completeness
         });
         return charFiltered.slice(0, 5).map(s => s.result);
       }
@@ -1780,11 +1787,14 @@ const Scan = () => {
             </div>
           </Link>
 
-          {/* Centre label */}
+          {/* Centre label — two-tone "goodscan" lockup, matching the app-wide
+              Wordmark. "good" stays white for legibility over the live camera
+              (this HUD is always on a dark feed); "scan" uses the brand green. */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, textShadow: '0 1px 6px rgba(0,0,0,0.5)' }}>
             <Logo size={22} />
-            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#fff', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-              GoodScan
+            <span style={{ fontFamily: DS.font, fontSize: '0.95rem', fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1, whiteSpace: 'nowrap' }}>
+              <span style={{ color: '#fff' }}>good</span>
+              <span style={{ color: '#3DBA82' }}>scan</span>
             </span>
           </div>
 

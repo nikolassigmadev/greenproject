@@ -10,7 +10,7 @@ import {
 import { shareProductCard } from "@/utils/shareCard";
 import { BackButton } from "@/components/BackButton";
 import { isWatched, toggleWatchlist, WATCHLIST_EVENT } from "@/utils/watchlist";
-import { Logo } from "@/components/Logo";
+import { Logo, Wordmark } from "@/components/Logo";
 import { lookupBarcode, searchProducts } from "@/services/openfoodfacts";
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
 import { loadPriorities, priorityMultiplier, saveScanToHistory, loadScanHistory, type UserPriorities } from "@/utils/userPreferences";
@@ -511,9 +511,7 @@ export default function OpenFoodFactsDetail() {
             <div style={{ paddingTop: "max(60px, calc(env(safe-area-inset-top, 0px) + 16px))", marginBottom: 24 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "0 0 6px" }}>
                 <Logo size={24} />
-                <p style={{ fontSize: 13, fontWeight: 600, color: DS.good, margin: 0, letterSpacing: 0.3 }}>
-                  GoodScan
-                </p>
+                <Wordmark fontSize={16} />
               </div>
               <h1 style={{ fontSize: 26, fontWeight: 800, margin: "0 0 8px", letterSpacing: -0.5, lineHeight: 1.15 }}>
                 {isShort ? "Quick reminder" : "Before you continue"}

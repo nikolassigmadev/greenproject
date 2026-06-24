@@ -116,7 +116,7 @@ const hasEcoscore = (product: OpenFoodFactsResult): boolean => {
  * We also require `image_front_url` to exist, since the curated state
  * occasionally lingers after the image is removed.
  */
-const hasCleanFrontImage = (product: OpenFoodFactsResult): boolean => {
+export const hasCleanFrontImage = (product: OpenFoodFactsResult): boolean => {
   if (!product.imageUrl) return false;
   const raw = product.rawProduct;
   if (!raw) return false;
@@ -128,6 +128,90 @@ const hasCleanFrontImage = (product: OpenFoodFactsResult): boolean => {
       s.toLowerCase() === 'en:front-photo-selected' ||
       s.toLowerCase() === 'en:photos-validated',
   );
+};
+
+/**
+ * Image quality tier, highest is best. Used to break ranking ties so we never
+ * show an "ugly" photo (a barcode/nutrition-panel shot, or a raw upload) when a
+ * proper front-of-pack image exists for an equally-relevant product.
+ *   3 — curated + validated front photo (`hasCleanFrontImage`)
+ *   2 — a selected front image exists, but not contributor-validated
+ *   1 — only a generic `image_url` (often not a clean front-of-pack shot)
+ *   0 — no image at all
+ */
+export const imageQualityTier = (p: OpenFoodFactsResult): number => {
+  if (hasCleanFrontImage(p)) return 3;
+  if (p.rawProduct?.image_front_url) return 2;
+  return p.imageUrl ? 1 : 0;
+};
+
+/**
+ * Data-completeness score for a product, weighted toward the fields we actually
+ * render (eco-score, carbon, nutrition). Higher = more useful to the shopper.
+ * Pure/in-memory — used only to rank an already-fetched candidate set, so it
+ * adds no network cost.
+ */
+export const scoreDataCompleteness = (p: OpenFoodFactsResult): number => {
+  let s = 0;
+  if (p.ecoscoreGrade) s += 20;
+  if (p.ecoscoreScore !== null) s += 8;
+  if (p.ecoscoreData?.agribalyse?.co2_total != null) s += 20;
+  else if (p.carbonFootprint100g !== null) s += 12;
+  if (p.nutriscoreGrade) s += 10;
+  if (p.novaGroup !== null) s += 6;
+  if (p.ingredientsText) s += 6;
+  if (p.categories.length > 0) s += 4;
+  if (p.labels.length > 0) s += 4;
+  if (p.brand) s += 4;
+  if (p.productName) s += 2;
+  return s;
+};
+
+/**
+ * Rank an already-fetched candidate list so the best product surfaces first,
+ * WITHOUT any extra network calls. Ordering, in priority:
+ *   1. Relevance to the query (coarse buckets — keeps the right product first)
+ *   2. Image quality   — avoids ugly/partial photos
+ *   3. Data completeness — avoids near-empty entries when a rich one matches
+ *   4. Original order (stable) — preserves the backend's popularity ranking
+ *
+ * Relevance is bucketed (not compared at full precision) so that two genuinely
+ * matching products are treated as equally relevant and then separated by
+ * quality, instead of an arbitrary float difference deciding the winner.
+ */
+export const rankByQuality = (
+  query: string,
+  products: OpenFoodFactsResult[],
+): OpenFoodFactsResult[] => {
+  const qWords = query
+    .toLowerCase()
+    .split(/[\s\-_,/&().]+/)
+    .filter((w) => w.length >= 3)
+    .map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+
+  const relevanceBucket = (p: OpenFoodFactsResult): number => {
+    if (qWords.length === 0) return 0;
+    const hay = [p.productName, p.brand].filter(Boolean).join(' ').toLowerCase();
+    let matched = 0;
+    for (const w of qWords) {
+      if (new RegExp(`\\b${w}\\b`, 'i').test(hay)) matched++;
+    }
+    return Math.round((matched / qWords.length) * 4); // 0–4 coarse buckets
+  };
+
+  return products
+    .map((p, i) => ({
+      p,
+      i,
+      rel: relevanceBucket(p),
+      img: imageQualityTier(p),
+      data: scoreDataCompleteness(p),
+    }))
+    .sort(
+      (a, b) =>
+        b.rel - a.rel || b.img - a.img || b.data - a.data || a.i - b.i,
+    )
+    .map((d) => d.p);
 };
 
 /**
@@ -493,22 +577,24 @@ const searchOneVariant = async (
     // Only return products with an eco-score and a curated front photo.
     // Image curation matters because raw OFF uploads often include hand-held
     // shots; the `en:front-photo-selected` state filters those out.
+    // rankByQuality then orders the survivors so the richest, best-imaged
+    // product wins — never an arbitrary "first from the API" sparse entry.
     const qualifyingResults = regionalResults
       .filter(hasEcoscore)
       .filter(hasCleanFrontImage);
-    let results = qualifyingResults.slice(0, limit);
+    let results = rankByQuality(query, qualifyingResults).slice(0, limit);
 
     ocrSearchLogger.logRegionalFiltering(allNormalized.length, regionalResults.length, false);
 
     // If the strict filters wiped out too many results, relax the image
     // requirement first (keep eco-score). We still keep the relevance guard
-    // so unrelated brands don't leak in.
+    // so unrelated brands don't leak in, and rank by quality so the fullest
+    // record (and the cleanest available image) leads.
     if (results.length < Math.ceil(limit * 0.5)) {
-      const padding = regionalResults
-        .filter(hasEcoscore)
-        .slice(0, limit * 3)
-        .filter((r) => isRelevantToQuery(query, r))
-        .filter((r) => !results.some((ur) => ur.barcode === r.barcode));
+      const padding = rankByQuality(
+        query,
+        regionalResults.filter(hasEcoscore).filter((r) => isRelevantToQuery(query, r)),
+      ).filter((r) => !results.some((ur) => ur.barcode === r.barcode));
       results = [...results, ...padding].slice(0, limit);
     }
 
@@ -517,9 +603,10 @@ const searchOneVariant = async (
     // OFF entries simply haven't been eco-scored yet. The relevance guard
     // still applies so we never surface unrelated products.
     if (results.length === 0) {
-      results = regionalResults
-        .filter((r) => isRelevantToQuery(query, r))
-        .slice(0, limit);
+      results = rankByQuality(
+        query,
+        regionalResults.filter((r) => isRelevantToQuery(query, r)),
+      ).slice(0, limit);
     }
 
     cacheSet(cacheKey, results);
@@ -739,13 +826,14 @@ const searchProductsGlobal = async (
     const normalized = rawProducts.map(normalizeProduct);
     // Tiered preference: eco-score + curated photo → eco-score only →
     // any result relevant to the query. The right product with missing eco
-    // data beats "not found".
+    // data beats "not found". Within the chosen tier, rankByQuality lifts the
+    // fullest record with the cleanest image to the top.
     const strict = normalized.filter(hasEcoscore).filter(hasCleanFrontImage);
     const ecoOnly = strict.length > 0 ? strict : normalized.filter(hasEcoscore);
     const fallback = ecoOnly.length > 0
       ? ecoOnly
       : normalized.filter((r) => isRelevantToQuery(candidate, r));
-    const results = fallback.slice(0, limit);
+    const results = rankByQuality(candidate, fallback).slice(0, limit);
     if (results.length === 0) continue;
     console.log(`   Got ${results.length} global results for "${candidate}" (region filter disabled)`);
     cacheSet(cacheKey, results);

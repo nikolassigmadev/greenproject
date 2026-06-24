@@ -101,6 +101,18 @@ const LABOUR_FLAG_CATEGORIES = new Set([
 // Fixed tiebreak when weighted scores match.
 const CONCERN_ORDER: ConcernType[] = ["labor", "animal_welfare", "boycott", "eco"];
 
+/**
+ * Does a curated candidate address a given concern?
+ *
+ * A `boycott` is a BRAND-level problem — switching to any of our curated
+ * alternatives (none of which are boycott-listed) inherently resolves it, so we
+ * treat every candidate as addressing a boycott. All other concerns must be
+ * explicitly listed in the candidate's `addresses`.
+ */
+function candidateAddresses(c: AltCandidate, concern: ConcernType): boolean {
+  return concern === "boycott" || c.addresses.includes(concern);
+}
+
 function priorityWeight(type: ConcernType, p: UserPriorities): number {
   switch (type) {
     case "labor": return p.laborRights;
@@ -241,7 +253,7 @@ export function assessUnmetDemand(
     ];
     swapAvailable = candidates.some(
       (c) =>
-        c.addresses.includes(primary.type) &&
+        candidateAddresses(c, primary.type) &&
         c.assumeAvailable !== false && // unverifiable-availability entries don't count
         isInMarket(c, countryCode),
     );
@@ -344,7 +356,7 @@ function buildSuggestion(
     certifications: c.certifications,
     strengths: c.strengths,
     addresses: c.addresses,
-    fixesPrimary: primaryType ? c.addresses.includes(primaryType) : false,
+    fixesPrimary: primaryType ? candidateAddresses(c, primaryType) : false,
     custom: c.custom ?? false,
     product: resolved,
     barcode: resolved?.barcode ?? null,
@@ -415,8 +427,8 @@ export async function getSwaps(
       const am = isInMarket(a, country) ? 1 : 0;
       const bm = isInMarket(b, country) ? 1 : 0;
       if (am !== bm) return bm - am;
-      const af = a.addresses.includes(primaryType) ? 1 : 0;
-      const bf = b.addresses.includes(primaryType) ? 1 : 0;
+      const af = candidateAddresses(a, primaryType) ? 1 : 0;
+      const bf = candidateAddresses(b, primaryType) ? 1 : 0;
       if (af !== bf) return bf - af;
       // Curated/global brands (known availability) before verified-ethics
       // brands whose market coverage we can't vouch for.
