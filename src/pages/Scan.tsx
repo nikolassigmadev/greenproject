@@ -1284,6 +1284,7 @@ const Scan = () => {
     sessionStorage.removeItem('ocr_product_name');
     sessionStorage.removeItem('scan_openai_response');
     sessionStorage.removeItem('scan_full_openai_response');
+    sessionStorage.removeItem('scan_image');
 
     try {
       // Step 1: OpenAI identifies the product
@@ -1317,6 +1318,11 @@ const Scan = () => {
       const fullOpenaiResponse = identified.rawExtraction?.trim();
       if (fullOpenaiResponse) sessionStorage.setItem('scan_full_openai_response', fullOpenaiResponse);
       else sessionStorage.removeItem('scan_full_openai_response');
+      // The downscaled photo we sent to OpenAI, carried to the detail page so the
+      // scan log can store it inline (Supabase ai_scans.image). Already ~512px
+      // JPEG base64, so it fits sessionStorage and the scan-log POST comfortably.
+      if (identified.compressedBase64) sessionStorage.setItem('scan_image', identified.compressedBase64);
+      else sessionStorage.removeItem('scan_image');
 
       // Step 1b: Check hardcoded barcode map before anything else
       setScanStage("Checking local product database...");

@@ -17,6 +17,8 @@ export interface AdvancedOCRResult {
   error?: string;
   processingTime?: number;
   notes?: string;
+  /** The downscaled image we sent to the model, as base64 (no data: prefix). Reused for the scan log. */
+  compressedBase64?: string;
 }
 
 /**
@@ -108,7 +110,8 @@ export const advancedProductOCR = async (imageDataUrl: string): Promise<Advanced
         ingredients: [],
         barcode: barcode,
         nutritionInfo: null,
-        notes: 'ChatGPT-style image analysis'
+        notes: 'ChatGPT-style image analysis',
+        compressedBase64: base64Image,
       };
     } else {
       return {
@@ -117,7 +120,8 @@ export const advancedProductOCR = async (imageDataUrl: string): Promise<Advanced
         confidence: 0,
         rawExtraction: rawResponse,
         error: 'Could not identify product from image',
-        processingTime
+        processingTime,
+        compressedBase64: base64Image,
       };
     }
 

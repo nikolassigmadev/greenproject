@@ -1825,7 +1825,7 @@ app.post('/api/scans', scanLimiter, smallBody, (req, res) => {
   try {
     const {
       barcode, name, brand, ecoGrade, country, city, anonId, openaiResponse, fullOpenaiResponse, bought,
-      carbonFootprint100g, priorities, category, verdict, primaryConcern, swapAvailable,
+      carbonFootprint100g, priorities, category, verdict, primaryConcern, swapAvailable, image,
     } = req.body || {};
     if (!name || typeof name !== 'string') {
       return res.status(400).json({ success: false, error: 'name is required' });
@@ -1833,12 +1833,13 @@ app.post('/api/scans', scanLimiter, smallBody, (req, res) => {
     // SQLite "most-scanned" counter (internally no-ops if unavailable).
     recordScan({ barcode, name, brand, ecoGrade, country, anonId });
     // Rich Postgres log of every scan (no-ops if DATABASE_URL unset/unreachable).
-    // logScan() sanitises/clamps every field, so the raw body passes through.
+    // logScan() sanitises/clamps every field (incl. the photo), so the raw body
+    // passes through. image is the user's scanned photo as compressed base64.
     logScan({
       source: bought ? 'decision' : 'scan',
       userId: anonId, productName: name, brand, barcode, ecoGrade, country, city,
       openaiResponse, fullOpenaiResponse, bought,
-      carbonFootprint100g, priorities, category, verdict, primaryConcern, swapAvailable,
+      carbonFootprint100g, priorities, category, verdict, primaryConcern, swapAvailable, image,
     });
     // Only fail if BOTH stores are unavailable.
     if (!scanDb && !scanStoreReady()) {

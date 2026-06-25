@@ -58,9 +58,11 @@ interface DecisionBarProps {
   openaiResponse?: string | null;
   /** The COMPLETE raw OpenAI response, before it was trimmed to the OFF search. */
   fullOpenaiResponse?: string | null;
+  /** The photo the user scanned (compressed base64), stored inline on the scan-log row. */
+  capturedImage?: string | null;
 }
 
-export function DecisionBar({ product, verdictKey, onSeeBetter, hasSwaps = false, openaiResponse, fullOpenaiResponse }: DecisionBarProps) {
+export function DecisionBar({ product, verdictKey, onSeeBetter, hasSwaps = false, openaiResponse, fullOpenaiResponse, capturedImage }: DecisionBarProps) {
   const [decision, setDecision] = useState(() => getDecision(product.barcode));
   const { lean, color, headline } = meaning(verdictKey);
 
@@ -92,6 +94,7 @@ export function DecisionBar({ product, verdictKey, onSeeBetter, hasSwaps = false
       ecoGrade: product.ecoscoreGrade,
       openaiResponse,
       fullOpenaiResponse,
+      image: capturedImage,
       bought: outcome === "bought" ? "YES" : "NO",
       carbonFootprint100g: product.carbonFootprint100g ?? null,
       verdict: verdictKey,

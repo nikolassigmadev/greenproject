@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS ai_scans (
   verdict         TEXT,          -- BUY | CONSIDER | CAUTION | AVOID | UNKNOWN shown to the user
   primary_concern TEXT,          -- labor | boycott | animal_welfare | eco (worst concern), or null
   swap_available  BOOLEAN,       -- was a region-available ethical alternative on offer? null = N/A
+  image           TEXT,          -- the photo the user scanned, as compressed JPEG base64 (no data: prefix)
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 -- Idempotent upgrades for tables created before these columns existed.
@@ -62,6 +63,8 @@ ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS category        TEXT;
 ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS verdict         TEXT;
 ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS primary_concern TEXT;
 ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS swap_available  BOOLEAN;
+-- The scanned photo itself, stored inline as compressed JPEG base64.
+ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS image           TEXT;
 -- Drop columns we no longer store.
 ALTER TABLE ai_scans DROP COLUMN IF EXISTS image_hash;
 ALTER TABLE ai_scans DROP COLUMN IF EXISTS image_url;
@@ -187,6 +190,17 @@ const VERDICTS = new Set(['BUY', 'CONSIDER', 'CAUTION', 'AVOID', 'UNKNOWN']);
 const CONCERNS = new Set(['labor', 'boycott', 'animal_welfare', 'eco']);
 const PRIORITY_KEYS = ['environment', 'laborRights', 'animalWelfare', 'nutrition'];
 
+// Accept a scanned photo as base64. Strips any `data:image/...;base64,` prefix
+// and caps length so a runaway payload can never bloat a row. Returns clean
+// base64 (no prefix) or null. Caller (client) already downscales to ~512px.
+function imageData(s) {
+  if (typeof s !== 'string') return null;
+  const b64 = (s.includes(',') ? s.slice(s.indexOf(',') + 1) : s).trim();
+  // ~3M base64 chars ≈ 2.25MB decoded — generous ceiling for a 512px JPEG.
+  if (!b64 || b64.length > 3_000_000) return null;
+  return b64;
+}
+
 // A finite, non-negative number within range, else null.
 function num(v, max) {
   const n = typeof v === 'number' ? v : Number(v);
@@ -227,6 +241,7 @@ function priorityJson(p) {
  * @param {string} [rec.verdict]       BUY|CONSIDER|CAUTION|AVOID|UNKNOWN shown to the user
  * @param {string} [rec.primaryConcern] worst concern: labor|boycott|animal_welfare|eco, or null
  * @param {boolean} [rec.swapAvailable] was a region-available ethical alternative on offer?
+ * @param {string} [rec.image]        the scanned photo as compressed JPEG base64 (no data: prefix)
  */
 export function logScan(rec = {}) {
   if (!ready || !pool) return;
@@ -254,6 +269,7 @@ export function logScan(rec = {}) {
       oneOf(rec.verdict, VERDICTS),
       oneOf(rec.primaryConcern, CONCERNS),
       swapAvailable,
+      imageData(rec.image),
     ];
     pool
       .query(
@@ -262,10 +278,10 @@ export function logScan(rec = {}) {
             eco_grade, country, city, off_url, openai_response,
             full_openai_response, bought,
             carbon_footprint_100g, priorities, category, verdict,
-            primary_concern, swap_available)
+            primary_concern, swap_available, image)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,
                  $11,$12,
-                 $13,$14::jsonb,$15,$16,$17,$18)`,
+                 $13,$14::jsonb,$15,$16,$17,$18,$19)`,
         values,
       )
       .catch((e) => console.error('scanStore: insert failed —', e.message));

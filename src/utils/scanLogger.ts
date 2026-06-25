@@ -57,6 +57,8 @@ export interface ScanLogInput {
   swapAvailable?: boolean | null;
   /** Concern-weight snapshot; defaults to the user's current saved priorities. */
   priorities?: UserPriorities | null;
+  /** The scanned photo as compressed JPEG base64 (no data: prefix), when from a camera scan. */
+  image?: string | null;
 }
 
 export function logScan(input: ScanLogInput): void {
@@ -84,6 +86,7 @@ export function logScan(input: ScanLogInput): void {
       verdict: input.verdict ?? null,
       primaryConcern: input.primaryConcern ?? null,
       swapAvailable: input.swapAvailable ?? null,
+      image: input.image ?? null,
     });
     void fetch(`${getBackendUrl()}/api/scans`, {
       method: "POST",

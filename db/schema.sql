@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS ai_scans (
   verdict         TEXT,          -- BUY | CONSIDER | CAUTION | AVOID | UNKNOWN shown to the user
   primary_concern TEXT,          -- labor | boycott | animal_welfare | eco (worst concern), or null
   swap_available  BOOLEAN,       -- was a region-available ethical alternative on offer? null = N/A
+  image           TEXT,          -- the scanned photo, as compressed JPEG base64 (no data: prefix)
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -40,6 +41,7 @@ ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS category        TEXT;
 ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS verdict         TEXT;
 ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS primary_concern TEXT;
 ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS swap_available  BOOLEAN;
+ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS image           TEXT;
 
 CREATE INDEX IF NOT EXISTS idx_ai_scans_created_at ON ai_scans (created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_ai_scans_user_id    ON ai_scans (user_id);
