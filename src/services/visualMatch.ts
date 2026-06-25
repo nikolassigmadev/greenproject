@@ -43,17 +43,41 @@ const CLOSE_MARGIN = 0.08;  // top two within this → ambiguous, worth an AI ch
 const MAX_CANDIDATES = 5;   // cap colour work per scan
 const MAX_AI_CHECKS = 2;    // cap AI confirmations per scan
 
+export interface VisualPick {
+  /** The candidate to show — the best colour/AI match, or `fallback`. */
+  chosen: OpenFoodFactsResult;
+  /** `candidates` reordered so `chosen` leads. */
+  reordered: OpenFoodFactsResult[];
+  /** Whether an AI vision confirmation was spent. */
+  usedAi: boolean;
+  /** Best colour similarity seen among candidates, 0–1 (0 = no usable signal). */
+  topSimilarity: number;
+  /** True when the user photo AND ≥1 candidate had usable colour to compare. */
+  hadSignal: boolean;
+  /**
+   * True when `chosen` is a CONFIRMED visual match (strong colour or AI-verified).
+   * False means "couldn't confirm" — either no signal, or the covers don't look
+   * like the photo — so the caller may want to widen the candidate pool.
+   */
+  verified: boolean;
+}
+
 /**
  * Re-rank candidates by how much each one's cover photo looks like the user's
- * scan, and return the best. `fallback` (the text-relevance winner) is returned
- * whenever colour gives no usable signal, so this can only improve the pick.
+ * scan, and return the best along with a verification verdict. `fallback` (the
+ * text-relevance winner) is returned whenever colour gives no usable signal, so
+ * this can only improve the pick — and `verified`/`topSimilarity` let the caller
+ * detect when NONE of the candidates actually match the photo.
  */
 export async function pickVisualBestCandidate(
   userImageBase64: string | null | undefined,
   candidates: OpenFoodFactsResult[],
   fallback: OpenFoodFactsResult,
-): Promise<{ chosen: OpenFoodFactsResult; reordered: OpenFoodFactsResult[]; usedAi: boolean }> {
-  const noop = { chosen: fallback, reordered: candidates, usedAi: false };
+): Promise<VisualPick> {
+  const noop: VisualPick = {
+    chosen: fallback, reordered: candidates, usedAi: false,
+    topSimilarity: 0, hadSignal: false, verified: false,
+  };
   if (!userImageBase64) return noop;
 
   const pool = candidates.filter((c) => c.imageUrl).slice(0, MAX_CANDIDATES);
@@ -78,11 +102,12 @@ export async function pickVisualBestCandidate(
 
   const top = withSignal[0];
   const second = withSignal[1];
+  const topSimilarity = top.color;
   const ambiguous = top.color < STRONG_COLOR || (!!second && top.color - second.color < CLOSE_MARGIN);
 
   // Strong, unambiguous colour winner — accept, no API spend.
   if (!ambiguous) {
-    return { chosen: top.c, reordered: reorder(top.c), usedAi: false };
+    return { chosen: top.c, reordered: reorder(top.c), usedAi: false, topSimilarity, hadSignal: true, verified: true };
   }
 
   // Ambiguous: confirm the top colour candidates with the vision model.
@@ -91,8 +116,10 @@ export async function pickVisualBestCandidate(
     const v = await verifyProductMatch(userImageBase64, s.c.imageUrl!);
     if (v?.match && (!best || v.confidence > best.confidence)) best = { c: s.c, confidence: v.confidence };
   }
-  if (best) return { chosen: best.c, reordered: reorder(best.c), usedAi: true };
+  if (best) return { chosen: best.c, reordered: reorder(best.c), usedAi: true, topSimilarity, hadSignal: true, verified: true };
 
-  // AI inconclusive/unavailable → keep the proven text-relevance pick (silent).
-  return { ...noop, usedAi: true };
+  // AI inconclusive/unavailable → keep the proven text-relevance pick. We had a
+  // colour signal but couldn't confirm a match (covers don't look like the
+  // photo) → report unverified so the caller can widen the search.
+  return { chosen: fallback, reordered: candidates, usedAi: true, topSimilarity, hadSignal: true, verified: false };
 }

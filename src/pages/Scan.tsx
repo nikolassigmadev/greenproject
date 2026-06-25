@@ -20,13 +20,13 @@ import { recognizeImageWithOpenAI } from "@/services/ocr/openai-service";
 import { advancedProductOCR } from "@/services/ocr/advanced-openai-ocr";
 import { copySingleProductCode } from "@/utils/productExporter";
 import { loadPriorities, DEFAULT_PRIORITIES, hasSavedPriorities, type UserPriorities } from "@/utils/userPreferences";
-import { lookupBarcode, isValidBarcode, searchProducts as searchOffProducts, imageQualityTier } from "@/services/openfoodfacts";
+import { lookupBarcode, isValidBarcode, searchProducts as searchOffProducts, searchVisualCandidates, imageQualityTier } from "@/services/openfoodfacts";
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
 import { DS } from "@/styles/design-tokens";
 import { getBackendUrl } from "@/config/backend";
 import { pickBestMatch, validateBarcodeResult, scoreRelevance, hasUsableBrandAnchor, type MatchResult } from "@/utils/productRelevance";
 import { logScan } from "@/utils/scanLogger";
-import { pickVisualBestCandidate } from "@/services/visualMatch";
+import { pickVisualBestCandidate, type VisualPick } from "@/services/visualMatch";
 
 /** Ask OpenAI to fix typos and clean up a user-typed product query */
 const fixProductQuery = async (raw: string): Promise<string> => {
@@ -1526,31 +1526,76 @@ const Scan = () => {
 
       setScanStage("Checking the photo matches...");
       setScanProgress(95);
-      // Verify the resolved product actually LOOKS like what the user scanned.
-      // Re-ranks candidates by colour similarity to the photo, AI-confirming only
-      // weak/ambiguous matches. Silent re-rank: always lands on the closest match,
-      // falling back to the text-relevance pick when there's no visual signal.
-      //
-      // This only ever HELPS an ambiguous match, so:
-      //   • a high-confidence text match skips it entirely (no network/AI cost), and
-      //   • weaker matches still run it, but time-boxed so a slow image download or
-      //     vision call can't blow the scan budget — on timeout we keep the text pick.
-      const VISUAL_CONFIDENCE_SKIP = 0.85;
-      const VISUAL_MATCH_BUDGET_MS = 1200;
+      // ── Colour verification ───────────────────────────────────────────────
+      // Confirm the resolved product actually LOOKS like what the user scanned,
+      // by comparing the user's photo to the candidate cover photos (hue match,
+      // robust to lighting). Two passes:
+      //   Pass 1 — re-rank/verify against the text-search pool.
+      //   Pass 2 — if NONE of those covers look like the photo, the eco-score
+      //            quality filter has likely dropped the real product from the
+      //            pool (OFF only eco-scores some variants — e.g. M&M's *ice
+      //            cream* is scored while the M&M's *candy* bags are not, so the
+      //            candy mis-resolves to the ice cream). Widen to an image-bearing
+      //            pool with NO eco gate and let colour pick the right product.
+      // Time-boxed throughout so a slow image download / vision call can't blow
+      // the scan budget; on timeout we keep the proven text pick.
+      // Colour histograms alone are noisy for busy packaging (two legit M&M's
+      // bags can score as low against each other as a bag scores against the ice
+      // cream), so `verified` — a STRONG colour win OR an AI vision confirmation
+      // that the two photos are the same product — is the signal we trust. Colour
+      // similarity is only the cheap pre-filter that decides what to AI-check.
+      const PASS1_BUDGET_MS = 2500;   // re-rank/verify the existing pool
+      const PASS2_BUDGET_MS = 3500;   // corrective widen — rarer, worth more time
+      const COLOR_MISMATCH_MAX = 0.55; // best cover this unlike the photo ⇒ probably wrong
+      const COLOR_SWITCH_MARGIN = 0.10;
       let chosenCandidate = bestMatch.product;
       let finalCandidates = [chosenCandidate, ...allCandidates.filter(c => c.barcode !== chosenCandidate.barcode)];
-      if (bestMatch.confidence < VISUAL_CONFIDENCE_SKIP && finalCandidates.length > 1) {
+
+      const timeboxedVisual = (cands: OpenFoodFactsResult[], fb: OpenFoodFactsResult, budgetMs: number): Promise<VisualPick> =>
+        Promise.race([
+          pickVisualBestCandidate(identified.compressedBase64, cands, fb),
+          new Promise<VisualPick>((resolve) =>
+            setTimeout(() => resolve({ chosen: fb, reordered: cands, usedAi: false, topSimilarity: 0, hadSignal: false, verified: false }), budgetMs),
+          ),
+        ]);
+
+      if (identified.compressedBase64) {
         try {
-          const visual = await Promise.race([
-            pickVisualBestCandidate(identified.compressedBase64, finalCandidates, chosenCandidate),
-            new Promise<{ chosen: OpenFoodFactsResult; reordered: OpenFoodFactsResult[]; usedAi: boolean }>((resolve) =>
-              setTimeout(() => resolve({ chosen: chosenCandidate, reordered: finalCandidates, usedAi: false }), VISUAL_MATCH_BUDGET_MS),
-            ),
-          ]);
+          // Pass 1: verify / re-rank against the existing (eco-ranked) pool.
+          const visual = await timeboxedVisual(finalCandidates, chosenCandidate, PASS1_BUDGET_MS);
           chosenCandidate = visual.chosen;
           finalCandidates = visual.reordered;
           if (chosenCandidate.barcode !== bestMatch.product.barcode) {
             console.log(`🎨 Visual re-rank → "${chosenCandidate.productName}" over "${bestMatch.product.productName}"${visual.usedAi ? ' (AI-confirmed)' : ''}`);
+          }
+
+          // Pass 2: we had a colour signal but couldn't confirm the match, AND the
+          // best cover doesn't really look like the photo → the real product was
+          // likely filtered out of the pool (no eco-score). Widen to every
+          // image-bearing match and let colour + AI find the right one.
+          if (visual.hadSignal && !visual.verified && visual.topSimilarity < COLOR_MISMATCH_MAX) {
+            console.warn(`🎨 Auto-match "${chosenCandidate.productName}" not visually confirmed (best sim=${visual.topSimilarity.toFixed(2)}) — widening pool`);
+            setScanStage("Confirming it's the right product...");
+            const widePool = await searchVisualCandidates(rawQuery, 12);
+            const hasNew = widePool.some(p => !finalCandidates.some(c => c.barcode === p.barcode));
+            if (widePool.length > 0 && hasNew) {
+              const visual2 = await timeboxedVisual(widePool, chosenCandidate, PASS2_BUDGET_MS);
+              // Swap when the wider pool yields a CONFIRMED match (AI or strong
+              // colour) — trust that over the unconfirmed text pick — or, lacking
+              // confirmation, when colour is clearly and meaningfully better.
+              const colourClearlyBetter = visual2.hadSignal
+                && visual2.topSimilarity >= COLOR_MISMATCH_MAX
+                && visual2.topSimilarity > visual.topSimilarity + COLOR_SWITCH_MARGIN;
+              if (visual2.chosen.barcode !== chosenCandidate.barcode && (visual2.verified || colourClearlyBetter)) {
+                console.log(`🎨 Colour-verified swap → "${visual2.chosen.productName}" (sim=${visual2.topSimilarity.toFixed(2)}${visual2.usedAi ? ', AI-confirmed' : ''}) over "${chosenCandidate.productName}"`);
+                chosenCandidate = visual2.chosen;
+                finalCandidates = [
+                  chosenCandidate,
+                  ...visual2.reordered.filter(c => c.barcode !== chosenCandidate.barcode),
+                  ...finalCandidates.filter(c => c.barcode !== chosenCandidate.barcode),
+                ];
+              }
+            }
           }
         } catch (e) {
           console.warn('Visual match step failed — keeping text match:', e);

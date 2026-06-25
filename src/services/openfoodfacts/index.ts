@@ -684,6 +684,57 @@ export const searchProducts = async (
   return [];
 };
 
+/**
+ * Search tuned for VISUAL (colour) matching rather than data richness.
+ *
+ * Unlike searchProducts/searchOneVariant, this does NOT require an eco-score —
+ * it returns every image-bearing product for the query. That matters because
+ * OFF eco-scores are sparse: for many brands the only eco-scored entry is an
+ * off-type variant (e.g. M&M's *ice cream* is eco-scored while the actual M&M's
+ * *candy* bags are not), so the normal eco-first ranking can drop the real
+ * product from the candidate pool entirely. When the eco-ranked text match
+ * fails to look like the user's photo, the scan flow widens to this pool so
+ * colour matching can still surface the correct product.
+ */
+export const searchVisualCandidates = async (
+  query: string,
+  limit = 12,
+): Promise<OpenFoodFactsResult[]> => {
+  const trimmed = query.trim();
+  if (!trimmed) return [];
+
+  const cacheKey = `visual:${trimmed.toLowerCase()}:${limit}`;
+  const cached = cacheGet<OpenFoodFactsResult[]>(cacheKey);
+  if (cached) return cached;
+
+  try {
+    const backendUrl = getBackendUrl();
+    const response = await fetch(`${backendUrl}/api/openfoodfacts/search`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: trimmed, limit: 20 }),
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!response.ok) return [];
+
+    const data: OpenFoodFactsSearchResponse = await response.json();
+    if (!data.products?.length) return [];
+
+    // Only image-bearing, in-region products — an entry with no cover can't be
+    // colour-matched, so it's useless as a visual candidate.
+    const candidates = data.products
+      .map(normalizeProduct)
+      .filter(isAllowedRegion)
+      .filter((p) => !!p.imageUrl);
+
+    const ranked = rankByQuality(trimmed, candidates).slice(0, limit);
+    if (ranked.length > 0) cacheSet(cacheKey, ranked);
+    return ranked;
+  } catch {
+    return [];
+  }
+};
+
 export interface BrowseOptions {
   query?: string;
   category?: string;
