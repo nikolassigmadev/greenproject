@@ -553,10 +553,14 @@ const searchOneVariant = async (
 
   try {
     const backendUrl = getBackendUrl();
+    // Bound the wait so a hung backend/upstream can't stall the scan. The server
+    // chains several OFF strategies (each ~7s max); 10s covers a realistic worst
+    // case while still failing fast enough to fall back to the direct OFF API.
     const response = await fetch(`${backendUrl}/api/openfoodfacts/search`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query, limit: Math.min(limit * 2, 20) }),
+      signal: AbortSignal.timeout(10000),
     });
 
     if (!response.ok) {

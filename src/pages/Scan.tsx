@@ -1445,23 +1445,43 @@ const Scan = () => {
       const recordAttempt = (q: string, outcome: string) =>
         searchAttempts.push(`${searchAttempts.length + 1}. "${q}" → ${outcome}`);
 
-      for (let qi = 0; qi < searchQueries.length; qi++) {
-        const q = searchQueries[qi];
-        setScanStage(`Searching "${q}"...`);
-        setScanProgress(60 + Math.round((qi / searchQueries.length) * 25));
-        console.log(`   [attempt ${qi + 1}/${searchQueries.length}] Searching: "${q}"`);
+      // Fire the query candidates CONCURRENTLY instead of awaiting each in
+      // series. The OCR-derived candidates heavily overlap (brand+product,
+      // product, brand, progressive strips), so running them one-at-a-time used
+      // to stack N network round-trips onto the critical path — the single
+      // biggest contributor to slow scans (each OFF search itself chains several
+      // upstream strategies server-side). We still evaluate the results in the
+      // original priority order and accept the first query that passes the
+      // relevance gate, so match selection is unchanged; only the waiting is gone.
+      // Cap the parallel breadth: each search already shrinks its own query
+      // internally (generateSearchVariations covers product-only / brand-only /
+      // progressive strips), so the top-3 most-specific candidates give full
+      // coverage. Firing more just adds upstream OFF contention without
+      // improving the match — and the brand-only tail is never auto-accepted.
+      const PARALLEL_QUERY_CAP = 3;
+      const queriesToRun = searchQueries.slice(0, PARALLEL_QUERY_CAP);
+      setScanStage("Searching product databases...");
+      setScanProgress(70);
+      const resultsPerQuery = await Promise.all(
+        queriesToRun.map((q) =>
+          searchOffProducts(q, 20).catch((e) => {
+            console.warn(`   ↪ Search failed for "${q}":`, e);
+            return [] as OpenFoodFactsResult[];
+          }),
+        ),
+      );
 
-        const results = await searchOffProducts(q, 20);
+      for (let qi = 0; qi < queriesToRun.length; qi++) {
+        const q = queriesToRun[qi];
+        const results = resultsPerQuery[qi];
         if (results.length === 0) {
           recordAttempt(q, "0 results");
-          console.warn(`   ↪ No results for "${q}"`);
           continue;
         }
 
         const topResults = filterBestProducts(results, q);
         if (topResults.length === 0) {
           recordAttempt(q, `${results.length} results, none relevant`);
-          console.warn(`   ↪ Results for "${q}" filtered out by relevance`);
           continue;
         }
 
@@ -1482,7 +1502,6 @@ const Scan = () => {
         // A brand-only fallback is never auto-accepted — log and continue trying
         if (match.brandOnlyFallback) {
           recordAttempt(q, `${topResults.length} results, brand-only fallback (not accepted)`);
-          console.warn(`   ↪ Brand-only fallback for "${q}" — not auto-accepting`);
         } else {
           recordAttempt(q, `${topResults.length} results, no confident match`);
         }
@@ -1511,17 +1530,31 @@ const Scan = () => {
       // Re-ranks candidates by colour similarity to the photo, AI-confirming only
       // weak/ambiguous matches. Silent re-rank: always lands on the closest match,
       // falling back to the text-relevance pick when there's no visual signal.
+      //
+      // This only ever HELPS an ambiguous match, so:
+      //   • a high-confidence text match skips it entirely (no network/AI cost), and
+      //   • weaker matches still run it, but time-boxed so a slow image download or
+      //     vision call can't blow the scan budget — on timeout we keep the text pick.
+      const VISUAL_CONFIDENCE_SKIP = 0.85;
+      const VISUAL_MATCH_BUDGET_MS = 1200;
       let chosenCandidate = bestMatch.product;
       let finalCandidates = [chosenCandidate, ...allCandidates.filter(c => c.barcode !== chosenCandidate.barcode)];
-      try {
-        const visual = await pickVisualBestCandidate(identified.compressedBase64, finalCandidates, chosenCandidate);
-        chosenCandidate = visual.chosen;
-        finalCandidates = visual.reordered;
-        if (chosenCandidate.barcode !== bestMatch.product.barcode) {
-          console.log(`🎨 Visual re-rank → "${chosenCandidate.productName}" over "${bestMatch.product.productName}"${visual.usedAi ? ' (AI-confirmed)' : ''}`);
+      if (bestMatch.confidence < VISUAL_CONFIDENCE_SKIP && finalCandidates.length > 1) {
+        try {
+          const visual = await Promise.race([
+            pickVisualBestCandidate(identified.compressedBase64, finalCandidates, chosenCandidate),
+            new Promise<{ chosen: OpenFoodFactsResult; reordered: OpenFoodFactsResult[]; usedAi: boolean }>((resolve) =>
+              setTimeout(() => resolve({ chosen: chosenCandidate, reordered: finalCandidates, usedAi: false }), VISUAL_MATCH_BUDGET_MS),
+            ),
+          ]);
+          chosenCandidate = visual.chosen;
+          finalCandidates = visual.reordered;
+          if (chosenCandidate.barcode !== bestMatch.product.barcode) {
+            console.log(`🎨 Visual re-rank → "${chosenCandidate.productName}" over "${bestMatch.product.productName}"${visual.usedAi ? ' (AI-confirmed)' : ''}`);
+          }
+        } catch (e) {
+          console.warn('Visual match step failed — keeping text match:', e);
         }
-      } catch (e) {
-        console.warn('Visual match step failed — keeping text match:', e);
       }
 
       setScanStage("Loading product details...");

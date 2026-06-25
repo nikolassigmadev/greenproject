@@ -462,9 +462,34 @@ export default function OpenFoodFactsDetail() {
   };
 
   const loadProduct = async (code: string) => {
-    setLoading(true);
     setMounted(false);
     setError(null);
+
+    // Fast path: arriving straight from a scan, we already hold the fully
+    // normalised product (eco-score, nutri-score, image, …) that the search
+    // step fetched moments ago — it's stored in scan_candidates. Render it
+    // instantly instead of blocking on a fresh barcode lookup, which used to
+    // bolt a whole network round-trip onto the critical path AFTER navigation.
+    // We still refresh from OpenFoodFacts in the background to pick up any
+    // richer fields, but the user sees the result immediately.
+    let renderedFromCache = false;
+    if (fromScan) {
+      try {
+        const stored = sessionStorage.getItem("scan_candidates");
+        if (stored) {
+          const parsed: OpenFoodFactsResult[] = JSON.parse(stored);
+          const hit = parsed.find((c) => c.barcode === code);
+          if (hit && hit.found !== false && hit.productName) {
+            setProduct(hit);
+            setLoading(false);
+            renderedFromCache = true;
+          }
+        }
+      } catch { /* ignore — fall through to a normal network load */ }
+    }
+
+    if (!renderedFromCache) setLoading(true);
+
     // A transient failure (backend proxy hiccup, OFF timeout/rate-limit) comes
     // back as a network-ish error — NOT a genuine "not found". Retry those a
     // couple of times so a one-off blip doesn't masquerade as "doesn't exist".
@@ -477,8 +502,10 @@ export default function OpenFoodFactsDetail() {
         result = await lookupBarcode(code);
       }
       if (result.found) {
+        // Background refresh succeeded — swap in the (possibly richer) record.
         setProduct(result);
-      } else {
+      } else if (!renderedFromCache) {
+        // Only surface a miss/error if we have nothing already on screen.
         const cached = loadScanHistory().find(h => h.barcode === code);
         if (cached) setProduct(buildFromCache(cached));
         else if (isTransient(result.error))
@@ -486,9 +513,11 @@ export default function OpenFoodFactsDetail() {
         else setError("Product not found in OpenFoodFacts database");
       }
     } catch {
-      const cached = loadScanHistory().find(h => h.barcode === code);
-      if (cached) setProduct(buildFromCache(cached));
-      else setError("Failed to load product details");
+      if (!renderedFromCache) {
+        const cached = loadScanHistory().find(h => h.barcode === code);
+        if (cached) setProduct(buildFromCache(cached));
+        else setError("Failed to load product details");
+      }
     } finally {
       setLoading(false);
     }

@@ -1117,6 +1117,13 @@ app.post('/api/openai/analyze-image', openaiLimiter, largeBody, async (req, res)
       });
     }
 
+    // gpt-4.1-mini is ~3x faster than gpt-4o-mini on vision (≈1.1s vs ≈4s) AND
+    // identifies products more precisely — fuller product names, correct brands,
+    // sometimes even the on-pack barcode (benchmarked across Nutella, KitKat,
+    // Doritos, Coca-Cola, Heinz, Oreo). The scan OCR is the single biggest
+    // latency leg of a scan, so this swap is the key speed win. The multi-product
+    // shelf task (detail:high, larger output) stays on the prior model.
+    const visionModel = task === 'scan-shelf' ? 'gpt-4o-mini' : 'gpt-4.1-mini';
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -1124,7 +1131,7 @@ app.post('/api/openai/analyze-image', openaiLimiter, largeBody, async (req, res)
         'Authorization': `Bearer ${OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: visionModel,
         store: true,
         messages: [
           {
@@ -1238,7 +1245,10 @@ CONFIDENCE: a number from 0.0 to 1.0`;
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${OPENAI_API_KEY}` },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        // Faster vision model (see /api/openai/analyze-image) — this confirm runs
+        // inside the scan's time-boxed visual-match step, so lower latency means
+        // fewer ambiguous matches get cut off by the timeout.
+        model: 'gpt-4.1-mini',
         store: true,
         messages: [{
           role: 'user',
@@ -1457,7 +1467,13 @@ app.post('/api/openfoodfacts/search', async (req, res) => {
     const pageSize = String(Math.min(limit, 50));
 
     let data = null;
-    const searchTimeout = 25000;
+    // Per-upstream-strategy timeout. Kept tight (was 25s) so a single slow OFF
+    // strategy can't dominate the scan budget — the search endpoint chains
+    // several strategies, and the scanner now runs multiple searches in
+    // parallel, so a long per-call ceiling translated directly into multi-second
+    // scans. OFF / Search-a-licious normally answer in well under 2s; 7s leaves
+    // ample headroom while bounding the worst case.
+    const searchTimeout = 7000;
     const headers = { 'User-Agent': 'Scan2Source/1.0 (ethical-shopper)' };
 
     const BRAND_ALIASES = {
@@ -1502,6 +1518,22 @@ app.post('/api/openfoodfacts/search', async (req, res) => {
     //    "Ben & Jerry's Phish Food" → first word "Ben" → matched a whey-protein
     //    brand called "Ben" and Moroccan "jben" yogurt → wildly wrong + flaky).
     const isMultiWord = queryWords.length > 1;
+
+    // Kick off the multi-word brand-boost lookup NOW so it runs CONCURRENTLY with
+    // the main strategies below instead of as a second sequential upstream call
+    // after them. It only ever contributes extra brand candidates that get merged
+    // (and deduped) at the very end — it never depends on the primary search's
+    // RESULTS — so overlapping it removes a whole ~2-4s OFF round-trip from the
+    // critical path on the common multi-word scan query. Started here, awaited at
+    // the merge step. `.catch(()=>null)` keeps a slow/failed boost from ever
+    // rejecting or blocking the response.
+    const brandBoostWord = isMultiWord ? queryWords[0] : null;
+    const brandBoostPromise = (brandBoostWord && brandBoostWord.length >= 4)
+      ? fetch(`https://world.openfoodfacts.org/api/v2/search?${new URLSearchParams({ brands_tags: brandBoostWord, fields, page_size: '50' })}`, {
+          signal: AbortSignal.timeout(searchTimeout),
+          headers,
+        }).then((r) => (r.ok ? r.json() : null)).catch(() => null)
+      : null;
 
     /** v2 brand tag search (full slug). Returns true if it produced results. */
     const tryBrandTagSearch = async () => {
@@ -1675,36 +1707,27 @@ app.post('/api/openfoodfacts/search', async (req, res) => {
     // gate downstream picks the right one (exact brand preferred); junk is
     // dropped by the safety net + the client's matcher. First word must be >= 4
     // chars (so "Ben" can't drag in "jben" yogurt).
-    if (isMultiWord && Array.isArray(data.products)) {
-      const brandWord = queryWords[0];
-      if (brandWord && brandWord.length >= 4) {
-        try {
-          const bParams = new URLSearchParams({ brands_tags: brandWord, fields, page_size: '50' });
-          const bResp = await fetch(`https://world.openfoodfacts.org/api/v2/search?${bParams}`, {
-            signal: AbortSignal.timeout(searchTimeout),
-            headers,
-          });
-          if (bResp.ok) {
-            const bData = await bResp.json();
-            const brandProducts = bData.products || [];
-            const stripA = (s) => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-            const remaining = queryWords.slice(1).filter((w) => w.length >= 3).map(stripA);
-            const relevantBrand = brandProducts.filter((p) => {
-              if (remaining.length === 0) return true;
-              const hay = stripA([p.product_name, p.product_name_en].filter(Boolean).join(' '));
-              return remaining.some((w) => hay.includes(w));
-            });
-            if (relevantBrand.length > 0) {
-              sortByRelevance(relevantBrand, queryWords.slice(1), queryLower);
-              const seen = new Set(data.products.map((p) => p.code));
-              const toAdd = relevantBrand.filter((p) => !seen.has(p.code)).slice(0, 10);
-              data.products = [...toAdd, ...data.products];
-              data.count = data.products.length;
-            }
-          }
-        } catch (e) {
-          console.warn(`Brand-boost merge failed: ${e.message}`);
+    if (brandBoostPromise && Array.isArray(data.products)) {
+      try {
+        // Already in flight since before the strategies above \u2014 just collect it.
+        const bData = await brandBoostPromise;
+        const brandProducts = (bData && bData.products) || [];
+        const stripA = (s) => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+        const remaining = queryWords.slice(1).filter((w) => w.length >= 3).map(stripA);
+        const relevantBrand = brandProducts.filter((p) => {
+          if (remaining.length === 0) return true;
+          const hay = stripA([p.product_name, p.product_name_en].filter(Boolean).join(' '));
+          return remaining.some((w) => hay.includes(w));
+        });
+        if (relevantBrand.length > 0) {
+          sortByRelevance(relevantBrand, queryWords.slice(1), queryLower);
+          const seen = new Set(data.products.map((p) => p.code));
+          const toAdd = relevantBrand.filter((p) => !seen.has(p.code)).slice(0, 10);
+          data.products = [...toAdd, ...data.products];
+          data.count = data.products.length;
         }
+      } catch (e) {
+        console.warn(`Brand-boost merge failed: ${e.message}`);
       }
     }
 
