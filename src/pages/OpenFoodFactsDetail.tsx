@@ -211,7 +211,37 @@ function shortCategory(product: OpenFoodFactsResult) {
 function titleParts(name: string) {
   const bits = name.split(/\s+/).filter(Boolean);
   if (bits.length <= 1) return { first: name, rest: "" };
-  return { first: bits[0], rest: bits.slice(1).join(" ") };
+  // The hero line is normally the first word, but never orphan a tiny leading
+  // word ("Mr", "Dr", "St") on its own line — keep it with the next word.
+  const firstCount = bits[0].length <= 2 && bits.length > 2 ? 2 : 1;
+  return { first: bits.slice(0, firstCount).join(" "), rest: bits.slice(firstCount).join(" ") };
+}
+
+/**
+ * Remove a leading brand from a product name so the title is the PRODUCT, not
+ * "Brand Product". Handles OFF's comma-joined brands ("Feastables, MrBeast") and
+ * spacing/punctuation variants ("MrBeast" vs "Mr Beast"). Returns "" if nothing
+ * meaningful is left.
+ */
+function stripLeadingBrand(name: string, brand: string | null): string {
+  let out = (name || "").trim();
+  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const brands = (brand || "").split(",").map((b) => b.trim()).filter(Boolean);
+  for (const b of brands) {
+    const nb = norm(b);
+    if (!nb) continue;
+    const words = out.split(/\s+/);
+    let acc = "";
+    for (let i = 0; i < words.length; i++) {
+      acc += norm(words[i]);
+      if (acc === nb) {
+        out = words.slice(i + 1).join(" ").replace(/^[\s\-–—:]+/, "").trim();
+        break;
+      }
+      if (!nb.startsWith(acc)) break; // name doesn't lead with this brand
+    }
+  }
+  return out.trim();
 }
 
 function packagingSummary(product: OpenFoodFactsResult) {
@@ -718,15 +748,17 @@ export default function OpenFoodFactsDetail() {
   // meta line above the title, so strip a leading brand to avoid repeating it.
   const openaiQuery = fromScan ? (sessionStorage.getItem("scan_openai_response") || "").trim() : "";
   const displayName = (() => {
-    if (openaiQuery) {
-      const brand = (product.brand || "").trim();
-      if (brand && openaiQuery.toLowerCase().startsWith(brand.toLowerCase())) {
-        const stripped = openaiQuery.slice(brand.length).trim();
-        if (stripped) return stripped;
-      }
-      return openaiQuery;
-    }
-    return ocrName || cleanName || product.productName || "Unknown product";
+    // Prefer the OpenAI-identified PRODUCT name (e.g. "Feastables Peanut Butter").
+    // It's exactly what was handed to Open Food Facts (so it tracks the product
+    // that came back), reads cleanly, and — unlike the brand+product query —
+    // doesn't duplicate the brand already shown in the meta line above. This is
+    // what avoids titles like "Mr Beast Feastables Peanut Butter".
+    if (ocrName) return ocrName;
+    // Fallback: the full OpenAI query, with a leading brand stripped so the title
+    // is the product, not "Brand Product" (handles OFF's comma-joined brands and
+    // "MrBeast" vs "Mr Beast" spacing).
+    if (openaiQuery) return stripLeadingBrand(openaiQuery, product.brand) || openaiQuery;
+    return cleanName || product.productName || "Unknown product";
   })();
 
   const hasScores = !!(ecoGrade || nutriGrade || product.novaGroup || welfareScore.score !== null);
@@ -740,7 +772,10 @@ export default function OpenFoodFactsDetail() {
     : boycottMatch
     ? `${boycottMatch.parent} is boycott listed`
     : verdict.reason;
-  const productMeta = [product.brand, category].filter(Boolean).join(" · ");
+  // OFF often lists several brands ("Feastables, MrBeast"); show just the primary
+  // one in the meta line so it reads "Feastables · Snacks", not the whole list.
+  const primaryBrand = (product.brand || "").split(",")[0].trim();
+  const productMeta = [primaryBrand, category].filter(Boolean).join(" · ");
 
   // ── Render ──
 
