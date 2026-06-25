@@ -1232,12 +1232,23 @@ app.get('/api/image-proxy', searchLimiter, async (req, res) => {
 app.post('/api/openai/verify-product-match', openaiLimiter, largeBody, async (req, res) => {
   try {
     if (!OPENAI_API_KEY) return res.status(500).json({ success: false, error: 'OpenAI API key not configured on server' });
-    const { imageBase64, candidateImageUrl } = req.body || {};
+    const { imageBase64, candidateImageUrl, mode } = req.body || {};
     if (!imageBase64 || typeof imageBase64 !== 'string') return res.status(400).json({ success: false, error: 'Missing imageBase64' });
     if (imageBase64.length > 10_000_000) return res.status(400).json({ success: false, error: 'Image too large' });
     if (!isOffImageUrl(candidateImageUrl)) return res.status(400).json({ success: false, error: 'candidateImageUrl must be an Open Food Facts image' });
 
-    const prompt = `Image 1 is a photo a shopper just took of a product. Image 2 is a product cover photo from a database. Decide if they show the SAME product — same brand AND same flavour/variant (ignore angle, lighting, background, glare, packaging wear). Reply in EXACTLY two lines:
+    // "strict" (default) — same exact product/SKU. Used to CONFIRM a match.
+    // "type" — same brand + same kind of product (same flavour line), ignoring
+    //   pack size, region and bag artwork. Used by the scan's corrective pass,
+    //   which runs only AFTER the original was already rejected, to recover the
+    //   right product with good recall (e.g. a brown M&M's chocolate bag photo
+    //   should match ANY M&M's milk-chocolate bag, but NOT M&M's ice cream and
+    //   NOT M&M's peanut). The category/flavour guard keeps it from over-matching.
+    const prompt = mode === 'type'
+      ? `Image 1 is a photo a shopper just took of a product. Image 2 is a product cover photo from a database. Answer YES only if they are the SAME BRAND and the SAME KIND of product — same product line and flavour/variant — even if the pack size, region, or bag artwork differ. Answer NO if the brand differs, the food category differs (e.g. ice cream / frozen dessert vs a candy/chocolate bag), or the flavour/variant differs (e.g. peanut vs plain vs caramel vs crispy). Ignore angle, lighting, background, glare, and packaging wear. Reply in EXACTLY two lines:
+MATCH: YES or NO
+CONFIDENCE: a number from 0.0 to 1.0`
+      : `Image 1 is a photo a shopper just took of a product. Image 2 is a product cover photo from a database. Decide if they show the SAME product — same brand AND same flavour/variant (ignore angle, lighting, background, glare, packaging wear). Reply in EXACTLY two lines:
 MATCH: YES or NO
 CONFIDENCE: a number from 0.0 to 1.0`;
 

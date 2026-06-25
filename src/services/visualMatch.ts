@@ -17,16 +17,22 @@ export function proxiedImageUrl(url: string): string {
   return `${getBackendUrl()}/api/image-proxy?url=${encodeURIComponent(url)}`;
 }
 
-/** Ask the vision model whether the user's photo and a candidate cover are the same product. */
+/**
+ * Ask the vision model whether the user's photo and a candidate cover match.
+ * mode "strict" (default) = same exact product; "type" = same brand + same kind
+ * of product (ignores pack size / region / artwork) — used by the corrective
+ * pass for better recall once the original match has already been rejected.
+ */
 export async function verifyProductMatch(
   userImageBase64: string,
   candidateImageUrl: string,
+  mode: "strict" | "type" = "strict",
 ): Promise<{ match: boolean; confidence: number } | null> {
   try {
     const res = await fetch(`${getBackendUrl()}/api/openai/verify-product-match`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ imageBase64: userImageBase64, candidateImageUrl }),
+      body: JSON.stringify({ imageBase64: userImageBase64, candidateImageUrl, mode }),
       signal: AbortSignal.timeout(12000),
     });
     if (!res.ok) return null;
@@ -122,4 +128,33 @@ export async function pickVisualBestCandidate(
   // colour signal but couldn't confirm a match (covers don't look like the
   // photo) → report unverified so the caller can widen the search.
   return { chosen: fallback, reordered: candidates, usedAi: true, topSimilarity, hadSignal: true, verified: false };
+}
+
+/**
+ * Corrective AI-led verification for the scan's "widen the pool" pass.
+ *
+ * Unlike pickVisualBestCandidate (which AI-checks only the top-2 by COLOUR),
+ * this walks candidates in their given order — the caller passes them
+ * relevance-ranked — and asks the vision model whether each is the same product
+ * as the user's photo. Colour is deliberately NOT used to choose what to check:
+ * it's too noisy for busy packaging (two real M&M's bags can score ~0.3 against
+ * each other), so a correct candidate can sit low on colour yet be an obvious AI
+ * match. Returns the highest-confidence confirmed match, or null if none confirm.
+ */
+export async function findAiConfirmedMatch(
+  userImageBase64: string | null | undefined,
+  candidates: OpenFoodFactsResult[],
+  maxChecks = 5,
+): Promise<{ product: OpenFoodFactsResult; confidence: number } | null> {
+  if (!userImageBase64) return null;
+  const pool = candidates.filter((c) => c.imageUrl).slice(0, maxChecks);
+  let best: { product: OpenFoodFactsResult; confidence: number } | null = null;
+  for (const c of pool) {
+    // "type" match: the original was already rejected, so we want the right
+    // product line back with good recall, not a pixel-perfect SKU match.
+    const v = await verifyProductMatch(userImageBase64, c.imageUrl!, "type");
+    if (v?.match && (!best || v.confidence > best.confidence)) best = { product: c, confidence: v.confidence };
+    if (best && best.confidence >= 0.9) break; // confident enough — stop early
+  }
+  return best;
 }

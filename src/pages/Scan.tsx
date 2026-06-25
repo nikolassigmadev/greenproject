@@ -26,7 +26,7 @@ import { DS } from "@/styles/design-tokens";
 import { getBackendUrl } from "@/config/backend";
 import { pickBestMatch, validateBarcodeResult, scoreRelevance, hasUsableBrandAnchor, type MatchResult } from "@/utils/productRelevance";
 import { logScan } from "@/utils/scanLogger";
-import { pickVisualBestCandidate, type VisualPick } from "@/services/visualMatch";
+import { pickVisualBestCandidate, findAiConfirmedMatch, type VisualPick } from "@/services/visualMatch";
 
 /** Ask OpenAI to fix typos and clean up a user-typed product query */
 const fixProductQuery = async (raw: string): Promise<string> => {
@@ -1545,9 +1545,7 @@ const Scan = () => {
       // that the two photos are the same product — is the signal we trust. Colour
       // similarity is only the cheap pre-filter that decides what to AI-check.
       const PASS1_BUDGET_MS = 2500;   // re-rank/verify the existing pool
-      const PASS2_BUDGET_MS = 3500;   // corrective widen — rarer, worth more time
-      const COLOR_MISMATCH_MAX = 0.55; // best cover this unlike the photo ⇒ probably wrong
-      const COLOR_SWITCH_MARGIN = 0.10;
+      const PASS2_BUDGET_MS = 4500;   // corrective widen — rarer, worth more time (up to 5 AI checks)
       let chosenCandidate = bestMatch.product;
       let finalCandidates = [chosenCandidate, ...allCandidates.filter(c => c.barcode !== chosenCandidate.barcode)];
 
@@ -1569,29 +1567,35 @@ const Scan = () => {
             console.log(`🎨 Visual re-rank → "${chosenCandidate.productName}" over "${bestMatch.product.productName}"${visual.usedAi ? ' (AI-confirmed)' : ''}`);
           }
 
-          // Pass 2: we had a colour signal but couldn't confirm the match, AND the
-          // best cover doesn't really look like the photo → the real product was
-          // likely filtered out of the pool (no eco-score). Widen to every
-          // image-bearing match and let colour + AI find the right one.
-          if (visual.hadSignal && !visual.verified && visual.topSimilarity < COLOR_MISMATCH_MAX) {
-            console.warn(`🎨 Auto-match "${chosenCandidate.productName}" not visually confirmed (best sim=${visual.topSimilarity.toFixed(2)}) — widening pool`);
+          // Pass 2: Pass 1 had a colour signal but could NOT confirm the match
+          // (strong colour or AI) — so the real product was likely filtered out of
+          // the eco-ranked pool (no eco-score). Widen to every image-bearing match
+          // and let colour + AI find the right one.
+          //
+          // The trigger is "unconfirmed", NOT "low colour": colour histograms are
+          // too noisy to gate on (the wrong M&M's ICE CREAM cover has a brown cone,
+          // so a brown CANDY-bag photo can score 0.6+ against it — above any sane
+          // threshold — yet the AI correctly says they're different products). When
+          // the AI/colour can't confirm, we trust that and look wider.
+          if (visual.hadSignal && !visual.verified) {
+            console.warn(`🎨 Auto-match "${chosenCandidate.productName}" not visually confirmed (best colour sim=${visual.topSimilarity.toFixed(2)}) — widening pool`);
             setScanStage("Confirming it's the right product...");
             const widePool = await searchVisualCandidates(rawQuery, 12);
-            const hasNew = widePool.some(p => !finalCandidates.some(c => c.barcode === p.barcode));
-            if (widePool.length > 0 && hasNew) {
-              const visual2 = await timeboxedVisual(widePool, chosenCandidate, PASS2_BUDGET_MS);
-              // Swap when the wider pool yields a CONFIRMED match (AI or strong
-              // colour) — trust that over the unconfirmed text pick — or, lacking
-              // confirmation, when colour is clearly and meaningfully better.
-              const colourClearlyBetter = visual2.hadSignal
-                && visual2.topSimilarity >= COLOR_MISMATCH_MAX
-                && visual2.topSimilarity > visual.topSimilarity + COLOR_SWITCH_MARGIN;
-              if (visual2.chosen.barcode !== chosenCandidate.barcode && (visual2.verified || colourClearlyBetter)) {
-                console.log(`🎨 Colour-verified swap → "${visual2.chosen.productName}" (sim=${visual2.topSimilarity.toFixed(2)}${visual2.usedAi ? ', AI-confirmed' : ''}) over "${chosenCandidate.productName}"`);
-                chosenCandidate = visual2.chosen;
+            // Drop anything already in the (rejected) pool, then AI-verify the most
+            // relevant widened candidates — colour order is unreliable here, so we
+            // ask the vision model directly, in relevance order, for a real match.
+            const fresh = widePool.filter(p => !finalCandidates.some(c => c.barcode === p.barcode));
+            if (fresh.length > 0) {
+              const confirmed = await Promise.race([
+                findAiConfirmedMatch(identified.compressedBase64, fresh, 5),
+                new Promise<null>((resolve) => setTimeout(() => resolve(null), PASS2_BUDGET_MS)),
+              ]);
+              if (confirmed && confirmed.product.barcode !== chosenCandidate.barcode) {
+                console.log(`🎨 AI-confirmed swap → "${confirmed.product.productName}" (conf=${confirmed.confidence.toFixed(2)}) over "${chosenCandidate.productName}"`);
+                chosenCandidate = confirmed.product;
                 finalCandidates = [
                   chosenCandidate,
-                  ...visual2.reordered.filter(c => c.barcode !== chosenCandidate.barcode),
+                  ...widePool.filter(c => c.barcode !== chosenCandidate.barcode),
                   ...finalCandidates.filter(c => c.barcode !== chosenCandidate.barcode),
                 ];
               }
