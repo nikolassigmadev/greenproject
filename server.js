@@ -1176,6 +1176,100 @@ app.post('/api/openai/analyze-image', openaiLimiter, largeBody, async (req, res)
   }
 });
 
+// Only Open Food Facts hosts may be proxied / verified — never a general proxy.
+const isOffImageUrl = (u) => {
+  try {
+    const url = new URL(u);
+    return url.protocol === 'https:' && /(^|\.)openfoodfacts\.org$/.test(url.hostname);
+  } catch { return false; }
+};
+
+/**
+ * GET /api/image-proxy?url=<OFF image url>
+ * Streams an Open Food Facts product image through our own origin so the browser
+ * can read its pixels on a canvas (CORS-safe) for visual colour-matching against
+ * the user's scan. Whitelisted to *.openfoodfacts.org — not a general proxy.
+ */
+app.get('/api/image-proxy', searchLimiter, async (req, res) => {
+  try {
+    const raw = typeof req.query.url === 'string' ? req.query.url : '';
+    if (!isOffImageUrl(raw)) {
+      return res.status(400).json({ success: false, error: 'Only Open Food Facts image URLs are allowed' });
+    }
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 8000);
+    const upstream = await fetch(raw, { signal: ctrl.signal, headers: { 'User-Agent': 'GoodScan/1.0' } }).catch(() => null);
+    clearTimeout(t);
+    if (!upstream || !upstream.ok) return res.status(502).json({ success: false, error: 'Upstream image fetch failed' });
+    const type = upstream.headers.get('content-type') || '';
+    if (!type.startsWith('image/')) return res.status(415).json({ success: false, error: 'Not an image' });
+    const buf = Buffer.from(await upstream.arrayBuffer());
+    if (buf.length > 6_000_000) return res.status(413).json({ success: false, error: 'Image too large' });
+    res.setHeader('Access-Control-Allow-Origin', '*'); // public image; allow canvas reads from any origin
+    res.setHeader('Content-Type', type);
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.send(buf);
+  } catch (e) {
+    console.error('image-proxy error:', e.message);
+    res.status(500).json({ success: false, error: 'Image proxy failed' });
+  }
+});
+
+/**
+ * POST /api/openai/verify-product-match
+ * Given the shopper's photo (imageBase64) and a candidate product's cover image
+ * URL, asks the vision model whether they are the SAME product. The scan resolver
+ * calls this only to confirm a low-confidence / ambiguous visual colour match
+ * before showing it. Returns { success, match: boolean, confidence: 0..1 }.
+ */
+app.post('/api/openai/verify-product-match', openaiLimiter, largeBody, async (req, res) => {
+  try {
+    if (!OPENAI_API_KEY) return res.status(500).json({ success: false, error: 'OpenAI API key not configured on server' });
+    const { imageBase64, candidateImageUrl } = req.body || {};
+    if (!imageBase64 || typeof imageBase64 !== 'string') return res.status(400).json({ success: false, error: 'Missing imageBase64' });
+    if (imageBase64.length > 10_000_000) return res.status(400).json({ success: false, error: 'Image too large' });
+    if (!isOffImageUrl(candidateImageUrl)) return res.status(400).json({ success: false, error: 'candidateImageUrl must be an Open Food Facts image' });
+
+    const prompt = `Image 1 is a photo a shopper just took of a product. Image 2 is a product cover photo from a database. Decide if they show the SAME product — same brand AND same flavour/variant (ignore angle, lighting, background, glare, packaging wear). Reply in EXACTLY two lines:
+MATCH: YES or NO
+CONFIDENCE: a number from 0.0 to 1.0`;
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${OPENAI_API_KEY}` },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        store: true,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'text', text: prompt },
+            { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${imageBase64}`, detail: 'low' } },
+            { type: 'image_url', image_url: { url: candidateImageUrl, detail: 'low' } },
+          ],
+        }],
+        max_tokens: 20,
+      }),
+    });
+    if (!response.ok) {
+      const e = await response.json().catch(() => ({}));
+      return res.status(response.status).json({ success: false, error: e.error?.message || 'OpenAI API error' });
+    }
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content || '';
+    const match = /MATCH:\s*YES/i.test(content);
+    const cm = content.match(/CONFIDENCE:\s*([0-9]*\.?[0-9]+)/i);
+    let confidence = cm ? parseFloat(cm[1]) : (match ? 0.6 : 0.4);
+    if (!Number.isFinite(confidence)) confidence = match ? 0.6 : 0.4;
+    confidence = Math.max(0, Math.min(1, confidence));
+    logOpenAICall('verify-product-match');
+    res.json({ success: true, match, confidence });
+  } catch (e) {
+    console.error('verify-product-match error:', e.message);
+    res.status(500).json({ success: false, error: 'Verification failed' });
+  }
+});
+
 // =====================================================
 // TASK-BASED CHAT (replaces open chat endpoint)
 // =====================================================

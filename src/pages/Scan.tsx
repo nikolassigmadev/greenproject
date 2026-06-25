@@ -26,6 +26,7 @@ import { DS } from "@/styles/design-tokens";
 import { getBackendUrl } from "@/config/backend";
 import { pickBestMatch, validateBarcodeResult, scoreRelevance, hasUsableBrandAnchor, type MatchResult } from "@/utils/productRelevance";
 import { logScan } from "@/utils/scanLogger";
+import { pickVisualBestCandidate } from "@/services/visualMatch";
 
 /** Ask OpenAI to fix typos and clean up a user-typed product query */
 const fixProductQuery = async (raw: string): Promise<string> => {
@@ -1504,10 +1505,26 @@ const Scan = () => {
         return;
       }
 
-      setScanStage("Loading product details...");
+      setScanStage("Checking the photo matches...");
       setScanProgress(95);
-      const chosenCandidate = bestMatch.product;
-      const finalCandidates = [chosenCandidate, ...allCandidates.filter(c => c.barcode !== chosenCandidate.barcode)];
+      // Verify the resolved product actually LOOKS like what the user scanned.
+      // Re-ranks candidates by colour similarity to the photo, AI-confirming only
+      // weak/ambiguous matches. Silent re-rank: always lands on the closest match,
+      // falling back to the text-relevance pick when there's no visual signal.
+      let chosenCandidate = bestMatch.product;
+      let finalCandidates = [chosenCandidate, ...allCandidates.filter(c => c.barcode !== chosenCandidate.barcode)];
+      try {
+        const visual = await pickVisualBestCandidate(identified.compressedBase64, finalCandidates, chosenCandidate);
+        chosenCandidate = visual.chosen;
+        finalCandidates = visual.reordered;
+        if (chosenCandidate.barcode !== bestMatch.product.barcode) {
+          console.log(`🎨 Visual re-rank → "${chosenCandidate.productName}" over "${bestMatch.product.productName}"${visual.usedAi ? ' (AI-confirmed)' : ''}`);
+        }
+      } catch (e) {
+        console.warn('Visual match step failed — keeping text match:', e);
+      }
+
+      setScanStage("Loading product details...");
       sessionStorage.setItem('scan_candidates', JSON.stringify(finalCandidates));
       navigate(`/product-off/${chosenCandidate.barcode}?from=scan`);
     } catch (error) {
