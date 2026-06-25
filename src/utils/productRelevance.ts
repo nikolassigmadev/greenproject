@@ -24,6 +24,12 @@ export interface RelevanceConfig {
    * so variant mismatches are penalized instead of ignored.
    */
   variantTokens: Set<string>;
+  /**
+   * Broad category nouns (chocolate, milk, drink…). They score normally, but a
+   * match resting only on these with a weak (parent-conglomerate) brand anchor is
+   * rejected, since it can't pin down a specific product.
+   */
+  genericTokens: Set<string>;
 }
 
 export const DEFAULT_BRAND_TOKENS = new Set([
@@ -55,6 +61,23 @@ export const DEFAULT_VARIANT_TOKENS = new Set([
   'mini', 'spicy', 'hot', 'mild',
 ]);
 
+/**
+ * Broad product-category nouns. Real words, but they identify a *category*, not a
+ * specific product ("chocolate", "milk", "drink"). They count toward scoring, but
+ * a match that rests ONLY on these — with a weak brand anchor (a parent
+ * conglomerate like Nestlé, or none) — is unreliable: that is exactly how a
+ * "Nestlé Chocolate Drink" scan drifts onto a Nestlé chocolate *bar*. When the
+ * brand anchor is weak we additionally require a NON-generic distinctive token.
+ */
+export const DEFAULT_GENERIC_TOKENS = new Set([
+  'chocolate', 'choco', 'cocoa', 'milk', 'drink', 'beverage', 'water', 'juice',
+  'tea', 'coffee', 'cream', 'bar', 'bars', 'cookie', 'cookies', 'biscuit',
+  'biscuits', 'candy', 'sweets', 'sauce', 'soup', 'bread', 'cheese', 'yogurt',
+  'yoghurt', 'snack', 'snacks', 'chips', 'crisps', 'cereal', 'cereals', 'spread',
+  'butter', 'oil', 'flour', 'sugar', 'rice', 'pasta', 'soda', 'cola', 'powder',
+  'mix', 'dessert', 'wafer', 'gum', 'bonbon', 'bonbons',
+]);
+
 /** Aliases so equivalent variant spellings count as the same family. */
 const VARIANT_ALIASES: Record<string, string> = {
   lite: 'light',
@@ -70,15 +93,23 @@ export const DEFAULT_CONFIG: RelevanceConfig = {
   brandTokens: DEFAULT_BRAND_TOKENS,
   stopWords: DEFAULT_STOP_WORDS,
   variantTokens: DEFAULT_VARIANT_TOKENS,
+  genericTokens: DEFAULT_GENERIC_TOKENS,
 };
 
 // ─── Normalization ───────────────────────────────────────────────────────────
 
-/** Strip accents/diacritics, lowercase, collapse whitespace. Language-agnostic. */
+/**
+ * Strip accents/diacritics, lowercase, collapse whitespace. Language-agnostic.
+ * Apostrophes are REMOVED (not space-split) so a possessive brand normalizes the
+ * same way OFF indexes it: "Harry's" \u2192 "harrys" (matching OFF's "Harrys"),
+ * "Ben & Jerry's" \u2192 "ben jerrys". Otherwise "harry" (from the OCR apostrophe
+ * form) never exact-matches OFF's "harrys" and the brand anchor misfires.
+ */
 export const normalize = (s: string): string =>
   s.normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
+    .replace(/['\u2019\u2018`\u00b4]/g, '')
     .replace(/[^a-z0-9\s\-]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
@@ -343,29 +374,62 @@ export const pickBestMatch = <T extends { productName: string | null; brand: str
     }
     return allBrandTokens.every(bt => fuzzyMatch(bt, resultTokens));
   };
-  const eligible = candidates.filter(carriesBrand);
 
-  let bestProduct: T | null = null;
-  let bestScore: RelevanceScore | null = null;
+  // Parent-conglomerate weak-anchor rule. When the identified brand is ONLY a
+  // parent company (Nestlé, Unilever…), the brand anchor is too broad to pin down
+  // a product — hundreds of sibling products share it. In that case a match must
+  // also carry a NON-generic distinctive product token. Otherwise "Nestlé
+  // Chocolate Drink" (only generic words: "chocolate" + stopword "drink") drifts
+  // onto an unrelated Nestlé chocolate *bar*. Brands with a real sub-brand token
+  // (KitKat, Chocapic) are unaffected — their strong token already anchors them.
+  const brandAnchorWeak =
+    allBrandTokens.length > 0 &&
+    allBrandTokens.every(t => config.brandTokens.has(normalize(t)));
+  const queryNonGenericDistinctive = classifyTokens(tokenize(originalOcrQuery), config)
+    .distinctive.filter(t => !config.genericTokens.has(t));
+  const sharesNonGenericDistinctive = (c: T): boolean => {
+    if (!brandAnchorWeak) return true; // strong/normal anchor → no extra constraint
+    if (queryNonGenericDistinctive.length === 0) return false; // nothing specific to anchor on
+    const resultTokens = tokenize([c.productName, c.brand].filter(Boolean).join(' '));
+    return queryNonGenericDistinctive.some(t => fuzzyMatch(t, resultTokens));
+  };
 
-  for (const candidate of eligible) {
-    const resultText = [candidate.productName, candidate.brand].filter(Boolean).join(' ');
-    const rel = scoreRelevance(originalOcrQuery, resultText, config);
+  const eligible = candidates.filter(c => carriesBrand(c) && sharesNonGenericDistinctive(c));
 
-    if (rel.passes && (!bestScore || rel.score > bestScore.score)) {
-      bestProduct = candidate;
-      bestScore = rel;
+  // Exact-brand preference. A candidate whose strong brand token matches EXACTLY
+  // (not merely fuzzily) is preferred over a fuzzy near-miss. This makes the real
+  // "Harry's" bread win over "Harris", and French "Lune de Miel" win over Italian
+  // "luna di miele" — the fuzzy bridge ("harry"≈"harris", "lune"≈"luna") only wins
+  // when NO exact-brand product is available (preserving OCR-typo tolerance, e.g.
+  // "Ligtel"→"Listel"). The right product exists on OFF, so we surface it.
+  const exactBrand = (c: T): boolean => {
+    if (strongBrandTokens.length === 0) return false;
+    const resultTokens = new Set(tokenize([c.productName, c.brand].filter(Boolean).join(' ')));
+    return strongBrandTokens.some(bt => resultTokens.has(bt));
+  };
+
+  const bestPassing = (pool: T[]): { product: T; score: RelevanceScore } | null => {
+    let bp: T | null = null;
+    let bs: RelevanceScore | null = null;
+    for (const candidate of pool) {
+      const resultText = [candidate.productName, candidate.brand].filter(Boolean).join(' ');
+      const rel = scoreRelevance(originalOcrQuery, resultText, config);
+      if (rel.passes && (!bs || rel.score > bs.score)) { bp = candidate; bs = rel; }
     }
-  }
+    return bp && bs ? { product: bp, score: bs } : null;
+  };
 
-  if (bestProduct && bestScore) {
+  const exactEligible = eligible.filter(exactBrand);
+  const best = (exactEligible.length > 0 ? bestPassing(exactEligible) : null) ?? bestPassing(eligible);
+
+  if (best) {
     return {
-      product: bestProduct,
-      confidence: bestScore.score,
+      product: best.product,
+      confidence: best.score.score,
       matchedQuery,
       passedRelevanceGate: true,
       brandOnlyFallback: false,
-      relevanceDetails: bestScore,
+      relevanceDetails: best.score,
     };
   }
 

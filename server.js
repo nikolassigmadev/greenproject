@@ -1331,7 +1331,7 @@ const OFF_SEARCH_FIELDS = [
  */
 app.post('/api/openfoodfacts/search', async (req, res) => {
   try {
-    const { query, limit = 50 } = req.body;
+    let { query, limit = 50 } = req.body;
 
     if (!query || !query.trim()) {
       return res.status(400).json({
@@ -1339,6 +1339,14 @@ app.post('/api/openfoodfacts/search', async (req, res) => {
         error: 'Missing search query',
       });
     }
+
+    // Open Food Facts indexes brands WITHOUT apostrophes ("Harry's" → "harrys",
+    // "Lay's" → "lays"). A raw apostrophe in the full-text / brand-tag query
+    // suppresses the real brand and surfaces generic same-category products
+    // instead (e.g. "Harry's Céréales et Graines" → a "Harris" bread, no Harry's
+    // at all). Stripping apostrophes makes the brand actually match. Verified:
+    // "Harry's …" returns 0 Harry's hits, "Harrys …" returns the real products.
+    query = query.replace(/[''’`´]/g, '');
 
     const fields = [
       'code', 'product_name', 'product_name_en', 'brands',
@@ -1558,6 +1566,49 @@ app.post('/api/openfoodfacts/search', async (req, res) => {
 
     if (!data || !data.products) {
       data = { products: [], count: 0 };
+    }
+
+    // Brand boost (multi-word). OFF's full-text engine ranks generic
+    // same-category products above a brand's items when the brand sits in the
+    // brands field and the product name leads with other words — e.g. Harry's
+    // "Beau & bon Céréales et graines" loses to plain "céréales et graines"
+    // breads, so NO Harry's product is even in the pool. Pull the first query
+    // word as a brand tag, keep only those that also match the remaining product
+    // words, and PREPEND them so the real brand is a candidate. The relevance
+    // gate downstream picks the right one (exact brand preferred); junk is
+    // dropped by the safety net + the client's matcher. First word must be >= 4
+    // chars (so "Ben" can't drag in "jben" yogurt).
+    if (isMultiWord && Array.isArray(data.products)) {
+      const brandWord = queryWords[0];
+      if (brandWord && brandWord.length >= 4) {
+        try {
+          const bParams = new URLSearchParams({ brands_tags: brandWord, fields, page_size: '50' });
+          const bResp = await fetch(`https://world.openfoodfacts.org/api/v2/search?${bParams}`, {
+            signal: AbortSignal.timeout(searchTimeout),
+            headers,
+          });
+          if (bResp.ok) {
+            const bData = await bResp.json();
+            const brandProducts = bData.products || [];
+            const stripA = (s) => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+            const remaining = queryWords.slice(1).filter((w) => w.length >= 3).map(stripA);
+            const relevantBrand = brandProducts.filter((p) => {
+              if (remaining.length === 0) return true;
+              const hay = stripA([p.product_name, p.product_name_en].filter(Boolean).join(' '));
+              return remaining.some((w) => hay.includes(w));
+            });
+            if (relevantBrand.length > 0) {
+              sortByRelevance(relevantBrand, queryWords.slice(1), queryLower);
+              const seen = new Set(data.products.map((p) => p.code));
+              const toAdd = relevantBrand.filter((p) => !seen.has(p.code)).slice(0, 10);
+              data.products = [...toAdd, ...data.products];
+              data.count = data.products.length;
+            }
+          }
+        } catch (e) {
+          console.warn(`Brand-boost merge failed: ${e.message}`);
+        }
+      }
     }
 
     // Final safety net: regardless of which strategy hit, drop products whose

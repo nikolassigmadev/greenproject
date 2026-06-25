@@ -283,6 +283,83 @@ describe('pickBestMatch', () => {
       expect(match.product?.brand).toBe('Milo');
     });
   });
+
+  // Real production failure: scanning a "KitKat Chocolate Drink" whose sub-brand
+  // was misread as the parent "Nestlé" drifted onto an unrelated Nestlé chocolate
+  // bar (Nestlé Dessert Noir Absolu / Nestlé Kit Kat wafer bar).
+  describe('parent-conglomerate weak-anchor rule', () => {
+    it('rejects parent-brand + generic-product drift (Nestlé Chocolate Drink -> Nestlé bar)', () => {
+      const wrong = [
+        { productName: 'Nestlé Dessert Noir Absolu', brand: 'Nestlé, Nestle Dessert', barcode: 'N1' },
+        { productName: 'Nestlé Kit Kat Chocolate Covered Wafer Bar', brand: 'Nestlé, Kit Kat', barcode: 'N2' },
+      ];
+      const match = pickBestMatch(wrong, 'Nestlé Chocolate Drink', 'Chocolate Drink', undefined, 'Nestlé');
+      expect(match.passedRelevanceGate).toBe(false);
+      expect(match.product).toBeNull();
+    });
+
+    it('still accepts the strong sub-brand path (KitKat Chocolate Drink -> KitKat drink)', () => {
+      const cands = [
+        { productName: 'Kitkat chocolate drink', brand: 'KitKat', barcode: 'K1' },
+        { productName: 'Nestlé Dessert Noir Absolu', brand: 'Nestlé', barcode: 'K2' },
+      ];
+      const match = pickBestMatch(cands, 'KitKat Chocolate Drink', 'KitKat Chocolate Drink', undefined, 'KitKat');
+      expect(match.passedRelevanceGate).toBe(true);
+      expect(match.product?.barcode).toBe('K1');
+    });
+
+    it('still accepts a distinctive product under a parent brand (Nestlé Chocapic)', () => {
+      const cands = [
+        { productName: 'Chocapic Céréales', brand: 'Nestlé, Chocapic', barcode: 'C1' },
+        { productName: 'Nestlé Dessert Noir', brand: 'Nestlé', barcode: 'C2' },
+      ];
+      const match = pickBestMatch(cands, 'Nestlé Chocapic', 'Nestlé Chocapic', undefined, 'Nestlé');
+      expect(match.passedRelevanceGate).toBe(true);
+      expect(match.product?.barcode).toBe('C1');
+    });
+
+    it('does NOT over-constrain non-parent short brands (Tuc Original)', () => {
+      const cands = [{ productName: 'Tuc Original', brand: 'Tuc', barcode: 'T1' }];
+      const match = pickBestMatch(cands, 'Tuc Original', 'Tuc Original', undefined, 'Tuc');
+      expect(match.passedRelevanceGate).toBe(true);
+      expect(match.product?.barcode).toBe('T1');
+    });
+  });
+
+  // Real battery failures: a fuzzy brand near-miss out-scored the exact brand.
+  // The correct product exists on OFF and must be surfaced.
+  describe('exact-brand preference over fuzzy near-miss', () => {
+    it('picks real "Harrys" bread over fuzzy "Harris" (OFF stores brand w/o apostrophe)', () => {
+      // OFF indexes "Harry's" as "Harrys" — the OCR query keeps the apostrophe.
+      // normalize() must collapse both to the same token, else "harry" != "harrys".
+      const cands = [
+        { productName: 'Pain céréales et graines', brand: 'Harris', barcode: 'H_WRONG' },
+        { productName: 'Beau et Bon Céréales et Graines', brand: 'Harrys', barcode: 'H_RIGHT' },
+      ];
+      const match = pickBestMatch(cands, "Harry's Céréales et Graines", 'Céréales et Graines', undefined, "Harry's");
+      expect(match.passedRelevanceGate).toBe(true);
+      expect(match.product?.barcode).toBe('H_RIGHT');
+    });
+
+    it('picks French "Lune de Miel" over Italian "luna di miele" (even though Italian scores higher)', () => {
+      const cands = [
+        { productName: 'Miele di acacia', brand: 'luna di miele, Terra e Oro', barcode: 'L_WRONG' },
+        { productName: 'Lune de miel', brand: 'Famille Michaud', barcode: 'L_RIGHT' },
+      ];
+      const match = pickBestMatch(cands, 'Lune de Miel Acacia Honey', 'Lune de Miel Acacia Honey', undefined, 'Lune de Miel');
+      expect(match.passedRelevanceGate).toBe(true);
+      expect(match.product?.barcode).toBe('L_RIGHT');
+    });
+
+    it('still falls back to a fuzzy brand match when no exact one exists (OCR typo Ligtel→Listel)', () => {
+      const cands = [
+        { productName: 'Pétillant de Listel Framboise', brand: 'Pétillant de Listel', barcode: 'LISTEL' },
+      ];
+      const match = pickBestMatch(cands, 'Ligtel Pétillant Framboise', 'Ligtel Pétillant Framboise', undefined, 'Ligtel');
+      expect(match.passedRelevanceGate).toBe(true);
+      expect(match.product?.barcode).toBe('LISTEL');
+    });
+  });
 });
 
 describe('hasUsableBrandAnchor', () => {
