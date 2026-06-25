@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS ai_scans (
   primary_concern TEXT,          -- labor | boycott | animal_welfare | eco (worst concern), or null
   swap_available  BOOLEAN,       -- was a region-available ethical alternative on offer? null = N/A
   image           TEXT,          -- the scanned photo, as compressed JPEG base64 (no data: prefix)
+  resolved        BOOLEAN NOT NULL DEFAULT true,  -- false = scan failed to resolve to a product
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -42,6 +43,7 @@ ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS verdict         TEXT;
 ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS primary_concern TEXT;
 ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS swap_available  BOOLEAN;
 ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS image           TEXT;
+ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS resolved        BOOLEAN NOT NULL DEFAULT true;
 
 CREATE INDEX IF NOT EXISTS idx_ai_scans_created_at ON ai_scans (created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_ai_scans_user_id    ON ai_scans (user_id);

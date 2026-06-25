@@ -25,6 +25,7 @@ import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
 import { DS } from "@/styles/design-tokens";
 import { getBackendUrl } from "@/config/backend";
 import { pickBestMatch, validateBarcodeResult, scoreRelevance, hasUsableBrandAnchor, type MatchResult } from "@/utils/productRelevance";
+import { logScan } from "@/utils/scanLogger";
 
 /** Ask OpenAI to fix typos and clean up a user-typed product query */
 const fixProductQuery = async (raw: string): Promise<string> => {
@@ -1295,7 +1296,23 @@ const Scan = () => {
       const isUnknownResponse = (s: string | null | undefined) =>
         !s || s.trim().toLowerCase() === 'unknown' || s.trim().toLowerCase() === 'none';
 
+      // Log a scan that never resolved to a product (anonymous, fire-and-forget,
+      // honours the same opt-out as a normal scan). Captures the photo and what
+      // OpenAI actually read, so misses like "M&M's → Chocolate Party 1kg" are
+      // debuggable from data (Supabase ai_scans.resolved = false) instead of guesswork.
+      const logFailedScan = (query: string) => {
+        logScan({
+          name: query?.trim() || "Unknown product",
+          resolved: false,
+          verdict: "UNKNOWN",
+          openaiResponse: sessionStorage.getItem("scan_openai_response"),
+          fullOpenaiResponse: sessionStorage.getItem("scan_full_openai_response") || identified.rawExtraction || null,
+          image: identified.compressedBase64 || sessionStorage.getItem("scan_image") || null,
+        });
+      };
+
       if (!identified.success || (isUnknownResponse(identified.productName) && isUnknownResponse(identified.brandName))) {
+        logFailedScan("");
         setProductUnknown(true);
         return;
       }
@@ -1372,6 +1389,7 @@ const Scan = () => {
       const rawQuery = [brandOnly, prodOnly].filter(Boolean).join(' ');
 
       if (!rawQuery) {
+        logFailedScan(rawQuery);
         setProductUnknown(true);
         return;
       }
@@ -1386,6 +1404,7 @@ const Scan = () => {
       // an unreadable brand, so this never blocks a real match.)
       if (!hasUsableBrandAnchor(brandOnly)) {
         console.warn(`⚠️ No usable brand anchor (brand="${brandOnly}") — refusing generic match, prompting manual entry`);
+        logFailedScan(prodOnly || rawQuery);
         setNotFoundQuery(prodOnly || rawQuery);
         return;
       }
@@ -1480,6 +1499,7 @@ const Scan = () => {
 
       if (!bestMatch || !bestMatch.product) {
         console.warn(`⚠️ No match found after ${searchQueries.length} query attempts for "${rawQuery}"`);
+        logFailedScan(cleanedQuery);
         setNotFoundQuery(cleanedQuery);
         return;
       }

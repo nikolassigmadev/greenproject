@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS ai_scans (
   primary_concern TEXT,          -- labor | boycott | animal_welfare | eco (worst concern), or null
   swap_available  BOOLEAN,       -- was a region-available ethical alternative on offer? null = N/A
   image           TEXT,          -- the photo the user scanned, as compressed JPEG base64 (no data: prefix)
+  resolved        BOOLEAN NOT NULL DEFAULT true,  -- false = scan failed to resolve to a product (debug these)
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 -- Idempotent upgrades for tables created before these columns existed.
@@ -65,6 +66,8 @@ ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS primary_concern TEXT;
 ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS swap_available  BOOLEAN;
 -- The scanned photo itself, stored inline as compressed JPEG base64.
 ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS image           TEXT;
+-- Did the scan resolve to a product? false rows are the misses worth debugging.
+ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS resolved        BOOLEAN NOT NULL DEFAULT true;
 -- Drop columns we no longer store.
 ALTER TABLE ai_scans DROP COLUMN IF EXISTS image_hash;
 ALTER TABLE ai_scans DROP COLUMN IF EXISTS image_url;
@@ -242,6 +245,7 @@ function priorityJson(p) {
  * @param {string} [rec.primaryConcern] worst concern: labor|boycott|animal_welfare|eco, or null
  * @param {boolean} [rec.swapAvailable] was a region-available ethical alternative on offer?
  * @param {string} [rec.image]        the scanned photo as compressed JPEG base64 (no data: prefix)
+ * @param {boolean} [rec.resolved]    false if the scan never resolved to a product (default true)
  */
 export function logScan(rec = {}) {
   if (!ready || !pool) return;
@@ -270,6 +274,7 @@ export function logScan(rec = {}) {
       oneOf(rec.primaryConcern, CONCERNS),
       swapAvailable,
       imageData(rec.image),
+      rec.resolved === false ? false : true,
     ];
     pool
       .query(
@@ -278,10 +283,10 @@ export function logScan(rec = {}) {
             eco_grade, country, city, off_url, openai_response,
             full_openai_response, bought,
             carbon_footprint_100g, priorities, category, verdict,
-            primary_concern, swap_available, image)
+            primary_concern, swap_available, image, resolved)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,
                  $11,$12,
-                 $13,$14::jsonb,$15,$16,$17,$18,$19)`,
+                 $13,$14::jsonb,$15,$16,$17,$18,$19,$20)`,
         values,
       )
       .catch((e) => console.error('scanStore: insert failed —', e.message));

@@ -279,13 +279,15 @@ Brand: [brand]
 Barcode: [digits or "none"]
 
 Rules:
-- Brand is REQUIRED. We use "Brand Product" to query Open Food Facts; without the brand the search is unreliable. Always populate Brand with your best guess from the package, even if the brand text is small or partially obscured.
+- Brand is REQUIRED and is the single most important field. We query Open Food Facts as "Brand Product"; without the brand the search drifts to a different company's product. Always populate Brand with your best guess from the package, even if the brand text is small, stylized, or partially obscured.
+- Recognisable brands and their logos (e.g. M&M's, KitKat, Oreo, Pringles, Doritos, Coca-Cola, Lay's) must NEVER be returned as UNKNOWN — identify them from the logo alone, even with no other text. A short, symbol-heavy, or non-alphabetic brand name (e.g. "M&M's", "7Up", "V8") is still a valid brand: return it exactly as shown.
+- At minimum, EITHER Brand OR Product must be a real, searchable identifier. Never return a generic descriptor alone (e.g. "Chocolate", "Party Mix", "Cookies", "Crisps") as Product with Brand "UNKNOWN" — that is unsearchable. If you can see ANY logo or brand mark, you MUST name the Brand.
 - Brand = the consumer-facing brand on the package (e.g. "Ben & Jerry's", "Lay's", "Nestle", "Coca-Cola"). If the package shows both a parent and a sub-brand, prefer the SUB-brand the shopper sees (e.g. "Ben & Jerry's", not "Unilever").
 - Product = the product line PLUS the exact flavor/variant/sub-type printed on the pack, WITHOUT the brand. The flavor/variant is CRITICAL: a database search for "Doritos" alone returns the wrong flavor — we need "Cool Ranch". Actively look for the flavor text; it is often smaller than the logo, near the bottom of the pack, or on a color band.
 - Copy flavor/variant words EXACTLY as printed. Do not translate, paraphrase, shorten, or generalize them ("Cool Ranch" must not become "Ranch"; "Zero Sugar" must not become "Zero" or "Sugar Free").
-- Good: Brand "Ben & Jerry's" + Product "Phish Food" | Brand "Doritos" + Product "Cool Ranch" | Brand "Coca-Cola" + Product "Zero Sugar" | Brand "Cadbury" + Product "Dairy Milk Fruit & Nut" | Brand "Walkers" + Product "Salt & Vinegar".
-- Bad: Product "Tortilla Chips" when the bag says "Nacho Cheese" (flavor lost) | Product "Ice Cream" when the tub says "Phish Food" | Brand "UNKNOWN" + Product "Phish Food" (we lose searchability) | Brand "Ben & Jerry's Phish Food" (brand must not duplicate product).
-- Do NOT include size, weight, volume, count, percentages, barcodes, slogans, or marketing claims ("New!", "Now Tastier") in Product.
+- Good: Brand "Ben & Jerry's" + Product "Phish Food" | Brand "M&M's" + Product "Chocolate" | Brand "Doritos" + Product "Cool Ranch" | Brand "Coca-Cola" + Product "Zero Sugar" | Brand "Cadbury" + Product "Dairy Milk Fruit & Nut" | Brand "Walkers" + Product "Salt & Vinegar".
+- Bad: Product "Tortilla Chips" when the bag says "Nacho Cheese" (flavor lost) | Product "Ice Cream" when the tub says "Phish Food" | Brand "UNKNOWN" + Product "Phish Food" (we lose searchability) | Brand "UNKNOWN" + Product "Chocolate Party 1kg" when the bag shows the M&M's logo (brand lost AND size wrongly kept) | Brand "Ben & Jerry's Phish Food" (brand must not duplicate product).
+- Do NOT include size, weight, volume, count, percentages, barcodes, slogans, pack-format words, or marketing claims ("New!", "Now Tastier", "1kg", "500g", "Party Bag", "Sharing", "Multipack") in Product.
 - If the pack shows multiple languages, prefer the English product/flavor name.
 - Always give your best guess. Never refuse or say you cannot read it. Only return Brand: UNKNOWN when there is literally no brand text or logo visible anywhere in the image.
 - No extra text outside the three lines.`,
@@ -295,11 +297,12 @@ Return ONLY a JSON array — no prose, no markdown code fences. Each element MUS
 {"brand": "<brand>", "product": "<product line + exact flavor/variant, WITHOUT the brand>"}
 
 Apply our single-product scanner's rules to EVERY item:
-- Brand is REQUIRED for every item. We query Open Food Facts with "Brand Product"; without the brand the search is unreliable. Always populate "brand" with your best guess from the package, even if the brand text is small or partially obscured.
+- Brand is REQUIRED for every item and is the single most important field. We query Open Food Facts with "Brand Product"; without the brand the search drifts to a different company's product. Always populate "brand" with your best guess from the package, even if the brand text is small, stylized, or partially obscured.
+- Recognisable brands and their logos (e.g. M&M's, KitKat, Oreo, Pringles, Doritos, Coca-Cola, Lay's) must NEVER be returned as "UNKNOWN" — identify them from the logo alone. A short, symbol-heavy, or non-alphabetic brand name (e.g. "M&M's", "7Up", "V8") is still a valid brand: return it exactly as shown. If you can read a logo but not a flavor, skip that item rather than returning it with "UNKNOWN" brand.
 - "brand" = the consumer-facing brand on the package (e.g. "Cadbury", "Tony's Chocolonely", "Lindt", "Nestle"). If the pack shows both a parent and a sub-brand, prefer the SUB-brand the shopper sees (e.g. "Ben & Jerry's", not "Unilever").
 - "product" = the product line PLUS the exact flavor/variant/sub-type printed on the pack, WITHOUT the brand. The flavor/variant is CRITICAL: "Dairy Milk" alone is ambiguous — distinguish "Dairy Milk Whole Nut" from "Dairy Milk Caramel". Actively look for the flavor text; it is often smaller than the logo, near the bottom of the pack, or on a colour band.
 - Copy flavor/variant words EXACTLY as printed. Do NOT translate, paraphrase, shorten, or generalize them ("Whole Nut" must not become "Nut"; "Zero Sugar" must not become "Zero"). DO include a cocoa/strength percentage when shown (e.g. "Excellence Dark 70%") — it distinguishes variants.
-- Do NOT include size, weight, volume, count, multipack numbers, slogans, or marketing claims ("New!", "Now Tastier") in "product".
+- Do NOT include size, weight, volume, count, multipack numbers, slogans, pack-format words, or marketing claims ("New!", "Now Tastier", "1kg", "500g", "Party Bag", "Sharing", "Multipack") in "product".
 - If a pack shows multiple languages, prefer the English product/flavor name.
 
 Shelf-specific:
@@ -1825,21 +1828,26 @@ app.post('/api/scans', scanLimiter, smallBody, (req, res) => {
   try {
     const {
       barcode, name, brand, ecoGrade, country, city, anonId, openaiResponse, fullOpenaiResponse, bought,
-      carbonFootprint100g, priorities, category, verdict, primaryConcern, swapAvailable, image,
+      carbonFootprint100g, priorities, category, verdict, primaryConcern, swapAvailable, image, resolved,
     } = req.body || {};
     if (!name || typeof name !== 'string') {
       return res.status(400).json({ success: false, error: 'name is required' });
     }
-    // SQLite "most-scanned" counter (internally no-ops if unavailable).
-    recordScan({ barcode, name, brand, ecoGrade, country, anonId });
+    const didResolve = resolved !== false;
+    // SQLite "most-scanned" counter (internally no-ops if unavailable). Skip it for
+    // failed scans so unresolved junk ("Unknown product", a stray query) never
+    // pollutes the most-scanned leaderboard — failures live only in Postgres.
+    if (didResolve) recordScan({ barcode, name, brand, ecoGrade, country, anonId });
     // Rich Postgres log of every scan (no-ops if DATABASE_URL unset/unreachable).
     // logScan() sanitises/clamps every field (incl. the photo), so the raw body
-    // passes through. image is the user's scanned photo as compressed base64.
+    // passes through. image is the user's scanned photo as compressed base64;
+    // resolved=false marks a scan that never matched a product (debug these).
     logScan({
       source: bought ? 'decision' : 'scan',
       userId: anonId, productName: name, brand, barcode, ecoGrade, country, city,
       openaiResponse, fullOpenaiResponse, bought,
       carbonFootprint100g, priorities, category, verdict, primaryConcern, swapAvailable, image,
+      resolved: didResolve,
     });
     // Only fail if BOTH stores are unavailable.
     if (!scanDb && !scanStoreReady()) {

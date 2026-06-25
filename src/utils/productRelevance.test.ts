@@ -390,4 +390,12 @@ describe('hasUsableBrandAnchor', () => {
     expect(hasUsableBrandAnchor('A1')).toBe(false);
     expect(hasUsableBrandAnchor('—')).toBe(false);
   });
+
+  it('accepts stylized brands whose 3+ letters are split by symbols (M&M\'s regression)', () => {
+    // "M&M's" → letters m, m, s are non-consecutive; the old 3-CONSECUTIVE-letter
+    // rule rejected it, sending a real scan to a wrongful "couldn't find it".
+    expect(hasUsableBrandAnchor("M&M's")).toBe(true);
+    expect(hasUsableBrandAnchor('M&Ms')).toBe(true);
+    expect(hasUsableBrandAnchor('Ben & Jerry')).toBe(true);
+  });
 });

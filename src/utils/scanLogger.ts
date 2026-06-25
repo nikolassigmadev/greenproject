@@ -59,6 +59,8 @@ export interface ScanLogInput {
   priorities?: UserPriorities | null;
   /** The scanned photo as compressed JPEG base64 (no data: prefix), when from a camera scan. */
   image?: string | null;
+  /** false when the scan never resolved to a product (logs the miss for debugging). Defaults to true. */
+  resolved?: boolean;
 }
 
 export function logScan(input: ScanLogInput): void {
@@ -87,6 +89,7 @@ export function logScan(input: ScanLogInput): void {
       primaryConcern: input.primaryConcern ?? null,
       swapAvailable: input.swapAvailable ?? null,
       image: input.image ?? null,
+      resolved: input.resolved ?? true,
     });
     void fetch(`${getBackendUrl()}/api/scans`, {
       method: "POST",

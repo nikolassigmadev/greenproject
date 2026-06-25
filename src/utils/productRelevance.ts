@@ -130,8 +130,16 @@ export const tokenize = (s: string): string[] =>
  * prompt manual entry when this returns false. Accented Latin brands
  * (Gerblé, Häagen-Dazs, Côte d'Or) still pass — diacritics are stripped first.
  */
+//
+// The anchor needs >= 3 Latin letters, but \u2014 crucially \u2014 they need NOT be
+// consecutive. A stylized brand like "M&M's" (letters m, m, s split by "&" and
+// "'") is real and perfectly searchable, yet the old 3-CONSECUTIVE-letters rule
+// rejected it, forcing a wrongful "couldn't find it". Counting total letters
+// fixes that while still failing 1-2 letter fragments ("V8", "A1", "OK"), pure
+// symbols, and non-Latin scripts ("\u062c\u0648\u0644\u062f"). It is strictly more permissive than
+// the old rule, so no brand that previously matched stops matching.
 export const hasUsableBrandAnchor = (brand: string | null | undefined): boolean =>
-  !!brand && /[a-z]{3,}/i.test(brand.normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
+  !!brand && (brand.normalize('NFD').replace(/[\u0300-\u036f]/g, '').match(/[a-z]/gi) || []).length >= 3;
 
 // ─── Token Classification ────────────────────────────────────────────────────
 
