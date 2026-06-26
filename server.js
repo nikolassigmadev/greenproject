@@ -1507,14 +1507,25 @@ app.post('/api/openfoodfacts/search', async (req, res) => {
       return products.sort((a, b) => {
         const nameA = (a.product_name || a.product_name_en || '').toLowerCase();
         const nameB = (b.product_name || b.product_name_en || '').toLowerCase();
+        // Include primary brand so "Rebo" in the brands field counts for "Rebo Kuaci" queries
+        const brandA = (a.brands || '').split(',')[0].trim().toLowerCase();
+        const brandB = (b.brands || '').split(',')[0].trim().toLowerCase();
+        const hayA = nameA + ' ' + brandA;
+        const hayB = nameB + ' ' + brandB;
         // Exact full-query match in name wins
-        const aExact = nameA.includes(fullQuery);
-        const bExact = nameB.includes(fullQuery);
+        const aExact = hayA.includes(fullQuery);
+        const bExact = hayB.includes(fullQuery);
         if (aExact && !bExact) return -1;
         if (!aExact && bExact) return 1;
-        // If both match equally, preserve original order (popularity from API)
-        const aScore = words.filter(w => nameA.includes(w)).length;
-        const bScore = words.filter(w => nameB.includes(w)).length;
+        // Positional weighting: earlier words (brand/product name) outweigh trailing
+        // descriptors. Query "Rebo Kuaci Salted Caramel" → weights [4,3,2,1]; matching
+        // "Rebo"+"Kuaci" (score 7) beats matching only "Salted"+"Caramel" (score 3).
+        const weightedScore = (hay) => words.reduce((s, w, idx) => {
+          const weight = Math.max(1, words.length - idx);
+          return s + (hay.includes(w) ? weight : 0);
+        }, 0);
+        const aScore = weightedScore(hayA);
+        const bScore = weightedScore(hayB);
         if (bScore !== aScore) return bScore - aScore;
         return 0; // stable — keeps API's popularity order
       });

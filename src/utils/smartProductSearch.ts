@@ -48,9 +48,9 @@ async function fixProductQuery(raw: string): Promise<string> {
 }
 
 /**
- * At least one ≥3-char word in `query` must appear as a WHOLE WORD in `text`.
- * Using substring matching (e.g. `.includes`) is wrong here — query "Ben"
- * would match "jben" (Moroccan yogurt). Word boundaries fix that.
+ * For multi-word queries, the first word (brand/most-specific) must match OR
+ * at least 2 words must match. For short queries, any single word suffices.
+ * Word-boundary matching prevents "Ben" from matching "jben" yogurt.
  */
 function containsAnyWord(query: string, text: string): boolean {
   const qWords = query
@@ -59,10 +59,14 @@ function containsAnyWord(query: string, text: string): boolean {
     .filter((w) => w.length >= 3);
   if (qWords.length === 0) return true;
   const lowered = text.toLowerCase();
-  return qWords.some((qw) => {
-    const escaped = qw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    return new RegExp(`\\b${escaped}\\b`, 'i').test(lowered);
-  });
+  const matches = (w: string) => new RegExp(`\\b${w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(lowered);
+  const matchCount = qWords.filter(matches).length;
+  if (qWords.length >= 3) {
+    // Require first word (brand) OR at least 2 words — prevents "caramel" alone
+    // from qualifying an unrelated caramel drink for "Rebo Kuaci Salted Caramel".
+    return matches(qWords[0]) || matchCount >= 2;
+  }
+  return matchCount >= 1;
 }
 
 /** Sort tiebreaker: how much eco/nutrition data does this product have? */

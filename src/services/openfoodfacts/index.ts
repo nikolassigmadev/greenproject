@@ -46,7 +46,15 @@ const isRelevantToQuery = (query: string, p: OpenFoodFactsResult): boolean => {
     .map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
   if (queryWords.length === 0) return true;
   const haystack = [p.productName, p.brand].filter(Boolean).join(' ').toLowerCase();
-  return queryWords.some((qw) => new RegExp(`\\b${qw}\\b`, 'i').test(haystack));
+  const matchCount = queryWords.filter((qw) => new RegExp(`\\b${qw}\\b`, 'i').test(haystack)).length;
+  // For multi-word queries, require the first word (brand/most-specific) OR
+  // at least 2 words to match. Prevents "caramel" alone from qualifying an
+  // unrelated caramel drink for a "Rebo Kuaci Salted Caramel" query.
+  if (queryWords.length >= 3) {
+    const firstWordMatches = new RegExp(`\\b${queryWords[0]}\\b`, 'i').test(haystack);
+    return firstWordMatches || matchCount >= 2;
+  }
+  return matchCount >= 1;
 };
 
 // ---------------------------------------------------------------------------
@@ -192,11 +200,16 @@ export const rankByQuality = (
   const relevanceBucket = (p: OpenFoodFactsResult): number => {
     if (qWords.length === 0) return 0;
     const hay = [p.productName, p.brand].filter(Boolean).join(' ').toLowerCase();
-    let matched = 0;
-    for (const w of qWords) {
-      if (new RegExp(`\\b${w}\\b`, 'i').test(hay)) matched++;
-    }
-    return Math.round((matched / qWords.length) * 4); // 0–4 coarse buckets
+    // Positional weighting: first words (brand/product name) outweigh trailing descriptors.
+    // "Rebo Kuaci Salted Caramel" → matching "Rebo"+"Kuaci" scores higher than "Salted"+"Caramel".
+    let weightedMatch = 0;
+    let totalWeight = 0;
+    qWords.forEach((w, idx) => {
+      const weight = Math.max(1, qWords.length - idx);
+      totalWeight += weight;
+      if (new RegExp(`\\b${w}\\b`, 'i').test(hay)) weightedMatch += weight;
+    });
+    return Math.round((weightedMatch / totalWeight) * 4); // 0–4 coarse buckets
   };
 
   return products
