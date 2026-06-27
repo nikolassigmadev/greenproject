@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { X, Loader2, ScanBarcode, AlertCircle, Camera, Keyboard } from "lucide-react";
+import { X, Loader2, ScanBarcode, AlertCircle, Camera, Keyboard, Search, Upload } from "lucide-react";
 import { DS } from "@/styles/design-tokens";
 import { lookupBarcode, isValidBarcode } from "@/services/openfoodfacts";
+import { smartProductSearch } from "@/utils/smartProductSearch";
 
 /**
  * Primary live barcode scanner — the default scan experience, an entirely
@@ -32,6 +33,9 @@ interface Props {
   /** The live stream owned by the Scan page. Shared, never stopped here. */
   stream: MediaStream | null;
   onClose: () => void;
+  /** Hand a captured/uploaded photo (data URL) to the parent's analysis flow.
+   *  May be async — the overlay awaits it to know when analysis finished. */
+  onPhoto?: (imageDataUrl: string) => void | Promise<void>;
 }
 
 const GREEN = "#3DBA82";
@@ -55,7 +59,7 @@ const glassBtn: React.CSSProperties = {
   cursor: "pointer",
 };
 
-export function BarcodeScannerOverlay({ stream, onClose }: Props) {
+export function BarcodeScannerOverlay({ stream, onClose, onPhoto }: Props) {
   const navigate = useNavigate();
   const videoRef = useRef<HTMLVideoElement>(null);
   const rafRef = useRef<number | null>(null);
@@ -70,6 +74,23 @@ export function BarcodeScannerOverlay({ stream, onClose }: Props) {
   const [manualInput, setManualInput] = useState("");
   const [manualError, setManualError] = useState("");
   const [manualLooking, setManualLooking] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchInput, setSearchInput] = useState("");
+  const [searchError, setSearchError] = useState("");
+  const [searchLooking, setSearchLooking] = useState(false);
+  const [photoOpen, setPhotoOpen] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [pillWidth, setPillWidth] = useState<number | undefined>(undefined);
+  const pillRef = useRef<HTMLDivElement>(null);
+  const restWidthRef = useRef<number | undefined>(undefined);
+  const photoFileRef = useRef<HTMLInputElement>(null);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
 
   // Slide the bottom controls up on mount (matches the Scan page's capture deck).
   useEffect(() => {
@@ -266,6 +287,117 @@ export function BarcodeScannerOverlay({ stream, onClose }: Props) {
     setManualLooking(false);
   };
 
+  // Lock the pill at its current (tab) width, then grow to `target` on the next
+  // frame so the width change actually tweens instead of jumping.
+  const growPill = (target: number, after: () => void) => {
+    const w = pillRef.current?.offsetWidth;
+    restWidthRef.current = w;
+    setPillWidth(w);
+    requestAnimationFrame(() => {
+      after();
+      setPillWidth(Math.min(window.innerWidth * 0.9, target));
+    });
+  };
+  // Collapse back to the tab width, then release to auto once settled.
+  const shrinkPill = () => {
+    setPillWidth(restWidthRef.current);
+    window.setTimeout(() => setPillWidth(undefined), 380);
+  };
+
+  const openSearch = () => {
+    pausedRef.current = true;
+    setSearchError("");
+    setSearchInput("");
+    growPill(380, () => setSearchOpen(true));
+  };
+  const closeSearch = () => {
+    pausedRef.current = false;
+    setSearchOpen(false);
+    setSearchError("");
+    shrinkPill();
+  };
+
+  const openPhoto = () => {
+    pausedRef.current = true;
+    growPill(256, () => setPhotoOpen(true));
+  };
+  const closePhoto = () => {
+    pausedRef.current = false;
+    setPhotoOpen(false);
+    shrinkPill();
+  };
+  // Run analysis without leaving the camera screen: freeze the captured frame as
+  // a backdrop, show our own "analyzing" layer (which covers the parent's
+  // full-screen scan UI), and await the parent. A confident match navigates away
+  // and a no-match unmounts us via the parent's render gate — so the code after
+  // the await only runs when analysis errored, where we resume scanning.
+  const submitPhoto = async (img: string) => {
+    if (!onPhoto) { onClose(); return; }
+    pausedRef.current = true; // ignore live barcode reads while analyzing
+    setCapturedImage(img);
+    setPhotoOpen(false);
+    setAnalyzing(true);
+    try {
+      await onPhoto(img);
+    } finally {
+      // A confident match navigates away and a no-match unmounts us via the
+      // parent's render gate — both within a tick. If we're STILL mounted a
+      // moment later, analysis genuinely errored: resume scanning.
+      window.setTimeout(() => {
+        if (!mountedRef.current) return;
+        setAnalyzing(false);
+        setCapturedImage(null);
+        setStatus("not-found");
+        setMessage("Couldn't read that photo — try again");
+        window.setTimeout(() => {
+          if (!mountedRef.current) return;
+          pausedRef.current = false;
+          setStatus("scanning");
+          setMessage("");
+        }, 1800);
+      }, 400);
+    }
+  };
+  const takePhoto = () => {
+    const v = videoRef.current;
+    if (!v || !v.videoWidth) return;
+    const c = document.createElement("canvas");
+    c.width = v.videoWidth;
+    c.height = v.videoHeight;
+    const ctx = c.getContext("2d");
+    if (!ctx) return;
+    ctx.drawImage(v, 0, 0, c.width, c.height);
+    submitPhoto(c.toDataURL("image/jpeg", 0.95));
+  };
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => submitPhoto(ev.target?.result as string);
+    reader.readAsDataURL(file);
+  };
+  const submitSearch = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    const query = searchInput.trim();
+    if (query.length < 2) {
+      setSearchError("Type a product or brand name to search.");
+      return;
+    }
+    setSearchError("");
+    setSearchLooking(true);
+    try {
+      const { product } = await smartProductSearch(query);
+      if (product?.barcode) {
+        navigate(`/product-off/${product.barcode}?from=scan`);
+        return;
+      }
+      setSearchError(`No match for "${query}" yet. Try another name.`);
+    } catch {
+      setSearchError("Couldn't reach the database. Check your connection.");
+    }
+    setSearchLooking(false);
+  };
+
   const cornerStyle = (v: { t?: boolean; b?: boolean; l?: boolean; r?: boolean }): React.CSSProperties => ({
     position: "absolute",
     width: 30,
@@ -306,7 +438,18 @@ export function BarcodeScannerOverlay({ stream, onClose }: Props) {
           pointerEvents: "none",
         }}
       >
-        <div style={{ position: "relative", width: "84%", maxWidth: 384, aspectRatio: "1.7 / 1" }}>
+        <div
+          style={{
+            position: "relative",
+            width: "84%",
+            maxWidth: 384,
+            // Barcode mode uses a short, wide slot; photo mode opens up to a
+            // normal (portrait-ish) photo frame so the framing matches what
+            // you're capturing.
+            aspectRatio: photoOpen ? "4 / 5" : "1.7 / 1",
+            transition: "aspect-ratio 420ms cubic-bezier(0.32, 0.72, 0, 1)",
+          }}
+        >
           {/* The window itself is clear; the huge box-shadow dims the surround. */}
           <div
             style={{
@@ -322,7 +465,7 @@ export function BarcodeScannerOverlay({ stream, onClose }: Props) {
           <div style={cornerStyle({ b: true, l: true })} />
           <div style={cornerStyle({ b: true, r: true })} />
 
-          {status === "scanning" && (
+          {status === "scanning" && !photoOpen && (
             <div style={{ position: "absolute", inset: 0, overflow: "hidden", borderRadius: 22, pointerEvents: "none" }}>
               {/* Soft directional sweep: a thin hairline leads, a faint glow trails
                   above it, both fading in/out — a deliberate scan, not a laser. */}
@@ -345,6 +488,49 @@ export function BarcodeScannerOverlay({ stream, onClose }: Props) {
           )}
         </div>
       </div>
+
+      {/* ── Analyzing layer: the captured frame stays put as the backdrop while
+           the product is identified, so we never jump to a separate scan page. ── */}
+      {analyzing && capturedImage && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            zIndex: 10,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 18,
+            animation: "searchFieldIn 240ms ease-out both",
+          }}
+        >
+          <img
+            src={capturedImage}
+            alt=""
+            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
+          />
+          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)", backdropFilter: "blur(2px)", WebkitBackdropFilter: "blur(2px)" }} />
+          <div
+            style={{
+              position: "relative",
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              padding: "12px 20px",
+              borderRadius: 999,
+              background: "rgba(20,20,22,0.72)",
+              backdropFilter: "blur(28px) saturate(180%)",
+              WebkitBackdropFilter: "blur(28px) saturate(180%)",
+              border: "1px solid rgba(255,255,255,0.1)",
+              boxShadow: "0 10px 30px rgba(0,0,0,0.32)",
+            }}
+          >
+            <Loader2 size={18} color={GREEN} style={{ animation: "spin 1s linear infinite" }} />
+            <span style={{ fontFamily: DS.font, fontWeight: 700, fontSize: "0.92rem", color: "#fff" }}>Analyzing photo…</span>
+          </div>
+        </div>
+      )}
 
       {/* ── Top bar ── */}
       <div
@@ -446,70 +632,287 @@ export function BarcodeScannerOverlay({ stream, onClose }: Props) {
         )}
       </div>
 
-      {/* ── Bottom: Barcode | Photo segmented control (slides up on mount) ── */}
+      {/* ── Bottom: segmented control that morphs into a search field ── */}
       <div
         style={{
           position: "absolute",
           left: "50%",
           bottom: "calc(env(safe-area-inset-bottom, 0px) + 26px)",
-          transform: entered ? "translateX(-50%)" : "translate(-50%, calc(100% + env(safe-area-inset-bottom, 0px) + 40px))",
+          transform: entered
+            ? `translateX(calc(-50% - ${searchOpen || photoOpen ? 14 : 0}px))`
+            : "translate(-50%, calc(100% + env(safe-area-inset-bottom, 0px) + 40px))",
           opacity: entered ? 1 : 0,
           transition: "transform 540ms cubic-bezier(0.32, 0.72, 0, 1), opacity 320ms ease-out",
           zIndex: 4,
         }}
       >
+        {/* Search error floats just above the pill so the box stays compact. */}
+        {searchOpen && searchError && (
+          <p
+            style={{
+              position: "absolute",
+              bottom: "calc(100% + 10px)",
+              left: 0,
+              right: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 6,
+              fontFamily: DS.font,
+              fontSize: "0.76rem",
+              fontWeight: 600,
+              color: "#fff",
+              margin: 0,
+              padding: "7px 12px",
+              borderRadius: 12,
+              background: "rgba(20,20,22,0.82)",
+              backdropFilter: "blur(20px)",
+              WebkitBackdropFilter: "blur(20px)",
+              animation: "searchFieldIn 220ms ease-out both",
+            }}
+          >
+            <AlertCircle size={14} /> {searchError}
+          </p>
+        )}
         <div
+          ref={pillRef}
           role="tablist"
           aria-label="Scan mode"
           style={{
             display: "flex",
+            alignItems: "center",
             gap: 4,
             padding: 4,
+            height: 52,
+            boxSizing: "border-box",
+            width: pillWidth ? `${pillWidth}px` : "auto",
+            transform: searchOpen || photoOpen ? "scale(1.05)" : "scale(1)",
+            transformOrigin: "center",
+            overflow: "hidden",
+            whiteSpace: "nowrap",
             borderRadius: 999,
             background: "rgba(20,20,22,0.72)",
             backdropFilter: "blur(28px) saturate(180%)",
             WebkitBackdropFilter: "blur(28px) saturate(180%)",
             border: "1px solid rgba(255,255,255,0.1)",
             boxShadow: "0 10px 30px rgba(0,0,0,0.32), inset 0 1px 0 rgba(255,255,255,0.06)",
+            transition: "width 380ms cubic-bezier(0.32, 0.72, 0, 1), transform 380ms cubic-bezier(0.32, 0.72, 0, 1)",
           }}
         >
-          <div
-            role="tab"
-            aria-selected="true"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 7,
-              height: 44,
-              padding: "0 22px",
-              borderRadius: 999,
-              background: GREEN,
-            }}
-          >
-            <ScanBarcode size={17} color={GREEN_INK} strokeWidth={2.4} />
-            <span style={{ fontFamily: DS.font, fontWeight: 700, fontSize: "0.9rem", color: GREEN_INK }}>Barcode</span>
-          </div>
-          <button
-            role="tab"
-            aria-selected="false"
-            onClick={onClose}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 7,
-              height: 44,
-              padding: "0 22px",
-              borderRadius: 999,
-              background: "transparent",
-              border: "none",
-              cursor: "pointer",
-            }}
-          >
-            <Camera size={17} color="rgba(255,255,255,0.82)" strokeWidth={2} />
-            <span style={{ fontFamily: DS.font, fontWeight: 600, fontSize: "0.9rem", color: "rgba(255,255,255,0.82)" }}>Photo</span>
-          </button>
+          {searchOpen ? (
+            <form
+              onSubmit={submitSearch}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                width: "100%",
+                padding: "0 4px 0 12px",
+                animation: "searchFieldIn 300ms ease-out both",
+              }}
+            >
+              <Search size={17} color={GREEN} strokeWidth={2.2} style={{ flexShrink: 0 }} />
+              <input
+                autoFocus
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder="Search product or brand…"
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  height: 40,
+                  border: "none",
+                  background: "transparent",
+                  outline: "none",
+                  fontFamily: DS.font,
+                  fontSize: "0.92rem",
+                  color: "#fff",
+                }}
+              />
+              <button
+                type="submit"
+                aria-label="Search"
+                disabled={!searchInput.trim() || searchLooking}
+                style={{
+                  height: 38,
+                  minWidth: 38,
+                  padding: "0 14px",
+                  borderRadius: 999,
+                  border: "none",
+                  background: searchInput.trim() ? GREEN : "rgba(255,255,255,0.14)",
+                  color: GREEN_INK,
+                  fontFamily: DS.font,
+                  fontWeight: 700,
+                  fontSize: "0.86rem",
+                  cursor: searchInput.trim() ? "pointer" : "default",
+                  flexShrink: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                {searchLooking ? <Loader2 size={16} color={GREEN_INK} style={{ animation: "spin 1s linear infinite" }} /> : "Go"}
+              </button>
+              <button
+                type="button"
+                onClick={closeSearch}
+                aria-label="Cancel search"
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 999,
+                  border: "none",
+                  background: "transparent",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
+                <X size={18} color="rgba(255,255,255,0.7)" />
+              </button>
+            </form>
+          ) : photoOpen ? (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 12,
+                width: "100%",
+                padding: "0 6px",
+                animation: "searchFieldIn 300ms ease-out both",
+              }}
+            >
+              <button
+                type="button"
+                onClick={takePhoto}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                  height: 44,
+                  padding: "0 22px",
+                  borderRadius: 999,
+                  border: "none",
+                  background: GREEN,
+                  cursor: "pointer",
+                  flexShrink: 0,
+                }}
+              >
+                <Camera size={17} color={GREEN_INK} strokeWidth={2.4} />
+                <span style={{ fontFamily: DS.font, fontWeight: 700, fontSize: "0.88rem", color: GREEN_INK }}>Take photo</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => photoFileRef.current?.click()}
+                aria-label="Upload image"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 44,
+                  height: 44,
+                  borderRadius: 999,
+                  border: "1px solid rgba(255,255,255,0.14)",
+                  background: "rgba(255,255,255,0.12)",
+                  cursor: "pointer",
+                  flexShrink: 0,
+                }}
+              >
+                <Upload size={18} color="#fff" strokeWidth={2.2} />
+              </button>
+              <button
+                type="button"
+                onClick={closePhoto}
+                aria-label="Cancel photo"
+                style={{
+                  width: 34,
+                  height: 44,
+                  borderRadius: 999,
+                  border: "none",
+                  background: "transparent",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
+                <X size={18} color="rgba(255,255,255,0.6)" />
+              </button>
+            </div>
+          ) : (
+            <>
+              <div
+                role="tab"
+                aria-selected="true"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 7,
+                  height: 44,
+                  padding: "0 17px",
+                  borderRadius: 999,
+                  background: GREEN,
+                }}
+              >
+                <ScanBarcode size={17} color={GREEN_INK} strokeWidth={2.4} />
+                <span style={{ fontFamily: DS.font, fontWeight: 700, fontSize: "0.9rem", color: GREEN_INK }}>Barcode</span>
+              </div>
+              <button
+                role="tab"
+                aria-selected="false"
+                onClick={openPhoto}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 7,
+                  height: 44,
+                  padding: "0 17px",
+                  borderRadius: 999,
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                <Camera size={17} color="rgba(255,255,255,0.82)" strokeWidth={2} />
+                <span style={{ fontFamily: DS.font, fontWeight: 600, fontSize: "0.9rem", color: "rgba(255,255,255,0.82)" }}>Photo</span>
+              </button>
+              <button
+                role="tab"
+                aria-selected="false"
+                onClick={openSearch}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 7,
+                  height: 44,
+                  padding: "0 17px",
+                  borderRadius: 999,
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                <Search size={17} color="rgba(255,255,255,0.82)" strokeWidth={2} />
+                <span style={{ fontFamily: DS.font, fontWeight: 600, fontSize: "0.9rem", color: "rgba(255,255,255,0.82)" }}>Search</span>
+              </button>
+            </>
+          )}
         </div>
       </div>
+
+      {/* Hidden picker backing the Photo → Upload action. */}
+      <input
+        ref={photoFileRef}
+        type="file"
+        accept="image/*"
+        onChange={handlePhotoUpload}
+        style={{ display: "none" }}
+      />
 
       {/* ── Manual entry sheet (matches the Scan page's other bottom sheets) ── */}
       {manualOpen && (
@@ -599,6 +1002,11 @@ export function BarcodeScannerOverlay({ stream, onClose }: Props) {
           84%  { opacity: 1; }
           100% { top: 88%; opacity: 0; }
         }
+        @keyframes searchFieldIn {
+          from { opacity: 0; transform: translateX(-8px); }
+          to   { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
       `}</style>
     </div>
   );

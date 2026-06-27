@@ -2051,6 +2051,14 @@ const Scan = () => {
         <BarcodeScannerOverlay
           stream={streamRef.current}
           onClose={() => setBarcodeScannerOpen(false)}
+          onPhoto={(img) => {
+            // Keep the scanner overlay mounted so its "analyzing" layer covers the
+            // page's full-screen scan UI — the user stays on the camera screen. A
+            // confident match navigates to the product; a no-match flips
+            // productUnknown/notFoundQuery, which the overlay's render gate honours.
+            setUploadedImage(img);
+            return processImageForOFF(img);
+          }}
         />
       )}
 
