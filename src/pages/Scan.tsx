@@ -445,9 +445,11 @@ const Scan = () => {
   const [offResult, setOffResult] = useState<OpenFoodFactsResult | null>(null);
   const [offLoading, setOffLoading] = useState(false);
   const [barcodeInput, setBarcodeInput] = useState("");
-  // Opt-in live barcode scanner (separate from the camera/OCR flow). Toggled by
-  // the barcode button in the top controls; shares the live camera stream.
-  const [barcodeScannerOpen, setBarcodeScannerOpen] = useState(false);
+  // Live barcode scanner is the PRIMARY scan experience (shown by default).
+  // The camera/OCR photo scan is reachable via the "Photo" toggle up top. The
+  // barcode overlay shares the live camera stream and never stops it, so the
+  // photo-scan pipeline underneath stays fully intact.
+  const [barcodeScannerOpen, setBarcodeScannerOpen] = useState(true);
   const [offSearchResults, setOffSearchResults] = useState<OpenFoodFactsResult[]>([]);
   const [offSearchLoading, setOffSearchLoading] = useState(false);
   const [productUnknown, setProductUnknown] = useState(false);
@@ -1941,25 +1943,26 @@ const Scan = () => {
             </span>
           </div>
 
-          {/* Right cluster: opt-in barcode scanner + flash. The barcode button
-              opens a separate live-barcode path (exact EAN/UPC lookup) — it does
-              NOT alter the camera/OCR product scan. Shown only when the live
-              camera is running so its stream can be shared with the overlay. */}
+          {/* Right cluster: a "Barcode" toggle back to the primary barcode
+              scanner + flash. Switching modes only shows/hides the overlay — it
+              never alters the camera/OCR photo-scan pipeline. Shown only when the
+              live camera is running so its stream can be shared with the overlay. */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, pointerEvents: 'auto' }}>
             {cameraActive && (
               <button
                 onClick={() => setBarcodeScannerOpen(true)}
-                aria-label="Scan a barcode instead"
+                aria-label="Switch to barcode scanner"
                 style={{
-                  width: 38, height: 38, borderRadius: 19,
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  height: 38, padding: '0 13px', borderRadius: 19,
                   background: 'rgba(0,0,0,0.35)',
                   backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
                   border: '1px solid rgba(255,255,255,0.14)',
                   cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}
               >
-                <ScanBarcode size={17} color="#fff" strokeWidth={1.9} />
+                <ScanBarcode size={16} color="#fff" strokeWidth={1.9} />
+                <span style={{ color: '#fff', fontFamily: DS.font, fontSize: '0.8rem', fontWeight: 700, letterSpacing: '-0.01em' }}>Barcode</span>
               </button>
             )}
             {/* Flash — only when the live camera track supports a torch */}
@@ -2031,10 +2034,12 @@ const Scan = () => {
         )}
       </div>
 
-      {/* ════════════════════ BARCODE SCANNER (opt-in overlay) ════════════════════ */}
-      {/* Fully separate from the camera/OCR product scan. Borrows the live
-          stream; never stops it. Resolves the exact product by EAN/UPC. */}
-      {barcodeScannerOpen && (
+      {/* ════════════════════ BARCODE SCANNER (primary scan UI) ════════════════════ */}
+      {/* The default scan experience. Fully separate from the camera/OCR photo
+          scan — it borrows the live stream and never stops it, resolving the exact
+          product by EAN/UPC. Gated on `cameraActive` so the shared stream is live.
+          `onClose` switches to the photo scan (revealing the camera UI beneath). */}
+      {barcodeScannerOpen && cameraActive && (
         <BarcodeScannerOverlay
           stream={streamRef.current}
           onClose={() => setBarcodeScannerOpen(false)}

@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { X, Loader2, ScanBarcode, AlertCircle } from "lucide-react";
+import { useNavigate, Link } from "react-router-dom";
+import { X, Loader2, ScanBarcode, AlertCircle, Camera } from "lucide-react";
 import { DS } from "@/styles/design-tokens";
 import { lookupBarcode, isValidBarcode } from "@/services/openfoodfacts";
 
 /**
- * Opt-in live barcode scanner — an entirely separate path from the camera/OCR
- * product-recognition flow on the Scan page. It is rendered only while the user
- * has tapped the barcode button, and it resolves the EXACT product by EAN/UPC
- * lookup (OpenFoodFacts is keyed by barcode), so there is no fuzzy matching.
+ * Primary live barcode scanner — the default scan experience, an entirely
+ * separate path from the camera/OCR photo-scan flow on the Scan page. It
+ * resolves the EXACT product by EAN/UPC lookup (OpenFoodFacts is keyed by
+ * barcode), so there is no fuzzy matching. The top-right "Photo" toggle
+ * (`onClose`) switches to the camera/OCR scan; "Barcode" up top switches back.
  *
  * Camera ownership: this overlay does NOT open its own camera. It borrows the
  * `MediaStream` the Scan page already started and plays it in its own <video>.
@@ -254,16 +255,42 @@ export function BarcodeScannerOverlay({ stream, onClose }: Props) {
             padding: "12px 16px 24px",
           }}
         >
-          <button onClick={onClose} aria-label="Close barcode scanner" style={roundBtn}>
-            <X size={17} color="#fff" />
-          </button>
+          {/* Exit the scanner entirely */}
+          <Link to="/" aria-label="Exit scanner" style={{ textDecoration: "none" }}>
+            <div style={roundBtn}>
+              <X size={17} color="#fff" />
+            </div>
+          </Link>
+          {/* Current mode */}
           <div style={{ display: "flex", alignItems: "center", gap: 7, textShadow: "0 1px 6px rgba(0,0,0,0.5)" }}>
             <ScanBarcode size={18} color="#3DBA82" strokeWidth={2.2} />
             <span style={{ fontFamily: DS.font, fontSize: "0.95rem", fontWeight: 800, color: "#fff", letterSpacing: "-0.01em" }}>
-              Scan barcode
+              Barcode
             </span>
           </div>
-          <div style={{ width: 38 }} />
+          {/* Switch to the camera/OCR photo scan */}
+          <button
+            onClick={onClose}
+            aria-label="Switch to photo scan"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              height: 38,
+              padding: "0 13px",
+              borderRadius: 19,
+              background: "rgba(0,0,0,0.4)",
+              backdropFilter: "blur(12px)",
+              WebkitBackdropFilter: "blur(12px)",
+              border: "1px solid rgba(255,255,255,0.16)",
+              cursor: "pointer",
+            }}
+          >
+            <Camera size={16} color="#fff" />
+            <span style={{ color: "#fff", fontFamily: DS.font, fontSize: "0.8rem", fontWeight: 700, letterSpacing: "-0.01em" }}>
+              Photo
+            </span>
+          </button>
         </div>
       </div>
 
@@ -307,17 +334,42 @@ export function BarcodeScannerOverlay({ stream, onClose }: Props) {
             />
           ))}
           {status === "scanning" && (
-            <div
-              style={{
-                position: "absolute",
-                left: 8,
-                right: 8,
-                height: 2,
-                background: "linear-gradient(90deg, rgba(61,186,130,0) 0%, #3DBA82 50%, rgba(61,186,130,0) 100%)",
-                boxShadow: "0 0 12px 2px rgba(61,186,130,0.6)",
-                animation: "bcScanLine 2s ease-in-out infinite",
-              }}
-            />
+            <div style={{ position: "absolute", inset: 0, overflow: "hidden", borderRadius: 12, pointerEvents: "none" }}>
+              {/* One soft, directional sweep: a thin hairline leads, a faint glow
+                  trails above it, both fading in/out at the ends. No hard neon
+                  laser — it reads as a deliberate scan, not a stock effect. */}
+              <div
+                style={{
+                  position: "absolute",
+                  left: 0,
+                  right: 0,
+                  height: 46,
+                  animation: "bcSweep 2.6s cubic-bezier(0.4, 0, 0.2, 1) infinite",
+                }}
+              >
+                <div
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    background: "linear-gradient(to top, rgba(61,186,130,0.18), rgba(61,186,130,0))",
+                    borderRadius: 8,
+                  }}
+                />
+                <div
+                  style={{
+                    position: "absolute",
+                    left: "7%",
+                    right: "7%",
+                    bottom: 0,
+                    height: 1.5,
+                    borderRadius: 2,
+                    background:
+                      "linear-gradient(90deg, rgba(61,186,130,0) 0%, rgba(61,186,130,0.85) 24%, rgba(255,255,255,0.92) 50%, rgba(61,186,130,0.85) 76%, rgba(61,186,130,0) 100%)",
+                    boxShadow: "0 0 5px rgba(61,186,130,0.3)",
+                  }}
+                />
+              </div>
+            </div>
           )}
         </div>
       </div>
@@ -367,10 +419,11 @@ export function BarcodeScannerOverlay({ stream, onClose }: Props) {
       </div>
 
       <style>{`
-        @keyframes bcScanLine {
-          0%   { top: 6%; }
-          50%  { top: 90%; }
-          100% { top: 6%; }
+        @keyframes bcSweep {
+          0%   { top: 2%;  opacity: 0; }
+          16%  { opacity: 1; }
+          84%  { opacity: 1; }
+          100% { top: 88%; opacity: 0; }
         }
       `}</style>
     </div>
