@@ -2106,8 +2106,8 @@ const Scan = () => {
           }} />
         )}
 
-        {/* Scanning bracket corners — bottom corners sit above the floating capture deck */}
-        {(['tl','tr','bl','br'] as const).map(corner => {
+        {/* Scanning bracket corners — only shown once camera is live */}
+        {cameraActive && (['tl','tr','bl','br'] as const).map(corner => {
           const isTop = corner.startsWith('t');
           const isLeft = corner.endsWith('l');
           const clr = offSearchLoading ? 'rgba(74,222,128,0.8)' : 'rgba(255,255,255,0.35)';
