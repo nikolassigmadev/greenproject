@@ -433,7 +433,12 @@ const Scan = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [cameraActive, setCameraActive] = useState(false);
   const [frozenFrame, setFrozenFrame] = useState<string | null>(null);
-  const [cameraInitializing, setCameraInitializing] = useState(false);
+  // Start in the "initializing" state whenever the camera will auto-start on
+  // mount (i.e. priorities are set). Otherwise the very first paint shows the
+  // idle #111 viewfinder placeholder for a frame — a gray flash of the scan page
+  // during the route transition before the camera spins up. Default-priorities
+  // users don't auto-start the camera, so they stay false (the gate shows).
+  const [cameraInitializing, setCameraInitializing] = useState(() => hasSavedPriorities());
   // Camera-access failure (permission denied, no device, in use…). When set, the
   // viewfinder shows a clean error card instead of a throwaway destructive toast.
   const [cameraError, setCameraError] = useState<{ title: string; suggestion: string } | null>(null);
