@@ -431,20 +431,20 @@ export function BarcodeScannerOverlay({ stream, onClose, onPhoto }: Props) {
 
   const cornerStyle = (v: { t?: boolean; b?: boolean; l?: boolean; r?: boolean }): React.CSSProperties => ({
     position: "absolute",
-    width: 30,
-    height: 30,
-    top: v.t ? -1 : undefined,
-    bottom: v.b ? -1 : undefined,
-    left: v.l ? -1 : undefined,
-    right: v.r ? -1 : undefined,
-    borderTop: v.t ? `3px solid ${GREEN}` : undefined,
-    borderBottom: v.b ? `3px solid ${GREEN}` : undefined,
-    borderLeft: v.l ? `3px solid ${GREEN}` : undefined,
-    borderRight: v.r ? `3px solid ${GREEN}` : undefined,
-    borderTopLeftRadius: v.t && v.l ? 14 : 0,
-    borderTopRightRadius: v.t && v.r ? 14 : 0,
-    borderBottomLeftRadius: v.b && v.l ? 14 : 0,
-    borderBottomRightRadius: v.b && v.r ? 14 : 0,
+    width: 52,
+    height: 52,
+    top: v.t ? -2 : undefined,
+    bottom: v.b ? -2 : undefined,
+    left: v.l ? -2 : undefined,
+    right: v.r ? -2 : undefined,
+    borderTop: v.t ? `2px solid #fff` : undefined,
+    borderBottom: v.b ? `2px solid #fff` : undefined,
+    borderLeft: v.l ? `2px solid #fff` : undefined,
+    borderRight: v.r ? `2px solid #fff` : undefined,
+    borderTopLeftRadius: v.t && v.l ? 20 : 0,
+    borderTopRightRadius: v.t && v.r ? 20 : 0,
+    borderBottomLeftRadius: v.b && v.l ? 20 : 0,
+    borderBottomRightRadius: v.b && v.r ? 20 : 0,
   });
 
   return (
@@ -487,14 +487,13 @@ export function BarcodeScannerOverlay({ stream, onClose, onPhoto }: Props) {
               position: "absolute",
               inset: 0,
               borderRadius: 22,
-              border: "1px solid rgba(255,255,255,0.16)",
-              boxShadow: "0 0 0 2000px rgba(0,0,0,0.58)",
+              boxShadow: "0 0 0 2000px rgba(0,0,0,0.62), inset 0 0 0 1px rgba(61,186,130,0.18), inset 0 0 32px rgba(61,186,130,0.05)",
             }}
           />
-          <div style={cornerStyle({ t: true, l: true })} />
-          <div style={cornerStyle({ t: true, r: true })} />
-          <div style={cornerStyle({ b: true, l: true })} />
-          <div style={cornerStyle({ b: true, r: true })} />
+          <div className="scanCorner" style={cornerStyle({ t: true, l: true })} />
+          <div className="scanCorner" style={cornerStyle({ t: true, r: true })} />
+          <div className="scanCorner" style={cornerStyle({ b: true, l: true })} />
+          <div className="scanCorner" style={cornerStyle({ b: true, r: true })} />
 
           {status === "scanning" && !photoOpen && (
             <div style={{ position: "absolute", inset: 0, overflow: "hidden", borderRadius: 22, pointerEvents: "none" }}>
@@ -1040,6 +1039,17 @@ export function BarcodeScannerOverlay({ stream, onClose, onPhoto }: Props) {
           to   { opacity: 1; transform: translateX(0); }
         }
         @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes scanCornerPulse {
+          0%, 100% {
+            opacity: 0.55;
+            filter: drop-shadow(0 0 2px rgba(255,255,255,0.2));
+          }
+          50% {
+            opacity: 1;
+            filter: drop-shadow(0 0 6px rgba(61,186,130,0.9)) drop-shadow(0 0 16px rgba(61,186,130,0.4));
+          }
+        }
+        .scanCorner { animation: scanCornerPulse 2.4s ease-in-out infinite; }
       `}</style>
     </div>
   );
