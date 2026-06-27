@@ -302,7 +302,7 @@ export default function Index() {
 
   return (
     <div style={{ background: DS.bg, minHeight: "100dvh", fontFamily: DS.font, color: DS.ink }}>
-      <main style={{ padding: "0 20px", paddingBottom: 110, maxWidth: 640, margin: "0 auto" }}>
+      <main style={{ padding: "0 20px", paddingBottom: 140, maxWidth: 640, margin: "0 auto" }}>
 
         {/* Header */}
         <div style={{ paddingTop: "max(60px, calc(env(safe-area-inset-top, 0px) + 16px))", marginBottom: 24 }}>
