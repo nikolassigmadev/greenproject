@@ -2234,7 +2234,10 @@ const Scan = () => {
           && !showSearch
           && !showManualCorrection
           && !productUnknown
-          && !notFoundQuery;
+          && !notFoundQuery
+          // Barcode mode owns the screen with its own controls — the photo
+          // capture deck (shutter/gallery/search) is only for photo mode.
+          && !barcodeScannerOpen;
         const hiddenTransform =
           'translate(-50%, calc(100% + env(safe-area-inset-bottom, 0px) + 28px))';
         return (
@@ -2272,7 +2275,7 @@ const Scan = () => {
         >
           {/* Gallery */}
           <button
-            onClick={() => { setBarcodeScannerOpen(false); offFileInputRef.current?.click(); }}
+            onClick={() => offFileInputRef.current?.click()}
             aria-label="Pick image from gallery"
             style={{
               width: 48, height: 48, borderRadius: 14,
@@ -2293,7 +2296,7 @@ const Scan = () => {
 
           {/* Shutter — large, glass-friendly */}
           <button
-            onClick={() => { setBarcodeScannerOpen(false); handleShutter(); }}
+            onClick={handleShutter}
             disabled={offSearchLoading}
             aria-label="Capture"
             style={{
