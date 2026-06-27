@@ -11,7 +11,6 @@ import { logScan } from "@/utils/scanLogger";
 import { assessUnmetDemand } from "@/services/swaps";
 import { loadPriorities } from "@/utils/userPreferences";
 import { loadRegion } from "@/utils/userRegion";
-import { toast } from "sonner";
 
 type Lean = "buy" | "skip" | "neutral";
 
@@ -117,12 +116,10 @@ export function DecisionBar({ product, verdictKey, onSeeBetter, hasSwaps = false
       // No toast — the bar itself confirms with "In your cart".
     } else {
       removeFromBasket(product.barcode);
-      // Only point to "cleaner picks below" when some actually rendered.
+      // No toast — the bar itself confirms with "You skipped this". Still scroll
+      // to the cleaner picks when some actually rendered.
       if (hasSwaps) {
-        toast("Skipped — see a cleaner pick below", { icon: "👇" });
         onSeeBetter();
-      } else {
-        toast("Skipped");
       }
     }
   };
