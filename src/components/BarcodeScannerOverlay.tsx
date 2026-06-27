@@ -80,6 +80,7 @@ export function BarcodeScannerOverlay({ stream, onClose, onPhoto }: Props) {
   const [searchError, setSearchError] = useState("");
   const [searchLooking, setSearchLooking] = useState(false);
   const [photoOpen, setPhotoOpen] = useState(false);
+  const [kbOffset, setKbOffset] = useState(0); // on-screen keyboard height (px)
   const [analyzing, setAnalyzing] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [pillWidth, setPillWidth] = useState<number | undefined>(undefined);
@@ -92,6 +93,26 @@ export function BarcodeScannerOverlay({ stream, onClose, onPhoto }: Props) {
     mountedRef.current = true;
     return () => { mountedRef.current = false; };
   }, []);
+
+  // Keep the morphing control pinned just above the on-screen keyboard while the
+  // search field is focused. The visual viewport shrinks by the keyboard height,
+  // so the overlap = layout height − visual height − its top offset.
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!searchOpen || !vv) { setKbOffset(0); return; }
+    const update = () => {
+      const overlap = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      setKbOffset(overlap);
+    };
+    update();
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    return () => {
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
+      setKbOffset(0);
+    };
+  }, [searchOpen]);
 
   // Slide the bottom controls up on mount (matches the Scan page's capture deck).
   useEffect(() => {
@@ -643,15 +664,17 @@ export function BarcodeScannerOverlay({ stream, onClose, onPhoto }: Props) {
       {/* ── Bottom: segmented control that morphs into a search field ── */}
       <div
         style={{
-          position: "absolute",
+          position: "fixed",
           left: "50%",
-          bottom: "calc(env(safe-area-inset-bottom, 0px) + 26px)",
+          bottom: kbOffset > 0
+            ? `${kbOffset + 14}px`
+            : "calc(env(safe-area-inset-bottom, 0px) + 26px)",
           transform: entered
             ? `translateX(calc(-50% - ${searchOpen || photoOpen ? 14 : 0}px))`
             : "translate(-50%, calc(100% + env(safe-area-inset-bottom, 0px) + 40px))",
           opacity: entered ? 1 : 0,
-          transition: "transform 540ms cubic-bezier(0.32, 0.72, 0, 1), opacity 320ms ease-out",
-          zIndex: 4,
+          transition: "transform 540ms cubic-bezier(0.32, 0.72, 0, 1), bottom 220ms ease-out, opacity 320ms ease-out",
+          zIndex: 11,
         }}
       >
         {/* Search error floats just above the pill so the box stays compact. */}
