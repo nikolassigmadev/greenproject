@@ -4,6 +4,7 @@ import { X, Loader2, ScanBarcode, AlertCircle, Camera, Keyboard, Search, Upload 
 import { DS } from "@/styles/design-tokens";
 import { lookupBarcode, isValidBarcode } from "@/services/openfoodfacts";
 import { smartProductSearch } from "@/utils/smartProductSearch";
+import { logScan } from "@/utils/scanLogger";
 
 /**
  * Primary live barcode scanner — the default scan experience, an entirely
@@ -386,11 +387,18 @@ export function BarcodeScannerOverlay({ stream, onClose, onPhoto }: Props) {
     setSearchError("");
     setSearchLooking(true);
     try {
-      const { product } = await smartProductSearch(query);
+      const { product, cleanedQuery } = await smartProductSearch(query);
       if (product?.barcode) {
         navigate(`/product-off/${product.barcode}?from=scan`);
         return;
       }
+      // Capture the unmet search so it's visible in Supabase (resolved=false).
+      logScan({
+        name: query,
+        resolved: false,
+        verdict: "UNKNOWN",
+        fullOpenaiResponse: cleanedQuery && cleanedQuery !== query ? `typed: "${query}" → cleaned: "${cleanedQuery}"` : null,
+      });
       setSearchError(`No match for "${query}" yet. Try another name.`);
     } catch {
       setSearchError("Couldn't reach the database. Check your connection.");

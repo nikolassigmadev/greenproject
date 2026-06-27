@@ -1709,7 +1709,15 @@ const Scan = () => {
         }
       }
 
-      // Nothing found even with single word — show not-found flow
+      // Nothing found even with single word — capture what the user typed so
+      // unmet searches are visible in Supabase (resolved=false), then show the
+      // not-found flow. Logs the raw text; carries the AI-cleaned form alongside.
+      logScan({
+        name: raw,
+        resolved: false,
+        verdict: "UNKNOWN",
+        fullOpenaiResponse: cleaned && cleaned !== raw ? `typed: "${raw}" → cleaned: "${cleaned}"` : null,
+      });
       setNotFoundQuery(cleaned);
     } catch (error) {
       console.error('Manual correction search error:', error);

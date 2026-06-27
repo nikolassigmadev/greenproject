@@ -45,8 +45,6 @@ export interface ScanLogInput {
   fullOpenaiResponse?: string | null;
   /** 'YES' if the user bought the product, 'NO' if they skipped it. */
   bought?: "YES" | "NO" | null;
-  /** CO2e grams per 100g (Open Food Facts), when known. */
-  carbonFootprint100g?: number | null;
   /** Swap-catalog category, e.g. "chocolate". */
   category?: string | null;
   /** Verdict shown to the user: BUY | CONSIDER | CAUTION | AVOID | UNKNOWN. */
@@ -82,7 +80,6 @@ export function logScan(input: ScanLogInput): void {
       country: region?.countryCode ?? null,
       city: region?.city ?? null,
       anonId: getAnonId(),
-      carbonFootprint100g: input.carbonFootprint100g ?? null,
       priorities: priorities ?? null,
       category: input.category ?? null,
       verdict: input.verdict ?? null,

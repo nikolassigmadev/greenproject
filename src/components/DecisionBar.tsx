@@ -96,7 +96,6 @@ export function DecisionBar({ product, verdictKey, onSeeBetter, hasSwaps = false
       fullOpenaiResponse,
       image: capturedImage,
       bought: outcome === "bought" ? "YES" : "NO",
-      carbonFootprint100g: product.carbonFootprint100g ?? null,
       verdict: verdictKey,
       priorities,
       category: demand.category,

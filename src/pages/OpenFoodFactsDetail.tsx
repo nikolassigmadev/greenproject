@@ -409,7 +409,6 @@ export default function OpenFoodFactsDetail() {
       openaiResponse,
       fullOpenaiResponse,
       image: scanImage,
-      carbonFootprint100g: product.carbonFootprint100g ?? null,
       verdict: verdictKey,
       priorities,
       category: demand.category,

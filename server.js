@@ -1967,7 +1967,7 @@ app.post('/api/scans', scanLimiter, smallBody, (req, res) => {
   try {
     const {
       barcode, name, brand, ecoGrade, country, city, anonId, openaiResponse, fullOpenaiResponse, bought,
-      carbonFootprint100g, priorities, category, verdict, primaryConcern, swapAvailable, image, resolved,
+      priorities, category, verdict, primaryConcern, swapAvailable, image, resolved,
     } = req.body || {};
     if (!name || typeof name !== 'string') {
       return res.status(400).json({ success: false, error: 'name is required' });
@@ -1985,7 +1985,7 @@ app.post('/api/scans', scanLimiter, smallBody, (req, res) => {
       source: bought ? 'decision' : 'scan',
       userId: anonId, productName: name, brand, barcode, ecoGrade, country, city,
       openaiResponse, fullOpenaiResponse, bought,
-      carbonFootprint100g, priorities, category, verdict, primaryConcern, swapAvailable, image,
+      priorities, category, verdict, primaryConcern, swapAvailable, image,
       resolved: didResolve,
     });
     // Only fail if BOTH stores are unavailable.

@@ -34,7 +34,6 @@ CREATE TABLE IF NOT EXISTS ai_scans (
   openai_response TEXT,
   full_openai_response TEXT,      -- the COMPLETE raw OpenAI response, before it's trimmed to a brand+product OFF search
   bought          TEXT,
-  carbon_footprint_100g REAL,    -- CO2e grams per 100g, from Open Food Facts
   priorities      JSONB,         -- snapshot of the user's concern weights at scan time (3-level scale: Low=25 / Medium=50 / Critical=100)
   category        TEXT,          -- swap-catalog category (e.g. "chocolate")
   verdict         TEXT,          -- BUY | CONSIDER | CAUTION | AVOID | UNKNOWN shown to the user
@@ -57,8 +56,7 @@ ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS openai_response TEXT;
 ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS full_openai_response TEXT;
 -- Did the user buy the product or skip it? 'YES' (bought) / 'NO' (skipped) / null.
 ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS bought          TEXT;
--- Carbon + personalisation + the signals that power the unmet-demand heatmap.
-ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS carbon_footprint_100g REAL;
+-- Personalisation + the signals that power the unmet-demand heatmap.
 ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS priorities      JSONB;
 ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS category        TEXT;
 ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS verdict         TEXT;
@@ -69,6 +67,7 @@ ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS image           TEXT;
 -- Did the scan resolve to a product? false rows are the misses worth debugging.
 ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS resolved        BOOLEAN NOT NULL DEFAULT true;
 -- Drop columns we no longer store.
+ALTER TABLE ai_scans DROP COLUMN IF EXISTS carbon_footprint_100g;
 ALTER TABLE ai_scans DROP COLUMN IF EXISTS image_hash;
 ALTER TABLE ai_scans DROP COLUMN IF EXISTS image_url;
 ALTER TABLE ai_scans DROP COLUMN IF EXISTS model;
@@ -238,7 +237,6 @@ function priorityJson(p) {
  * @param {string} [rec.openaiResponse] raw product string OpenAI identified (brand + product)
  * @param {string} [rec.fullOpenaiResponse] the COMPLETE raw OpenAI response, before trimming to the OFF search
  * @param {string} [rec.bought]        'YES' if the user bought it, 'NO' if skipped, else null
- * @param {number} [rec.carbonFootprint100g] CO2e grams per 100g, from Open Food Facts
  * @param {object} [rec.priorities]    the user's concern weights {environment,laborRights,animalWelfare,nutrition}
  * @param {string} [rec.category]      swap-catalog category, e.g. "chocolate"
  * @param {string} [rec.verdict]       BUY|CONSIDER|CAUTION|AVOID|UNKNOWN shown to the user
@@ -267,7 +265,6 @@ export function logScan(rec = {}) {
       clip(rec.openaiResponse, 500),
       clipRaw(rec.fullOpenaiResponse, 20000),
       bought,
-      num(rec.carbonFootprint100g, 100000),
       priorityJson(rec.priorities),
       clip(rec.category, 64),
       oneOf(rec.verdict, VERDICTS),
@@ -282,11 +279,11 @@ export function logScan(rec = {}) {
            (user_id, source, product_name, brand, barcode,
             eco_grade, country, city, off_url, openai_response,
             full_openai_response, bought,
-            carbon_footprint_100g, priorities, category, verdict,
+            priorities, category, verdict,
             primary_concern, swap_available, image, resolved)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,
                  $11,$12,
-                 $13,$14::jsonb,$15,$16,$17,$18,$19,$20)`,
+                 $13::jsonb,$14,$15,$16,$17,$18,$19)`,
         values,
       )
       .catch((e) => console.error('scanStore: insert failed —', e.message));
