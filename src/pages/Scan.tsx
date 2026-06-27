@@ -2037,9 +2037,17 @@ const Scan = () => {
       {/* ════════════════════ BARCODE SCANNER (primary scan UI) ════════════════════ */}
       {/* The default scan experience. Fully separate from the camera/OCR photo
           scan — it borrows the live stream and never stops it, resolving the exact
-          product by EAN/UPC. Gated on `cameraActive` so the shared stream is live.
+          product by EAN/UPC. It sits UNDER the shared capture-deck footer (which
+          renders unchanged, with its own animation), so the page's footer shows
+          through. Hidden whenever a modal sheet is up — exactly mirroring the
+          footer's own `captureVisible` gate — so those sheets are never occluded.
           `onClose` switches to the photo scan (revealing the camera UI beneath). */}
-      {barcodeScannerOpen && cameraActive && (
+      {barcodeScannerOpen
+        && cameraActive
+        && !showSearch
+        && !showManualCorrection
+        && !productUnknown
+        && !notFoundQuery && (
         <BarcodeScannerOverlay
           stream={streamRef.current}
           onClose={() => setBarcodeScannerOpen(false)}
@@ -2264,7 +2272,7 @@ const Scan = () => {
         >
           {/* Gallery */}
           <button
-            onClick={() => offFileInputRef.current?.click()}
+            onClick={() => { setBarcodeScannerOpen(false); offFileInputRef.current?.click(); }}
             aria-label="Pick image from gallery"
             style={{
               width: 48, height: 48, borderRadius: 14,
@@ -2285,7 +2293,7 @@ const Scan = () => {
 
           {/* Shutter — large, glass-friendly */}
           <button
-            onClick={handleShutter}
+            onClick={() => { setBarcodeScannerOpen(false); handleShutter(); }}
             disabled={offSearchLoading}
             aria-label="Capture"
             style={{

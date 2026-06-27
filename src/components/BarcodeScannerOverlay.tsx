@@ -220,7 +220,12 @@ export function BarcodeScannerOverlay({ stream, onClose }: Props) {
       style={{
         position: "fixed",
         inset: 0,
-        zIndex: 1000,
+        // Sit ABOVE the camera viewfinder + page top controls (z20) but BELOW the
+        // shared capture-deck footer (z49) and the page's modal sheets (z40/50),
+        // so the Scan page's real footer — with its own slide animation and
+        // handlers — shows through unchanged. The parent only mounts this overlay
+        // when no sheet is open, so nothing it should sit under is ever active.
+        zIndex: 45,
         background: "#000",
         overflow: "hidden",
       }}
@@ -374,17 +379,18 @@ export function BarcodeScannerOverlay({ stream, onClose }: Props) {
         </div>
       </div>
 
-      {/* Bottom status */}
+      {/* Status — floats just ABOVE the shared capture-deck footer so the two
+          never overlap. The footer (rendered by the Scan page) owns the very
+          bottom of the screen. */}
       <div
         style={{
           position: "absolute",
-          bottom: 0,
+          bottom: "calc(env(safe-area-inset-bottom, 0px) + 112px)",
           left: 0,
           right: 0,
           zIndex: 3,
-          padding: "20px 28px calc(env(safe-area-inset-bottom, 0px) + 30px)",
+          padding: "0 28px",
           textAlign: "center",
-          background: "linear-gradient(to top, rgba(0,0,0,0.6), rgba(0,0,0,0))",
         }}
       >
         {status === "scanning" && (
