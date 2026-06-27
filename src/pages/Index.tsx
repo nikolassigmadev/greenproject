@@ -603,23 +603,34 @@ export default function Index() {
         <section>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             {[
-              { title: "Search products", to: "/database" },
-              { title: "Chocolate directory", to: "/chocolate" },
-              { title: "Scan history", to: "/dashboard" },
-              { title: "Set your values", to: "/preferences" },
-              { title: "About us", to: "/about" },
-            ].map(card => (
-              <Link key={card.title} to={card.to} style={{ textDecoration: "none" }}>
-                <div style={{
-                  background: DS.card, borderRadius: DS.radius.md, padding: 16,
-                  display: "flex", alignItems: "center", justifyContent: "space-between",
-                  boxShadow: "0 2px 6px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)",
-                }}>
-                  <span style={{ fontSize: 14, fontWeight: 600, color: DS.ink }}>{card.title}</span>
-                  <ChevronRight style={{ width: 16, height: 16, color: DS.muted }} />
-                </div>
-              </Link>
-            ))}
+              { title: "Search products",     to: "/database",    icon: Search    },
+              { title: "Chocolate directory", to: "/chocolate",   icon: Award     },
+              { title: "Scan history",        to: "/dashboard",   icon: BarChart3 },
+              { title: "Set your values",     to: "/preferences", icon: Shield    },
+              { title: "About us",            to: "/about",       icon: Users, full: true },
+            ].map(card => {
+              const Icon = card.icon;
+              return (
+                <Link key={card.title} to={card.to} style={{ textDecoration: "none", gridColumn: card.full ? "1 / -1" : undefined }}>
+                  <div style={{
+                    background: DS.card, borderRadius: DS.radius.md, padding: "14px 16px",
+                    display: "flex", alignItems: "center", gap: 12,
+                    boxShadow: "0 2px 6px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)",
+                  }}>
+                    <div style={{
+                      width: 34, height: 34, borderRadius: 10,
+                      background: DS.goodBg,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      flexShrink: 0,
+                    }}>
+                      <Icon style={{ width: 16, height: 16, color: DS.good }} />
+                    </div>
+                    <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: DS.ink }}>{card.title}</span>
+                    <ChevronRight style={{ width: 16, height: 16, color: DS.muted, flexShrink: 0 }} />
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         </section>
 
