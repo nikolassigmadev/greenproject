@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { lookupHardcodedBarcodes, lookupHardcodedImage } from "@/data/productBarcodeMap";
 import { useNavigate, useLocation, Link } from "react-router-dom";
-import { Camera, Upload, Search, Loader2, AlertCircle, AlertTriangle, RefreshCw, X, ScanLine, Image as ImageIcon, Plus, Leaf, BarChart3, QrCode, Settings, Users, Heart, Apple, ChevronRight, Check, Zap } from "lucide-react";
+import { Camera, Upload, Search, Loader2, AlertCircle, AlertTriangle, RefreshCw, X, ScanLine, ScanBarcode, Image as ImageIcon, Plus, Leaf, BarChart3, QrCode, Settings, Users, Heart, Apple, ChevronRight, Check, Zap } from "lucide-react";
 import { useBottomNav } from "@/components/BottomNav";
 import { Logo } from "@/components/Logo";
 import { Input } from "@/components/ui/input";
@@ -27,6 +27,7 @@ import { getBackendUrl } from "@/config/backend";
 import { pickBestMatch, validateBarcodeResult, scoreRelevance, hasUsableBrandAnchor, type MatchResult } from "@/utils/productRelevance";
 import { logScan } from "@/utils/scanLogger";
 import { pickVisualBestCandidate, findAiConfirmedMatch, type VisualPick } from "@/services/visualMatch";
+import { BarcodeScannerOverlay } from "@/components/BarcodeScannerOverlay";
 
 /** Ask OpenAI to fix typos and clean up a user-typed product query */
 const fixProductQuery = async (raw: string): Promise<string> => {
@@ -444,6 +445,9 @@ const Scan = () => {
   const [offResult, setOffResult] = useState<OpenFoodFactsResult | null>(null);
   const [offLoading, setOffLoading] = useState(false);
   const [barcodeInput, setBarcodeInput] = useState("");
+  // Opt-in live barcode scanner (separate from the camera/OCR flow). Toggled by
+  // the barcode button in the top controls; shares the live camera stream.
+  const [barcodeScannerOpen, setBarcodeScannerOpen] = useState(false);
   const [offSearchResults, setOffSearchResults] = useState<OpenFoodFactsResult[]>([]);
   const [offSearchLoading, setOffSearchLoading] = useState(false);
   const [productUnknown, setProductUnknown] = useState(false);
@@ -1937,27 +1941,49 @@ const Scan = () => {
             </span>
           </div>
 
-          {/* Flash — only when the live camera track supports a torch */}
-          {torchSupported ? (
-            <button
-              onClick={() => setFlashOn(f => !f)}
-              aria-label={flashOn ? 'Turn flash off' : 'Turn flash on'}
-              aria-pressed={flashOn}
-              style={{
-                width: 38, height: 38, borderRadius: 19,
-                background: flashOn ? 'rgba(245,158,11,0.92)' : 'rgba(0,0,0,0.35)',
-                backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
-                border: `1px solid ${flashOn ? 'rgba(245,158,11,0.5)' : 'rgba(255,255,255,0.14)'}`,
-                cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                transition: 'all 0.15s',
-              }}
-            >
-              <Zap size={17} strokeWidth={flashOn ? 2.5 : 1.8} color={flashOn ? '#1A1614' : '#fff'} fill={flashOn ? '#1A1614' : 'none'} />
-            </button>
-          ) : (
-            <div style={{ width: 38, height: 38 }} />
-          )}
+          {/* Right cluster: opt-in barcode scanner + flash. The barcode button
+              opens a separate live-barcode path (exact EAN/UPC lookup) — it does
+              NOT alter the camera/OCR product scan. Shown only when the live
+              camera is running so its stream can be shared with the overlay. */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, pointerEvents: 'auto' }}>
+            {cameraActive && (
+              <button
+                onClick={() => setBarcodeScannerOpen(true)}
+                aria-label="Scan a barcode instead"
+                style={{
+                  width: 38, height: 38, borderRadius: 19,
+                  background: 'rgba(0,0,0,0.35)',
+                  backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+                  border: '1px solid rgba(255,255,255,0.14)',
+                  cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}
+              >
+                <ScanBarcode size={17} color="#fff" strokeWidth={1.9} />
+              </button>
+            )}
+            {/* Flash — only when the live camera track supports a torch */}
+            {torchSupported ? (
+              <button
+                onClick={() => setFlashOn(f => !f)}
+                aria-label={flashOn ? 'Turn flash off' : 'Turn flash on'}
+                aria-pressed={flashOn}
+                style={{
+                  width: 38, height: 38, borderRadius: 19,
+                  background: flashOn ? 'rgba(245,158,11,0.92)' : 'rgba(0,0,0,0.35)',
+                  backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+                  border: `1px solid ${flashOn ? 'rgba(245,158,11,0.5)' : 'rgba(255,255,255,0.14)'}`,
+                  cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  transition: 'all 0.15s',
+                }}
+              >
+                <Zap size={17} strokeWidth={flashOn ? 2.5 : 1.8} color={flashOn ? '#1A1614' : '#fff'} fill={flashOn ? '#1A1614' : 'none'} />
+              </button>
+            ) : (
+              !cameraActive && <div style={{ width: 38, height: 38 }} />
+            )}
+          </div>
         </div>
 
         {/* Status pills */}
@@ -2004,6 +2030,16 @@ const Scan = () => {
           </div>
         )}
       </div>
+
+      {/* ════════════════════ BARCODE SCANNER (opt-in overlay) ════════════════════ */}
+      {/* Fully separate from the camera/OCR product scan. Borrows the live
+          stream; never stops it. Resolves the exact product by EAN/UPC. */}
+      {barcodeScannerOpen && (
+        <BarcodeScannerOverlay
+          stream={streamRef.current}
+          onClose={() => setBarcodeScannerOpen(false)}
+        />
+      )}
 
       {/* ════════════════════ CAMERA VIEWFINDER (full bleed) ════════════════════ */}
       <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
