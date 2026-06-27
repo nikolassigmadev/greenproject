@@ -317,7 +317,9 @@ export function BarcodeScannerOverlay({ stream, onClose, onPhoto }: Props) {
     setPillWidth(w);
     requestAnimationFrame(() => {
       after();
-      setPillWidth(Math.min(window.innerWidth * 0.9, target));
+      // Cap at `target`, but always leave a clear margin on each side so the pill
+      // stays centered and never runs edge-to-edge on narrow screens.
+      setPillWidth(Math.min(window.innerWidth - 48, target));
     });
   };
   // Collapse back to the tab width, then release to auto once settled.
@@ -330,7 +332,7 @@ export function BarcodeScannerOverlay({ stream, onClose, onPhoto }: Props) {
     pausedRef.current = true;
     setSearchError("");
     setSearchInput("");
-    growPill(380, () => setSearchOpen(true));
+    growPill(340, () => setSearchOpen(true));
   };
   const closeSearch = () => {
     pausedRef.current = false;
@@ -670,7 +672,7 @@ export function BarcodeScannerOverlay({ stream, onClose, onPhoto }: Props) {
             ? `${kbOffset + 14}px`
             : "calc(env(safe-area-inset-bottom, 0px) + 26px)",
           transform: entered
-            ? `translateX(calc(-50% - ${searchOpen || photoOpen ? 14 : 0}px))`
+            ? "translateX(-50%)"
             : "translate(-50%, calc(100% + env(safe-area-inset-bottom, 0px) + 40px))",
           opacity: entered ? 1 : 0,
           transition: "transform 540ms cubic-bezier(0.32, 0.72, 0, 1), bottom 220ms ease-out, opacity 320ms ease-out",
