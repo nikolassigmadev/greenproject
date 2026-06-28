@@ -5,6 +5,7 @@ import { DS } from "@/styles/design-tokens";
 import { lookupBarcode, isValidBarcode } from "@/services/openfoodfacts";
 import { smartProductSearch } from "@/utils/smartProductSearch";
 import { logScan } from "@/utils/scanLogger";
+import { advancedProductOCR } from "@/services/ocr/advanced-openai-ocr";
 
 /**
  * Primary live barcode scanner — the default scan experience, an entirely
@@ -34,9 +35,6 @@ interface Props {
   /** The live stream owned by the Scan page. Shared, never stopped here. */
   stream: MediaStream | null;
   onClose: () => void;
-  /** Hand a captured/uploaded photo (data URL) to the parent's analysis flow.
-   *  May be async — the overlay awaits it to know when analysis finished. */
-  onPhoto?: (imageDataUrl: string) => void | Promise<void>;
 }
 
 const GREEN = "#3DBA82";
@@ -60,7 +58,7 @@ const glassBtn: React.CSSProperties = {
   cursor: "pointer",
 };
 
-export function BarcodeScannerOverlay({ stream, onClose, onPhoto }: Props) {
+export function BarcodeScannerOverlay({ stream, onClose }: Props) {
   const navigate = useNavigate();
   const videoRef = useRef<HTMLVideoElement>(null);
   const rafRef = useRef<number | null>(null);
@@ -350,36 +348,63 @@ export function BarcodeScannerOverlay({ stream, onClose, onPhoto }: Props) {
     setPhotoOpen(false);
     shrinkPill();
   };
-  // Run analysis without leaving the camera screen: freeze the captured frame as
-  // a backdrop, show our own "analyzing" layer (which covers the parent's
-  // full-screen scan UI), and await the parent. A confident match navigates away
-  // and a no-match unmounts us via the parent's render gate — so the code after
-  // the await only runs when analysis errored, where we resume scanning.
+  // Photo capture: OpenAI identifies the product NAME from the photo, we search
+  // Open Food Facts for that name to resolve a barcode, then open the product —
+  // same destination as a barcode scan, but the user just points at the product.
+  // (If the model also read a barcode off the pack, we take that shortcut first.)
+  const resumeScanning = (msg: string) => {
+    if (!mountedRef.current) return;
+    setAnalyzing(false);
+    setCapturedImage(null);
+    setStatus("not-found");
+    setMessage(msg);
+    window.setTimeout(() => {
+      if (!mountedRef.current) return;
+      pausedRef.current = false;
+      setStatus("scanning");
+      setMessage("");
+    }, 1900);
+  };
   const submitPhoto = async (img: string) => {
-    if (!onPhoto) { onClose(); return; }
-    pausedRef.current = true; // ignore live barcode reads while analyzing
+    pausedRef.current = true; // ignore live barcode reads while we work
     setCapturedImage(img);
     setPhotoOpen(false);
     setAnalyzing(true);
     try {
-      await onPhoto(img);
-    } finally {
-      // A confident match navigates away and a no-match unmounts us via the
-      // parent's render gate — both within a tick. If we're STILL mounted a
-      // moment later, analysis genuinely errored: resume scanning.
-      window.setTimeout(() => {
-        if (!mountedRef.current) return;
-        setAnalyzing(false);
-        setCapturedImage(null);
-        setStatus("not-found");
-        setMessage("Couldn't read that photo — try again");
-        window.setTimeout(() => {
-          if (!mountedRef.current) return;
-          pausedRef.current = false;
-          setStatus("scanning");
-          setMessage("");
-        }, 1800);
-      }, 400);
+      const ocr = await advancedProductOCR(img);
+
+      // Shortcut: a barcode read straight off the pack is the most accurate hit.
+      const code = ocr.barcode?.replace(/\s+/g, "");
+      if (code && isValidBarcode(code)) {
+        const direct = await lookupBarcode(code);
+        if (direct.found) {
+          navigate(`/product-off/${direct.barcode}?from=scan`);
+          return;
+        }
+      }
+
+      // Otherwise: search Open Food Facts by the identified name → resolve a barcode.
+      const clean = (s?: string) => {
+        const t = (s || "").trim();
+        return t && t.toLowerCase() !== "unknown" && t.toLowerCase() !== "none" ? t : "";
+      };
+      const name = [clean(ocr.brandName), clean(ocr.productName)].filter(Boolean).join(" ").trim();
+      if (name) {
+        const { product } = await smartProductSearch(name);
+        if (product?.barcode) {
+          navigate(`/product-off/${product.barcode}?from=scan`);
+          return;
+        }
+        logScan({ name, resolved: false, verdict: "UNKNOWN", image: ocr.compressedBase64 ?? null });
+        resumeScanning(`No match for "${name}" yet`);
+        return;
+      }
+
+      // OpenAI couldn't identify the product at all.
+      logScan({ name: "Unknown product", resolved: false, verdict: "UNKNOWN", image: ocr.compressedBase64 ?? null });
+      resumeScanning("Couldn't identify that — try again");
+    } catch {
+      resumeScanning("Couldn't reach the scanner — try again");
     }
   };
   const takePhoto = () => {
@@ -557,7 +582,7 @@ export function BarcodeScannerOverlay({ stream, onClose, onPhoto }: Props) {
             }}
           >
             <Loader2 size={18} color={GREEN} style={{ animation: "spin 1s linear infinite" }} />
-            <span style={{ fontFamily: DS.font, fontWeight: 700, fontSize: "0.92rem", color: "#fff" }}>Analyzing photo…</span>
+            <span style={{ fontFamily: DS.font, fontWeight: 700, fontSize: "0.92rem", color: "#fff" }}>Identifying product…</span>
           </div>
         </div>
       )}
@@ -620,8 +645,14 @@ export function BarcodeScannerOverlay({ stream, onClose, onPhoto }: Props) {
               padding: "7px 15px",
             }}
           >
-            <ScanBarcode size={15} color={GREEN} strokeWidth={2.2} />
-            <span style={{ color: "#fff", fontFamily: DS.font, fontSize: "0.82rem", fontWeight: 600 }}>Point at a barcode</span>
+            {photoOpen ? (
+              <Camera size={15} color={GREEN} strokeWidth={2.2} />
+            ) : (
+              <ScanBarcode size={15} color={GREEN} strokeWidth={2.2} />
+            )}
+            <span style={{ color: "#fff", fontFamily: DS.font, fontSize: "0.82rem", fontWeight: 600 }}>
+              {photoOpen ? "Point at a product" : "Point at a barcode"}
+            </span>
           </div>
         )}
         {status === "looking-up" && (
