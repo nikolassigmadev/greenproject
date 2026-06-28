@@ -473,7 +473,10 @@ export function BarcodeScannerOverlay({ stream, onClose }: Props) {
   });
 
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 50, background: "#000", overflow: "hidden" }}>
+    {/* Height-driven (not bottom:0) so the camera reaches the TRUE physical
+        bottom in standalone PWAs — bottom:0 pins to the safe-area line and leaves
+        a black home-indicator strip. */}
+    <div style={{ position: "fixed", top: 0, left: 0, right: 0, height: "100dvh", zIndex: 50, background: "#000", overflow: "hidden" }}>
       <video
         ref={videoRef}
         muted
