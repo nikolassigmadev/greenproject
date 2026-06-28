@@ -93,11 +93,11 @@ export function BarcodeScannerOverlay({ stream, onClose }: Props) {
   }, []);
 
   // Keep the morphing control pinned just above the on-screen keyboard while the
-  // search field is focused. The visual viewport shrinks by the keyboard height,
-  // so the overlap = layout height − visual height − its top offset.
+  // search field OR the manual-entry sheet is focused. The visual viewport shrinks
+  // by the keyboard height, so the overlap = layout height − visual height − its top offset.
   useEffect(() => {
     const vv = window.visualViewport;
-    if (!searchOpen || !vv) { setKbOffset(0); return; }
+    if ((!searchOpen && !manualOpen) || !vv) { setKbOffset(0); return; }
     const update = () => {
       const overlap = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
       setKbOffset(overlap);
@@ -110,7 +110,7 @@ export function BarcodeScannerOverlay({ stream, onClose }: Props) {
       vv.removeEventListener("scroll", update);
       setKbOffset(0);
     };
-  }, [searchOpen]);
+  }, [searchOpen, manualOpen]);
 
   // Slide the bottom controls up on mount (matches the Scan page's capture deck).
   useEffect(() => {
@@ -502,11 +502,11 @@ export function BarcodeScannerOverlay({ stream, onClose }: Props) {
           style={{
             position: "relative",
             // Barcode mode uses a short, wide slot; photo mode opens up to a
-            // normal (portrait-ish) photo frame so the framing matches what
-            // you're capturing — but kept smaller than the barcode slot so it
-            // doesn't crowd the "Point at a product" hint and the controls below.
-            width: photoOpen ? "70%" : "84%",
-            maxWidth: photoOpen ? 312 : 384,
+            // large portrait photo frame so there's plenty of room to fit the
+            // product, while still clearing the "Point at a product" hint and
+            // the controls below.
+            width: photoOpen ? "86%" : "84%",
+            maxWidth: photoOpen ? 420 : 384,
             aspectRatio: photoOpen ? "4 / 5" : "1.7 / 1",
             transition:
               "aspect-ratio 420ms cubic-bezier(0.32, 0.72, 0, 1), width 420ms cubic-bezier(0.32, 0.72, 0, 1), max-width 420ms cubic-bezier(0.32, 0.72, 0, 1)",
@@ -709,10 +709,11 @@ export function BarcodeScannerOverlay({ stream, onClose }: Props) {
           bottom: kbOffset > 0
             ? `${kbOffset + 14}px`
             : "calc(env(safe-area-inset-bottom, 0px) + 26px)",
-          transform: entered
+          transform: entered && !manualOpen
             ? "translateX(-50%)"
             : "translate(-50%, calc(100% + env(safe-area-inset-bottom, 0px) + 40px))",
-          opacity: entered ? 1 : 0,
+          opacity: entered && !manualOpen ? 1 : 0,
+          pointerEvents: entered && !manualOpen ? "auto" : "none",
           transition: "transform 540ms cubic-bezier(0.32, 0.72, 0, 1), bottom 220ms ease-out, opacity 320ms ease-out",
           zIndex: 11,
         }}
@@ -996,7 +997,8 @@ export function BarcodeScannerOverlay({ stream, onClose }: Props) {
             zIndex: 6,
             background: DS.bg,
             borderRadius: "20px 20px 0 0",
-            padding: "20px 20px calc(env(safe-area-inset-bottom, 0px) + 24px)",
+            padding: `20px 20px calc(env(safe-area-inset-bottom, 0px) + 24px + ${kbOffset}px)`,
+            transition: "padding-bottom 220ms ease-out",
             boxShadow: "0 -4px 24px rgba(0,0,0,0.22)",
           }}
         >
@@ -1019,6 +1021,7 @@ export function BarcodeScannerOverlay({ stream, onClose }: Props) {
               pattern="[0-9]*"
               value={manualInput}
               onChange={(e) => setManualInput(e.target.value)}
+              onBlur={() => { if (!manualInput.trim()) closeManual(); }}
               placeholder="e.g. 5012345678900"
               style={{
                 flex: 1,
