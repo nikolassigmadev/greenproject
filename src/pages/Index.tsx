@@ -404,7 +404,7 @@ export default function Index() {
             {[
               { icon: ScanLine, title: "Scan a shelf", desc: "We pick the best-rated product", to: "/shelf", color: DS.good },
               { icon: GitCompareArrows, title: "Compare", desc: "Put two products head-to-head", to: "/compare", color: DS.warn },
-              { icon: Eye, title: "Watchlist", desc: "Track brands you're watching", to: "/watchlist", color: "#9B7AAE" },
+              { icon: Eye, title: "Watchlist", desc: "Track brands you're watching", to: "/watchlist", color: DS.warn },
               { icon: Flag, title: "Flag a brand", desc: "Report a sourced ethical concern", to: "/submit-flag", color: DS.bad },
             ].map((tool) => (
               <Link key={tool.to} to={tool.to} style={{ textDecoration: "none" }}>

@@ -1881,7 +1881,7 @@ const Scan = () => {
             {[
               { icon: Users,  label: 'Labour Rights',  color: DS.bad,            bg: DS.badBg,   border: 'rgba(178,58,43,0.2)' },
               { icon: Leaf,   label: 'Environment',    color: DS.good,           bg: DS.goodBg,  border: 'rgba(31,107,78,0.2)' },
-              { icon: Heart,  label: 'Animal Welfare', color: '#9B7AAE',         bg: 'var(--ds-animal-bg, #EAE0EF)',  border: 'rgba(122,90,138,0.2)' },
+              { icon: Heart,  label: 'Animal Welfare', color: DS.warn,           bg: 'var(--ds-animal-bg, #F0E1C2)',  border: 'rgba(192,130,42,0.2)' },
               { icon: Apple,  label: 'Nutrition',      color: DS.warn,           bg: DS.warnBg,  border: 'rgba(192,130,42,0.2)' },
             ].map(({ icon: Icon, label, color, bg, border }) => (
               <div key={label} style={{

@@ -49,7 +49,7 @@ const CO2_CATEGORIES = [
   { key: "co2_processing",    label: "Processing",    Icon: Factory,         gradient: "from-blue-500 to-blue-400"       },
   { key: "co2_packaging",     label: "Packaging",     Icon: Package,         gradient: "from-amber-500 to-amber-400"     },
   { key: "co2_transportation",label: "Transport",     Icon: Truck,           gradient: "from-orange-500 to-orange-400"   },
-  { key: "co2_distribution",  label: "Distribution",  Icon: Store,           gradient: "from-violet-500 to-violet-400"   },
+  { key: "co2_distribution",  label: "Distribution",  Icon: Store,           gradient: "from-yellow-500 to-yellow-400"   },
   { key: "co2_consumption",   label: "Consumption",   Icon: UtensilsCrossed, gradient: "from-rose-500 to-rose-400"       },
 ] as const;
 

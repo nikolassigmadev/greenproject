@@ -21,6 +21,8 @@ import SupplyChain from "./pages/SupplyChain";
 import Methodology from "./pages/Methodology";
 import ChocolateDirectory from "./pages/ChocolateDirectory";
 import Privacy from "./pages/Privacy";
+import TermsOfService from "./pages/TermsOfService";
+import TermsAndConditions from "./pages/TermsAndConditions";
 import { CalAIShowcase } from "./components/CalAIShowcase";
 import ChatGPTScan from "./pages/ChatGPTScan";
 import Watchlist from "./pages/Watchlist";
@@ -175,6 +177,14 @@ export const router = createBrowserRouter([
       {
         path: "/privacy",
         element: <Privacy />,
+      },
+      {
+        path: "/terms-of-service",
+        element: <TermsOfService />,
+      },
+      {
+        path: "/terms-and-conditions",
+        element: <TermsAndConditions />,
       },
       {
         path: "/chatgpt",

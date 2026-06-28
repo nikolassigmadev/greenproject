@@ -79,7 +79,7 @@ const EDITORIAL = {
   amber: DS.warn,
   amberSoft: DS.warnBg,
   blue: "#2E5A7A",
-  purple: "#6A4A6E",
+  gold: "#9A7B1F",
 } as const;
 
 const GRADE_COLOR: Record<string, string> = {
@@ -111,7 +111,7 @@ const CO2_BARS = [
   { key: "co2_processing",     label: "Processing",   Icon: Factory,         color: EDITORIAL.blue },
   { key: "co2_packaging",      label: "Packaging",    Icon: Package,         color: EDITORIAL.amber },
   { key: "co2_transportation", label: "Transport",    Icon: Truck,           color: "#C26544" },
-  { key: "co2_distribution",   label: "Distribution", Icon: Store,           color: EDITORIAL.purple },
+  { key: "co2_distribution",   label: "Distribution", Icon: Store,           color: EDITORIAL.gold },
   { key: "co2_consumption",    label: "Consumption",  Icon: UtensilsCrossed, color: "#9B4E63" },
 ] as const;
 

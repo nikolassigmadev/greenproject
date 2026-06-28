@@ -21,7 +21,7 @@ export function AuroraButton({
       {/* Gradient glow layer */}
       <div
         className={cn(
-          "absolute -inset-[2px] rounded-lg bg-gradient-to-r from-purple-500 via-cyan-300 to-emerald-400 opacity-75 blur-lg transition-all",
+          "absolute -inset-[2px] rounded-lg bg-gradient-to-r from-emerald-500 via-yellow-300 to-green-400 opacity-75 blur-lg transition-all",
           "group-hover:opacity-100 group-hover:blur-xl",
           glowClassName
         )}

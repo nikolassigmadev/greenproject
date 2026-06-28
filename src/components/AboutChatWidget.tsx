@@ -203,7 +203,7 @@ export function AboutChatWidget() {
                       maxWidth: "85%",
                       padding: "14px 14px",
                       borderRadius: 14,
-                      background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                      background: "linear-gradient(135deg, #15B879, #2FD18C)",
                       color: "#fff",
                       fontSize: "0.82rem",
                       lineHeight: 1.5,

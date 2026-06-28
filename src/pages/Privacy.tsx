@@ -29,7 +29,7 @@ export default function Privacy() {
           <Section title="Camera & Photo Library">
             The app requests access to your camera and photo library solely to capture or select images of product barcodes and food labels. These images are sent to our secure backend server for analysis using OpenAI's vision API to extract product information (name, brand, ingredients, certifications). The photos are not used to train AI models.
             <p style={{ marginTop: 8, marginBottom: 0 }}>
-              A downscaled copy of each photo you scan is retained on our backend as part of your anonymous scan record (see "Scan Records" below), so we can review and improve product recognition. Because a scan photo can incidentally capture faces, hands, or your surroundings, only point the camera at the product. If you'd rather no photos be kept, turn off scan logging (see "Scan Records").
+              A downscaled copy of each photo you scan is retained on our backend as part of your anonymous scan record (see "Scan Records" below), so we can review and improve product recognition. Because a scan photo can incidentally capture faces, hands, or your surroundings, only point the camera at the product. If you'd rather not share photos at all, you can deny or revoke camera access in your device settings and instead type a product name or barcode number manually — no image is captured that way.
             </p>
           </Section>
 
@@ -53,7 +53,7 @@ export default function Privacy() {
               <li style={{ marginBottom: 6 }}>A random device identifier — generated on your device, not linked to your identity</li>
             </ul>
             <p style={{ margin: 0 }}>
-              These records are not tied to your name, email, or account (we have none of these). If you opt out of scan logging, we stop creating scan records entirely — including retaining any photos.
+              These records are not tied to your name, email, or account (we have none of these). If you'd rather not create scan records, deny or revoke the app's camera access in your device settings and type a product name or barcode number instead — no photo is captured or stored when you enter products manually.
             </p>
           </Section>
 

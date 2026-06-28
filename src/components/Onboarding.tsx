@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import {
   ScanLine, ShieldCheck, Sparkles, MapPin, Users, Leaf, Heart,
-  ArrowRight, ArrowLeft, ChevronDown,
+  ArrowRight, ArrowLeft, ChevronDown, ChevronRight, FileText, Check,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import {
@@ -14,6 +14,9 @@ import {
 import { OB_CSS } from "@/components/onboardingTheme";
 
 const ONBOARDING_KEY = "goodscan-onboarding-complete";
+const CONSENT_KEY = "goodscan-legal-consent";
+// Bump when the legal documents change materially to re-prompt for consent.
+const CONSENT_VERSION = "2026-06";
 
 export function hasCompletedOnboarding(): boolean {
   try {
@@ -31,6 +34,24 @@ function markOnboardingComplete(): void {
   }
 }
 
+function recordConsent(): void {
+  try {
+    localStorage.setItem(
+      CONSENT_KEY,
+      JSON.stringify({ version: CONSENT_VERSION, acceptedAt: new Date().toISOString() }),
+    );
+  } catch {
+    // ignore
+  }
+}
+
+// The legal documents a user must accept before using the app.
+const LEGAL_DOCS = [
+  { label: "Terms of Service", href: "/terms-of-service" },
+  { label: "Terms & Conditions", href: "/terms-and-conditions" },
+  { label: "Privacy Policy", href: "/privacy" },
+];
+
 // ── Priority levels (3-level scale shared with Preferences) ──
 const LEVELS = [
   { value: 25, label: "Low" },
@@ -46,8 +67,8 @@ const PRIORITY_CONFIG = [
   { key: "animalWelfare" as keyof UserPriorities, cls: "c3", label: "Animal Welfare", Icon: Heart },
 ];
 
-type StepId = "welcome" | "location" | "priorities";
-const STEPS: StepId[] = ["welcome", "location", "priorities"];
+type StepId = "welcome" | "location" | "priorities" | "consent";
+const STEPS: StepId[] = ["welcome", "location", "priorities", "consent"];
 
 interface OnboardingProps {
   onComplete: () => void;
@@ -64,9 +85,11 @@ export function Onboarding({ onComplete }: OnboardingProps) {
   const [country, setCountry] = useState(existingRegion?.countryCode || guessCountryCode() || "");
   const [city, setCity] = useState(existingRegion?.city || "");
   const [priorities, setPriorities] = useState<UserPriorities>(() => loadPriorities());
+  const [agreed, setAgreed] = useState(false);
 
   const step = STEPS[stepIdx];
-  const canGoNext = step === "location" ? !!country : true;
+  const canGoNext =
+    step === "location" ? !!country : step === "consent" ? agreed : true;
 
   // Lock the page behind the overlay so focusing inputs can't scroll it.
   useEffect(() => {
@@ -81,6 +104,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
       saveRegion({ countryCode: match.code, country: match.name, city: city.trim() || undefined });
     }
     savePriorities(priorities);
+    recordConsent();
     markOnboardingComplete();
     (document.activeElement as HTMLElement | null)?.blur?.();
     onComplete();
@@ -98,7 +122,8 @@ export function Onboarding({ onComplete }: OnboardingProps) {
     setPriorities((p) => ({ ...p, [key]: value }));
 
   const selected = COUNTRIES.find((c) => c.code === country);
-  const ctaLabel = step === "welcome" ? "Get started" : "Continue";
+  const ctaLabel =
+    step === "welcome" ? "Get started" : step === "consent" ? "Agree & continue" : "Continue";
 
   return (
     <div className="gs-ob" data-theme={theme} role="dialog" aria-modal="true">
@@ -142,8 +167,8 @@ export function Onboarding({ onComplete }: OnboardingProps) {
             <>
               <span className="icon-tile" style={{ marginBottom: 26 }}><MapPin /></span>
               <div className="eyebrow">
-                <span className="label">Step 1 of 2</span>
-                <span className="progress"><i className="on" /><i /></span>
+                <span className="label">Step 1 of 3</span>
+                <span className="progress"><i className="on" /><i /><i /></span>
               </div>
               <h1 className="title">Where do you shop?</h1>
               <p className="sub">
@@ -198,8 +223,8 @@ export function Onboarding({ onComplete }: OnboardingProps) {
             <>
               <span className="icon-tile" style={{ marginBottom: 26 }}><Sparkles /></span>
               <div className="eyebrow">
-                <span className="label">Step 2 of 2</span>
-                <span className="progress"><i className="on" /><i className="on" /></span>
+                <span className="label">Step 2 of 3</span>
+                <span className="progress"><i className="on" /><i className="on" /><i /></span>
               </div>
               <h1 className="title">What matters most to you?</h1>
               <p className="sub">This shapes every verdict and swap. You can fine-tune it later in Settings.</p>
@@ -232,12 +257,52 @@ export function Onboarding({ onComplete }: OnboardingProps) {
               </div>
             </>
           )}
+
+          {step === "consent" && (
+            <>
+              <span className="icon-tile" style={{ marginBottom: 26 }}><ShieldCheck /></span>
+              <div className="eyebrow">
+                <span className="label">Step 3 of 3</span>
+                <span className="progress"><i className="on" /><i className="on" /><i className="on" /></span>
+              </div>
+              <h1 className="title">A quick agreement</h1>
+              <p className="sub">
+                Before you start, please review and accept the documents below. Tap any to read the full text.
+              </p>
+
+              <div className="doc-list">
+                {LEGAL_DOCS.map((doc) => (
+                  <a
+                    key={doc.href}
+                    className="doc-row"
+                    href={doc.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <span className="doc-ic"><FileText /></span>
+                    <span className="doc-txt">{doc.label}</span>
+                    <span className="doc-chev"><ChevronRight /></span>
+                  </a>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                className={`agree${agreed ? " checked" : ""}`}
+                aria-pressed={agreed}
+                onClick={() => setAgreed((v) => !v)}
+              >
+                <span className="box"><Check strokeWidth={3} /></span>
+                <span className="agree-txt">
+                  I have read and agree to the <b>Terms of Service</b>, <b>Terms &amp; Conditions</b>, and <b>Privacy Policy</b>.
+                </span>
+              </button>
+            </>
+          )}
         </div>
 
         <div className="footer">
-          {stepIdx === 0 ? (
-            <button type="button" className="skip" onClick={finish}>Skip</button>
-          ) : (
+          {stepIdx > 0 && (
             <button type="button" className="iconbtn" aria-label="Back" onClick={back}>
               <ArrowLeft />
             </button>

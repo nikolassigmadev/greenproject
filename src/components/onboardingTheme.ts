@@ -6,7 +6,7 @@ export const OB_CSS = `
   --green:#2FD18C; --green-strong:#15B879; --green-soft:rgba(47,209,140,0.14);
   --coral:#F26A5B; --coral-soft:rgba(242,106,91,0.16);
   --leaf:#2FD18C; --leaf-soft:rgba(47,209,140,0.16);
-  --violet:#B49CEB; --violet-soft:rgba(180,156,235,0.18);
+  --gold:#E5A83E; --gold-soft:rgba(229,168,62,0.18);
   --radius-card:22px; --radius-field:18px;
   --font:"Hanken Grotesk", system-ui, -apple-system, sans-serif;
   position:fixed; top:0; left:0; right:0; bottom:0;
@@ -35,9 +35,9 @@ export const OB_CSS = `
   --back-bg:#EDF0EB; --back-text:#2A322D;
   --seg-track:#EDF0EC; --field-bg:#F6F8F4;
   --icon-tile-bg:rgba(15,158,104,0.10);
-  --green:#12B97C; --leaf:#12B97C; --coral:#E0584B; --violet:#8C6FD6;
+  --green:#12B97C; --leaf:#12B97C; --coral:#E0584B; --gold:#C0822A;
   --green-soft:rgba(18,185,124,0.12); --leaf-soft:rgba(18,185,124,0.12);
-  --coral-soft:rgba(224,88,75,0.12); --violet-soft:rgba(140,111,214,0.14);
+  --coral-soft:rgba(224,88,75,0.12); --gold-soft:rgba(192,130,42,0.16);
 }
 
 .gs-ob * { box-sizing:border-box; }
@@ -163,10 +163,15 @@ export const OB_CSS = `
 .gs-ob .prio-head h3 { font-size:17px; font-weight:800; letter-spacing:-0.01em; color:var(--text); }
 .gs-ob .prio.c1 .icon-tile { background:var(--coral-soft); color:var(--coral); }
 .gs-ob .prio.c2 .icon-tile { background:var(--leaf-soft); color:var(--leaf); }
-.gs-ob .prio.c3 .icon-tile { background:var(--violet-soft); color:var(--violet); }
+.gs-ob .prio.c3 .icon-tile { background:var(--gold-soft); color:var(--gold); }
 .gs-ob .seg {
   display:grid; grid-template-columns:repeat(3,1fr);
   background:var(--seg-track); border-radius:14px; padding:4px; gap:3px;
+}
+/* In light mode the track is nearly the same tone as the card, so give it a
+   soft shadow + hairline so each selector lifts off the background. */
+.gs-ob[data-theme="light"] .seg {
+  box-shadow:0 1px 3px rgba(18,30,24,0.08), 0 0 0 1px rgba(18,30,24,0.06);
 }
 .gs-ob .seg button {
   appearance:none; border:0; cursor:pointer; font-family:inherit; font-weight:700;
@@ -176,7 +181,7 @@ export const OB_CSS = `
 .gs-ob .seg button:hover { color:var(--text); }
 .gs-ob .prio.c1 .seg button.on { background:var(--coral); color:#fff; box-shadow:0 6px 14px -6px var(--coral); }
 .gs-ob .prio.c2 .seg button.on { background:var(--leaf); color:#04130C; box-shadow:0 6px 14px -6px var(--leaf); }
-.gs-ob .prio.c3 .seg button.on { background:var(--violet); color:#fff; box-shadow:0 6px 14px -6px var(--violet); }
+.gs-ob .prio.c3 .seg button.on { background:var(--gold); color:#1A1206; box-shadow:0 6px 14px -6px var(--gold); }
 
 /* ===== Add to Home Screen ===== */
 .gs-ob .a2hs { display:flex; flex-direction:column; flex:1; min-height:0; justify-content:center; }
@@ -249,4 +254,38 @@ export const OB_CSS = `
 .gs-ob .step .txt b { font-weight:800; }
 .gs-ob .step .txt .ios-ic { display:inline-grid; place-items:center; vertical-align:-4px; color:var(--green); margin:0 2px; }
 .gs-ob .step .txt .ios-ic svg { width:17px; height:17px; }
+
+/* ===== Consent step ===== */
+.gs-ob .doc-list {
+  margin-top:clamp(16px,3svh,30px); display:flex; flex-direction:column; gap:clamp(9px,1.5svh,12px);
+}
+.gs-ob .doc-row {
+  display:flex; align-items:center; gap:14px; padding:clamp(13px,1.9svh,17px) 18px;
+  border-radius:var(--radius-card); background:var(--surface); border:1px solid var(--border);
+  text-decoration:none; color:var(--text); transition:border-color .2s ease, background .2s ease;
+}
+.gs-ob .doc-row:hover { border-color:color-mix(in srgb, var(--green) 45%, var(--border)); }
+.gs-ob .doc-row .doc-ic { flex:none; width:38px; height:38px; border-radius:11px; display:grid; place-items:center; background:var(--green-soft); color:var(--green); }
+.gs-ob .doc-row .doc-ic svg { width:20px; height:20px; }
+.gs-ob .doc-row .doc-txt { flex:1; min-width:0; font-size:15.5px; font-weight:700; letter-spacing:-0.01em; }
+.gs-ob .doc-row .doc-chev { flex:none; color:var(--text-3); display:grid; }
+.gs-ob .doc-row .doc-chev svg { width:18px; height:18px; }
+
+.gs-ob .agree {
+  display:flex; align-items:flex-start; gap:13px; margin-top:clamp(16px,2.8svh,24px);
+  padding:clamp(14px,2svh,18px) 18px; border-radius:var(--radius-card);
+  background:var(--surface); border:1px solid var(--border); cursor:pointer; text-align:left;
+  transition:border-color .2s ease;
+}
+.gs-ob .agree.checked { border-color:var(--green); }
+.gs-ob .agree .box {
+  flex:none; width:24px; height:24px; border-radius:7px; margin-top:1px;
+  border:2px solid var(--border-strong); background:var(--field-bg);
+  display:grid; place-items:center; color:#fff; transition:background .15s ease, border-color .15s ease;
+}
+.gs-ob .agree.checked .box { background:var(--green); border-color:var(--green); }
+.gs-ob .agree .box svg { width:15px; height:15px; opacity:0; transition:opacity .15s ease; }
+.gs-ob .agree.checked .box svg { opacity:1; }
+.gs-ob .agree .agree-txt { font-size:14px; line-height:1.5; font-weight:500; color:var(--text-2); }
+.gs-ob .agree .agree-txt b { color:var(--text); font-weight:700; }
 `;

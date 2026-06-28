@@ -11,9 +11,10 @@
  */
 
 import { getBackendUrl } from '@/config/backend';
-import { searchProducts as searchOff, imageQualityTier } from '@/services/openfoodfacts';
+import { searchProducts as searchOff, imageQualityTier, lookupBarcode } from '@/services/openfoodfacts';
 import type { OpenFoodFactsResult } from '@/services/openfoodfacts/types';
 import { pickBestMatch } from './productRelevance';
+import { extractBarcode } from './gs1';
 
 export interface SmartSearchResult {
   product: OpenFoodFactsResult | null;
@@ -44,6 +45,36 @@ async function fixProductQuery(raw: string): Promise<string> {
     return fixed || raw;
   } catch {
     return raw;
+  }
+}
+
+/**
+ * Ask OpenAI for a product's retail barcode from typed text — the text-search
+ * analogue of reading a barcode off a scanned photo. Returns a normalized
+ * EAN/UPC, or null when the model isn't confident (it's told to answer NONE).
+ * The caller MUST still validate the barcode against OFF; the model can return
+ * a plausible-but-wrong number, so an unverified barcode is never trusted.
+ */
+async function barcodeFromText(raw: string): Promise<string | null> {
+  try {
+    const res = await fetch(`${getBackendUrl()}/api/openai/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ task: 'product-barcode', userMessage: raw }),
+      signal: AbortSignal.timeout(4000),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const content = typeof data?.content === 'string' ? data.content.trim() : '';
+    if (!content || /none/i.test(content)) return null;
+    // Reuse the scanner's GS1 parser so digits / GTIN forms are normalized.
+    const direct = extractBarcode(content);
+    if (direct) return direct;
+    // Tolerate a number wrapped in stray text ("Barcode: 3017620422003").
+    const digits = content.match(/\b\d{8,14}\b/);
+    return digits ? extractBarcode(digits[0]) : null;
+  } catch {
+    return null;
   }
 }
 
@@ -120,6 +151,13 @@ export interface SmartSearchOptions {
   poolSize?: number;
   /** Skip the AI typo-fix step (use raw query directly). Default false. */
   skipAiFix?: boolean;
+  /**
+   * Also ask OpenAI for the product's barcode from the typed text (the analogue
+   * of reading a barcode off a scanned photo). When it returns one that resolves
+   * to a real product in OFF, that exact match wins over the text-search result.
+   * Default false. Used by the manual search box.
+   */
+  aiBarcode?: boolean;
 }
 
 /** Brand-shape check: does the candidate's primary brand line up with the query? */
@@ -218,7 +256,22 @@ export async function smartProductSearch(
   const trimmed = rawQuery.trim();
   if (!trimmed) return NO_MATCH('');
 
-  const cleanedQuery = opts.skipAiFix ? trimmed : await fixProductQuery(trimmed);
+  // Run the typo-fix and (optional) AI-barcode resolution together so the extra
+  // OpenAI call doesn't add latency on top of the existing one.
+  const [cleanedQuery, aiBarcode] = await Promise.all([
+    opts.skipAiFix ? Promise.resolve(trimmed) : fixProductQuery(trimmed),
+    opts.aiBarcode ? barcodeFromText(trimmed) : Promise.resolve(null),
+  ]);
+
+  // EXACT-BARCODE PATH (manual search): if OpenAI named a barcode AND it resolves
+  // to a real product in OFF, trust that over fuzzy text search. The OFF lookup is
+  // the safety gate — a hallucinated/unknown number simply falls through.
+  if (aiBarcode) {
+    const byBarcode = await lookupBarcode(aiBarcode);
+    if (byBarcode.found) {
+      return { product: byBarcode, confidence: 0.95, cleanedQuery, noMatch: false };
+    }
+  }
 
   // Pull a bigger pool — many OFF hits have no eco data, so we need headroom
   // to find ones that actually do.

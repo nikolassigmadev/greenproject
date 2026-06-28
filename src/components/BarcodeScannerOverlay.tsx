@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { X, Loader2, ScanBarcode, AlertCircle, Camera, Keyboard, Search, Upload } from "lucide-react";
 import { DS } from "@/styles/design-tokens";
 import { lookupBarcode, isValidBarcode } from "@/services/openfoodfacts";
+import { extractBarcode } from "@/utils/gs1";
 import { smartProductSearch } from "@/utils/smartProductSearch";
 import { logScan } from "@/utils/scanLogger";
 import { advancedProductOCR } from "@/services/ocr/advanced-openai-ocr";
@@ -41,9 +42,10 @@ interface Props {
 const GREEN = "#3DBA82";
 const GREEN_INK = "#06301f"; // dark green for text on the green pill
 
-// Product symbologies only. Restricting formats speeds up decoding and avoids
-// false reads from QR codes or other 1D codes printed on packaging.
-const NATIVE_FORMATS = ["ean_13", "ean_8", "upc_a", "upc_e"];
+// Retail product symbologies. 1D EAN/UPC plus the 2D codes (QR carrying a GS1
+// Digital Link, and DataMatrix) that products are migrating to under GS1's
+// "Sunrise 2027" — all decode to a GTIN we parse out via extractBarcode().
+const NATIVE_FORMATS = ["ean_13", "ean_8", "upc_a", "upc_e", "qr_code", "data_matrix"];
 
 const glassBtn: React.CSSProperties = {
   width: 40,
@@ -149,8 +151,9 @@ export function BarcodeScannerOverlay({ stream, onClose }: Props) {
 
     const handleCode = async (raw: string) => {
       if (handledRef.current || pausedRef.current) return;
-      const cleaned = raw.replace(/\s+/g, "");
-      if (!isValidBarcode(cleaned)) return; // ignore non-product / partial reads
+      // Accept 1D EAN/UPC and 2D GS1 codes alike — extract the GTIN from either.
+      const cleaned = extractBarcode(raw);
+      if (!cleaned || !isValidBarcode(cleaned)) return; // ignore non-product / partial reads
       handledRef.current = true;
       activeRef.current = false;
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
@@ -252,6 +255,8 @@ export function BarcodeScannerOverlay({ stream, onClose }: Props) {
             zx.BarcodeFormat.EAN_8,
             zx.BarcodeFormat.UPC_A,
             zx.BarcodeFormat.UPC_E,
+            zx.BarcodeFormat.QR_CODE,
+            zx.BarcodeFormat.DATA_MATRIX,
           ]);
           hints.set(zx.DecodeHintType.TRY_HARDER, true);
           const reader = new zx.MultiFormatReader();
@@ -294,7 +299,8 @@ export function BarcodeScannerOverlay({ stream, onClose }: Props) {
   };
   const submitManual = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    const code = manualInput.replace(/\D/g, "");
+    // Handle a pasted GS1 Digital Link / element string too, not just raw digits.
+    const code = extractBarcode(manualInput) ?? manualInput.replace(/\D/g, "");
     if (!isValidBarcode(code)) {
       setManualError("Enter the 8–13 digits printed under the barcode.");
       return;
@@ -450,7 +456,9 @@ export function BarcodeScannerOverlay({ stream, onClose }: Props) {
     setSearchError("");
     setSearchLooking(true);
     try {
-      const { product, cleanedQuery } = await smartProductSearch(query);
+      // aiBarcode: also ask OpenAI for the product's barcode from the typed text
+      // (the text analogue of reading a barcode off a scanned photo).
+      const { product, cleanedQuery } = await smartProductSearch(query, { aiBarcode: true });
       if (product?.barcode) {
         navigate(`/product-off/${product.barcode}?from=scan`);
         return;
@@ -1076,10 +1084,14 @@ export function BarcodeScannerOverlay({ stream, onClose }: Props) {
               justifyContent: "center",
               gap: 14,
               padding: "0 36px",
+              // Reserve the keyboard's height at the bottom so the centred hint
+              // lifts above it instead of hiding behind it when the field focuses.
+              paddingBottom: kbOffset,
               textAlign: "center",
               border: "none",
               background: "transparent",
               cursor: "pointer",
+              transition: "padding-bottom 240ms cubic-bezier(0.22, 1, 0.36, 1)",
               animation: searchClosing ? undefined : "searchContentIn 460ms ease-out 170ms both",
             }}
           >

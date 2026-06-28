@@ -70,8 +70,8 @@ const compressImage = (dataUrl: string, maxSize = 512): Promise<string> =>
 
 // ── Accent gradient ──────────────────────────────────────────────────────────
 
-const ACCENT = "linear-gradient(135deg, #7C3AED, #6D28D9)";
-const ACCENT_SOFT = "var(--ds-animal-bg, #EAE0EF)";
+const ACCENT = "linear-gradient(135deg, #15B879, #12B97C)";
+const ACCENT_SOFT = "var(--ds-good-bg, #D8E5DA)";
 
 // ── Pill ─────────────────────────────────────────────────────────────────────
 
@@ -175,7 +175,7 @@ export default function ChatGPTScan() {
     { key: "environment" as const, icon: Leaf,  label: "Environment",    score: r.environment.score, notes: r.environment.notes, type: "score" as const, iconColor: DS.good },
     { key: "nutrition"   as const, icon: Apple, label: "Nutrition",      score: r.nutrition.score,    notes: r.nutrition.notes,    type: "score" as const, iconColor: DS.warn },
     { key: "labor"       as const, icon: Users, label: "Labor Rights",   score: r.labor.risk,         notes: r.labor.notes,        type: "risk"  as const, iconColor: DS.bad },
-    { key: "animal"      as const, icon: Heart, label: "Animal Welfare", score: r.animalWelfare.risk, notes: r.animalWelfare.notes, type: "risk"  as const, iconColor: "#9B7AAE" },
+    { key: "animal"      as const, icon: Heart, label: "Animal Welfare", score: r.animalWelfare.risk, notes: r.animalWelfare.notes, type: "risk"  as const, iconColor: "#C0822A" },
   ] : [];
 
   return (
@@ -189,7 +189,7 @@ export default function ChatGPTScan() {
             <div style={{
               display: "flex", alignItems: "center", gap: 6,
               padding: "5px 12px 5px 8px", borderRadius: 999,
-              background: ACCENT_SOFT, fontSize: "0.68rem", fontWeight: 700, color: "#7C3AED",
+              background: ACCENT_SOFT, fontSize: "0.68rem", fontWeight: 700, color: "#15B879",
             }}>
               <Zap size={12} /> Secret Feature
             </div>
@@ -275,7 +275,7 @@ export default function ChatGPTScan() {
               display: "flex", alignItems: "center", justifyContent: "center",
               margin: "0 auto 16px",
             }}>
-              <Loader2 size={28} className="animate-spin" style={{ color: "#7C3AED" }} />
+              <Loader2 size={28} className="animate-spin" style={{ color: "#15B879" }} />
             </div>
             <p style={{ fontSize: "0.92rem", fontWeight: 700, color: DS.ink, marginBottom: 4 }}>
               Analyzing{query ? ` "${query}"` : " image"}...
@@ -287,7 +287,7 @@ export default function ChatGPTScan() {
             <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 20 }}>
               {[0, 1, 2, 3].map(i => (
                 <div key={i} style={{
-                  width: 6, height: 6, borderRadius: "50%", background: "#7C3AED",
+                  width: 6, height: 6, borderRadius: "50%", background: "#15B879",
                   opacity: 0.3, animation: `pulse 1.2s ease-in-out ${i * 0.15}s infinite`,
                 }} />
               ))}
@@ -432,7 +432,7 @@ export default function ChatGPTScan() {
                 opacity: mounted ? 1 : 0, transition: "all 0.5s ease 0.6s",
               }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-                  <Sparkles size={15} style={{ color: "#7C3AED" }} />
+                  <Sparkles size={15} style={{ color: "#15B879" }} />
                   <span style={{ fontSize: "0.82rem", fontWeight: 700, color: DS.ink }}>Try Instead</span>
                 </div>
                 {r.alternatives.map((alt, i) => (
@@ -522,7 +522,7 @@ export default function ChatGPTScan() {
                     width: 36, height: 36, borderRadius: 10,
                     background: ACCENT_SOFT,
                     display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: "0.78rem", fontWeight: 800, color: "#7C3AED",
+                    fontSize: "0.78rem", fontWeight: 800, color: "#15B879",
                     flexShrink: 0,
                   }}>
                     {item.step}

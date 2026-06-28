@@ -75,6 +75,8 @@ export default function AboutUs() {
             {[
               { label: "Email", value: "contact@goodscan.shop", href: "mailto:contact@goodscan.shop" },
               { label: "Privacy policy", value: "View", to: "/privacy" },
+              { label: "Terms of service", value: "View", to: "/terms-of-service" },
+              { label: "Terms & conditions", value: "View", to: "/terms-and-conditions" },
               { label: "Methodology", value: "View", to: "/methodology" },
             ].map((item, i) => {
               const inner = (

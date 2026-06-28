@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { BackButton } from "@/components/BackButton";
 import {
   loadPriorities, savePriorities, DEFAULT_PRIORITIES, type UserPriorities,
 } from "@/utils/userPreferences";
@@ -45,8 +44,8 @@ const priorityConfig = [
     label: "Animal Welfare",
     description: "Factory farming, animal testing, cruelty",
     icon: Heart,
-    color: "#9B7AAE",
-    bgColor: "var(--ds-animal-bg, #EAE0EF)",
+    color: DS.warn,
+    bgColor: DS.warnBg,
   },
   // Nutrition is no longer user-tunable here; it stays at its Medium default
   // (DEFAULT_PRIORITIES.nutrition = 50) and still feeds the nutri-score measure.
@@ -82,7 +81,13 @@ function ValueRow({
       </div>
 
       {/* Segmented selector — single inset track, active pill in the category color */}
-      <div style={{ display: "flex", gap: 3, padding: 3, background: DS.bg, borderRadius: 11 }}>
+      <div style={{
+        display: "flex", gap: 3, padding: 3, background: DS.bg, borderRadius: 11,
+        // The track tone is almost identical to the cream card, so outline it
+        // with a hairline + soft shadow to keep each selector from blending in.
+        border: `1px solid ${DS.hair}`,
+        boxShadow: "0 1px 3px rgba(0,0,0,0.07), inset 0 1px 1px rgba(0,0,0,0.03)",
+      }}>
         {LEVELS.map((lvl, i) => {
           const active = i === idx;
           return (
@@ -139,26 +144,22 @@ export default function Preferences() {
     <div style={{ background: DS.bg, minHeight: "100dvh", fontFamily: DS.font, color: DS.ink }}>
       <main style={{ paddingBottom: 110 }}>
 
-        {/* Header */}
-        <div style={{
-          padding: "max(56px, calc(env(safe-area-inset-top, 0px) + 16px)) 20px 18px",
-          display: "flex", alignItems: "flex-start", gap: 14,
-        }}>
-          <BackButton />
-          <div style={{ flex: 1, minWidth: 0 }}>
+        {/* Header — roomy large-title block. */}
+        <div style={{ padding: "max(56px, calc(env(safe-area-inset-top, 0px) + 16px)) 20px 20px" }}>
+          <div>
             <p style={{
               fontSize: 11, fontWeight: 800, color: DS.muted,
-              letterSpacing: "0.08em", textTransform: "uppercase", margin: "2px 0 4px",
+              letterSpacing: "0.08em", textTransform: "uppercase", margin: "0 0 6px",
             }}>
               My Values
             </p>
             <h1 style={{
               fontSize: "1.7rem", fontWeight: 800, color: DS.ink,
-              letterSpacing: "-0.03em", lineHeight: 1.1, margin: "0 0 6px",
+              letterSpacing: "-0.03em", lineHeight: 1.1, margin: "0 0 8px",
             }}>
               What matters to you?
             </h1>
-            <p style={{ fontSize: 13.5, color: DS.muted, lineHeight: 1.5 }}>
+            <p style={{ fontSize: 13.5, color: DS.muted, lineHeight: 1.5, margin: 0 }}>
               Every scan is scored around what matters to you.
             </p>
           </div>
