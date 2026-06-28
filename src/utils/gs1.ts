@@ -36,10 +36,14 @@ function gtinFromDigitalLink(raw: string): string | null {
 function gtinFromElementString(raw: string): string | null {
   // Drop a leading symbology identifier such as ]C1, ]Q3, ]d2, ]e0.
   const s = raw.replace(/^\][A-Za-z0-9]{2}/, "");
-  // Human-readable bracketed form: (01)09506000134352
-  const bracket = s.match(/\(01\)(\d{14})/);
+  // Human-readable bracketed form. Strictly AI 01 is GTIN-14, but real data
+  // (incl. Open Food Facts' own examples, e.g. "(01)3274080005003") often omits
+  // the zero-pad, so accept 8–14 digits and let normalizeGtin sort it out.
+  const bracket = s.match(/\(01\)(\d{8,14})/);
   if (bracket) return bracket[1];
-  // FNC1 form: AI "01" is fixed-length 14, at the start or after a GS (\x1d) separator.
+  // FNC1 form: AI "01" is fixed-length 14, at the start or after a GS (\x1d)
+  // separator. Must stay 14 here — there's no delimiter, so the length is how
+  // we know where the GTIN ends before the next AI.
   const fnc1 = s.match(/(?:^|\x1d)01(\d{14})/);
   if (fnc1) return fnc1[1];
   return null;

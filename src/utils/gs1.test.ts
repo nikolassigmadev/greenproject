@@ -38,6 +38,12 @@ describe('extractBarcode', () => {
     expect(extractBarcode('(01)05012345678900(17)270101(10)LOT42')).toBe('5012345678900');
   });
 
+  it("handles Open Food Facts' own 13-digit bracketed example", () => {
+    // OFF normalizes 2D codes to the EAN; their docs use a non-zero-padded GTIN.
+    expect(extractBarcode('(01)3274080005003')).toBe('3274080005003');
+    expect(extractBarcode('https://www.example.org/01/3274080005003')).toBe('3274080005003');
+  });
+
   it('extracts the GTIN from an FNC1 element string with a symbology identifier', () => {
     // ]d2 symbology id, AI 01 GTIN-14, GS separator (\x1d), then AI 17
     expect(extractBarcode(']d201050123456789001727010110LOT42')).toBe('5012345678900');
