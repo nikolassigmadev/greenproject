@@ -1824,7 +1824,7 @@ const Scan = () => {
   };
 
   return (
-    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, height: '100dvh', zIndex: 60, backgroundColor: '#000', overflow: 'hidden', fontFamily: DS.font, display: 'flex', flexDirection: 'column' }}>
+    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, height: '100vh', zIndex: 60, backgroundColor: '#000', overflow: 'hidden', fontFamily: DS.font, display: 'flex', flexDirection: 'column' }}>
 
       {/* ── Priorities gate ─────────────────────────────────────────────── */}
       {isDefaultPriorities && (

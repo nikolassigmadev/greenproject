@@ -369,6 +369,7 @@ export function BarcodeScannerOverlay({ stream, onClose }: Props) {
     pausedRef.current = true; // ignore live barcode reads while we work
     setCapturedImage(img);
     setPhotoOpen(false);
+    setPillWidth(undefined); // release the photo-mode pill width back to auto
     setAnalyzing(true);
     try {
       const ocr = await advancedProductOCR(img);
@@ -472,11 +473,11 @@ export function BarcodeScannerOverlay({ stream, onClose }: Props) {
     borderBottomRightRadius: v.b && v.r ? 20 : 0,
   });
 
+  // Root is height-driven off the LARGEST viewport (100vh = lvh on iOS) so the
+  // camera always fills the full screen. `100dvh` shrinks while transient bottom
+  // chrome is up, leaving a black home-indicator strip until you scroll.
   return (
-    {/* Height-driven (not bottom:0) so the camera reaches the TRUE physical
-        bottom in standalone PWAs — bottom:0 pins to the safe-area line and leaves
-        a black home-indicator strip. */}
-    <div style={{ position: "fixed", top: 0, left: 0, right: 0, height: "100dvh", zIndex: 50, background: "#000", overflow: "hidden" }}>
+    <div style={{ position: "fixed", top: 0, left: 0, right: 0, height: "100vh", zIndex: 50, background: "#000", overflow: "hidden" }}>
       <video
         ref={videoRef}
         muted
@@ -500,13 +501,15 @@ export function BarcodeScannerOverlay({ stream, onClose }: Props) {
         <div
           style={{
             position: "relative",
-            width: "84%",
-            maxWidth: 384,
             // Barcode mode uses a short, wide slot; photo mode opens up to a
             // normal (portrait-ish) photo frame so the framing matches what
-            // you're capturing.
+            // you're capturing — but kept smaller than the barcode slot so it
+            // doesn't crowd the "Point at a product" hint and the controls below.
+            width: photoOpen ? "70%" : "84%",
+            maxWidth: photoOpen ? 312 : 384,
             aspectRatio: photoOpen ? "4 / 5" : "1.7 / 1",
-            transition: "aspect-ratio 420ms cubic-bezier(0.32, 0.72, 0, 1)",
+            transition:
+              "aspect-ratio 420ms cubic-bezier(0.32, 0.72, 0, 1), width 420ms cubic-bezier(0.32, 0.72, 0, 1), max-width 420ms cubic-bezier(0.32, 0.72, 0, 1)",
           }}
         >
           {/* The window itself is clear; the huge box-shadow dims the surround. */}
@@ -549,12 +552,14 @@ export function BarcodeScannerOverlay({ stream, onClose }: Props) {
 
       {/* ── Analyzing layer: the captured frame stays put as the backdrop while
            the product is identified, so we never jump to a separate scan page. ── */}
+      {/* z-index 12 keeps this above the bottom controls (z-11) so the resting
+          Barcode/Photo/Search toggle never bleeds through while identifying. */}
       {analyzing && capturedImage && (
         <div
           style={{
             position: "absolute",
             inset: 0,
-            zIndex: 10,
+            zIndex: 12,
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
