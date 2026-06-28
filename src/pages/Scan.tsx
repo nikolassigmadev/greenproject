@@ -28,6 +28,7 @@ import { pickBestMatch, validateBarcodeResult, scoreRelevance, hasUsableBrandAnc
 import { logScan } from "@/utils/scanLogger";
 import { pickVisualBestCandidate, findAiConfirmedMatch, type VisualPick } from "@/services/visualMatch";
 import { BarcodeScannerOverlay } from "@/components/BarcodeScannerOverlay";
+import { useStableViewportHeight } from "@/hooks/useStableViewportHeight";
 
 /** Ask OpenAI to fix typos and clean up a user-typed product query */
 const fixProductQuery = async (raw: string): Promise<string> => {
@@ -472,6 +473,11 @@ const Scan = () => {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const viewfinderRef = useRef<HTMLDivElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  // Defeat the iOS standalone-PWA `100vh` bug (black strip along the bottom that
+  // only clears once you scroll). See the hook for the full explanation.
+  useStableViewportHeight(rootRef);
   const location = useLocation();
   const [priorities, setPriorities] = useState<UserPriorities>(loadPriorities());
   const [prioritiesDismissed, setPrioritiesDismissed] = useState(false);
@@ -1824,7 +1830,7 @@ const Scan = () => {
   };
 
   return (
-    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, height: '100vh', zIndex: 60, backgroundColor: '#000', overflow: 'hidden', fontFamily: DS.font, display: 'flex', flexDirection: 'column' }}>
+    <div ref={rootRef} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 60, backgroundColor: '#000', overflow: 'hidden', fontFamily: DS.font, display: 'flex', flexDirection: 'column' }}>
 
       {/* ── Priorities gate ─────────────────────────────────────────────── */}
       {isDefaultPriorities && (

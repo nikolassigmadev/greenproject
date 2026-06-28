@@ -6,6 +6,7 @@ import { lookupBarcode, isValidBarcode } from "@/services/openfoodfacts";
 import { smartProductSearch } from "@/utils/smartProductSearch";
 import { logScan } from "@/utils/scanLogger";
 import { advancedProductOCR } from "@/services/ocr/advanced-openai-ocr";
+import { useStableViewportHeight } from "@/hooks/useStableViewportHeight";
 
 /**
  * Primary live barcode scanner — the default scan experience, an entirely
@@ -86,6 +87,11 @@ export function BarcodeScannerOverlay({ stream, onClose }: Props) {
   const restWidthRef = useRef<number | undefined>(undefined);
   const photoFileRef = useRef<HTMLInputElement>(null);
   const mountedRef = useRef(true);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  // Defeat the iOS standalone-PWA `100vh` bug (black strip along the bottom that
+  // only clears once you scroll). See the hook for the full explanation.
+  useStableViewportHeight(rootRef);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -473,11 +479,12 @@ export function BarcodeScannerOverlay({ stream, onClose }: Props) {
     borderBottomRightRadius: v.b && v.r ? 20 : 0,
   });
 
-  // Root is height-driven off the LARGEST viewport (100vh = lvh on iOS) so the
-  // camera always fills the full screen. `100dvh` shrinks while transient bottom
-  // chrome is up, leaving a black home-indicator strip until you scroll.
+  // Root is sized from viewport BOUNDS (top:0 + bottom:0), never a `vh` unit:
+  // in an installed iOS PWA `100vh`/`100dvh` under-compute on launch and leave a
+  // black strip at the bottom until you scroll. `useStableViewportHeight` adds a
+  // JS minHeight = window.innerHeight safety net for the same reason.
   return (
-    <div style={{ position: "fixed", top: 0, left: 0, right: 0, height: "100vh", zIndex: 50, background: "#000", overflow: "hidden" }}>
+    <div ref={rootRef} style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 50, background: "#000", overflow: "hidden" }}>
       <video
         ref={videoRef}
         muted
@@ -503,13 +510,16 @@ export function BarcodeScannerOverlay({ stream, onClose }: Props) {
             position: "relative",
             // Barcode mode uses a short, wide slot; photo mode opens up to a
             // large portrait photo frame so there's plenty of room to fit the
-            // product, while still clearing the "Point at a product" hint and
-            // the controls below.
-            width: photoOpen ? "86%" : "84%",
-            maxWidth: photoOpen ? 420 : 384,
-            aspectRatio: photoOpen ? "4 / 5" : "1.7 / 1",
+            // product. It's nudged upward (translateY) to fill the empty space
+            // under the top bar instead of sitting dead-centre, and maxHeight
+            // keeps it clear of the controls/hint on shorter screens.
+            width: photoOpen ? "92%" : "84%",
+            maxWidth: photoOpen ? 440 : 384,
+            aspectRatio: photoOpen ? "3 / 4" : "1.7 / 1",
+            maxHeight: photoOpen ? "calc(100dvh - 290px)" : undefined,
+            transform: photoOpen ? "translateY(-32px)" : "translateY(0)",
             transition:
-              "aspect-ratio 420ms cubic-bezier(0.32, 0.72, 0, 1), width 420ms cubic-bezier(0.32, 0.72, 0, 1), max-width 420ms cubic-bezier(0.32, 0.72, 0, 1)",
+              "aspect-ratio 420ms cubic-bezier(0.32, 0.72, 0, 1), width 420ms cubic-bezier(0.32, 0.72, 0, 1), max-width 420ms cubic-bezier(0.32, 0.72, 0, 1), transform 420ms cubic-bezier(0.32, 0.72, 0, 1)",
           }}
         >
           {/* The window itself is clear; the huge box-shadow dims the surround. */}
