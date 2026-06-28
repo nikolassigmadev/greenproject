@@ -8,15 +8,17 @@ const Section = ({ title, children }: { title: string; children: React.ReactNode
   </div>
 );
 
-export default function Privacy() {
+export default function Privacy({ embedded = false }: { embedded?: boolean } = {}) {
   return (
-    <div style={{ minHeight: "100dvh", background: DS.bg, fontFamily: DS.font, color: DS.ink, display: "flex", flexDirection: "column" }}>
-      <main style={{ flex: 1, maxWidth: 640, margin: "0 auto", width: "100%", padding: "0 20px 110px", paddingTop: "max(60px, calc(env(safe-area-inset-top, 0px) + 16px))" }}>
+    <div style={{ minHeight: embedded ? "auto" : "100dvh", background: DS.bg, fontFamily: DS.font, color: DS.ink, display: "flex", flexDirection: "column" }}>
+      <main style={{ flex: 1, maxWidth: 640, margin: "0 auto", width: "100%", padding: embedded ? "16px 20px 40px" : "0 20px 110px", paddingTop: embedded ? 16 : "max(60px, calc(env(safe-area-inset-top, 0px) + 16px))" }}>
         {/* Header */}
         <div style={{ marginBottom: 28 }}>
-          <div style={{ marginBottom: 16 }}>
-            <BackButton to="/about" />
-          </div>
+          {!embedded && (
+            <div style={{ marginBottom: 16 }}>
+              <BackButton to="/about" />
+            </div>
+          )}
           <h1 style={{ fontSize: 28, fontWeight: 700, color: DS.ink, letterSpacing: -0.5, marginBottom: 4 }}>Privacy Policy</h1>
           <p style={{ fontSize: 14, color: DS.muted }}>Last updated: June 2026</p>
         </div>

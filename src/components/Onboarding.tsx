@@ -5,6 +5,10 @@ import {
   ArrowRight, ArrowLeft, ChevronDown, ChevronRight, FileText, Check, X,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
+import { DS } from "@/styles/design-tokens";
+import TermsOfService from "@/pages/TermsOfService";
+import TermsAndConditions from "@/pages/TermsAndConditions";
+import Privacy from "@/pages/Privacy";
 import {
   COUNTRIES, saveRegion, loadRegion, guessCountryCode,
 } from "@/utils/userRegion";
@@ -51,6 +55,18 @@ const LEGAL_DOCS = [
   { label: "Terms & Conditions", href: "/terms-and-conditions" },
   { label: "Privacy Policy", href: "/privacy" },
 ];
+
+// The page component behind each legal doc, rendered *in place* inside the
+// onboarding sheet. We deliberately don't navigate (router links would unmount
+// onboarding and lose the user's progress), so each doc is shown embedded.
+const DOC_COMPONENTS: Record<
+  string,
+  React.ComponentType<{ embedded?: boolean; onOpenDoc?: (href: string) => void }>
+> = {
+  "/terms-of-service": TermsOfService,
+  "/terms-and-conditions": TermsAndConditions,
+  "/privacy": Privacy,
+};
 
 // ── Priority levels (3-level scale shared with Preferences) ──
 const LEVELS = [
@@ -314,46 +330,55 @@ export function Onboarding({ onComplete }: OnboardingProps) {
         </div>
       </div>
 
-      {/* In-app policy viewer — slides over the onboarding without navigation */}
-      {docViewer && (
-        <div
-          style={{
-            position: "fixed", inset: 0, zIndex: 10,
-            display: "flex", flexDirection: "column",
-            background: "var(--ob-bg, #0d1117)",
-          }}
-        >
-          {/* Header */}
-          <div style={{
-            display: "flex", alignItems: "center", justifyContent: "space-between",
-            padding: "max(16px, env(safe-area-inset-top, 0px)) 20px 12px",
-            borderBottom: "1px solid rgba(255,255,255,0.08)",
-            flexShrink: 0,
-          }}>
-            <span style={{ fontFamily: "inherit", fontWeight: 600, fontSize: 16, color: "var(--ob-ink, #e6edf3)" }}>
-              {docViewer.label}
-            </span>
-            <button
-              type="button"
-              onClick={() => setDocViewer(null)}
-              aria-label="Close"
-              style={{
-                background: "rgba(255,255,255,0.08)", border: "none", borderRadius: "50%",
-                width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center",
-                cursor: "pointer", color: "var(--ob-ink, #e6edf3)", flexShrink: 0,
-              }}
-            >
-              <X size={18} />
-            </button>
+      {/* In-app policy viewer — renders the doc *in place* (no navigation), so
+          the user's onboarding progress is never lost. */}
+      {docViewer && (() => {
+        const DocComp = DOC_COMPONENTS[docViewer.href];
+        return (
+          <div
+            style={{
+              position: "fixed", inset: 0, zIndex: 10,
+              display: "flex", flexDirection: "column",
+              background: DS.bg, fontFamily: DS.font,
+            }}
+          >
+            {/* Header */}
+            <div style={{
+              display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
+              padding: "max(16px, calc(env(safe-area-inset-top, 0px) + 12px)) 20px 12px",
+              borderBottom: `1px solid ${DS.hair}`,
+              flexShrink: 0, background: DS.bg,
+            }}>
+              <span style={{ fontWeight: 600, fontSize: 16, color: DS.ink }}>
+                {docViewer.label}
+              </span>
+              <button
+                type="button"
+                onClick={() => setDocViewer(null)}
+                aria-label="Close"
+                style={{
+                  background: DS.card, border: "none", borderRadius: "50%",
+                  width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center",
+                  cursor: "pointer", color: DS.ink, flexShrink: 0,
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            {/* Scrollable content */}
+            <div style={{ flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch" }}>
+              {DocComp && (
+                <DocComp
+                  embedded
+                  onOpenDoc={(href) =>
+                    setDocViewer(LEGAL_DOCS.find((d) => d.href === href) ?? null)
+                  }
+                />
+              )}
+            </div>
           </div>
-          {/* Content via iframe so the page renders as-is */}
-          <iframe
-            src={docViewer.href}
-            title={docViewer.label}
-            style={{ flex: 1, border: "none", width: "100%", height: "100%" }}
-          />
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }

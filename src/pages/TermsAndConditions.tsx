@@ -8,15 +8,28 @@ const Section = ({ title, children }: { title: string; children: React.ReactNode
   </div>
 );
 
-export default function TermsAndConditions() {
+export default function TermsAndConditions({
+  embedded = false,
+  onOpenDoc,
+}: { embedded?: boolean; onOpenDoc?: (href: string) => void } = {}) {
+  // When rendered inside the onboarding sheet, inline cross-links must swap the
+  // viewed document rather than trigger a full navigation (which would unmount
+  // onboarding). Outside the sheet they remain ordinary links.
+  const docLinkProps = (href: string) =>
+    embedded && onOpenDoc
+      ? { href, onClick: (e: React.MouseEvent) => { e.preventDefault(); onOpenDoc(href); } }
+      : { href };
+
   return (
-    <div style={{ minHeight: "100dvh", background: DS.bg, fontFamily: DS.font, color: DS.ink, display: "flex", flexDirection: "column" }}>
-      <main style={{ flex: 1, maxWidth: 640, margin: "0 auto", width: "100%", padding: "0 20px 110px", paddingTop: "max(60px, calc(env(safe-area-inset-top, 0px) + 16px))" }}>
+    <div style={{ minHeight: embedded ? "auto" : "100dvh", background: DS.bg, fontFamily: DS.font, color: DS.ink, display: "flex", flexDirection: "column" }}>
+      <main style={{ flex: 1, maxWidth: 640, margin: "0 auto", width: "100%", padding: embedded ? "16px 20px 40px" : "0 20px 110px", paddingTop: embedded ? 16 : "max(60px, calc(env(safe-area-inset-top, 0px) + 16px))" }}>
         {/* Header */}
         <div style={{ marginBottom: 28 }}>
-          <div style={{ marginBottom: 16 }}>
-            <BackButton to="/about" />
-          </div>
+          {!embedded && (
+            <div style={{ marginBottom: 16 }}>
+              <BackButton to="/about" />
+            </div>
+          )}
           <h1 style={{ fontSize: 28, fontWeight: 700, color: DS.ink, letterSpacing: -0.5, marginBottom: 4 }}>Terms &amp; Conditions</h1>
           <p style={{ fontSize: 14, color: DS.muted }}>Last updated: June 2026</p>
         </div>
@@ -24,9 +37,9 @@ export default function TermsAndConditions() {
         <div style={{ background: DS.card, borderRadius: 18, padding: "24px 20px" }}>
           <Section title="Agreement">
             These Terms &amp; Conditions govern your use of GoodScan. They work alongside our{" "}
-            <a href="/terms-of-service" style={{ color: DS.ink, textDecoration: "none", fontWeight: 600 }}>Terms of Service</a>{" "}
+            <a {...docLinkProps("/terms-of-service")} style={{ color: DS.ink, textDecoration: "none", fontWeight: 600 }}>Terms of Service</a>{" "}
             and{" "}
-            <a href="/privacy" style={{ color: DS.ink, textDecoration: "none", fontWeight: 600 }}>Privacy Policy</a>.
+            <a {...docLinkProps("/privacy")} style={{ color: DS.ink, textDecoration: "none", fontWeight: 600 }}>Privacy Policy</a>.
             By continuing to use the app, you confirm that you accept all three.
           </Section>
 
@@ -50,7 +63,7 @@ export default function TermsAndConditions() {
 
           <Section title="Data &amp; Privacy">
             Your use of the app is also subject to our{" "}
-            <a href="/privacy" style={{ color: DS.ink, textDecoration: "none", fontWeight: 600 }}>Privacy Policy</a>,
+            <a {...docLinkProps("/privacy")} style={{ color: DS.ink, textDecoration: "none", fontWeight: 600 }}>Privacy Policy</a>,
             which explains what is collected and how it is handled. We do not require an account, name, or email to use GoodScan.
           </Section>
 

@@ -82,7 +82,7 @@ function RootLayout() {
   // localStorage so it only ever runs once per device, and gated so it only
   // ever runs inside the Home-Screen / installed app.
   const [showOnboarding, setShowOnboarding] = useState(
-    () => true || (isInstalledExperience() && !hasCompletedOnboarding()),
+    () => isInstalledExperience() && !hasCompletedOnboarding(),
   );
 
   if (installGated) {
