@@ -3,7 +3,6 @@ import { lookupHardcodedBarcodes, lookupHardcodedImage } from "@/data/productBar
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { Camera, Upload, Search, Loader2, AlertCircle, AlertTriangle, RefreshCw, X, ScanLine, ScanBarcode, Image as ImageIcon, Plus, Leaf, BarChart3, QrCode, Settings, Users, Heart, Apple, ChevronRight, Check, Zap } from "lucide-react";
 import { useBottomNav } from "@/components/BottomNav";
-import { Logo } from "@/components/Logo";
 import { Input } from "@/components/ui/input";
 import { CalAIButton, ButtonGroup } from "@/components/CalAIButton";
 import { AlertBox, AlertList } from "@/components/AlertBox";
@@ -1951,11 +1950,11 @@ const Scan = () => {
             </div>
           </Link>
 
-          {/* Centre label — two-tone "goodscan" lockup, matching the app-wide
-              Wordmark. "good" stays white for legibility over the live camera
-              (this HUD is always on a dark feed); "scan" uses the brand green. */}
+          {/* Centre label — two-tone "goodscan" wordmark (no icon mark), matching
+              the barcode scanner header. "good" stays white for legibility over
+              the live camera (this HUD is always on a dark feed); "scan" uses the
+              brand green. */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, textShadow: '0 1px 6px rgba(0,0,0,0.5)' }}>
-            <Logo size={22} />
             <span style={{ fontFamily: DS.font, fontSize: '0.95rem', fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1, whiteSpace: 'nowrap' }}>
               <span style={{ color: '#fff' }}>good</span>
               <span style={{ color: '#3DBA82' }}>scan</span>
@@ -2241,6 +2240,17 @@ const Scan = () => {
           </div>
         )}
       </div>
+
+      {/* ════════════════════ BOTTOM FADE ════════════════════ */}
+      {/* Soft shadow easing the camera into pure black at the very bottom, so the
+          installed-PWA black home-indicator strip (if any) reads as an
+          intentional vignette rather than a hard seam. Above the camera, below
+          the controls (z20) and capture deck (z49). */}
+      <div style={{
+        position: 'absolute', left: 0, right: 0, bottom: 0,
+        height: 190, zIndex: 10, pointerEvents: 'none',
+        background: 'linear-gradient(to top, #000 0%, #000 12%, rgba(0,0,0,0.55) 46%, rgba(0,0,0,0) 100%)',
+      }} />
 
       {/* ════════════════════ FLOATING CAPTURE DECK ════════════════════ */}
       {/* Glass pill that takes BottomNav's slot once the chrome transition

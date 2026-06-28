@@ -560,6 +560,25 @@ export function BarcodeScannerOverlay({ stream, onClose }: Props) {
         </div>
       </div>
 
+      {/* ── Bottom fade: a soft shadow that eases the camera into pure black at
+           the very bottom. In an installed iOS PWA a thin black home-indicator
+           strip can still sit below the viewfinder; fading the feed to #000 here
+           makes that strip read as an intentional vignette instead of a hard
+           seam. Sits above the dimmed feed (z2) but below the controls (z11). ── */}
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: 190,
+          zIndex: 3,
+          pointerEvents: "none",
+          background:
+            "linear-gradient(to top, #000 0%, #000 12%, rgba(0,0,0,0.55) 46%, rgba(0,0,0,0) 100%)",
+        }}
+      />
+
       {/* ── Analyzing layer: the captured frame stays put as the backdrop while
            the product is identified, so we never jump to a separate scan page. ── */}
       {/* z-index 12 keeps this above the bottom controls (z-11) so the resting
