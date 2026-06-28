@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import {
   ScanLine, ShieldCheck, Sparkles, MapPin, Users, Leaf, Heart,
-  ArrowRight, ArrowLeft, ChevronDown, ChevronRight, FileText, Check,
+  ArrowRight, ArrowLeft, ChevronDown, ChevronRight, FileText, Check, X,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import {
@@ -79,6 +79,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
   const theme = resolvedTheme === "light" ? "light" : "dark";
 
   const [stepIdx, setStepIdx] = useState(0);
+  const [docViewer, setDocViewer] = useState<{ label: string; href: string } | null>(null);
 
   // Pre-fill from anything the user already has (current users see it too).
   const existingRegion = loadRegion();
@@ -272,17 +273,16 @@ export function Onboarding({ onComplete }: OnboardingProps) {
 
               <div className="doc-list">
                 {LEGAL_DOCS.map((doc) => (
-                  <a
+                  <button
                     key={doc.href}
+                    type="button"
                     className="doc-row"
-                    href={doc.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    onClick={() => setDocViewer(doc)}
                   >
                     <span className="doc-ic"><FileText /></span>
                     <span className="doc-txt">{doc.label}</span>
                     <span className="doc-chev"><ChevronRight /></span>
-                  </a>
+                  </button>
                 ))}
               </div>
 
@@ -313,6 +313,47 @@ export function Onboarding({ onComplete }: OnboardingProps) {
           </button>
         </div>
       </div>
+
+      {/* In-app policy viewer — slides over the onboarding without navigation */}
+      {docViewer && (
+        <div
+          style={{
+            position: "fixed", inset: 0, zIndex: 10,
+            display: "flex", flexDirection: "column",
+            background: "var(--ob-bg, #0d1117)",
+          }}
+        >
+          {/* Header */}
+          <div style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            padding: "max(16px, env(safe-area-inset-top, 0px)) 20px 12px",
+            borderBottom: "1px solid rgba(255,255,255,0.08)",
+            flexShrink: 0,
+          }}>
+            <span style={{ fontFamily: "inherit", fontWeight: 600, fontSize: 16, color: "var(--ob-ink, #e6edf3)" }}>
+              {docViewer.label}
+            </span>
+            <button
+              type="button"
+              onClick={() => setDocViewer(null)}
+              aria-label="Close"
+              style={{
+                background: "rgba(255,255,255,0.08)", border: "none", borderRadius: "50%",
+                width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center",
+                cursor: "pointer", color: "var(--ob-ink, #e6edf3)", flexShrink: 0,
+              }}
+            >
+              <X size={18} />
+            </button>
+          </div>
+          {/* Content via iframe so the page renders as-is */}
+          <iframe
+            src={docViewer.href}
+            title={docViewer.label}
+            style={{ flex: 1, border: "none", width: "100%", height: "100%" }}
+          />
+        </div>
+      )}
     </div>
   );
 }

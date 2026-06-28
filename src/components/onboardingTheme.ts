@@ -263,6 +263,7 @@ export const OB_CSS = `
   display:flex; align-items:center; gap:14px; padding:clamp(13px,1.9svh,17px) 18px;
   border-radius:var(--radius-card); background:var(--surface); border:1px solid var(--border);
   text-decoration:none; color:var(--text); transition:border-color .2s ease, background .2s ease;
+  width:100%; text-align:left; cursor:pointer; font-family:inherit;
 }
 .gs-ob .doc-row:hover { border-color:color-mix(in srgb, var(--green) 45%, var(--border)); }
 .gs-ob .doc-row .doc-ic { flex:none; width:38px; height:38px; border-radius:11px; display:grid; place-items:center; background:var(--green-soft); color:var(--green); }
