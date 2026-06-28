@@ -75,6 +75,7 @@ export function BarcodeScannerOverlay({ stream, onClose }: Props) {
   const [manualError, setManualError] = useState("");
   const [manualLooking, setManualLooking] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [searchClosing, setSearchClosing] = useState(false); // playing the collapse animation
   const [searchInput, setSearchInput] = useState("");
   const [searchError, setSearchError] = useState("");
   const [searchLooking, setSearchLooking] = useState(false);
@@ -336,13 +337,20 @@ export function BarcodeScannerOverlay({ stream, onClose }: Props) {
     pausedRef.current = true;
     setSearchError("");
     setSearchInput("");
-    growPill(340, () => setSearchOpen(true));
+    setSearchClosing(false);
+    setSearchOpen(true);
   };
+  // Animated collapse: play the circular reveal in reverse, then unmount the
+  // full-screen panel and resume the live barcode scan.
   const closeSearch = () => {
-    pausedRef.current = false;
-    setSearchOpen(false);
-    setSearchError("");
-    shrinkPill();
+    setSearchClosing(true);
+    window.setTimeout(() => {
+      if (!mountedRef.current) return;
+      setSearchOpen(false);
+      setSearchClosing(false);
+      setSearchError("");
+      pausedRef.current = false;
+    }, 300);
   };
 
   const openPhoto = () => {
@@ -738,43 +746,15 @@ export function BarcodeScannerOverlay({ stream, onClose }: Props) {
           bottom: kbOffset > 0
             ? `${kbOffset + 14}px`
             : "calc(env(safe-area-inset-bottom, 0px) + 26px)",
-          transform: entered && !manualOpen
+          transform: entered && !manualOpen && !searchOpen
             ? "translateX(-50%)"
             : "translate(-50%, calc(100% + env(safe-area-inset-bottom, 0px) + 40px))",
-          opacity: entered && !manualOpen ? 1 : 0,
-          pointerEvents: entered && !manualOpen ? "auto" : "none",
+          opacity: entered && !manualOpen && !searchOpen ? 1 : 0,
+          pointerEvents: entered && !manualOpen && !searchOpen ? "auto" : "none",
           transition: "transform 540ms cubic-bezier(0.32, 0.72, 0, 1), bottom 220ms ease-out, opacity 320ms ease-out",
           zIndex: 11,
         }}
       >
-        {/* Search error floats just above the pill so the box stays compact. */}
-        {searchOpen && searchError && (
-          <p
-            style={{
-              position: "absolute",
-              bottom: "calc(100% + 10px)",
-              left: 0,
-              right: 0,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 6,
-              fontFamily: DS.font,
-              fontSize: "0.76rem",
-              fontWeight: 600,
-              color: "#fff",
-              margin: 0,
-              padding: "7px 12px",
-              borderRadius: 12,
-              background: "rgba(20,20,22,0.82)",
-              backdropFilter: "blur(20px)",
-              WebkitBackdropFilter: "blur(20px)",
-              animation: "searchFieldIn 220ms ease-out both",
-            }}
-          >
-            <AlertCircle size={14} /> {searchError}
-          </p>
-        )}
         <div
           ref={pillRef}
           role="tablist"
@@ -787,7 +767,7 @@ export function BarcodeScannerOverlay({ stream, onClose }: Props) {
             height: 52,
             boxSizing: "border-box",
             width: pillWidth ? `${pillWidth}px` : "auto",
-            transform: searchOpen || photoOpen ? "scale(1.05)" : "scale(1)",
+            transform: photoOpen ? "scale(1.05)" : "scale(1)",
             transformOrigin: "center",
             overflow: "hidden",
             whiteSpace: "nowrap",
@@ -800,81 +780,7 @@ export function BarcodeScannerOverlay({ stream, onClose }: Props) {
             transition: "width 380ms cubic-bezier(0.32, 0.72, 0, 1), transform 380ms cubic-bezier(0.32, 0.72, 0, 1)",
           }}
         >
-          {searchOpen ? (
-            <form
-              onSubmit={submitSearch}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                width: "100%",
-                padding: "0 4px 0 12px",
-                animation: "searchFieldIn 300ms ease-out both",
-              }}
-            >
-              <Search size={17} color={GREEN} strokeWidth={2.2} style={{ flexShrink: 0 }} />
-              <input
-                autoFocus
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                placeholder="Search product or brand…"
-                style={{
-                  flex: 1,
-                  minWidth: 0,
-                  height: 40,
-                  border: "none",
-                  background: "transparent",
-                  outline: "none",
-                  fontFamily: DS.font,
-                  fontSize: "0.92rem",
-                  color: "#fff",
-                }}
-              />
-              <button
-                type="submit"
-                aria-label="Search"
-                disabled={!searchInput.trim() || searchLooking}
-                style={{
-                  height: 38,
-                  minWidth: 38,
-                  padding: "0 14px",
-                  borderRadius: 999,
-                  border: "none",
-                  background: searchInput.trim() ? GREEN : "rgba(255,255,255,0.14)",
-                  color: GREEN_INK,
-                  fontFamily: DS.font,
-                  fontWeight: 700,
-                  fontSize: "0.86rem",
-                  cursor: searchInput.trim() ? "pointer" : "default",
-                  flexShrink: 0,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                {searchLooking ? <Loader2 size={16} color={GREEN_INK} style={{ animation: "spin 1s linear infinite" }} /> : "Go"}
-              </button>
-              <button
-                type="button"
-                onClick={closeSearch}
-                aria-label="Cancel search"
-                style={{
-                  width: 38,
-                  height: 38,
-                  borderRadius: 999,
-                  border: "none",
-                  background: "transparent",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                }}
-              >
-                <X size={18} color="rgba(255,255,255,0.7)" />
-              </button>
-            </form>
-          ) : photoOpen ? (
+          {photoOpen ? (
             <div
               style={{
                 display: "flex",
@@ -890,6 +796,8 @@ export function BarcodeScannerOverlay({ stream, onClose }: Props) {
                 type="button"
                 onClick={takePhoto}
                 style={{
+                  position: "relative",
+                  overflow: "hidden",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -901,10 +809,33 @@ export function BarcodeScannerOverlay({ stream, onClose }: Props) {
                   background: GREEN,
                   cursor: "pointer",
                   flexShrink: 0,
+                  // Gentle breathing pulse to flag this as the action that
+                  // captures the product.
+                  animation: "takePhotoBreathe 2.6s ease-in-out infinite",
                 }}
               >
-                <Camera size={17} color={GREEN_INK} strokeWidth={2.4} />
-                <span style={{ fontFamily: DS.font, fontWeight: 700, fontSize: "0.88rem", color: GREEN_INK }}>Take photo</span>
+                {/* Light glint that sweeps across the button on a loop. */}
+                <span
+                  aria-hidden="true"
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    bottom: 0,
+                    left: 0,
+                    width: "45%",
+                    background:
+                      "linear-gradient(100deg, transparent 0%, rgba(255,255,255,0.55) 50%, transparent 100%)",
+                    animation: "takePhotoShimmer 2.6s ease-in-out infinite",
+                    pointerEvents: "none",
+                  }}
+                />
+                <Camera
+                  size={17}
+                  color={GREEN_INK}
+                  strokeWidth={2.4}
+                  style={{ position: "relative", animation: "cameraNudge 2.6s ease-in-out infinite" }}
+                />
+                <span style={{ position: "relative", fontFamily: DS.font, fontWeight: 700, fontSize: "0.88rem", color: GREEN_INK }}>Take photo</span>
               </button>
               <button
                 type="button"
@@ -1015,6 +946,156 @@ export function BarcodeScannerOverlay({ stream, onClose }: Props) {
         style={{ display: "none" }}
       />
 
+      {/* ── Full-screen search ──────────────────────────────────────────────
+           Tapping the Search tab opens this over the whole scanner with a
+           circular reveal that wipes away the barcode UI (origin = the Search
+           tab's spot, bottom-centre). Collapses with the same animation in
+           reverse via the X or by tapping the empty area below the field. ── */}
+      {searchOpen && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 30,
+            display: "flex",
+            flexDirection: "column",
+            background: "rgba(8,9,11,0.94)",
+            backdropFilter: "blur(26px) saturate(140%)",
+            WebkitBackdropFilter: "blur(26px) saturate(140%)",
+            paddingTop: "calc(env(safe-area-inset-top, 0px) + 12px)",
+            animation: searchClosing
+              ? "searchRevealOut 280ms cubic-bezier(0.4, 0, 1, 1) forwards"
+              : "searchRevealIn 440ms cubic-bezier(0.22, 1, 0.36, 1) both",
+          }}
+        >
+          {/* Header: title + big, obvious collapse button */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "4px 16px 0" }}>
+            <span style={{ fontFamily: DS.font, fontSize: "1.1rem", fontWeight: 800, color: "#fff", letterSpacing: "-0.02em" }}>
+              Search
+            </span>
+            <button onClick={closeSearch} aria-label="Close search" style={glassBtn}>
+              <X size={18} color="#fff" />
+            </button>
+          </div>
+
+          {/* Search field */}
+          <form
+            onSubmit={submitSearch}
+            style={{
+              padding: "20px 16px 0",
+              animation: searchClosing ? undefined : "searchContentIn 460ms ease-out 90ms both",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                height: 58,
+                padding: "0 8px 0 16px",
+                borderRadius: 18,
+                background: "rgba(255,255,255,0.08)",
+                border: `1px solid ${searchInput.trim() ? "rgba(61,186,130,0.5)" : "rgba(255,255,255,0.12)"}`,
+                transition: "border-color 0.2s",
+              }}
+            >
+              <Search size={20} color={GREEN} strokeWidth={2.2} style={{ flexShrink: 0 }} />
+              <input
+                autoFocus
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder="Search product or brand…"
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  height: "100%",
+                  border: "none",
+                  background: "transparent",
+                  outline: "none",
+                  fontFamily: DS.font,
+                  fontSize: "1.02rem",
+                  color: "#fff",
+                }}
+              />
+              <button
+                type="submit"
+                aria-label="Search"
+                disabled={!searchInput.trim() || searchLooking}
+                style={{
+                  height: 44,
+                  minWidth: 56,
+                  padding: "0 18px",
+                  borderRadius: 14,
+                  border: "none",
+                  background: searchInput.trim() ? GREEN : "rgba(255,255,255,0.14)",
+                  color: GREEN_INK,
+                  fontFamily: DS.font,
+                  fontWeight: 700,
+                  fontSize: "0.92rem",
+                  cursor: searchInput.trim() ? "pointer" : "default",
+                  flexShrink: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                {searchLooking ? <Loader2 size={17} color={GREEN_INK} style={{ animation: "spin 1s linear infinite" }} /> : "Go"}
+              </button>
+            </div>
+            {searchError && (
+              <p
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  fontFamily: DS.font,
+                  fontSize: "0.8rem",
+                  fontWeight: 600,
+                  color: DS.warn,
+                  margin: "12px 4px 0",
+                }}
+              >
+                <AlertCircle size={14} /> {searchError}
+              </p>
+            )}
+          </form>
+
+          {/* Empty state / hint — also a generous tap target to collapse. */}
+          <button
+            type="button"
+            onClick={closeSearch}
+            aria-label="Close search"
+            style={{
+              flex: 1,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 14,
+              padding: "0 36px",
+              textAlign: "center",
+              border: "none",
+              background: "transparent",
+              cursor: "pointer",
+              animation: searchClosing ? undefined : "searchContentIn 460ms ease-out 170ms both",
+            }}
+          >
+            <div style={{ width: 66, height: 66, borderRadius: 22, background: "rgba(61,186,130,0.12)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Search size={28} color={GREEN} strokeWidth={1.8} />
+            </div>
+            <span style={{ fontFamily: DS.font, fontSize: "0.98rem", fontWeight: 700, color: "#fff" }}>
+              Search any product or brand
+            </span>
+            <span style={{ fontFamily: DS.font, fontSize: "0.84rem", color: "rgba(255,255,255,0.5)", lineHeight: 1.55, maxWidth: 280 }}>
+              Type a name and we'll pull up its ethics score. Tap anywhere here to go back to scanning.
+            </span>
+          </button>
+        </div>
+      )}
+
       {/* ── Manual entry sheet (matches the Scan page's other bottom sheets) ── */}
       {manualOpen && (
         <div
@@ -1109,7 +1190,32 @@ export function BarcodeScannerOverlay({ stream, onClose }: Props) {
           from { opacity: 0; transform: translateX(-8px); }
           to   { opacity: 1; transform: translateX(0); }
         }
+        @keyframes searchRevealIn {
+          from { clip-path: circle(0% at 50% 96%); opacity: 0.4; }
+          to   { clip-path: circle(150% at 50% 96%); opacity: 1; }
+        }
+        @keyframes searchRevealOut {
+          from { clip-path: circle(150% at 50% 96%); opacity: 1; }
+          to   { clip-path: circle(0% at 50% 96%); opacity: 0; }
+        }
+        @keyframes searchContentIn {
+          from { opacity: 0; transform: translateY(12px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
         @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes takePhotoBreathe {
+          0%, 100% { transform: scale(1); }
+          50%      { transform: scale(1.035); }
+        }
+        @keyframes takePhotoShimmer {
+          0%        { transform: translateX(-180%) skewX(-18deg); }
+          55%, 100% { transform: translateX(360%) skewX(-18deg); }
+        }
+        @keyframes cameraNudge {
+          0%, 72%, 100% { transform: scale(1) rotate(0deg); }
+          80%           { transform: scale(1.22) rotate(-7deg); }
+          90%           { transform: scale(1.1) rotate(5deg); }
+        }
         @keyframes scanCornerPulse {
           0%, 100% {
             opacity: 0.55;
