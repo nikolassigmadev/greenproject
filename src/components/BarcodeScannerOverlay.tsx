@@ -684,7 +684,9 @@ export function BarcodeScannerOverlay({ stream, onClose }: Props) {
           pointerEvents: "none",
         }}
       >
-        {status === "scanning" && (
+        {/* Barcode mode shows a "Point at a barcode" hint; photo mode has its own
+            framing + "Take photo" button, so no guidance pill there. */}
+        {status === "scanning" && !photoOpen && (
           <div
             style={{
               display: "inline-flex",
@@ -698,13 +700,9 @@ export function BarcodeScannerOverlay({ stream, onClose }: Props) {
               padding: "7px 15px",
             }}
           >
-            {photoOpen ? (
-              <Camera size={15} color={GREEN} strokeWidth={2.2} />
-            ) : (
-              <ScanBarcode size={15} color={GREEN} strokeWidth={2.2} />
-            )}
+            <ScanBarcode size={15} color={GREEN} strokeWidth={2.2} />
             <span style={{ color: "#fff", fontFamily: DS.font, fontSize: "0.82rem", fontWeight: 600 }}>
-              {photoOpen ? "Point at a product" : "Point at a barcode"}
+              Point at a barcode
             </span>
           </div>
         )}
