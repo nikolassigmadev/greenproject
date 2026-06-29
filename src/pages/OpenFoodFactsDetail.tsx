@@ -1,4 +1,4 @@
-import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams, Link } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import type { ReactNode } from "react";
 import {
@@ -631,6 +631,14 @@ export default function OpenFoodFactsDetail() {
                 Read full disclaimer
               </button>
             )}
+
+            {/* Policies reminder — the legal terms accepted at onboarding, always one tap away */}
+            <p style={{ fontSize: 12.5, color: DS.muted, lineHeight: 1.55, margin: "0 0 16px", textAlign: "center" }}>
+              By continuing you agree to our{" "}
+              <Link to="/terms-of-service" style={{ color: DS.ink, fontWeight: 700, textDecoration: "underline" }}>Terms of Service</Link>,{" "}
+              <Link to="/terms-and-conditions" style={{ color: DS.ink, fontWeight: 700, textDecoration: "underline" }}>Terms &amp; Conditions</Link>, and{" "}
+              <Link to="/privacy" style={{ color: DS.ink, fontWeight: 700, textDecoration: "underline" }}>Privacy Policy</Link>.
+            </p>
 
             {/* Actions */}
             <button

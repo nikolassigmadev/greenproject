@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo } from "react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import {
-  loadPriorities, savePriorities, DEFAULT_PRIORITIES, type UserPriorities,
+  loadPriorities, savePriorities, summarizePriorities, DEFAULT_PRIORITIES, type UserPriorities,
 } from "@/utils/userPreferences";
-import { Leaf, Users, Heart, RotateCcw, Check } from "lucide-react";
+import { Leaf, Users, Heart, RotateCcw, Check, Sparkles } from "lucide-react";
 import { DS } from "@/styles/design-tokens";
 import { RegionPicker } from "@/components/RegionPicker";
 import { toast } from "sonner";
@@ -140,6 +140,8 @@ export default function Preferences() {
     [priorities],
   );
 
+  const impactSummary = useMemo(() => summarizePriorities(priorities), [priorities]);
+
   return (
     <div style={{ background: DS.bg, minHeight: "100dvh", fontFamily: DS.font, color: DS.ink }}>
       <main style={{ paddingBottom: 110 }}>
@@ -181,6 +183,17 @@ export default function Preferences() {
                 divider={i > 0}
               />
             ))}
+          </div>
+
+          {/* Live impact summary — explains what these settings do to a verdict */}
+          <div style={{
+            display: "flex", alignItems: "flex-start", gap: 10,
+            background: DS.goodBg, borderRadius: 14, padding: "12px 14px",
+          }}>
+            <Sparkles size={15} style={{ color: DS.good, flexShrink: 0, marginTop: 1 }} strokeWidth={2.2} />
+            <p style={{ fontSize: 12.5, color: DS.ink, lineHeight: 1.5, margin: 0 }}>
+              {impactSummary}
+            </p>
           </div>
 
           {/* Saved hint + reset, on one compact line */}

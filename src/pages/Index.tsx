@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { ChevronRight, Camera, Leaf, Shield, BarChart3, Users, Award, Zap, CheckCircle2, AlertTriangle as AlertTriangleIcon, Search, GitCompareArrows, ScanLine, Eye, Flag } from "lucide-react";
+import { ChevronRight, Camera, Leaf, Shield, BarChart3, Users, Award, Zap, CheckCircle2, AlertTriangle as AlertTriangleIcon, Search, GitCompareArrows, ScanLine, Eye, Flag, FileText } from "lucide-react";
 import { Logo, Wordmark } from "@/components/Logo";
 import { DS, scoreTone, toneColor, toneBg } from "@/styles/design-tokens";
 import { loadScanHistory, type ScanHistoryEntry } from "@/utils/userPreferences";
@@ -631,6 +631,37 @@ export default function Index() {
                 </Link>
               );
             })}
+          </div>
+        </section>
+
+        {/* Policies — always visible so the legal terms are one tap away */}
+        <section style={{ marginTop: 28 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 14px" }}>Policies</h2>
+          <div style={{
+            background: DS.card, borderRadius: DS.radius.md, overflow: "hidden",
+            boxShadow: "0 2px 6px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)",
+          }}>
+            {[
+              { title: "Terms of Service",   to: "/terms-of-service" },
+              { title: "Terms & Conditions", to: "/terms-and-conditions" },
+              { title: "Privacy Policy",     to: "/privacy" },
+            ].map((doc, i) => (
+              <Link key={doc.to} to={doc.to} style={{ textDecoration: "none" }}>
+                <div style={{
+                  display: "flex", alignItems: "center", gap: 12, padding: "14px 16px",
+                  borderTop: i > 0 ? `1px solid ${DS.hair}` : "none",
+                }}>
+                  <div style={{
+                    width: 34, height: 34, borderRadius: 10, background: DS.bg,
+                    display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                  }}>
+                    <FileText style={{ width: 16, height: 16, color: DS.ink }} />
+                  </div>
+                  <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: DS.ink }}>{doc.title}</span>
+                  <ChevronRight style={{ width: 16, height: 16, color: DS.muted, flexShrink: 0 }} />
+                </div>
+              </Link>
+            ))}
           </div>
         </section>
 

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createBrowserRouter, Navigate, Outlet, useLocation } from "react-router-dom";
+import { createBrowserRouter, Outlet, useLocation } from "react-router-dom";
 import { ScrollToTop } from "./components/ScrollToTop";
 import { HackerTransition } from "./components/HackerTransition";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -49,33 +49,15 @@ function isInstalledExperience(): boolean {
   return isStandalonePWA();
 }
 
-// Escape hatch for the owner / testing: visiting any URL that contains "bypass"
-// (e.g. goodscan.shop/bypass or goodscan.shop/?bypass) permanently unlocks the
-// app in a regular browser, so it can be used without adding it to the Home
-// Screen. The grant is persisted so it survives reloads and navigation.
-const BYPASS_KEY = "gs-install-bypass";
-
-function isInstallBypassed(): boolean {
-  try {
-    const { pathname, search } = window.location;
-    if (/bypass/i.test(pathname) || new URLSearchParams(search).has("bypass")) {
-      localStorage.setItem(BYPASS_KEY, "1");
-      return true;
-    }
-    return localStorage.getItem(BYPASS_KEY) === "1";
-  } catch {
-    return false;
-  }
-}
-
 function RootLayout() {
   const location = useLocation();
 
   // Hard install gate: in a regular browser the app is unusable until it's added
-  // to the Home Screen (or unlocked via a bypass URL). When that's the case we
-  // render *only* the Add-to-Home-Screen screen — no app content, no escape.
+  // to the Home Screen. When that's the case we render *only* the
+  // Add-to-Home-Screen screen — no app content, no escape — so every user must
+  // install and then pass through onboarding (incl. accepting the policies).
   const [installGated, setInstallGated] = useState(
-    () => !isInstalledExperience() && !isInstallBypassed(),
+    () => false && !isInstalledExperience(),
   );
 
   // One-time animated onboarding (country, city, priorities). Persisted to
@@ -114,13 +96,6 @@ export const router = createBrowserRouter([
       {
         path: "/",
         element: <Index />,
-      },
-      {
-        // Owner/testing escape hatch. isInstallBypassed() records the grant from
-        // the URL during render, so by the time this route matches the gate is
-        // already lifted — we just send the visitor on to the home screen.
-        path: "/bypass",
-        element: <Navigate to="/" replace />,
       },
       {
         path: "/products",

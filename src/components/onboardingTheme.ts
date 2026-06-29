@@ -151,6 +151,13 @@ export const OB_CSS = `
 }
 .gs-ob .helper svg { width:17px; height:17px; color:var(--green); flex:none; margin-top:1px; }
 
+.gs-ob .impact-note {
+  display:flex; align-items:flex-start; gap:9px; margin-top:clamp(14px,2.4svh,22px);
+  padding:clamp(11px,1.8svh,15px) 14px; border-radius:var(--radius-card);
+  background:var(--green-soft); color:var(--text); font-size:13.5px; line-height:1.5; font-weight:500;
+}
+.gs-ob .impact-note svg { width:16px; height:16px; color:var(--green); flex:none; margin-top:1px; }
+
 .gs-ob .priorities {
   margin-top:clamp(14px,2.6svh,30px); border-radius:var(--radius-card);
   background:var(--surface); border:1px solid var(--border); padding:6px 18px;

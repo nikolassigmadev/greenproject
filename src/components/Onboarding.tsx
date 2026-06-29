@@ -13,7 +13,7 @@ import {
   COUNTRIES, saveRegion, loadRegion, guessCountryCode,
 } from "@/utils/userRegion";
 import {
-  loadPriorities, savePriorities, type UserPriorities,
+  loadPriorities, savePriorities, summarizePriorities, type UserPriorities,
 } from "@/utils/userPreferences";
 import { OB_CSS } from "@/components/onboardingTheme";
 
@@ -271,6 +271,11 @@ export function Onboarding({ onComplete }: OnboardingProps) {
                     </div>
                   );
                 })}
+              </div>
+
+              <div className="impact-note">
+                <Sparkles />
+                <span>{summarizePriorities(priorities)}</span>
               </div>
             </>
           )}

@@ -27,6 +27,50 @@ export function priorityMultiplier(value: number): number {
   return 5.0;                    // Critical
 }
 
+// Short, human names for each tunable priority, used in the impact summary.
+const PRIORITY_SHORT_NAMES: Record<"laborRights" | "environment" | "animalWelfare", string> = {
+  laborRights: "labour & human rights",
+  environment: "environmental impact",
+  animalWelfare: "animal welfare",
+};
+
+const joinList = (items: string[]): string => {
+  if (items.length <= 1) return items[0] ?? "";
+  if (items.length === 2) return `${items[0]} and ${items[1]}`;
+  return `${items.slice(0, -1).join(", ")}, and ${items[items.length - 1]}`;
+};
+
+/**
+ * Plain-English summary of what the user's current priorities will do to a
+ * verdict, e.g. "Verdicts will lean most on labour & human rights, weigh
+ * environmental impact normally, and let animal welfare only nudge the result."
+ * Shown right after priorities are changed so the effect is never a mystery.
+ */
+export function summarizePriorities(p: UserPriorities): string {
+  const tunable = ["laborRights", "environment", "animalWelfare"] as const;
+  const high: string[] = [];
+  const mid: string[] = [];
+  const low: string[] = [];
+  for (const key of tunable) {
+    const name = PRIORITY_SHORT_NAMES[key];
+    const v = p[key];
+    if (v <= 37) low.push(name);
+    else if (v <= 62) mid.push(name);
+    else high.push(name);
+  }
+
+  if (high.length === 0 && low.length === 0) {
+    return "Every product is judged evenly across labour, environment, and animal welfare.";
+  }
+
+  const clauses: string[] = [];
+  if (high.length) clauses.push(`lean most heavily on ${joinList(high)}`);
+  if (mid.length) clauses.push(`weigh ${joinList(mid)} normally`);
+  if (low.length) clauses.push(`let ${joinList(low)} only gently nudge the result`);
+
+  return `Verdicts will ${joinList(clauses)}.`;
+}
+
 const PRIORITIES_KEY = 'ethical-shopper-priorities';
 const PRIORITIES_SET_KEY = 'ethical-shopper-priorities-set';
 
