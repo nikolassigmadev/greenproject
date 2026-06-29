@@ -15,7 +15,7 @@ ffff
 
 
 cd "/Users/nikolasdzhovanis/Downloads/ethical-shopper-main copy 2"
-./scripts/pull-flags.sh
+./scripts/pull-flags.sh f
 
 
 git add .
