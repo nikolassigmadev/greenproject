@@ -3,7 +3,10 @@ import { Link } from "react-router-dom";
 import { ChevronRight, Camera, Leaf, Shield, BarChart3, Users, Award, Zap, CheckCircle2, AlertTriangle as AlertTriangleIcon, Search, GitCompareArrows, ScanLine, Eye, Flag, FileText } from "lucide-react";
 import { Logo, Wordmark } from "@/components/Logo";
 import { DS, scoreTone, toneColor, toneBg } from "@/styles/design-tokens";
-import { loadScanHistory, getHistoryStats, type ScanHistoryEntry } from "@/utils/userPreferences";
+import { loadScanHistory, type ScanHistoryEntry } from "@/utils/userPreferences";
+import { loadDecisions, DECISIONS_EVENT } from "@/utils/decisions";
+import { getVerifiedFlagForBrand } from "@/services/brandFlags";
+import type { FlagCategory } from "@/types/brandFlag";
 import {
   scanEntryToShowcase,
   hasCompleteEcoData,
@@ -282,60 +285,167 @@ function ScoreBadge({ score }: { score: number }) {
 
 /* ── Returning-user history surfaces ──────────────────────────────────── */
 
-function StatTile({ value, label, color }: { value: React.ReactNode; label: string; color: string }) {
+function ImpactRow({ icon: Icon, tint, value, text }: {
+  icon: React.ElementType;
+  tint: string;
+  value: React.ReactNode;
+  text: string;
+}) {
   return (
-    <div style={{ flex: 1, textAlign: "center", padding: "2px 2px" }}>
-      <div style={{ fontSize: 22, fontWeight: 800, color, lineHeight: 1 }}>{value}</div>
-      <div style={{ fontSize: 10.5, fontWeight: 600, color: DS.muted, marginTop: 6, letterSpacing: 0.2 }}>{label}</div>
+    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+      <div style={{
+        width: 34, height: 34, borderRadius: 10, flexShrink: 0,
+        background: `color-mix(in srgb, ${tint} 15%, transparent)`,
+        display: "flex", alignItems: "center", justifyContent: "center",
+      }}>
+        <Icon style={{ width: 17, height: 17, color: tint }} />
+      </div>
+      <div style={{ fontSize: 13.5, lineHeight: 1.35 }}>
+        <span style={{ fontWeight: 800, color: DS.ink }}>{value}</span>{" "}
+        <span style={{ color: DS.ink2 }}>{text}</span>
+      </div>
     </div>
   );
 }
 
-/** A snapshot of what the user has scanned — only meaningful with real history. */
-function StatsOverview({ history }: { history: ScanHistoryEntry[] }) {
-  const stats = getHistoryStats(history);
-  const positive = stats.good + stats.moderate; // Buy + Consider
-  const goodPct = stats.total ? Math.round((positive / stats.total) * 100) : 0;
-  const avg = Math.round(stats.avgEcoScore);
-  const rated = positive + stats.caution + stats.avoid;
+const GOOD_VERDICTS = new Set(["BUY", "CONSIDER"]);
+const BAD_VERDICTS = new Set(["CAUTION", "AVOID"]);
 
-  const Divider = () => <div style={{ width: 1, background: DS.hair, margin: "4px 0" }} />;
+// Human-readable concern phrases, heaviest first — used to spell out what the
+// brands a user avoided were actually flagged for.
+const CONCERN_LABEL: Partial<Record<FlagCategory, string>> = {
+  child_labour: "child labour",
+  forced_labour: "forced labour and modern slavery",
+  animal_welfare: "animal welfare",
+  unsafe_conditions: "unsafe working conditions",
+  wage_theft: "wage theft",
+  union_busting: "union busting",
+  discrimination: "discrimination",
+  environmental_harm: "environmental harm",
+  supply_chain_opacity: "opaque supply chains",
+  boycott_listed: "active boycotts",
+};
+const CONCERN_ORDER: FlagCategory[] = [
+  "child_labour", "forced_labour", "animal_welfare", "unsafe_conditions",
+  "wage_theft", "union_busting", "discrimination", "environmental_harm",
+  "supply_chain_opacity", "boycott_listed",
+];
+
+const joinAnd = (xs: string[]) =>
+  xs.length <= 1 ? (xs[0] ?? "") : `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`;
+
+/**
+ * Decision-driven impact snapshot. Quality is measured only on what the user
+ * actually chose to BUY (good picks %), and they get credit for the flagged
+ * products they SAW and SKIPPED — scans they never acted on don't count.
+ */
+function StatsOverview({ history }: { history: ScanHistoryEntry[] }) {
+  // Re-read decisions whenever one is recorded so the card stays live.
+  const [, bump] = useState(0);
+  useEffect(() => {
+    const refresh = () => bump((n) => n + 1);
+    window.addEventListener(DECISIONS_EVENT, refresh);
+    return () => window.removeEventListener(DECISIONS_EVENT, refresh);
+  }, []);
+
+  const decisions = loadDecisions();
+  const verdictOf = (d: { verdict: string }) => (d.verdict || "").toUpperCase();
+  const bought = decisions.filter((d) => d.outcome === "bought");
+  const skipped = decisions.filter((d) => d.outcome === "rejected");
+  const goodBought = bought.filter((d) => GOOD_VERDICTS.has(verdictOf(d))).length;
+  const goodPct = bought.length ? Math.round((goodBought / bought.length) * 100) : 0;
+  const scanned = history.length;
+
+  // CO₂ avoided by buying lower-impact products than an average choice. Grade
+  // → kg CO₂e/kg estimates mirror getCarbonStats in userPreferences.
+  const GRADE_CO2: Record<string, number> = { a: 0.5, b: 1.2, c: 2.5, d: 4.0, e: 6.0 };
+  const BASELINE = 2.5, SERVING = 0.25; // kg CO₂e/kg, ~kg per product
+  let co2Saved = 0;
+  for (const d of bought) {
+    const co2 = GRADE_CO2[(d.ecoGrade || "").toLowerCase()];
+    if (co2 == null) continue;
+    const saved = (BASELINE - co2) * SERVING;
+    if (saved > 0) co2Saved += saved;
+  }
+  co2Saved = Math.round(co2Saved * 10) / 10;
+
+  // Distinct flagged brands the user saw a problem with and chose to skip, plus
+  // the actual concern categories behind them (child labour, animal welfare, …).
+  const avoidedBrandSet = new Set<string>();
+  const avoidedCategories = new Set<FlagCategory>();
+  for (const d of skipped) {
+    if (!BAD_VERDICTS.has(verdictOf(d))) continue;
+    const key = (d.brand || "").toLowerCase().trim();
+    if (key) avoidedBrandSet.add(key);
+    const flag = getVerifiedFlagForBrand(d.brand);
+    if (flag) avoidedCategories.add(flag.category);
+  }
+  const brandsAvoided = avoidedBrandSet.size;
+  const concernLabels = CONCERN_ORDER
+    .filter((c) => avoidedCategories.has(c))
+    .map((c) => CONCERN_LABEL[c]!)
+    .slice(0, 3);
+  // Name the real categories when we know them; otherwise still speak to the
+  // kinds of harm these flags represent so the impact lands.
+  const concernClause = concernLabels.length
+    ? `flagged for ${joinAnd(concernLabels)}`
+    : "flagged for issues like child labour, modern slavery or poor animal welfare";
 
   return (
     <div style={{
-      background: DS.card, borderRadius: DS.radius.md, padding: "18px 16px",
-      boxShadow: "0 2px 6px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)",
+      background: DS.card, borderRadius: DS.radius.lg, padding: 22,
+      boxShadow: "0 6px 20px rgba(26,22,20,0.11), 0 0 0 1px rgba(26,22,20,0.05)",
     }}>
-      <div style={{ display: "flex", alignItems: "stretch" }}>
-        <StatTile value={stats.total} label="Scanned" color={DS.ink} />
-        <Divider />
-        <StatTile value={`${goodPct}%`} label="Good picks" color={DS.good} />
-        <Divider />
-        <StatTile value={avg || "—"} label="Avg score" color={avg ? toneColor(scoreTone(avg)) : DS.muted} />
-        <Divider />
-        <StatTile value={stats.withLaborConcerns} label="Labour flags" color={stats.withLaborConcerns ? DS.bad : DS.muted} />
+      {/* Hero — the quality of what they actually bought. Coloured by tone so a
+          weak buy record reads honestly (red/amber), not a misleading green. */}
+      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+        <span style={{
+          fontSize: 48, fontWeight: 800, lineHeight: 0.85, letterSpacing: -1.5,
+          color: bought.length ? toneColor(scoreTone(goodPct)) : DS.muted,
+        }}>
+          {bought.length ? `${goodPct}%` : "—"}
+        </span>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 16.5, fontWeight: 800, color: DS.ink, letterSpacing: -0.2 }}>Good picks</div>
+          <div style={{ fontSize: 12.5, color: DS.muted, marginTop: 3, lineHeight: 1.35 }}>
+            {bought.length
+              ? `of the ${bought.length} product${bought.length > 1 ? "s" : ""} you chose to buy`
+              : "Buy or skip a scanned product to start tracking"}
+          </div>
+        </div>
       </div>
 
-      {rated > 0 && (
-        <>
-          <div style={{ display: "flex", height: 8, borderRadius: 999, overflow: "hidden", marginTop: 18, background: DS.bg }}>
-            {positive > 0 && <div style={{ flex: positive, background: DS.good }} />}
-            {stats.caution > 0 && <div style={{ flex: stats.caution, background: DS.warn }} />}
-            {stats.avoid > 0 && <div style={{ flex: stats.avoid, background: DS.bad }} />}
+      {/* Progress — good share of what was bought. */}
+      {bought.length > 0 && (
+        <div style={{ height: 10, borderRadius: 999, overflow: "hidden", marginTop: 16, background: DS.bg }}>
+          <div style={{ height: "100%", borderRadius: 999, background: toneColor(scoreTone(goodPct)), width: `${Math.max(goodPct, 2)}%` }} />
+        </div>
+      )}
+
+      {/* Impact details — fuller, spelled-out metrics. */}
+      <div style={{
+        marginTop: 18, paddingTop: 16, borderTop: `1px solid ${DS.hair}`,
+        display: "flex", flexDirection: "column", gap: 14,
+      }}>
+        <ImpactRow icon={Leaf} tint={DS.good}
+          value={`${co2Saved} kg`} text="CO₂ saved vs. buying average products" />
+        <ImpactRow icon={ScanLine} tint={DS.ink}
+          value={scanned} text={`product${scanned === 1 ? "" : "s"} scanned in total`} />
+      </div>
+
+      {/* Ethical statement — names what the avoided brands were flagged for. */}
+      {brandsAvoided > 0 && (
+        <div style={{
+          marginTop: 14, display: "flex", gap: 10, alignItems: "flex-start",
+          background: DS.goodBg, borderRadius: 12, padding: "12px 14px",
+        }}>
+          <Shield style={{ width: 16, height: 16, color: DS.good, flexShrink: 0, marginTop: 1 }} />
+          <div style={{ fontSize: 12.5, color: DS.ink, lineHeight: 1.45 }}>
+            You walked away from{" "}
+            <strong>{brandsAvoided} brand{brandsAvoided === 1 ? "" : "s"}</strong>{" "}
+            {concernClause}.
           </div>
-          <div style={{ display: "flex", gap: 14, marginTop: 11, flexWrap: "wrap" }}>
-            {[
-              { c: DS.good, label: "Buy / Consider", n: positive },
-              { c: DS.warn, label: "Caution", n: stats.caution },
-              { c: DS.bad, label: "Avoid", n: stats.avoid },
-            ].filter((x) => x.n > 0).map((x) => (
-              <div key={x.label} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ width: 8, height: 8, borderRadius: 999, background: x.c }} />
-                <span style={{ fontSize: 11.5, color: DS.muted, fontWeight: 600 }}>{x.label} · {x.n}</span>
-              </div>
-            ))}
-          </div>
-        </>
+        </div>
       )}
     </div>
   );
