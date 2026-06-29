@@ -49,7 +49,16 @@ export const OB_CSS = `
   padding: calc(env(safe-area-inset-top,0px) + clamp(14px, 3.2svh, 30px)) 26px
            calc(env(safe-area-inset-bottom,0px) + clamp(12px, 2svh, 18px));
 }
-.gs-ob .anim { display:flex; flex-direction:column; flex:1; min-height:0; animation: gs-ob-rise .45s cubic-bezier(0.22,1,0.36,1) both; }
+.gs-ob .anim {
+  display:flex; flex-direction:column; flex:1; min-height:0;
+  /* On short screens a step (esp. priorities, with its impact note) can be
+     taller than the viewport. Let the step content scroll inside its own area so
+     it never overlaps the pinned footer CTA below it. */
+  overflow-y:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch;
+  padding-bottom:4px;
+  animation: gs-ob-rise .45s cubic-bezier(0.22,1,0.36,1) both;
+}
+.gs-ob .anim::-webkit-scrollbar { width:0; height:0; }
 @keyframes gs-ob-rise { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
 
 .gs-ob .icon-tile {
@@ -109,7 +118,7 @@ export const OB_CSS = `
 
 .gs-ob .hero-mark { width:clamp(54px,8.5svh,76px); height:clamp(54px,8.5svh,76px); margin:clamp(2px,0.6svh,8px) auto clamp(12px,2.6svh,30px); display:grid; place-items:center; }
 .gs-ob .hero-mark svg { width:100%; height:100%; }
-.gs-ob .welcome-head { text-align:center; display:flex; flex-direction:column; flex:1; min-height:0; }
+.gs-ob .welcome-head { text-align:center; display:flex; flex-direction:column; flex:1 0 auto; }
 .gs-ob .welcome-head h1.title { font-size:clamp(26px, 4.6svh, 34px); }
 .gs-ob .welcome-head p.sub { margin:0 auto; }
 .gs-ob .features { display:flex; flex-direction:column; gap:clamp(8px, 1.3svh, 13px); margin-top:clamp(14px, 3svh, 38px); text-align:left; }
