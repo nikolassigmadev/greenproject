@@ -89,11 +89,17 @@
   --sidebar-border: 42 33.3% 84.1%;
   --sidebar-ring: 20 13% 9%;
 
-  /* Shadows */
-  --shadow-soft: 0 1px 4px rgba(26,22,20,0.06), 0 2px 12px rgba(26,22,20,0.04);
-  --shadow-card: 0 2px 8px rgba(26,22,20,0.06), 0 4px 24px rgba(26,22,20,0.04);
-  --shadow-elevated: 0 8px 32px rgba(26,22,20,0.12), 0 2px 8px rgba(26,22,20,0.06);
-  --shadow-bottom-nav: 0 -1px 0 rgba(26,22,20,0.06), 0 -4px 16px rgba(26,22,20,0.04);
+  /* Shadows — light mode. Cards/circles share the beige page tone, so these are
+     deliberately pronounced enough to lift a cream surface off the background. */
+  --shadow-soft: 0 1px 2px rgba(26,22,20,0.06), 0 3px 10px rgba(26,22,20,0.07);
+  --shadow-card: 0 1px 2px rgba(26,22,20,0.05), 0 4px 14px rgba(26,22,20,0.09), 0 12px 28px rgba(26,22,20,0.05);
+  --shadow-elevated: 0 8px 32px rgba(26,22,20,0.14), 0 2px 8px rgba(26,22,20,0.08);
+  --shadow-bottom-nav: 0 -1px 0 rgba(26,22,20,0.06), 0 -4px 16px rgba(26,22,20,0.06);
+  /* Default elevation applied to cream "card" surfaces so they stand out on beige. */
+  --ds-elev: 0 1px 2px rgba(26,22,20,0.05), 0 4px 14px rgba(26,22,20,0.09), 0 10px 24px rgba(26,22,20,0.05);
+  /* Recessed groove for progress/score-bar tracks: the empty track is page-tone
+     and otherwise invisible on a cream card, so we inset a hairline + soft shadow. */
+  --ds-track-inset: inset 0 0 0 1px rgba(26,22,20,0.07), inset 0 1px 2px rgba(26,22,20,0.09);
 }
 
 /* ── Dark theme ──────────────────────────────────────────────────────────── */
@@ -180,6 +186,8 @@
   --shadow-card: 0 2px 8px rgba(0,0,0,0.2), 0 4px 24px rgba(0,0,0,0.15);
   --shadow-elevated: 0 8px 32px rgba(0,0,0,0.3), 0 2px 8px rgba(0,0,0,0.2);
   --shadow-bottom-nav: 0 -1px 0 rgba(0,0,0,0.2), 0 -4px 16px rgba(0,0,0,0.15);
+  /* Dark cards already separate from the black page; no auto-elevation needed. */
+  --ds-elev: none;
 
   color-scheme: dark;
 }
@@ -232,6 +240,40 @@
   html {
     background: var(--ds-bg, #F7F6F3);
   }
+}
+
+/* ── Light-mode auto-elevation ───────────────────────────────────────────────
+   In light mode the cream card surface (#FBF7EC) sits on a near-identical beige
+   page (#F7F6F3), so untreated cards, sheets and icon circles blend in and look
+   flat. These rules give every card-toned surface a real shadow so it lifts off
+   the page. The cards are inline-styled with `background: var(--ds-card)`, which
+   serialises into the element's `style` attribute, so an attribute selector
+   catches them all in one place. The stylesheet `!important` intentionally beats
+   the weak per-component inline `boxShadow`s. Scoped to `:not(.dark)` so the dark
+   theme (cards on a black page already separate) is untouched. */
+:root:not(.dark) [style*="background: var(--ds-card)"],
+:root:not(.dark) [style*="background:var(--ds-card)"],
+:root:not(.dark) .bg-white,
+:root:not(.dark) .bg-card,
+:root:not(.dark) .bg-popover {
+  box-shadow: var(--ds-elev) !important;
+}
+
+/* Icon tiles/circles painted in the page tone (`var(--ds-bg)`) are otherwise
+   invisible. `var(--ds-bg)` is also the full-page wrapper colour, so we narrow
+   to elements that directly wrap an <svg> — i.e. icon badges, not page shells,
+   inputs or progress tracks. A softer shadow suits these small surfaces. */
+:root:not(.dark) [style*="background: var(--ds-bg)"]:has(> svg),
+:root:not(.dark) [style*="background:var(--ds-bg)"]:has(> svg) {
+  box-shadow: var(--shadow-soft) !important;
+}
+
+/* Progress / score-bar tracks: a page-tone bar (`var(--ds-bg)`) with `overflow:
+   hidden` clipping a coloured fill child. The empty portion blends into the
+   card, so we give the track a recessed groove. An *inset* shadow paints behind
+   child content, so it shows only on the unfilled part — the fill stays clean. */
+:root:not(.dark) [style*="background: var(--ds-bg)"][style*="overflow: hidden"] {
+  box-shadow: var(--ds-track-inset) !important;
 }
 
 /* ── Bottom nav styles ───────────────────────────────────────────────────── */

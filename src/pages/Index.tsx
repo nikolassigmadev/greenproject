@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { ChevronRight, Camera, Leaf, Shield, BarChart3, Users, Award, Zap, CheckCircle2, AlertTriangle as AlertTriangleIcon, Search, GitCompareArrows, ScanLine, Eye, Flag, FileText } from "lucide-react";
 import { Logo, Wordmark } from "@/components/Logo";
 import { DS, scoreTone, toneColor, toneBg } from "@/styles/design-tokens";
-import { loadScanHistory, type ScanHistoryEntry } from "@/utils/userPreferences";
+import { loadScanHistory, getHistoryStats, type ScanHistoryEntry } from "@/utils/userPreferences";
 import {
   scanEntryToShowcase,
   hasCompleteEcoData,
@@ -176,7 +176,7 @@ function ResultShowcase({ products, cycle, footer }: ResultShowcaseProps) {
           {/* SVG ring */}
           <div style={{ position: "relative", width: 96, height: 96, flexShrink: 0 }}>
             <svg width="96" height="96" viewBox="0 0 96 96" style={{ transform: "rotate(-90deg)" }}>
-              <circle cx="48" cy="48" r="42" fill="none" stroke={DS.bg} strokeWidth="8" />
+              <circle cx="48" cy="48" r="42" fill="none" stroke={DS.hair} strokeWidth="8" />
               <circle
                 cx="48" cy="48" r="42" fill="none"
                 stroke={product.ringColor}
@@ -280,6 +280,105 @@ function ScoreBadge({ score }: { score: number }) {
   );
 }
 
+/* ── Returning-user history surfaces ──────────────────────────────────── */
+
+function StatTile({ value, label, color }: { value: React.ReactNode; label: string; color: string }) {
+  return (
+    <div style={{ flex: 1, textAlign: "center", padding: "2px 2px" }}>
+      <div style={{ fontSize: 22, fontWeight: 800, color, lineHeight: 1 }}>{value}</div>
+      <div style={{ fontSize: 10.5, fontWeight: 600, color: DS.muted, marginTop: 6, letterSpacing: 0.2 }}>{label}</div>
+    </div>
+  );
+}
+
+/** A snapshot of what the user has scanned — only meaningful with real history. */
+function StatsOverview({ history }: { history: ScanHistoryEntry[] }) {
+  const stats = getHistoryStats(history);
+  const positive = stats.good + stats.moderate; // Buy + Consider
+  const goodPct = stats.total ? Math.round((positive / stats.total) * 100) : 0;
+  const avg = Math.round(stats.avgEcoScore);
+  const rated = positive + stats.caution + stats.avoid;
+
+  const Divider = () => <div style={{ width: 1, background: DS.hair, margin: "4px 0" }} />;
+
+  return (
+    <div style={{
+      background: DS.card, borderRadius: DS.radius.md, padding: "18px 16px",
+      boxShadow: "0 2px 6px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)",
+    }}>
+      <div style={{ display: "flex", alignItems: "stretch" }}>
+        <StatTile value={stats.total} label="Scanned" color={DS.ink} />
+        <Divider />
+        <StatTile value={`${goodPct}%`} label="Good picks" color={DS.good} />
+        <Divider />
+        <StatTile value={avg || "—"} label="Avg score" color={avg ? toneColor(scoreTone(avg)) : DS.muted} />
+        <Divider />
+        <StatTile value={stats.withLaborConcerns} label="Labour flags" color={stats.withLaborConcerns ? DS.bad : DS.muted} />
+      </div>
+
+      {rated > 0 && (
+        <>
+          <div style={{ display: "flex", height: 8, borderRadius: 999, overflow: "hidden", marginTop: 18, background: DS.bg }}>
+            {positive > 0 && <div style={{ flex: positive, background: DS.good }} />}
+            {stats.caution > 0 && <div style={{ flex: stats.caution, background: DS.warn }} />}
+            {stats.avoid > 0 && <div style={{ flex: stats.avoid, background: DS.bad }} />}
+          </div>
+          <div style={{ display: "flex", gap: 14, marginTop: 11, flexWrap: "wrap" }}>
+            {[
+              { c: DS.good, label: "Buy / Consider", n: positive },
+              { c: DS.warn, label: "Caution", n: stats.caution },
+              { c: DS.bad, label: "Avoid", n: stats.avoid },
+            ].filter((x) => x.n > 0).map((x) => (
+              <div key={x.label} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ width: 8, height: 8, borderRadius: 999, background: x.c }} />
+                <span style={{ fontSize: 11.5, color: DS.muted, fontWeight: 600 }}>{x.label} · {x.n}</span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function RecentScans({ recent }: { recent: ScanHistoryEntry[] }) {
+  return (
+    <section style={{ marginBottom: 28 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+        <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>Recent scans</h2>
+        <Link to="/dashboard" style={{ fontSize: 13, color: DS.muted, fontWeight: 500, textDecoration: "none" }}>See all</Link>
+      </div>
+      <div style={{ background: DS.card, borderRadius: DS.radius.md, overflow: "hidden", boxShadow: "0 2px 6px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)" }}>
+        {recent.map((entry, i) => {
+          const score = entry.scores.ecoScore ?? 50;
+          return (
+            <Link
+              key={entry.id}
+              to={`/product-off/${entry.barcode}`}
+              style={{
+                display: "flex", alignItems: "center", gap: 12, padding: 14,
+                borderTop: i ? `1px solid ${DS.hair}` : "none",
+                textDecoration: "none", color: DS.ink,
+              }}
+            >
+              <ScoreBadge score={score} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 15, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {entry.productName || "Unknown product"}
+                </div>
+                <div style={{ fontSize: 13, color: DS.muted, marginTop: 2 }}>
+                  {entry.brand || "Unknown brand"}
+                </div>
+              </div>
+              <ChevronRight style={{ width: 16, height: 16, color: DS.muted, flexShrink: 0 }} />
+            </Link>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 export default function Index() {
   const [history, setHistory] = useState<ScanHistoryEntry[]>([]);
 
@@ -299,6 +398,9 @@ export default function Index() {
   // from the rotating example to their most recent such scan — same card,
   // same animation — with a link through to the full breakdown.
   const recentEco = history.find(hasCompleteEcoData) ?? null;
+  // First-time users (fewer than 2 scans) get the example showcase on top; once
+  // they've scanned a couple of products we lead with their own history instead.
+  const isReturning = history.length >= 2;
 
   return (
     <div style={{ background: DS.bg, minHeight: "100dvh", fontFamily: DS.font, color: DS.ink }}>
@@ -347,39 +449,42 @@ export default function Index() {
         </Link>
         </div>
 
-        {/* Enter product manually */}
-        <Link to="/scan?manual=true" style={{
-          textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "center",
-          gap: 6, marginTop: -16, marginBottom: 28, padding: "8px 0",
-        }}>
-          <Search style={{ width: 14, height: 14, color: DS.muted }} />
-          <span style={{ fontSize: 13, color: DS.muted, fontWeight: 500 }}>Or enter a product manually</span>
-        </Link>
+        {/* Returning users lead with their own history; new users see the demo. */}
+        {isReturning ? (
+          <>
+            <section style={{ marginBottom: 28 }}>
+              <h2 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 14px" }}>Your impact</h2>
+              <StatsOverview history={history} />
+            </section>
 
-        {/* Animated result — example for new users, recent scan once they have one */}
-        <section style={{ marginBottom: 28 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 14px" }}>
-            {recentEco ? "Your most recent scan" : "Example result"}
-          </h2>
-          {recentEco ? (
-            <ResultShowcase
-              products={[scanEntryToShowcase(recentEco)]}
-              cycle={false}
-              footer={
-                <Link
-                  to={`/product-off/${recentEco.barcode}`}
-                  style={{
-                    display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                    textDecoration: "none", background: DS.bg, borderRadius: 12,
-                    padding: "11px 0", fontSize: 13, fontWeight: 700, color: DS.ink,
-                  }}
-                >
-                  View full breakdown
-                  <ChevronRight style={{ width: 15, height: 15 }} />
-                </Link>
-              }
-            />
-          ) : (
+            {recentEco && (
+              <section style={{ marginBottom: 28 }}>
+                <h2 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 14px" }}>Your most recent scan</h2>
+                <ResultShowcase
+                  products={[scanEntryToShowcase(recentEco)]}
+                  cycle={false}
+                  footer={
+                    <Link
+                      to={`/product-off/${recentEco.barcode}`}
+                      style={{
+                        display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                        textDecoration: "none", background: DS.bg, borderRadius: 12,
+                        padding: "11px 0", fontSize: 13, fontWeight: 700, color: DS.ink,
+                      }}
+                    >
+                      View full breakdown
+                      <ChevronRight style={{ width: 15, height: 15 }} />
+                    </Link>
+                  }
+                />
+              </section>
+            )}
+
+            {recent.length > 0 && <RecentScans recent={recent} />}
+          </>
+        ) : (
+          <section style={{ marginBottom: 28 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 14px" }}>Example result</h2>
             <ResultShowcase
               products={DEMO_PRODUCTS}
               cycle
@@ -389,8 +494,8 @@ export default function Index() {
                 </p>
               }
             />
-          )}
-        </section>
+          </section>
+        )}
 
         {/* Do more — high-visibility tools row, placed above the explainer content */}
         <section style={{ marginBottom: 28 }}>
@@ -533,42 +638,9 @@ export default function Index() {
           </div>
         </section>
 
-        {/* Recent scans (if any) */}
-        {recent.length > 0 && (
-          <section style={{ marginBottom: 28 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-              <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>Recent scans</h2>
-              <Link to="/dashboard" style={{ fontSize: 13, color: DS.muted, fontWeight: 500, textDecoration: "none" }}>See all</Link>
-            </div>
-            <div style={{ background: DS.card, borderRadius: DS.radius.md, overflow: "hidden", boxShadow: "0 2px 6px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)" }}>
-              {recent.map((entry, i) => {
-                const score = entry.scores.ecoScore ?? 50;
-                return (
-                  <Link
-                    key={entry.id}
-                    to={`/product-off/${entry.barcode}`}
-                    style={{
-                      display: "flex", alignItems: "center", gap: 12, padding: 14,
-                      borderTop: i ? `1px solid ${DS.hair}` : "none",
-                      textDecoration: "none", color: DS.ink,
-                    }}
-                  >
-                    <ScoreBadge score={score} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 15, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                        {entry.productName || "Unknown product"}
-                      </div>
-                      <div style={{ fontSize: 13, color: DS.muted, marginTop: 2 }}>
-                        {entry.brand || "Unknown brand"}
-                      </div>
-                    </div>
-                    <ChevronRight style={{ width: 16, height: 16, color: DS.muted, flexShrink: 0 }} />
-                  </Link>
-                );
-              })}
-            </div>
-          </section>
-        )}
+        {/* Recent scans — only here for users still in the demo state (1 scan);
+            returning users already get this surfaced up top. */}
+        {!isReturning && recent.length > 0 && <RecentScans recent={recent} />}
 
         {/* Features */}
         <section style={{ marginBottom: 28 }}>

@@ -3,14 +3,16 @@ import { Link } from "react-router-dom";
 import {
   Search, Loader2, GitCompareArrows, AlertTriangle,
   CheckCircle2, ExternalLink, Package2, X, Trophy, Leaf, Heart, Cloud,
-  ShieldCheck, Sparkles, Plus, SlidersHorizontal,
+  ShieldCheck, Sparkles, Plus, SlidersHorizontal, Camera,
 } from "lucide-react";
+import { useRef } from "react";
 import { BackButton } from "@/components/BackButton";
 import { DS } from "@/styles/design-tokens";
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
 import { getVerifiedFlagForBrand } from "@/services/brandFlags";
 import type { BrandFlagV2, FlagCategory } from "@/types/brandFlag";
 import { smartProductSearch } from "@/utils/smartProductSearch";
+import { identifyLabelFromImage, fileToDataUrl } from "@/utils/identifyFromImage";
 import { loadPriorities, priorityMultiplier, type UserPriorities } from "@/utils/userPreferences";
 import { toast } from "sonner";
 
@@ -246,6 +248,34 @@ function SlotInput({
   disabled: boolean;
 }) {
   const accent = slot === "A" ? DS.brand : DS.ink;
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [identifying, setIdentifying] = useState(false);
+
+  // Photo capture → same identification path as the scan page: OpenAI vision
+  // reads the packaging (and any barcode), a barcode resolves against OFF, and
+  // the resulting "Brand Product" label seeds the slot so the existing compare
+  // search resolves it. Image → OpenAI → barcode → OFF, just like a scan.
+  const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (fileRef.current) fileRef.current.value = "";
+    if (!file) return;
+    setIdentifying(true);
+    try {
+      const dataUrl = await fileToDataUrl(file);
+      const label = await identifyLabelFromImage(dataUrl);
+      if (label) {
+        onChange(label);
+        toast.success(`Identified: ${label}`);
+      } else {
+        toast.error("Couldn't read that product — try typing it instead.");
+      }
+    } catch {
+      toast.error("Couldn't process that photo.");
+    } finally {
+      setIdentifying(false);
+    }
+  };
+
   return (
     <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
       <span style={{
@@ -265,16 +295,42 @@ function SlotInput({
           type="text"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          disabled={disabled}
-          placeholder={slot === "A" ? "First product (e.g. Oreo)" : "Second product (e.g. Hydrox)"}
+          disabled={disabled || identifying}
+          placeholder={identifying ? "Identifying photo…" : slot === "A" ? "First product (e.g. Oreo)" : "Second product (e.g. Hydrox)"}
           style={{
-            width: "100%", height: 44, padding: "0 12px 0 34px",
+            width: "100%", height: 44, padding: "0 46px 0 34px",
             borderRadius: 11, border: `1.5px solid ${DS.hair}`,
             background: DS.bg, color: DS.ink,
             fontSize: 14, fontFamily: DS.font, outline: "none", boxSizing: "border-box",
             fontWeight: 600, opacity: disabled ? 0.6 : 1,
           }}
         />
+        {/* Photo / camera capture — identifies the product like a scan. */}
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={handlePhoto}
+          style={{ display: "none" }}
+        />
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          disabled={disabled || identifying}
+          aria-label={`Identify product ${slot} from a photo`}
+          style={{
+            position: "absolute", right: 6, width: 34, height: 34,
+            borderRadius: 9, border: "none", background: "transparent",
+            color: identifying ? DS.muted : accent,
+            display: "inline-flex", alignItems: "center", justifyContent: "center",
+            cursor: disabled || identifying ? "default" : "pointer",
+          }}
+        >
+          {identifying
+            ? <Loader2 style={{ width: 17, height: 17, animation: "spin 0.7s linear infinite" }} />
+            : <Camera style={{ width: 17, height: 17 }} />}
+        </button>
       </div>
     </label>
   );
