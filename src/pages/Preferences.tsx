@@ -132,7 +132,10 @@ export default function Preferences() {
     // all-Critical). Reject a change that would flatten them and explain why.
     const levels = priorityConfig.map((c) => levelIndex(updated[c.key]));
     if (levels.every((l) => l === levels[0])) {
-      toast("Pick at least one that stands out — your values can't all be the same.");
+      toast.warning("Your values can't all be the same", {
+        description: "Keep at least one ahead of the others so scoring has something to weigh.",
+        position: "top-center",
+      });
       return;
     }
     setPriorities(updated);

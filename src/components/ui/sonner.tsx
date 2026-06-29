@@ -27,6 +27,9 @@ const Toaster = ({ ...props }: ToasterProps) => {
           "--error-bg": "var(--ds-card)",
           "--error-text": "var(--ds-ink)",
           "--error-border": "color-mix(in srgb, var(--ds-bad) 35%, transparent)",
+          "--warning-bg": "var(--ds-card)",
+          "--warning-text": "var(--ds-ink)",
+          "--warning-border": "color-mix(in srgb, var(--ds-warn) 45%, transparent)",
         } as React.CSSProperties
       }
       toastOptions={{
