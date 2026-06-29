@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { X, Share2, ScanLine, GitCompareArrows, Leaf } from "lucide-react";
 import { DS } from "@/styles/design-tokens";
 import {
@@ -58,14 +59,18 @@ export function WeeklyRecapModal() {
     }
   };
 
-  return (
+  // Portal to <body> so the overlay escapes the page-transition stacking context
+  // (an opacity animation) and its z-index can actually sit above the BottomNav.
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
       aria-label="Your weekly impact recap"
       onClick={close}
       style={{
-        position: "fixed", inset: 0, zIndex: 200,
+        // Above the fixed BottomNav (z-index 9999) so the sheet's action buttons
+        // aren't covered by it — this is a full-screen modal with its own backdrop.
+        position: "fixed", inset: 0, zIndex: 10000,
         background: "rgba(0,0,0,0.5)",
         backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)",
         display: "flex", alignItems: "flex-end", justifyContent: "center",
@@ -152,6 +157,7 @@ export function WeeklyRecapModal() {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

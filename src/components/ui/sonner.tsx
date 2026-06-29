@@ -11,6 +11,15 @@ const Toaster = ({ ...props }: ToasterProps) => {
       theme={theme as ToasterProps["theme"]}
       position="bottom-center"
       offset={92}
+      // On mobile sonner uses its own small offset (16px) and ignores `offset`,
+      // so a top-positioned toast would tuck under the iOS notch / Dynamic
+      // Island and the bottom nav. Pad both edges by the device safe areas.
+      mobileOffset={{
+        top: "calc(env(safe-area-inset-top, 0px) + 16px)",
+        bottom: "calc(env(safe-area-inset-bottom, 0px) + 92px)",
+        left: "16px",
+        right: "16px",
+      }}
       duration={3000}
       visibleToasts={3}
       gap={8}

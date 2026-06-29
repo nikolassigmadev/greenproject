@@ -1,0 +1,1528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#f4f1ea">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>goodscan — sourcing map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
+<style>
+  :root {
+    --bg: #f4f1ea;
+    --panel: #faf8f3;
+    --ink: #1b1b19;
+    --ink-2: #5b594f;
+    --ink-3: #908d80;
+    --line: #d8d3c4;
+    --land: #ddd7c8;
+    --good: #1F7A4D;
+    --good-soft: #e2efe7;
+    --bad: #b1492f;
+    --bad-soft: #f1e0d6;
+
+    /* 4-tier verdict palette (Be Slavery Free / Mighty Earth) */
+    --v-leader:  #1F7A4D;  --v-leader-soft:  #e2efe7;
+    --v-better:  #5C9E5E;  --v-better-soft:  #e6f0e2;
+    --v-caution: #C07A33;  --v-caution-soft: #f4e7d6;
+    --v-avoid:   #B1492F;  --v-avoid-soft:   #f1e0d6;
+
+    --logo-ink: #0B0B0B;
+    --logo-green: #1F7A4D;
+
+    --hdr: 10px;
+    --peek: 238px;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bot: env(safe-area-inset-bottom, 0px);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Inter', -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+    overscroll-behavior: none;
+    position: fixed; inset: 0;
+    -webkit-user-select: none; user-select: none;
+    -webkit-touch-callout: none;
+  }
+  .app {
+    position: relative;
+    height: 100dvh;
+    height: 100vh;
+    width: 100%;
+    overflow: hidden;
+  }
+
+  /* ---------- header ---------- */
+  header {
+    position: absolute; top: 0; left: 0; right: 0;
+    z-index: 30;
+    height: calc(var(--hdr) + var(--safe-top));
+    padding: var(--safe-top) 18px 0;
+    display: flex; align-items: center; justify-content: space-between;
+    background: linear-gradient(var(--bg) 62%, rgba(244,241,234,0));
+  }
+  body.dark header { background: linear-gradient(var(--bg) 62%, rgba(19,18,16,0)); }
+  .brand { display: flex; flex-direction: column; gap: 4px; line-height: 1.05; }
+  .gs-logo { display: block; width: auto; }
+  .brand .gs-logo { height: 25px; align-self: flex-start; }
+  .brand .tag { font-size: 10.5px; color: var(--ink-3); letter-spacing: 0.01em; }
+  .theme-toggle {
+    width: 38px; height: 38px;
+    border: 1px solid var(--line);
+    background: var(--panel);
+    border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .theme-toggle:active { transform: scale(.93); }
+  .theme-toggle .glyph {
+    width: 16px; height: 16px; border-radius: 50%;
+    border: 1.5px solid var(--ink);
+    background: linear-gradient(90deg, var(--ink) 0 50%, transparent 50% 100%);
+  }
+
+  /* ---------- stage (globe lives in the area above the peeking sheet) ---------- */
+  .stage {
+    position: absolute;
+    top: calc(var(--hdr) + var(--safe-top));
+    left: 0; right: 0;
+    bottom: calc(var(--peek) + var(--safe-bot));
+    display: flex; align-items: center; justify-content: center;
+    z-index: 10;
+  }
+  .globe-wrap { position: relative; touch-action: none; cursor: grab; }
+  .globe-wrap.dragging { cursor: grabbing; }
+  canvas { display: block; }
+
+  .stage-count {
+    position: absolute; top: 8px; left: 18px;
+    z-index: 12;
+    font-size: 12px; color: var(--ink-3);
+    display: flex; gap: 12px;
+  }
+  .stage-count { gap: 10px; }
+  .stage-count b { color: var(--ink); font-weight: 600; }
+  .stage-count .g b { color: var(--v-leader); }
+  .stage-count .c b { color: var(--v-caution); }
+  .stage-count .b b { color: var(--v-avoid); }
+  .stage-hint {
+    position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%);
+    z-index: 12;
+    font-size: 11px; color: var(--ink-3);
+    letter-spacing: 0.04em; text-transform: uppercase;
+    display: flex; align-items: center; gap: 7px;
+    white-space: nowrap; pointer-events: none;
+    transition: opacity .3s;
+  }
+  .stage-hint .k { border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; font-size: 10px; }
+
+  .zoom-ctrl {
+    position: absolute; right: 14px; bottom: 6px; z-index: 13;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .zoom-ctrl button {
+    width: 36px; height: 36px;
+    border: 1px solid var(--line); background: var(--panel); color: var(--ink);
+    border-radius: 11px; font-size: 19px; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-family: inherit;
+  }
+  .zoom-ctrl button:active { transform: scale(.92); }
+
+  /* pins */
+  .pin {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    width: 15px; height: 15px;
+    border-radius: 50%;
+    border: 2px solid var(--bg);
+    cursor: pointer;
+    will-change: left, top;
+  }
+  .pin.good { background: var(--good); }
+  .pin.bad { background: var(--bad); }
+  .pin.active { width: 21px; height: 21px; box-shadow: 0 0 0 5px rgba(27,27,25,0.06); }
+  body.dark .pin.active { box-shadow: 0 0 0 5px rgba(241,239,231,0.07); }
+  .pin .ping { position: absolute; inset: -2px; border-radius: 50%; border: 1.5px solid currentColor; opacity: 0; }
+  .pin.active.good { color: var(--good); }
+  .pin.active.bad { color: var(--bad); }
+  .pin.active .ping { animation: ping 1.8s ease-out infinite; }
+  @keyframes ping {
+    0% { transform: scale(1); opacity: .5; }
+    100% { transform: scale(2.6); opacity: 0; }
+  }
+  .pin-label {
+    position: absolute;
+    transform: translate(-50%, -165%);
+    background: var(--ink); color: var(--bg);
+    font-size: 11px; font-weight: 500;
+    padding: 3px 8px; border-radius: 5px;
+    white-space: nowrap; pointer-events: none;
+    opacity: 0; transition: opacity .2s;
+    z-index: 15;
+  }
+  .pin-label.show { opacity: 1; }
+
+  /* markers are decorative; the globe handles all pointer gestures + hit-testing */
+  #pins { pointer-events: none; }
+
+  /* cluster badge — a composition ring (conic of member verdicts) around a count */
+  .cluster {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    border: 2px solid var(--bg);
+    box-shadow: 0 2px 9px rgba(27,27,25,0.20);
+    will-change: left, top;
+  }
+  body.dark .cluster { box-shadow: 0 2px 11px rgba(0,0,0,0.55); }
+  .cluster .cnt {
+    border-radius: 50%;
+    background: var(--panel);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+  .cluster .ping { display: none; }
+  .pin .cnt { display: none; }
+
+  /* ---------- bottom sheet ---------- */
+  .sheet {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    z-index: 25;
+    height: 86dvh; height: 86vh;
+    background: var(--panel);
+    border-top-left-radius: 22px; border-top-right-radius: 22px;
+    box-shadow: 0 -10px 40px rgba(27,27,25,0.13), 0 -1px 0 var(--line);
+    display: flex; flex-direction: column;
+    transform: translateY(60%);
+    will-change: transform;
+    touch-action: none;
+  }
+  body.dark .sheet { box-shadow: 0 -10px 40px rgba(0,0,0,0.5); }
+
+  .grip {
+    flex-shrink: 0;
+    padding-top: 9px;
+    cursor: grab;
+  }
+  .grip:active { cursor: grabbing; }
+  .grip .bar {
+    width: 38px; height: 4.5px; border-radius: 100px;
+    background: var(--line); margin: 0 auto 12px;
+  }
+
+  /* peek card — selected site summary, always visible */
+  .peek {
+    flex-shrink: 0;
+    padding: 0 20px 16px;
+    border-bottom: 1px solid var(--line);
+  }
+  .peek .top { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+  .status {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 10.5px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+    padding: 4px 10px; border-radius: 100px;
+  }
+  .status .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .status.good { background: var(--good-soft); color: var(--good); }
+  .status.good .dot { background: var(--good); }
+  .status.bad { background: var(--bad-soft); color: var(--bad); }
+  .status.bad .dot { background: var(--bad); }
+  .grade {
+    font-family: 'Inter', sans-serif; font-size: 42px; line-height: .9; font-weight: 800;
+    letter-spacing: -0.03em; text-align: right;
+  }
+  .grade small { display: block; margin-top: 4px; font-family: 'Inter'; font-size: 11px; font-weight: 500; color: var(--ink-3); letter-spacing: .02em; }
+  .peek h2 {
+    font-family: 'Inter', sans-serif; font-weight: 700;
+    font-size: 24px; line-height: 1.08; letter-spacing: -0.02em;
+    margin: 12px 0 6px;
+  }
+  .meta { font-size: 12.5px; color: var(--ink-2); display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .meta .sep { color: var(--line); }
+  .peek-more {
+    margin-top: 12px; font-size: 11px; color: var(--ink-3);
+    letter-spacing: 0.04em; text-transform: uppercase;
+    display: flex; align-items: center; gap: 6px;
+    transition: opacity .25s;
+  }
+  .sheet.open .peek-more { opacity: 0; }
+  .peek-more svg { width: 12px; height: 12px; }
+
+  /* scrollable detail + list */
+  .scroll {
+    flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    padding-bottom: calc(28px + var(--safe-bot));
+  }
+  .scroll::-webkit-scrollbar { width: 0; }
+
+  .detail { padding: 20px 20px 22px; border-bottom: 1px solid var(--line); }
+  .summary { font-size: 14px; line-height: 1.55; color: var(--ink-2); margin-bottom: 20px; }
+  .bars { display: grid; gap: 12px; }
+  .bar-row { display: grid; grid-template-columns: 110px 1fr 30px; align-items: center; gap: 10px; }
+  .bar-row .lbl { font-size: 12.5px; color: var(--ink-2); }
+  .track { height: 6px; background: var(--line); border-radius: 100px; overflow: hidden; }
+  .fill { height: 100%; border-radius: 100px; width: 0; transition: width .7s cubic-bezier(.4,0,.2,1); }
+  .fill.good { background: var(--good); }
+  .fill.bad { background: var(--bad); }
+  .bar-row .val { font-size: 12px; font-variant-numeric: tabular-nums; color: var(--ink); text-align: right; }
+  .products { margin-top: 22px; }
+  .products .h { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 10px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 7px; }
+  .chip { font-size: 12px; color: var(--ink-2); border: 1px solid var(--line); border-radius: 100px; padding: 5px 12px; background: var(--bg); }
+
+  /* sources */
+  .sources { margin-top: 22px; }
+  .sources .h { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 10px; }
+  .srclist { list-style: none; display: grid; gap: 8px; }
+  .srclist li { font-size: 12px; line-height: 1.45; color: var(--ink-2); padding-left: 15px; position: relative; }
+  .srclist li::before { content: ''; position: absolute; left: 1px; top: 7px; width: 5px; height: 5px; border-radius: 50%; background: var(--ink-3); }
+  .srclist a { color: var(--good); text-decoration: none; border-bottom: 1px solid color-mix(in srgb, var(--good) 35%, transparent); }
+  .srclist a:active { border-bottom-color: var(--good); }
+
+  /* filter + list */
+  .list-wrap { padding-top: 6px; }
+  .list-head {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 8px;
+    padding: 14px 20px 10px;
+  }
+  .seg button { white-space: nowrap; }
+  .list-head .h { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
+  .seg {
+    display: inline-flex; background: var(--bg); border: 1px solid var(--line);
+    border-radius: 100px; padding: 2px;
+  }
+  .seg button {
+    font-family: inherit; font-size: 11.5px; font-weight: 500; color: var(--ink-2);
+    border: 0; background: transparent; padding: 5px 11px; border-radius: 100px; cursor: pointer;
+  }
+  .seg button.on { background: var(--ink); color: var(--bg); }
+
+  .litem {
+    display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 13px;
+    padding: 13px 20px; cursor: pointer; border-left: 2px solid transparent;
+  }
+  .litem:active { background: rgba(27,27,25,0.04); }
+  .litem.active { background: rgba(27,27,25,0.05); border-left-color: var(--ink); }
+  body.dark .litem.active { background: rgba(241,239,231,0.06); }
+  .litem .ldot { width: 9px; height: 9px; border-radius: 50%; }
+  .litem .ldot.good { background: var(--good); }
+  .litem .ldot.bad { background: var(--bad); }
+  .litem .lname { font-size: 14px; font-weight: 500; }
+  .litem .lmeta { font-size: 12px; color: var(--ink-3); margin-top: 1px; }
+  .litem .lscore { font-family: 'Inter', sans-serif; font-size: 21px; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .litem .lscore.good { color: var(--good); }
+  .litem .lscore.bad { color: var(--bad); }
+
+  /* ---------- 4-tier verdict styling ---------- */
+  .pin.leader  { background: var(--v-leader);  color: var(--v-leader);  }
+  .pin.better  { background: var(--v-better);  color: var(--v-better);  }
+  .pin.caution { background: var(--v-caution); color: var(--v-caution); }
+  .pin.avoid   { background: var(--v-avoid);   color: var(--v-avoid);   }
+
+  .status.leader  { background: var(--v-leader-soft);  color: var(--v-leader);  }
+  .status.better  { background: var(--v-better-soft);  color: var(--v-better);  }
+  .status.caution { background: var(--v-caution-soft); color: var(--v-caution); }
+  .status.avoid   { background: var(--v-avoid-soft);   color: var(--v-avoid);   }
+  .status.leader  .dot { background: var(--v-leader);  }
+  .status.better  .dot { background: var(--v-better);  }
+  .status.caution .dot { background: var(--v-caution); }
+  .status.avoid   .dot { background: var(--v-avoid);   }
+
+  .fill.leader  { background: var(--v-leader);  }
+  .fill.better  { background: var(--v-better);  }
+  .fill.caution { background: var(--v-caution); }
+  .fill.avoid   { background: var(--v-avoid);   }
+
+  .ldot.leader  { background: var(--v-leader);  }
+  .ldot.better  { background: var(--v-better);  }
+  .ldot.caution { background: var(--v-caution); }
+  .ldot.avoid   { background: var(--v-avoid);   }
+  .lscore.leader  { color: var(--v-leader);  }
+  .lscore.better  { color: var(--v-better);  }
+  .lscore.caution { color: var(--v-caution); }
+  .lscore.avoid   { color: var(--v-avoid);   }
+
+  /* facts block in detail */
+  .facts { display: grid; gap: 11px; margin: 0 0 20px; }
+  .fact { display: flex; flex-direction: column; gap: 2px; }
+  .fact .fk { font-size: 10.5px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-3); }
+  .fact .fv { font-size: 13px; color: var(--ink); line-height: 1.45; }
+
+  /* ---------- loader ---------- */
+  #loader {
+    position: absolute; inset: 0; z-index: 60;
+    background: var(--bg);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 26px;
+    transition: opacity .55s ease;
+  }
+  #loader.hide { opacity: 0; pointer-events: none; }
+  #loader .lcanvas { width: 168px; height: 168px; }
+  #loader .gs-logo { height: 30px; }
+  #loader .lsub {
+    font-size: 11px; color: var(--ink-3); letter-spacing: 0.18em; text-transform: uppercase;
+    margin-top: -14px;
+  }
+
+  /* dark mode */
+  body.dark {
+    --bg: #131210;
+    --panel: #1a1916;
+    --ink: #f1efe7;
+    --ink-2: #b6b3a6;
+    --ink-3: #807d71;
+    --line: #322f29;
+    --land: #f1efe7;
+    --good: #3FD089;
+    --good-soft: rgba(63,208,137,0.16);
+    --logo-ink: #FFFFFF;
+    --logo-green: #3FD089;
+    --bad: #db6c4c;
+    --bad-soft: rgba(219,108,76,0.16);
+    --v-leader:  #3FD089;  --v-leader-soft:  rgba(63,208,137,0.16);
+    --v-better:  #74C07E;  --v-better-soft:  rgba(116,192,126,0.16);
+    --v-caution: #d99a4e;  --v-caution-soft: rgba(217,154,78,0.16);
+    --v-avoid:   #db6c4c;  --v-avoid-soft:   rgba(219,108,76,0.16);
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="stage">
+    <div class="stage-count">
+      <span class="g"><b id="recCount">0</b> recommended</span>
+      <span class="c"><b id="cautionCount">0</b> caution</span>
+      <span class="b"><b id="avoidCount">0</b> avoid</span>
+    </div>
+    <div class="globe-wrap" id="wrap">
+      <canvas id="globe"></canvas>
+      <div id="pins"></div>
+      <div class="pin-label" id="plabel"></div>
+    </div>
+    <div class="stage-hint" id="hint"><span class="k">drag</span> spin · <span class="k">pinch</span> zoom · tap markers</div>
+    <div class="zoom-ctrl">
+      <button id="zoomIn" aria-label="Zoom in">+</button>
+      <button id="zoomOut" aria-label="Zoom out">−</button>
+    </div>
+  </div>
+
+  <div class="sheet" id="sheet">
+    <div class="grip" id="grip">
+      <div class="bar"></div>
+      <div class="peek" id="peek"></div>
+    </div>
+    <div class="scroll" id="scroll">
+      <div class="detail" id="detail"></div>
+      <div class="list-wrap">
+        <div class="list-head">
+          <span class="h">All chocolate brands</span>
+          <span class="seg" id="seg">
+            <button data-f="all" class="on">All</button>
+            <button data-f="rec">Recommended</button>
+            <button data-f="caution">Caution</button>
+            <button data-f="avoid">Avoid</button>
+          </span>
+        </div>
+        <div id="list"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="loader">
+    <canvas class="lcanvas" id="lcanvas" width="200" height="200"></canvas>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:14px">
+      <svg class="gs-logo" viewBox="0 0 480 120" role="img" aria-label="goodscan" xmlns="http://www.w3.org/2000/svg">
+        <g transform="translate(7.6,27.7) scale(1.68)">
+          <g fill="none" stroke="var(--logo-ink)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 13.4 L5 8 Q5 5 8 5 L13.4 5"/>
+            <path d="M34.6 5 L40 5 Q43 5 43 8 L43 13.4"/>
+            <path d="M43 34.6 L43 40 Q43 43 40 43 L34.6 43"/>
+            <path d="M13.4 43 L8 43 Q5 43 5 40 L5 34.6"/>
+          </g>
+          <path d="M12.8 24.5 L21.2 33.4 L35.7 17.4" fill="none" stroke="var(--logo-green)" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round"/>
+        </g>
+        <text x="104" y="80" font-family="Poppins, Inter, sans-serif" font-size="62" font-weight="700" letter-spacing="-1.5">
+          <tspan fill="var(--logo-ink)">good</tspan><tspan fill="var(--logo-green)">scan</tspan>
+        </text>
+      </svg>
+      <span class="lsub">mapping the supply chain</span>
+    </div>
+  </div>
+</div>
+
+<script>
+/* The Chocolate Brand Directory — every company plotted at its owner HQ.
+   verdict: leader | better | caution | avoid  (Be Slavery Free / Mighty Earth 2025 tiers) */
+const COMPANIES = [
+  /* ---- 1. Major mass-market manufacturers ---- */
+  { id:'hershey', name:'Hershey', owner:'The Hershey Co.', hq:'Hershey, PA, USA', lon:-76.65, lat:40.28, category:'Manufacturer', verdict:'caution', score:52,
+    sourcing:"Côte d'Ivoire & Ghana via Barry Callebaut, Cargill, Olam",
+    summary:"Runs a 'Cocoa For Good' program but accused of greenwashing; ~68% traceability visibility and named in a forced-labour suit (Coubaly v. Cargill, dismissed on standing 2025).",
+    products:["Reese's","Kisses","Kit Kat (US)","Lily's","Heath","Almond Joy","Mounds","Jolly Rancher"] },
+  { id:'mars', name:'Mars', owner:'Mars Inc. (private)', hq:'McLean, VA, USA', lon:-77.18, lat:38.93, category:'Manufacturer', verdict:'caution', score:55,
+    sourcing:'~14 countries incl. W. Africa, Indonesia, Latin America',
+    summary:'Among the better big-six on traceability and women (2025 Scorecard), but still heavily exposed to West Africa and Harkin-Engel misses.',
+    products:["M&M's","Snickers","Twix","Dove","Bounty","Milky Way","Galaxy","Maltesers"] },
+  { id:'mondelez', name:'Mondelez', owner:'Mondelez Intl', hq:'Chicago, IL, USA', lon:-87.63, lat:41.88, category:'Manufacturer', verdict:'avoid', score:24,
+    sourcing:"Ghana, Côte d'Ivoire, Indonesia, DR, Brazil (Cocoa Life)",
+    summary:"2025 Scorecard 'Bad Egg' — did not respond. Subject of an April 2022 Channel 4 Dispatches documentary ('Cadbury Exposed') and a greenwashing suit.",
+    products:["Cadbury","Oreo","Toblerone","Milka","Green & Black's","Cote d'Or","Chips Ahoy"] },
+  { id:'nestle', name:'Nestlé', owner:'Nestlé S.A.', hq:'Vevey, Switzerland', lon:6.84, lat:46.46, category:'Manufacturer', verdict:'caution', score:50,
+    sourcing:'West Africa & others via the Nestlé Cocoa Plan',
+    summary:'Scorecard praised its Cocoa Plan and child-labour work, but it carries the SCOTUS slavery-case history.',
+    products:["KitKat (global)","Aero","Smarties","Quality Street","Toll House"] },
+  { id:'ferrero', name:'Ferrero', owner:'Ferrero Group', hq:'Alba, Italy', lon:8.03, lat:44.70, category:'Manufacturer', verdict:'caution', score:49,
+    sourcing:'West Africa & others; Ferrero Farming Values',
+    summary:'Green-bean rating on deforestation; still a very large bulk buyer.',
+    products:["Nutella","Kinder","Ferrero Rocher","Raffaello","Tic Tac","Butterfinger","Crunch","Baby Ruth"] },
+  { id:'lindt', name:'Lindt & Sprüngli', owner:'Lindt & Sprüngli', hq:'Kilchberg, Switzerland', lon:8.55, lat:47.32, category:'Manufacturer', verdict:'caution', score:53,
+    sourcing:'Ghana (~80k farmers) via ECOM; Ecuador & others',
+    summary:'Green-bean on deforestation and runs its own Farming Program, but a 2024 Swiss child-labour doc and Ghirardelli heavy-metal tests weigh on it.',
+    products:["Lindt","Lindor","Ghirardelli","Russell Stover","Whitman's"] },
+  { id:'ritter', name:'Ritter Sport', owner:'Alfred Ritter GmbH', hq:'Waldenbuch, Germany', lon:9.13, lat:48.65, category:'Manufacturer', verdict:'better', score:74,
+    sourcing:'Own farm in Nicaragua (Cacao Nica) + West Africa',
+    summary:"Won a 2025 Chocolate Scorecard 'Good Egg' award; green egg for pesticides; partial own-estate cocoa and long-term sourcing, though it still buys some bulk West-African cocoa.",
+    products:["Ritter Sport"] },
+  { id:'valrhona', name:'Valrhona', owner:'Valrhona (Savencia)', hq:"Tain-l'Hermitage, France", lon:4.86, lat:45.07, category:'Manufacturer', verdict:'better', score:78,
+    sourcing:'Direct, traceable single-origin (Latin America etc.)',
+    summary:'Premium B2B / pastry brand with a relatively strong score (19); emphasises traceable partner plantations.',
+    products:["Valrhona couverture"] },
+  { id:'genmills', name:'General Mills', owner:'General Mills', hq:'Minneapolis, MN, USA', lon:-93.27, lat:44.98, category:'Manufacturer', verdict:'caution', score:46,
+    sourcing:'Bulk via traders',
+    summary:'Assessed on the 2025 Scorecard; a conventional buyer (e.g. Häagen-Dazs US, baking chips).',
+    products:["Häagen-Dazs (US)","Baking chips"] },
+  { id:'kellanova', name:'Kellanova', owner:'Kellanova (ex-Kellogg)', hq:'Chicago, IL, USA', lon:-87.65, lat:41.85, category:'Manufacturer', verdict:'caution', score:45,
+    sourcing:'Bulk via traders',
+    summary:'Assessed; conventional buyer, now part of Mars.',
+    products:["Pop-Tarts","Rice Krispies Treats"] },
+  { id:'unilever', name:'Unilever', owner:'Unilever', hq:'London, UK', lon:-0.13, lat:51.51, category:'Manufacturer', verdict:'caution', score:51,
+    sourcing:'Bulk via traders',
+    summary:"Assessed; ice-cream chocolate (Magnum; Ben & Jerry's uses fairtrade).",
+    products:["Magnum","Ben & Jerry's"] },
+  { id:'storck', name:'Storck', owner:'August Storck KG', hq:'Berlin, Germany', lon:13.40, lat:52.52, category:'Manufacturer', verdict:'caution', score:47,
+    sourcing:'Bulk via traders',
+    summary:'Assessed; conventional sourcing.',
+    products:["Werther's Original","Toffifee","Merci","Riesen","Knoppers"] },
+  { id:'godiva', name:'Godiva', owner:'Pladis / Yıldız Holding', hq:'Istanbul, Turkey', lon:28.98, lat:41.01, category:'Manufacturer', verdict:'caution', score:44,
+    sourcing:'Bulk via traders',
+    summary:'Premium-priced but conventional sourcing; limited public traceability.',
+    products:["Godiva"] },
+  { id:'fazer', name:'Fazer', owner:'Fazer Group', hq:'Helsinki, Finland', lon:24.94, lat:60.17, category:'Manufacturer', verdict:'caution', score:56,
+    sourcing:'West Africa; cocoa programme',
+    summary:'Assessed; Nordic maker engaging on sustainability.',
+    products:["Karl Fazer","Fazer Blue"] },
+  { id:'whittakers', name:"Whittaker's", owner:'J.H. Whittaker & Sons', hq:'Porirua, New Zealand', lon:174.84, lat:-41.13, category:'Manufacturer', verdict:'better', score:80,
+    sourcing:'Traceable; Rainforest Alliance + own programs',
+    summary:"'Good Egg' two years running; strong traceability for a mid-size maker.",
+    products:["Whittaker's"] },
+  { id:'meiji', name:'Meiji', owner:'Meiji Holdings', hq:'Tokyo, Japan', lon:139.69, lat:35.69, category:'Manufacturer', verdict:'caution', score:50,
+    sourcing:'West Africa, Venezuela, etc.',
+    summary:'Assessed; large Japanese maker, improving disclosure.',
+    products:["Meiji"] },
+  { id:'morinaga', name:'Morinaga', owner:'Morinaga & Co.', hq:'Tokyo, Japan', lon:139.75, lat:35.66, category:'Manufacturer', verdict:'caution', score:48,
+    sourcing:'Bulk via traders incl. Asian grinders',
+    summary:'Assessed Asian major; participation up but traceability limited.',
+    products:["Morinaga"] },
+  { id:'lotte', name:'Lotte', owner:'Lotte', hq:'Seoul, South Korea', lon:126.98, lat:37.51, category:'Manufacturer', verdict:'caution', score:46,
+    sourcing:'Bulk via traders incl. Asian grinders',
+    summary:'Assessed Asian major; participation up but traceability limited.',
+    products:["Ghana (Lotte)","Crunky"] },
+  { id:'glico', name:'Glico', owner:'Ezaki Glico', hq:'Osaka, Japan', lon:135.50, lat:34.69, category:'Manufacturer', verdict:'caution', score:47,
+    sourcing:'Bulk via traders incl. Asian grinders',
+    summary:'Assessed Asian major; participation up but traceability limited.',
+    products:["Pocky"] },
+  { id:'stollwerck', name:'Stollwerck', owner:'Stollwerck', hq:'Norderstedt, Germany', lon:9.99, lat:53.69, category:'Manufacturer', verdict:'caution', score:45,
+    sourcing:'Bulk via traders',
+    summary:'Assessed European maker & private-label producer; mid-pack.',
+    products:["Sarotti","Alpia"] },
+  { id:'orkla', name:'Orkla', owner:'Orkla', hq:'Oslo, Norway', lon:10.74, lat:59.91, category:'Manufacturer', verdict:'caution', score:49,
+    sourcing:'Bulk via traders',
+    summary:'Assessed European maker & private-label producer; mid-pack.',
+    products:["Freia","Nidar"] },
+  { id:'kruger', name:'Krüger', owner:'Krüger GmbH', hq:'Bergisch Gladbach, Germany', lon:7.13, lat:50.99, category:'Manufacturer', verdict:'caution', score:44,
+    sourcing:'Bulk via traders',
+    summary:'Assessed private-label producer; mid-pack.',
+    products:["Mauxion","Private label"] },
+  { id:'cemoi', name:'Cémoi', owner:'Cémoi', hq:'Perpignan, France', lon:2.90, lat:42.70, category:'Manufacturer', verdict:'caution', score:50,
+    sourcing:'West Africa; own programs',
+    summary:'French maker & processor; engaging but conventional.',
+    products:["Cémoi"] },
+
+  /* ---- 2. Cocoa traders, grinders & processors ---- */
+  { id:'barry', name:'Barry Callebaut', owner:'Barry Callebaut', hq:'Zurich, Switzerland', lon:8.54, lat:47.37, category:'Trader / processor', verdict:'caution', score:48,
+    sourcing:"Côte d'Ivoire, Ghana, Cameroon (direct + bulk)",
+    summary:"World's largest processor; disclosed direct suppliers but found buying from illegal-deforestation areas and named in the Brazil case. Makes for most brands incl. Tony's.",
+    products:["Callebaut","Cacao Barry","Van Houten"] },
+  { id:'cargill', name:'Cargill', owner:'Cargill (private)', hq:'Minnetonka, MN, USA', lon:-93.47, lat:44.92, category:'Trader / processor', verdict:'avoid', score:26,
+    sourcing:'West Africa, Brazil, Indonesia',
+    summary:'A Brazilian Labour Court found it liable for child & forced labour (ruling Sept 2023, from a 2021 case); co-defendant in US cocoa suits (Coubaly v. Cargill, dismissed on standing 2025); illegal-area sourcing.',
+    products:["Gerkens cocoa","Bulk couverture"] },
+  { id:'olam', name:'Olam (ofi)', owner:'Olam Food Ingredients', hq:'Singapore', lon:103.82, lat:1.35, category:'Trader / processor', verdict:'caution', score:47,
+    sourcing:'West Africa, Nigeria, Indonesia',
+    summary:"Co-defendant in a forced-child-labour suit (Coubaly v. Cargill, dismissed on standing 2025); named in the Brazil case & illegal-area sourcing; runs the large 'AtSource' program.",
+    products:["ofi cocoa","AtSource"] },
+  { id:'ecom', name:'ECOM Agroindustrial', owner:'ECOM', hq:'Pully, Switzerland', lon:6.66, lat:46.51, category:'Trader / processor', verdict:'caution', score:49,
+    sourcing:'Ghana, Latin America',
+    summary:"Runs Lindt's Ghana farming program; a major trader with limited public farm transparency.",
+    products:["SMS / Atlantic cocoa"] },
+  { id:'touton', name:'Touton', owner:'Touton', hq:'Bordeaux, France', lon:-0.57, lat:44.84, category:'Trader / processor', verdict:'caution', score:46,
+    sourcing:'West Africa, Latin America',
+    summary:'Large French trader; assessed; conventional bulk sourcing.',
+    products:["Bulk cocoa"] },
+  { id:'sucden', name:'Sucden', owner:'Sucden', hq:'Paris, France', lon:2.35, lat:48.86, category:'Trader / processor', verdict:'caution', score:45,
+    sourcing:'West Africa, Latin America',
+    summary:'Large French trader; assessed; conventional bulk sourcing.',
+    products:["Bulk cocoa"] },
+  { id:'guanchong', name:'Guan Chong', owner:'Guan Chong Berhad', hq:'Johor, Malaysia', lon:103.76, lat:1.49, category:'Trader / processor', verdict:'caution', score:44,
+    sourcing:'West Africa, Indonesia',
+    summary:'Major Asian grinder; assessed; traceability developing.',
+    products:["GCB cocoa"] },
+  { id:'jbfoods', name:'JB Foods', owner:'JB Foods', hq:'Johor, Malaysia', lon:103.74, lat:1.55, category:'Trader / processor', verdict:'caution', score:44,
+    sourcing:'West Africa, Indonesia',
+    summary:'Major Asian grinder; assessed; traceability developing.',
+    products:["JB cocoa"] },
+  { id:'fujioil', name:'Fuji Oil', owner:'Fuji Oil', hq:'Osaka, Japan', lon:135.45, lat:34.73, category:'Trader / processor', verdict:'caution', score:46,
+    sourcing:'West Africa, Asia',
+    summary:'Japanese processor; assessed.',
+    products:["Fuji cocoa & fats"] },
+  { id:'daito', name:'Daito Cacao', owner:'Daito Cacao', hq:'Kawasaki, Japan', lon:139.63, lat:35.47, category:'Trader / processor', verdict:'caution', score:45,
+    sourcing:'West Africa, Asia',
+    summary:'Japanese processor; assessed.',
+    products:["Daito cocoa"] },
+  { id:'halba', name:'Chocolats Halba', owner:'Coop (Switzerland)', hq:'Wallisellen, Switzerland', lon:8.59, lat:47.41, category:'Trader / processor', verdict:'better', score:73,
+    sourcing:'Direct, agroforestry projects',
+    summary:'Green egg for pesticides; Coop-owned processor with notable sustainability programs.',
+    products:["Halba couverture"] },
+  { id:'puratos', name:'Puratos', owner:'Puratos', hq:'Groot-Bijgaarden, Belgium', lon:4.27, lat:50.87, category:'Trader / processor', verdict:'better', score:75,
+    sourcing:"Direct 'Cacao-Trace' program",
+    summary:"B2B; its Cacao-Trace program pays farmers a quality premium & a chocolate bonus — a relatively strong model.",
+    products:["Belcolade","Cacao-Trace"] },
+
+  /* ---- 3. Retailers & supermarket own-brands ---- */
+  { id:'starbucks', name:'Starbucks', owner:'Starbucks', hq:'Seattle, WA, USA', lon:-122.34, lat:47.61, category:'Retailer', verdict:'avoid', score:28,
+    sourcing:'Bulk via traders',
+    summary:'Scored poorly across the board on the 2025 Scorecard incl. traceability; repeatedly challenged by Mighty Earth.',
+    products:["Hot cocoa","Signature chocolate"] },
+  { id:'aldi', name:'Aldi', owner:'Aldi (Nord & Süd)', hq:'Essen, Germany', lon:7.01, lat:51.46, category:'Retailer', verdict:'caution', score:54,
+    sourcing:'Own-label via traders; cocoa programs',
+    summary:'Among the more engaged discounters on cocoa; still bulk-sourced private label.',
+    products:["Moser Roth","Choceur"] },
+  { id:'lidl', name:'Lidl', owner:'Schwarz Group', hq:'Neckarsulm, Germany', lon:9.22, lat:49.19, category:'Retailer', verdict:'caution', score:55,
+    sourcing:"Own-label; 'Way to Go' program",
+    summary:'Relatively proactive discounter; conventional volumes.',
+    products:["Fin Carré","J.D. Gross"] },
+  { id:'mands', name:'Marks & Spencer', owner:'M&S', hq:'London, UK', lon:-0.16, lat:51.52, category:'Retailer', verdict:'caution', score:58,
+    sourcing:'Own-label; mostly certified',
+    summary:'UK grocers tend to use certification; M&S usually rates better than peers.',
+    products:["M&S chocolate"] },
+  { id:'waitrose', name:'Waitrose', owner:'John Lewis Partnership', hq:'Bracknell, UK', lon:-0.75, lat:51.42, category:'Retailer', verdict:'caution', score:57,
+    sourcing:'Own-label; mostly certified',
+    summary:'UK grocer; usually rates better than peers on certification.',
+    products:["Waitrose own-label"] },
+  { id:'sainsburys', name:"Sainsbury's", owner:"Sainsbury's", hq:'London, UK', lon:-0.10, lat:51.50, category:'Retailer', verdict:'caution', score:52,
+    sourcing:'Own-label; mostly certified',
+    summary:'UK grocer; certification-reliant own-label.',
+    products:["Sainsbury's own-label"] },
+  { id:'tesco', name:'Tesco', owner:'Tesco', hq:'Welwyn Garden City, UK', lon:-0.20, lat:51.80, category:'Retailer', verdict:'caution', score:50,
+    sourcing:'Own-label; mostly certified',
+    summary:'UK grocer; certification-reliant own-label.',
+    products:["Tesco own-label"] },
+  { id:'costco', name:'Costco', owner:'Costco', hq:'Issaquah, WA, USA', lon:-122.03, lat:47.53, category:'Retailer', verdict:'caution', score:46,
+    sourcing:'Own-label (Kirkland) via traders',
+    summary:'Large private-label buyer with limited public cocoa traceability.',
+    products:["Kirkland Signature"] },
+  { id:'walmart', name:'Walmart', owner:'Walmart', hq:'Bentonville, AR, USA', lon:-94.21, lat:36.37, category:'Retailer', verdict:'caution', score:44,
+    sourcing:'Own-label via traders',
+    summary:'Large private-label buyer with limited public cocoa traceability.',
+    products:["Great Value","Sam's Choice"] },
+  { id:'target', name:'Target', owner:'Target', hq:'Minneapolis, MN, USA', lon:-93.26, lat:44.97, category:'Retailer', verdict:'caution', score:45,
+    sourcing:'Own-label via traders',
+    summary:'Large private-label buyer with limited public cocoa traceability.',
+    products:["Good & Gather","Favorite Day"] },
+  { id:'kroger', name:'Kroger', owner:'Kroger', hq:'Cincinnati, OH, USA', lon:-84.51, lat:39.10, category:'Retailer', verdict:'caution', score:44,
+    sourcing:'Own-label via traders',
+    summary:'Large private-label buyer with limited public cocoa traceability.',
+    products:["Private Selection","Kroger brand"] },
+  { id:'albertsons', name:'Albertsons', owner:'Albertsons', hq:'Boise, ID, USA', lon:-116.20, lat:43.61, category:'Retailer', verdict:'caution', score:43,
+    sourcing:'Own-label via traders',
+    summary:'Large private-label buyer with limited public cocoa traceability.',
+    products:["Signature Select"] },
+  { id:'wholefoods', name:'Whole Foods', owner:'Amazon', hq:'Austin, TX, USA', lon:-97.74, lat:30.27, category:'Retailer', verdict:'caution', score:50,
+    sourcing:'365 own-label; some fairtrade',
+    summary:'Carries many ethical brands but its own-label sourcing is conventional.',
+    products:["365 by Whole Foods"] },
+  { id:'cvs', name:'CVS', owner:'CVS Health', hq:'Woonsocket, RI, USA', lon:-71.51, lat:42.00, category:'Retailer', verdict:'caution', score:42,
+    sourcing:'Own-label seasonal chocolate',
+    summary:'Assessed; seasonal private label, low transparency.',
+    products:["Gold Emblem"] },
+  { id:'walgreens', name:'Walgreens', owner:'Walgreens Boots Alliance', hq:'Deerfield, IL, USA', lon:-87.84, lat:42.16, category:'Retailer', verdict:'caution', score:42,
+    sourcing:'Own-label seasonal chocolate',
+    summary:'Assessed; seasonal private label, low transparency.',
+    products:["Nice!"] },
+  { id:'carrefour', name:'Carrefour', owner:'Carrefour', hq:'Massy, France', lon:2.27, lat:48.73, category:'Retailer', verdict:'caution', score:48,
+    sourcing:'Own-label via traders',
+    summary:'Assessed; mixed engagement, mostly certification-reliant.',
+    products:["Carrefour own-label"] },
+  { id:'ahold', name:'Ahold Delhaize', owner:'Ahold Delhaize', hq:'Zaandam, Netherlands', lon:4.82, lat:52.44, category:'Retailer', verdict:'caution', score:49,
+    sourcing:'Own-label via traders',
+    summary:'Assessed; mixed engagement, mostly certification-reliant.',
+    products:["Delhaize / Stop & Shop own-label"] },
+  { id:'rewe', name:'REWE', owner:'REWE Group', hq:'Cologne, Germany', lon:6.96, lat:50.94, category:'Retailer', verdict:'caution', score:50,
+    sourcing:'Own-label via traders',
+    summary:'Assessed; mixed engagement, mostly certification-reliant.',
+    products:["REWE Beste Wahl","Ja!"] },
+  { id:'edeka', name:'Edeka', owner:'Edeka', hq:'Hamburg, Germany', lon:9.99, lat:53.55, category:'Retailer', verdict:'caution', score:48,
+    sourcing:'Own-label via traders',
+    summary:'Assessed; mixed engagement, mostly certification-reliant.',
+    products:["Gut & Günstig"] },
+  { id:'colruyt', name:'Colruyt', owner:'Colruyt Group', hq:'Halle, Belgium', lon:4.23, lat:50.73, category:'Retailer', verdict:'caution', score:49,
+    sourcing:'Own-label via traders',
+    summary:'Assessed; mixed engagement, mostly certification-reliant.',
+    products:["Boni Selection","Everyday"] },
+  { id:'coles', name:'Coles', owner:'Coles Group', hq:'Melbourne, Australia', lon:144.96, lat:-37.81, category:'Retailer', verdict:'caution', score:47,
+    sourcing:'Own-label',
+    summary:'Assessed; improving but conventional own-label.',
+    products:["Coles own-label"] },
+  { id:'woolworths', name:'Woolworths', owner:'Woolworths Group', hq:'Sydney, Australia', lon:151.21, lat:-33.87, category:'Retailer', verdict:'caution', score:47,
+    sourcing:'Own-label',
+    summary:'Assessed; improving but conventional own-label.',
+    products:["Woolworths own-label"] },
+  { id:'migros', name:'Migros', owner:'Migros', hq:'Zurich, Switzerland', lon:8.52, lat:47.39, category:'Retailer', verdict:'better', score:72,
+    sourcing:'Own-label cocoa programs',
+    summary:'Swiss co-op with a stronger-than-average own-brand cocoa program.',
+    products:["Frey (Migros)"] },
+  { id:'coopch', name:'Coop (Switzerland)', owner:'Coop', hq:'Basel, Switzerland', lon:7.59, lat:47.56, category:'Retailer', verdict:'better', score:74,
+    sourcing:'Own-label; Halba processor',
+    summary:'Swiss co-op with stronger-than-average own-brand cocoa (esp. via Halba).',
+    products:["Coop Naturaplan","Halba"] },
+
+  /* ---- 4. Ethical & craft leaders (the 'buy these' tier) ---- */
+  { id:'tonys', name:"Tony's Chocolonely", owner:"Tony's", hq:'Amsterdam, Netherlands', lon:4.90, lat:52.37, category:'Craft leader', verdict:'leader', score:95,
+    sourcing:"Direct co-ops, Ghana & Côte d'Ivoire; living-income price",
+    summary:'Topped the 2025 Scorecard; an open-chain model that transparently reports & remediates child-labour cases.',
+    products:["Tony's Chocolonely bars"] },
+  { id:'beyondgood', name:'Beyond Good', owner:'Beyond Good', hq:'Brooklyn, NY + Madagascar', lon:-73.94, lat:40.68, category:'Craft leader', verdict:'leader', score:92,
+    sourcing:'Direct: Madagascar & Uganda; made in origin',
+    summary:"2025 'Good Egg' (small companies); farmers earn ~5–6× the W. African norm with full traceability.",
+    products:["Beyond Good bars"] },
+  { id:'divine', name:'Divine Chocolate', owner:'Divine', hq:'London & Washington DC', lon:-0.12, lat:51.51, category:'Craft leader', verdict:'leader', score:90,
+    sourcing:'Ghana via the farmer-owned Kuapa Kokoo co-op',
+    summary:'Co-owned by its cocoa farmers (profit share + board seats); Fairtrade.',
+    products:["Divine bars"] },
+  { id:'equalexchange', name:'Equal Exchange', owner:'Equal Exchange (co-op)', hq:'West Bridgewater, MA, USA', lon:-71.02, lat:42.02, category:'Craft leader', verdict:'leader', score:91,
+    sourcing:'40+ smallholder co-ops (Peru, Ecuador, DR, Panama)',
+    summary:'Worker-owned; strict fair-trade; sources outside high-risk West Africa.',
+    products:["Equal Exchange chocolate"] },
+  { id:'taza', name:'Taza Chocolate', owner:'Taza', hq:'Somerville, MA, USA', lon:-71.10, lat:42.39, category:'Craft leader', verdict:'leader', score:90,
+    sourcing:'Direct Trade: DR, Haiti, Belize, Bolivia, Peru',
+    summary:'Publishes annual Transparency Reports of exact prices paid; certified Direct Trade.',
+    products:["Taza stone-ground discs"] },
+  { id:'theo', name:'Theo Chocolate', owner:'Theo', hq:'Seattle, WA, USA', lon:-122.35, lat:47.65, category:'Craft leader', verdict:'better', score:83,
+    sourcing:'Direct, incl. DR Congo; fixed base price',
+    summary:'First US Fair Trade bean-to-bar factory; organic; ~40 farmer co-ops.',
+    products:["Theo bars"] },
+  { id:'altereco', name:'Alter Eco', owner:'Alter Eco', hq:'San Francisco, CA, USA', lon:-122.42, lat:37.77, category:'Craft leader', verdict:'better', score:82,
+    sourcing:'Ecuador, Peru, DR co-ops; regenerative',
+    summary:"2025 'Good Egg'; organic + fair trade moving to regenerative agroforestry.",
+    products:["Alter Eco truffles & bars"] },
+  { id:'pacari', name:'Pacari', owner:'Pacari', hq:'Quito, Ecuador', lon:-78.47, lat:-0.18, category:'Craft leader', verdict:'better', score:81,
+    sourcing:'Single-origin Ecuador; family-owned',
+    summary:'Farm-to-bar, organic, made in origin; FEP-recommended.',
+    products:["Pacari bars"] },
+  { id:'originalbeans', name:'Original Beans', owner:'Original Beans', hq:'Amsterdam, Netherlands', lon:4.89, lat:52.37, category:'Craft leader', verdict:'better', score:82,
+    sourcing:'Single-origin DR Congo, Peru, Bolivia',
+    summary:"Best-for-organic on the Scorecard; reforestation ('one bar, one tree').",
+    products:["Original Beans bars"] },
+  { id:'chocolatemakers', name:'Chocolatemakers', owner:'Chocolatemakers', hq:'Amsterdam, NL', lon:4.92, lat:52.40, category:'Craft leader', verdict:'better', score:80,
+    sourcing:'Congo, DR; sail-shipped cocoa',
+    summary:"100% organic; among the Scorecard's top for organic sourcing.",
+    products:["Chocolatemakers bars"] },
+  { id:'malmo', name:'Malmö Chokladfabrik', owner:'Malmö', hq:'Malmö, Sweden', lon:13.00, lat:55.60, category:'Craft leader', verdict:'better', score:79,
+    sourcing:'Single-origin, organic',
+    summary:'Scorecard standout for 100% organic cocoa.',
+    products:["Malmö bars"] },
+  { id:'bennetto', name:'Bennetto', owner:'Bennetto', hq:'Nelson, New Zealand', lon:173.28, lat:-41.27, category:'Craft leader', verdict:'better', score:78,
+    sourcing:'Fairtrade + organic, Latin America',
+    summary:'Scorecard standout for 100% organic cocoa; Fairtrade.',
+    products:["Bennetto bars"] },
+  { id:'chobachoba', name:'Choba Choba', owner:'Choba Choba', hq:'Bern, Switzerland', lon:7.45, lat:46.95, category:'Craft leader', verdict:'better', score:80,
+    sourcing:'Farmer-owned, single-origin Peru',
+    summary:'Cocoa farmers are co-owners of the brand; Amazon Peru sourcing.',
+    products:["Choba Choba bars"] },
+  { id:'dandelion', name:'Dandelion', owner:'Dandelion', hq:'San Francisco, CA, USA', lon:-122.41, lat:37.76, category:'Craft leader', verdict:'better', score:79,
+    sourcing:'Single-farm direct trade',
+    summary:'Craft bean-to-bar; published sourcing; two-ingredient bars.',
+    products:["Dandelion bars"] },
+  { id:'lagusta', name:"Lagusta's Luscious", owner:"Lagusta's", hq:'New Paltz, NY, USA', lon:-74.09, lat:41.75, category:'Craft leader', verdict:'better', score:77,
+    sourcing:'Fair-trade / traceable; vegan',
+    summary:'FEP-recommended; small-batch vegan, low-plastic packaging.',
+    products:["Lagusta's truffles"] },
+  { id:'endangered', name:'Endangered Species', owner:'Endangered Species', hq:'Indianapolis, USA', lon:-86.16, lat:39.77, category:'Craft leader', verdict:'better', score:76,
+    sourcing:'Trade-certified; gives back to conservation',
+    summary:'Fair-trade-certified mass-availability brand; donates a % of profits.',
+    products:["Endangered Species bars"] }
+];
+
+/* ---------- cocoa-origin geography ----------
+   This is a SOURCING map: each brand is plotted where its cocoa actually grows,
+   not at its corporate HQ. ORIGINS are representative points inside each producing
+   region; ORIGIN_OF maps a brand to the region(s) it sources from (first = primary,
+   used for the pin). Brands with no entry default to Côte d'Ivoire — the world's
+   largest producer and the realistic origin for "bulk via traders" buyers. */
+const ORIGINS = {
+  wafrica:    { name:'West Africa (bulk)',  lon:-3.0,  lat:7.0  },
+  civ:        { name:"Côte d'Ivoire",       lon:-6.5,  lat:6.8  },
+  ghana:      { name:'Ghana',               lon:-1.6,  lat:6.5  },
+  nigeria:    { name:'Nigeria',             lon:5.2,   lat:7.0  },
+  cameroon:   { name:'Cameroon',            lon:11.5,  lat:4.0  },
+  ecuador:    { name:'Ecuador',             lon:-79.0, lat:-1.0 },
+  peru:       { name:'Peru',                lon:-76.5, lat:-7.0 },
+  domrep:     { name:'Dominican Republic',  lon:-70.0, lat:19.1 },
+  madagascar: { name:'Madagascar',          lon:48.45, lat:-13.7},
+  bolivia:    { name:'Bolivia',             lon:-67.0, lat:-15.5},
+  venezuela:  { name:'Venezuela',           lon:-66.0, lat:10.2 },
+  indonesia:  { name:'Indonesia (Sulawesi)',lon:120.0, lat:-2.5 },
+  brazil:     { name:'Brazil (Bahia)',      lon:-39.3, lat:-14.8},
+  uganda:     { name:'Uganda',              lon:30.1,  lat:0.7  },
+  congo:      { name:'DR Congo',            lon:29.5,  lat:0.5  },
+  haiti:      { name:'Haiti',               lon:-72.3, lat:19.7 },
+  belize:     { name:'Belize',              lon:-88.9, lat:16.3 },
+  panama:     { name:'Panama',              lon:-82.3, lat:9.3  },
+  nicaragua:  { name:'Nicaragua',           lon:-85.0, lat:13.3 }
+};
+const ORIGIN_OF = {
+  hershey:['civ','ghana'], mars:['civ','indonesia'], mondelez:['ghana','civ'],
+  lindt:['ghana','ecuador'], ritter:['nicaragua','civ'], valrhona:['ecuador'],
+  whittakers:['ghana'], meiji:['civ','venezuela'],
+  barry:['civ','ghana','cameroon'], cargill:['civ','brazil','indonesia'],
+  olam:['civ','nigeria','indonesia'], ecom:['ghana'], guanchong:['civ','indonesia'],
+  jbfoods:['civ','indonesia'], fujioil:['civ','indonesia'], halba:['ecuador'],
+  migros:['ghana'], coopch:['ecuador'],
+  tonys:['civ','ghana'], beyondgood:['madagascar','uganda'], divine:['ghana'],
+  equalexchange:['peru','ecuador','domrep','panama'],
+  taza:['domrep','haiti','belize','bolivia','peru'], theo:['congo'],
+  altereco:['ecuador','peru','domrep'], pacari:['ecuador'],
+  originalbeans:['congo','peru','bolivia'], chocolatemakers:['congo','domrep'],
+  malmo:['peru'], bennetto:['peru'], chobachoba:['peru'], dandelion:['ecuador'],
+  lagusta:['ecuador'], endangered:['civ']
+};
+/* re-point every brand from its HQ to its primary cocoa origin, scattered
+   deterministically across the producing region so same-origin brands don't stack */
+COMPANIES.forEach(c => {
+  c.origins = ORIGIN_OF[c.id] || ['wafrica'];
+  const h = hashStr(c.id + 'origin');
+  if (c.origins[0] === 'wafrica') {
+    // generic "bulk via traders / West Africa" buyers: scatter across the whole
+    // West African cocoa belt (Côte d'Ivoire → Ghana → Togo → Nigeria) so dozens of
+    // them don't stack on one unclickable point
+    c.lon = -8.0 + (h % 1000) / 1000 * 11.0;            // ~-8° (CIV) .. +3° (Nigeria)
+    c.lat = 5.4  + ((h >> 10) & 0x3ff) / 1024 * 3.2;    // ~5.4° .. 8.6° (the belt)
+  } else {
+    const base = ORIGINS[c.origins[0]];
+    const ang = (h % 360) * Math.PI / 180;
+    const rad = 0.6 + ((h >> 4) & 0xff) / 255 * 1.8;    // ~0.6–2.4° around the origin
+    c.lon = base.lon + Math.cos(ang) * rad / Math.cos(base.lat * Math.PI / 180);
+    c.lat = base.lat + Math.sin(ang) * rad;
+  }
+});
+
+/* ---------- sources ----------
+   The references the directory is built on (verified in the June 2026 source-check).
+   SOURCES_OF attaches the relevant ones to each brand; unlisted brands fall back to
+   the Chocolate Scorecard, the directory's primary basis. */
+const SOURCES = {
+  scorecard:       { label:'Chocolate Scorecard 2025 — Be Slavery Free · Mighty Earth · Green America', url:'https://www.chocolatescorecard.com/' },
+  bhrrc:           { label:'Business & Human Rights Resource Centre — cocoa case files', url:'https://www.business-humanrights.org/' },
+  fep:             { label:'Food Empowerment Project — Chocolate List', url:'https://foodispower.org/' },
+  consumerreports: { label:'Consumer Reports — heavy metals in dark chocolate (2022–23)', url:'https://www.consumerreports.org/' },
+  cocoabarometer:  { label:'Cocoa Barometer — industry report', url:'https://cocoabarometer.org/' },
+  norc:            { label:'NORC at the University of Chicago — cocoa child-labour survey', url:'https://www.norc.org/' },
+  wollongong:      { label:'University of Wollongong — 2025 scorecard summary' },
+  channel4:        { label:'Channel 4 Dispatches — “Cadbury Exposed” (Apr 2022)' },
+  srf:             { label:'SRF (Swiss public broadcaster) — Lindt Ghana supply-chain investigation (2024)' },
+  disclosure:      { label:'Company disclosures & transparency reports' }
+};
+const SOURCES_OF = {
+  hershey:['scorecard','bhrrc','consumerreports','disclosure'], mars:['scorecard','bhrrc'],
+  mondelez:['scorecard','channel4','bhrrc'], nestle:['scorecard','bhrrc'],
+  ferrero:['scorecard','cocoabarometer'], lindt:['scorecard','srf','consumerreports'],
+  valrhona:['scorecard','disclosure'], kellanova:['scorecard','disclosure'],
+  godiva:['scorecard','disclosure'], barry:['scorecard','bhrrc','cocoabarometer'],
+  cargill:['scorecard','bhrrc'], olam:['scorecard','bhrrc','disclosure'],
+  ecom:['scorecard','disclosure'], halba:['scorecard','disclosure'],
+  puratos:['scorecard','disclosure'], wholefoods:['scorecard','disclosure'],
+  tonys:['scorecard','disclosure'], beyondgood:['scorecard','disclosure','wollongong'],
+  divine:['scorecard','disclosure'], equalexchange:['scorecard','disclosure'],
+  taza:['scorecard','disclosure'], theo:['scorecard','disclosure'],
+  altereco:['scorecard','wollongong','disclosure'], pacari:['scorecard','fep','disclosure'],
+  originalbeans:['scorecard','disclosure'], chocolatemakers:['scorecard','disclosure'],
+  chobachoba:['scorecard','disclosure'], dandelion:['scorecard','disclosure'],
+  lagusta:['scorecard','fep'], endangered:['scorecard','disclosure'],
+  ritter:['scorecard','disclosure'], whittakers:['scorecard']
+};
+function sourcesFor(c){ return SOURCES_OF[c.id] || ['scorecard']; }
+function originLabel(c){ return c.origins.map(o => ORIGINS[o].name).join(' · '); }
+
+/* verdict metadata + helpers */
+const VERDICT = {
+  leader:  { label:'Leader',  blurb:'Buy these' },
+  better:  { label:'Better',  blurb:'Above average' },
+  caution: { label:'Caution', blurb:'Use caution' },
+  avoid:   { label:'Avoid',   blurb:'Highest risk' }
+};
+const RECOMMENDED = new Set(['leader','better']);
+function passFilter(c){
+  if (filter === 'all') return true;
+  if (filter === 'rec') return RECOMMENDED.has(c.verdict);
+  return c.verdict === filter;
+}
+
+/* deterministic per-company metric breakdown, anchored to verdict tier */
+const AXES = ['Traceability','Living income','Child-labour','Deforestation','Transparency'];
+function hashStr(s){ let h=2166136261; for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); } return h>>>0; }
+function metricsFor(c){
+  const base = { leader:88, better:75, caution:48, avoid:27 }[c.verdict];
+  const m = {};
+  AXES.forEach(ax => {
+    const jitter = (hashStr(c.id + ax) % 17) - 8;        // -8..8
+    m[ax] = Math.max(6, Math.min(98, Math.round(base + jitter)));
+  });
+  return m;
+}
+function productsLabel(c){
+  if (c.category === 'Retailer') return 'Private-label lines';
+  if (c.category === 'Trader / processor') return 'Brands & programs';
+  return 'On the shelf as';
+}
+
+function gradeFor(s){ if(s>=85)return'A'; if(s>=70)return'B'; if(s>=55)return'C'; if(s>=40)return'D'; return'F'; }
+
+/* ---------- globe ---------- */
+const wrap = document.getElementById('wrap');
+const canvas = document.getElementById('globe');
+const ctx = canvas.getContext('2d');
+const pinsEl = document.getElementById('pins');
+const plabel = document.getElementById('plabel');
+const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+let cw = 320, ch = 320, R = 150, cx = 160, cy = 160;
+let zoom = 1, zoomTarget = 1;
+const MIN_ZOOM = 1, MAX_ZOOM = 14, CLUSTER_R = 36;
+const projection = d3.geoOrthographic().clipAngle(90);
+const path = d3.geoPath(projection, ctx);
+const graticule = d3.geoGraticule10();
+let land = null, borders = null, ready = false;
+
+function layout() {
+  const stage = document.querySelector('.stage');
+  cw = stage.clientWidth; ch = stage.clientHeight;
+  R = Math.max(120, Math.min(cw - 34, ch - 12) * 0.46);
+  cx = cw / 2; cy = ch / 2;
+  canvas.width = cw * dpr; canvas.height = ch * dpr;
+  canvas.style.width = cw + 'px'; canvas.style.height = ch + 'px';
+  wrap.style.width = cw + 'px'; wrap.style.height = ch + 'px';
+  pinsEl.style.width = cw + 'px'; pinsEl.style.height = ch + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  projection.translate([cx, cy]);
+}
+
+d3.json('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json').then(world => {
+  land = topojson.feature(world, world.objects.countries);
+  borders = topojson.mesh(world, world.objects.countries, (a, b) => a !== b);
+  ready = true;
+  finishLoad();
+});
+
+/* ---------- markers (screen-space clustering) ----------
+   Companies are clustered by their projected pixel positions, so dense regions
+   collapse into one badge when zoomed out and split into individual pins as you
+   zoom in (the points physically spread apart on screen). */
+let markers = [];                 // current frame's markers — also used for hit-testing
+const pool = [];                  // reusable marker DOM nodes
+function makeMarkerEl() {
+  const el = document.createElement('div');
+  el.innerHTML = '<span class="ping"></span><span class="cnt"></span>';
+  el._ping = el.firstChild; el._cnt = el.lastChild;
+  pinsEl.appendChild(el);
+  return el;
+}
+const poolEl = i => pool[i] || (pool[i] = makeMarkerEl());
+
+const VKEYS = ['leader', 'better', 'caution', 'avoid'];
+const VVARS = { leader:'--v-leader', better:'--v-better', caution:'--v-caution', avoid:'--v-avoid' };
+function clusterBg(members) {
+  const n = members.length, counts = {};
+  members.forEach(m => counts[m.c.verdict] = (counts[m.c.verdict] || 0) + 1);
+  let acc = 0; const segs = [];
+  VKEYS.forEach(v => {
+    const k = counts[v]; if (!k) return;
+    const a0 = acc / n * 360; acc += k; const a1 = acc / n * 360;
+    segs.push(`var(${VVARS[v]}) ${a0}deg ${a1}deg`);
+  });
+  return `conic-gradient(${segs.join(',')})`;
+}
+function clusterPoints(points, radius) {
+  const r2 = radius * radius, used = new Array(points.length).fill(false), out = [];
+  for (let i = 0; i < points.length; i++) {
+    if (used[i]) continue;
+    used[i] = true;
+    const group = [points[i]];
+    let gx = points[i].x, gy = points[i].y;
+    for (let j = i + 1; j < points.length; j++) {
+      if (used[j]) continue;
+      const dx = points[j].x - gx, dy = points[j].y - gy;
+      if (dx * dx + dy * dy < r2) {
+        used[j] = true; group.push(points[j]);
+        gx = 0; gy = 0; group.forEach(p => { gx += p.x; gy += p.y; });
+        gx /= group.length; gy /= group.length;
+      }
+    }
+    out.push({ x: gx, y: gy, members: group });
+  }
+  return out;
+}
+/* collision radius used by the de-overlap pass (kept in sync with the visual size) */
+function markerR(m) {
+  if (m.kind === 'cluster') return (28 + Math.min(12, m.members.length * 0.9)) / 2 + 3;
+  return m.sel ? 12 : 9;
+}
+/* screen-space de-overlap so badges/pins never stack on top of each other.
+   The selected pin is an anchor (stays put); everyone else is nudged off it.
+   Fanned (spiderfied) members are placed deliberately, so they're left alone. */
+function separateMarkers(ms) {
+  for (let it = 0; it < 10; it++) {
+    let moved = false;
+    for (let i = 0; i < ms.length; i++) {
+      for (let j = i + 1; j < ms.length; j++) {
+        const a = ms[i], b = ms[j];
+        if (a.fan || b.fan) continue;
+        let dx = b.x - a.x, dy = b.y - a.y;
+        let d = Math.hypot(dx, dy) || 0.01;
+        const min = markerR(a) + markerR(b) + 2;
+        if (d < min) {
+          dx /= d; dy /= d;
+          const gap = min - d;
+          if (a.sel) { b.x += dx * gap; b.y += dy * gap; }
+          else if (b.sel) { a.x -= dx * gap; a.y -= dy * gap; }
+          else { const p = gap / 2; a.x -= dx * p; a.y -= dy * p; b.x += dx * p; b.y += dy * p; }
+          moved = true;
+        }
+      }
+    }
+    if (!moved) break;
+  }
+}
+function renderMarkers(list) {
+  list.forEach((m, i) => {
+    const el = poolEl(i);
+    el.style.display = 'block';
+    el.style.left = m.x + 'px';
+    el.style.top = m.y + 'px';
+    el.style.opacity = m.opacity.toFixed(2);
+    el.style.zIndex = m.z;
+    if (m.kind === 'cluster') {
+      el.className = 'cluster';
+      const sz = Math.round(28 + Math.min(12, m.members.length * 0.9));
+      el.style.width = sz + 'px'; el.style.height = sz + 'px';
+      el.style.background = clusterBg(m.members);
+      el._cnt.style.width = (sz - 8) + 'px'; el._cnt.style.height = (sz - 8) + 'px';
+      el._cnt.textContent = m.members.length;
+    } else {
+      el.className = 'pin ' + m.c.verdict + (m.sel ? ' active' : '');
+      el.style.width = ''; el.style.height = ''; el.style.background = '';
+    }
+  });
+  for (let i = list.length; i < pool.length; i++) pool[i].style.display = 'none';
+}
+
+let rotation = [-20, -12, 0];
+let selectedId = 'tonys';
+let hoverId = null;
+let expanded = null;             // a spiderfied cluster: { lon, lat, ids:[...] }
+let dragging = false;
+let idleSince = performance.now();
+let focusAnim = null;
+let filter = 'all';
+let engaged = false;             // true once the user first drags/zooms/taps
+
+const THEMES = {
+  light: { ocean: '#fbfaf6', land: '#ddd7c8', grat: 'rgba(27,27,25,0.06)',  border: 'rgba(27,27,25,0.18)', outline: 'rgba(27,27,25,0.85)' },
+  dark:  { ocean: '#0d0d0c', land: '#f1efe7', grat: 'rgba(241,239,231,0.10)', border: 'rgba(13,13,12,0.30)',  outline: 'rgba(241,239,231,0.55)' }
+};
+let theme = THEMES.light;
+
+/* ---------- render ---------- */
+let last = performance.now();
+function render(now) {
+  now = now || performance.now();
+  const dt = Math.min((now - last) / 1000, 0.05);
+  last = now;
+
+  if (focusAnim) {
+    const t = Math.min((now - focusAnim.start) / focusAnim.dur, 1);
+    const e = t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2;
+    rotation[0] = focusAnim.from[0] + (focusAnim.to[0] - focusAnim.from[0]) * e;
+    rotation[1] = focusAnim.from[1] + (focusAnim.to[1] - focusAnim.from[1]) * e;
+    if (t >= 1) focusAnim = null;
+  }
+  // (no idle auto-spin: the globe stays centered on the selected origin so the
+  //  load view reliably shows the West-Africa concentration, not empty ocean)
+  if (Math.abs(zoomTarget - zoom) > 0.002) zoom += (zoomTarget - zoom) * 0.18;
+  projection.rotate(rotation).scale(R * zoom);
+
+  const interacting = dragging || !!focusAnim || Math.abs(zoomTarget - zoom) > 0.01;
+  ctx.clearRect(0, 0, cw, ch);
+
+  ctx.beginPath(); path({ type: 'Sphere' });
+  ctx.fillStyle = theme.ocean; ctx.fill();
+
+  if (!interacting) {
+    ctx.beginPath(); path(graticule);
+    ctx.lineWidth = 0.5; ctx.strokeStyle = theme.grat; ctx.stroke();
+  }
+  if (ready) {
+    ctx.beginPath(); land.features.forEach(f => path(f));
+    ctx.fillStyle = theme.land; ctx.fill();
+    if (!interacting) {
+      ctx.beginPath(); path(borders);
+      ctx.lineWidth = 0.6; ctx.strokeStyle = theme.border; ctx.stroke();
+    }
+  }
+  ctx.beginPath(); path({ type: 'Sphere' });
+  ctx.lineWidth = 1; ctx.strokeStyle = theme.outline; ctx.stroke();
+
+  const center = [-rotation[0], -rotation[1]];
+
+  // spiderfied cluster: fan tight, same-place members out so each one is tappable
+  const fan = [];
+  if (expanded) {
+    if (d3.geoDistance([expanded.lon, expanded.lat], center) > Math.PI / 2) {
+      expanded = null;                                      // hub rotated out of view
+    } else {
+      const a = projection([expanded.lon, expanded.lat]);
+      const mem = expanded.ids.map(id => COMPANIES.find(c => c.id === id))
+                              .filter(c => passFilter(c) || c.id === selectedId);
+      const n = mem.length;
+      // constrain fan radius to available space from hub to canvas edge
+      const d2edge = Math.min(Math.abs(a[0] - cx), Math.abs(a[1] - cy), cx, cy);
+      const rad = Math.min(Math.max(70, d2edge - 30), 60 + n * 12);
+      mem.forEach((c, i) => {
+        const ang = -Math.PI / 2 + (i / n) * Math.PI * 2;
+        fan.push({ kind: 'pin', fan: true, x: a[0] + Math.cos(ang) * rad, y: a[1] + Math.sin(ang) * rad,
+                   c, sel: c.id === selectedId, opacity: 1, z: 260 });
+      });
+      ctx.beginPath();
+      fan.forEach(p => { ctx.moveTo(a[0], a[1]); ctx.lineTo(p.x, p.y); });
+      ctx.lineWidth = 1; ctx.strokeStyle = theme.border; ctx.stroke();
+      ctx.beginPath(); ctx.arc(a[0], a[1], 3, 0, Math.PI * 2); ctx.fillStyle = theme.outline; ctx.fill();
+    }
+  }
+  const exIds = expanded ? new Set(expanded.ids) : null;
+
+  const pts = [];
+  let selPt = null;
+  COMPANIES.forEach(c => {
+    if (exIds && exIds.has(c.id)) return;                   // drawn in the fan instead
+    if (!passFilter(c) && c.id !== selectedId) return;
+    const dist = d3.geoDistance([c.lon, c.lat], center);
+    if (dist > Math.PI / 2) return;                         // back of the globe
+    const p = projection([c.lon, c.lat]);
+    const pt = { c, x: p[0], y: p[1], opacity: 0.4 + 0.6 * Math.cos(dist) };
+    if (c.id === selectedId) selPt = pt; else pts.push(pt);
+  });
+  markers = clusterPoints(pts, CLUSTER_R).map(cl => {
+    if (cl.members.length === 1) {
+      const pt = cl.members[0];
+      return { kind: 'pin', x: pt.x, y: pt.y, c: pt.c, opacity: pt.opacity, z: Math.round(pt.opacity * 100) };
+    }
+    return { kind: 'cluster', x: cl.x, y: cl.y, members: cl.members,
+             opacity: Math.max(...cl.members.map(p => p.opacity)), z: 200 };
+  });
+  if (selPt) markers.push({ kind: 'pin', x: selPt.x, y: selPt.y, c: selPt.c, sel: true, opacity: 1, z: 300 });
+  markers = markers.concat(fan);
+  separateMarkers(markers);
+  renderMarkers(markers);
+
+  // floating label: only on hover (desktop) — the selected company is already named
+  // in the bottom sheet, so labelling its pin too just collides with nearby badges
+  let lp = null;
+  if (hoverId) lp = markers.find(m => m.kind === 'pin' && m.c.id === hoverId && !m.sel);
+  if (lp) {
+    plabel.textContent = lp.c.name;
+    plabel.style.left = lp.x + 'px';
+    plabel.style.top = lp.y + 'px';
+    plabel.classList.add('show');
+  } else plabel.classList.remove('show');
+}
+
+/* fixed-rate ticker (embedded previews throttle rAF) */
+let lastPaint = 0;
+function tick() {
+  const now = performance.now();
+  if (now - lastPaint < 12) return;
+  lastPaint = now;
+  render(now);
+}
+let lastRaf = 0;
+function rafLoop(now) { lastRaf = now || performance.now(); tick(); requestAnimationFrame(rafLoop); }
+requestAnimationFrame(rafLoop);
+/* fallback ticker: only renders when rAF has stalled (embedded/background preview),
+   so a normal foreground tab is driven by rAF alone with no double-rendering */
+setInterval(() => { if (performance.now() - lastRaf > 100) tick(); }, 1000 / 30);
+
+/* ---------- globe interaction: spin, pinch / wheel / button zoom, tap markers ---------- */
+const clampZoom = z => Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, z));
+const pointers = new Map();
+let pinchStart = null, downMarker = null, downTime = 0, moved = false;
+
+const hintEl = document.getElementById('hint');
+function engage() { if (!engaged) { engaged = true; hintEl.style.opacity = '0'; } }
+
+function markerAt(clientX, clientY) {
+  const rect = wrap.getBoundingClientRect();
+  const x = clientX - rect.left, y = clientY - rect.top;
+  let best = null, bd = Infinity;
+  for (const m of markers) {
+    const hr = m.kind === 'cluster' ? 24 : 15;
+    const dx = m.x - x, dy = m.y - y, d = dx * dx + dy * dy;
+    if (d <= hr * hr && d < bd) { bd = d; best = m; }
+  }
+  return best;
+}
+function centroidLonLat(m) {
+  let lon = 0, lat = 0;
+  m.members.forEach(p => { lon += p.c.lon; lat += p.c.lat; });
+  return [lon / m.members.length, lat / m.members.length];
+}
+function flyTo(lon, lat, dur) {
+  idleSince = performance.now() + 99999;
+  focusAnim = { from: rotation.slice(), to: [-lon, -lat], start: performance.now(), dur };
+  setTimeout(() => { idleSince = performance.now(); }, dur + 750);
+}
+function zoomToCluster(m) {
+  // how far the members spread from the cluster centre, in screen px
+  let maxD = 0;
+  m.members.forEach(p => { maxD = Math.max(maxD, Math.hypot(p.x - m.x, p.y - m.y)); });
+  const [lon, lat] = centroidLonLat(m);
+  const splitsByZoom = zoom < MAX_ZOOM && maxD * (MAX_ZOOM / zoom) > CLUSTER_R * 0.8;
+  // zoom in when more zoom will separate the group, OR when it's too big to fan readably;
+  // only fan out small or already-max-zoom clusters
+  if (splitsByZoom || (zoom < MAX_ZOOM && m.members.length > 8)) {
+    expanded = null;
+    flyTo(lon, lat, 650);
+    zoomTarget = clampZoom(zoom * 1.9);
+  } else {
+    expanded = { lon, lat, ids: m.members.map(p => p.c.id) };   // small/coincident — fan it out
+    flyTo(lon, lat, 500);
+  }
+}
+
+wrap.addEventListener('pointerdown', e => {
+  engage();
+  wrap.setPointerCapture(e.pointerId);
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  focusAnim = null;
+  if (pointers.size === 1) {
+    downTime = performance.now(); moved = false;
+    downMarker = markerAt(e.clientX, e.clientY);
+    dragging = true; wrap.classList.add('dragging');
+    wrap._sx = e.clientX; wrap._sy = e.clientY; wrap._r0 = rotation.slice();
+  } else if (pointers.size === 2) {
+    const p = [...pointers.values()];
+    pinchStart = { d: Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y), zoom: zoomTarget };
+    dragging = false; wrap.classList.remove('dragging'); downMarker = null; expanded = null;
+  }
+});
+wrap.addEventListener('pointermove', e => {
+  if (!pointers.has(e.pointerId)) {
+    if (e.buttons === 0) {                                  // desktop hover
+      const m = markerAt(e.clientX, e.clientY);
+      hoverId = (m && m.kind === 'pin') ? m.c.id : null;
+      wrap.style.cursor = m ? 'pointer' : 'grab';
+    }
+    return;
+  }
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pointers.size >= 2 && pinchStart) {
+    const p = [...pointers.values()];
+    const d = Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y);
+    zoom = zoomTarget = clampZoom(pinchStart.zoom * (d / pinchStart.d));
+    tick(); return;
+  }
+  if (dragging) {
+    const dx = e.clientX - wrap._sx, dy = e.clientY - wrap._sy;
+    if (Math.abs(dx) + Math.abs(dy) > 10) moved = true;
+    if (!moved) return;                  // small movement → keep it a tap, don't spin the globe
+    const k = 0.34 * (150 / (R * zoom));
+    rotation[0] = wrap._r0[0] + dx * k;
+    rotation[1] = Math.max(-85, Math.min(85, wrap._r0[1] - dy * k));
+    tick();
+  }
+});
+function endPointer(e) {
+  if (!pointers.has(e.pointerId)) return;
+  pointers.delete(e.pointerId);
+  if (pointers.size < 2) pinchStart = null;
+  if (pointers.size === 0) {
+    if (dragging) { dragging = false; wrap.classList.remove('dragging'); idleSince = performance.now(); }
+    if (!moved && performance.now() - downTime < 350) {
+      if (downMarker) {
+        if (downMarker.kind === 'pin') select(downMarker.c.id, true);
+        else zoomToCluster(downMarker);
+      } else if (expanded) {
+        expanded = null;                                    // tap empty space to close the fan
+      }
+    }
+    downMarker = null;
+  }
+}
+wrap.addEventListener('pointerup', endPointer);
+wrap.addEventListener('pointercancel', endPointer);
+wrap.addEventListener('wheel', e => {
+  e.preventDefault();
+  engage();
+  zoomTarget = clampZoom(zoomTarget * Math.exp(-e.deltaY * 0.0016));
+  idleSince = performance.now();
+  tick();
+}, { passive: false });
+
+document.getElementById('zoomIn').addEventListener('click', () => { engage(); zoomTarget = clampZoom(zoomTarget * 1.6); expanded = null; idleSince = performance.now(); });
+document.getElementById('zoomOut').addEventListener('click', () => { engage(); zoomTarget = clampZoom(zoomTarget / 1.6); expanded = null; idleSince = performance.now(); });
+
+/* ---------- selection ---------- */
+function select(id, focus) {
+  selectedId = id;
+  const s = COMPANIES.find(x => x.id === id);
+  if (focus) {
+    idleSince = performance.now() + 99999;
+    focusAnim = { from: rotation.slice(), to: [-s.lon, -s.lat], start: performance.now(), dur: 850 };
+    setTimeout(() => { idleSince = performance.now(); }, 1600);
+  }
+  renderPeek(s);
+  renderDetail(s);
+  renderList();
+}
+
+function renderPeek(s) {
+  const grade = gradeFor(s.score);
+  const v = VERDICT[s.verdict];
+  document.getElementById('peek').innerHTML = `
+    <div class="top">
+      <div>
+        <span class="status ${s.verdict}"><span class="dot"></span>${v.label} · ${v.blurb}</span>
+        <h2>${s.name}</h2>
+        <div class="meta">${s.category}<span class="sep">/</span>cocoa from ${ORIGINS[s.origins[0]].name}</div>
+      </div>
+      <div class="grade">${grade}<small>score ${s.score}</small></div>
+    </div>
+    <div class="peek-more">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path stroke-linecap="round" stroke-linejoin="round" d="M18 15l-6-6-6 6"/></svg>
+      drag up for breakdown
+    </div>`;
+}
+
+function renderDetail(s) {
+  const metrics = metricsFor(s);
+  const bars = Object.entries(metrics).map(([k, v]) => `
+    <div class="bar-row">
+      <span class="lbl">${k}</span>
+      <span class="track"><span class="fill ${s.verdict}" data-w="${v}"></span></span>
+      <span class="val">${v}</span>
+    </div>`).join('');
+  const chips = s.products.map(p => `<span class="chip">${p}</span>`).join('');
+  const srcItems = sourcesFor(s).map(id => {
+    const sc = SOURCES[id]; if (!sc) return '';
+    return `<li>${sc.url ? `<a href="${sc.url}" target="_blank" rel="noopener">${sc.label}</a>` : sc.label}</li>`;
+  }).join('');
+  const d = document.getElementById('detail');
+  d.innerHTML = `
+    <p class="summary">${s.summary}</p>
+    <div class="facts">
+      <div class="fact"><span class="fk">Owner / HQ</span><span class="fv">${s.owner} · ${s.hq}</span></div>
+      <div class="fact"><span class="fk">Sourcing regions</span><span class="fv">${originLabel(s)}</span></div>
+      <div class="fact"><span class="fk">Where cocoa is sourced</span><span class="fv">${s.sourcing}</span></div>
+    </div>
+    <div class="bars">${bars}</div>
+    <div class="products">
+      <div class="h">${productsLabel(s)}</div>
+      <div class="chips">${chips}</div>
+    </div>
+    <div class="sources">
+      <div class="h">Sources</div>
+      <ul class="srclist">${srcItems}</ul>
+    </div>`;
+  requestAnimationFrame(() => d.querySelectorAll('.fill').forEach(f => { f.style.width = f.dataset.w + '%'; }));
+}
+
+function renderList() {
+  const list = document.getElementById('list');
+  const items = COMPANIES.filter(passFilter);
+  list.innerHTML = items.map(s => `
+    <div class="litem ${s.id === selectedId ? 'active' : ''}" data-id="${s.id}">
+      <span class="ldot ${s.verdict}"></span>
+      <div>
+        <div class="lname">${s.name}</div>
+        <div class="lmeta">${s.category} · ${s.hq}</div>
+      </div>
+      <span class="lscore ${s.verdict}">${s.score}</span>
+    </div>`).join('');
+  list.querySelectorAll('.litem').forEach(el => {
+    el.addEventListener('click', () => { engage(); select(el.dataset.id, true); setSheet(false); });
+  });
+}
+
+document.getElementById('recCount').textContent = COMPANIES.filter(s => RECOMMENDED.has(s.verdict)).length;
+document.getElementById('cautionCount').textContent = COMPANIES.filter(s => s.verdict === 'caution').length;
+document.getElementById('avoidCount').textContent = COMPANIES.filter(s => s.verdict === 'avoid').length;
+
+/* ---------- filter ---------- */
+document.getElementById('seg').addEventListener('click', e => {
+  const btn = e.target.closest('button'); if (!btn) return;
+  filter = btn.dataset.f;
+  document.querySelectorAll('#seg button').forEach(b => b.classList.toggle('on', b === btn));
+  renderList();
+});
+
+/* ---------- bottom sheet (drag + snap) ---------- */
+const sheet = document.getElementById('sheet');
+const grip = document.getElementById('grip');
+let sheetH = 0, peekT = 0, open = false, sy = 0, startT = 0, curT = 0, sdrag = false;
+
+function measureSheet() {
+  sheetH = sheet.offsetHeight;
+  const peekPx = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--peek')) || 238;
+  const safeBot = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--safe-bot')) || 0;
+  peekT = sheetH - (peekPx + safeBot);
+  applySheet(open ? 0 : peekT, false);
+}
+function applySheet(t, anim) {
+  curT = t;
+  sheet.style.transition = anim ? 'transform .4s cubic-bezier(.32,.72,0,1)' : 'none';
+  sheet.style.transform = 'translateY(' + t + 'px)';
+}
+function setSheet(o) {
+  open = o;
+  sheet.classList.toggle('open', o);
+  applySheet(o ? 0 : peekT, true);
+  document.getElementById('hint').style.opacity = (o || engaged) ? '0' : '1';
+}
+
+grip.addEventListener('pointerdown', e => {
+  sdrag = true; sy = e.clientY; startT = curT;
+  sheet.style.transition = 'none';
+  grip.setPointerCapture(e.pointerId);
+});
+grip.addEventListener('pointermove', e => {
+  if (!sdrag) return;
+  let t = Math.max(0, Math.min(peekT, startT + (e.clientY - sy)));
+  applySheet(t, false);
+});
+function endSheet() {
+  if (!sdrag) return;
+  sdrag = false;
+  setSheet(curT < peekT / 2);
+}
+grip.addEventListener('pointerup', endSheet);
+grip.addEventListener('pointercancel', endSheet);
+
+/* ---------- dark mode ---------- */
+function applyTheme(mode) {
+  theme = THEMES[mode] || THEMES.light;
+  document.body.classList.toggle('dark', mode === 'dark');
+  document.querySelector('meta[name=theme-color]').setAttribute('content', mode === 'dark' ? '#131210' : '#f4f1ea');
+  loaderColors(mode);
+  try { localStorage.setItem('goodscan-theme', mode); } catch (e) {}
+}
+/* Embedded in the app: theme is driven by the host page via a ?theme= query
+   param on first load and live `postMessage` updates afterwards (no in-map
+   toggle, since the app owns the theme switch). */
+window.addEventListener('message', (e) => {
+  const t = e.data && e.data.type === 'goodscan-theme' ? e.data.theme : null;
+  if (t === 'light' || t === 'dark') applyTheme(t);
+});
+let savedTheme = 'light';
+try {
+  const fromUrl = new URLSearchParams(location.search).get('theme');
+  savedTheme = fromUrl || localStorage.getItem('goodscan-theme') || 'light';
+} catch (e) {}
+
+/* ---------- loader globe ---------- */
+let loaderDone = false;
+const bootAt = performance.now();
+let L = { ink: '#1b1b19', bg: '#f4f1ea' };
+function loaderColors(mode){ L = mode === 'dark' ? { ink: '#f1efe7', bg: '#131210' } : { ink: '#1b1b19', bg: '#f4f1ea' }; }
+(function loaderGlobe(){
+  const SIZE = 200, c = document.getElementById('lcanvas'), lc = c.getContext('2d');
+  const ldpr = Math.min(window.devicePixelRatio || 1, 2);
+  c.width = SIZE * ldpr; c.height = SIZE * ldpr; lc.scale(ldpr, ldpr);
+  const lcx = SIZE/2, lcy = SIZE/2, lR = 60;
+  const proj = d3.geoOrthographic().translate([lcx, lcy]).scale(lR).clipAngle(90);
+  const lpath = d3.geoPath(proj, lc);
+  const particles = [];
+  for (let i = 0; i < 5; i++) particles.push({ angle:(Math.PI*2/5)*i, radius:78+(i%2)*9, speed:0.9+i*0.12, size:1.6+(i%2)*0.8, tilt:0.34 });
+  let lambda = 0, ring = 0, llast = performance.now();
+  function rgba(hex, a){ const n=parseInt(hex.slice(1),16); return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`; }
+  function draw(now){
+    now = now || performance.now();
+    const dt = Math.min((now - llast)/1000, 0.05); llast = now;
+    lambda += dt*26; ring += dt;
+    lc.clearRect(0,0,SIZE,SIZE);
+    proj.rotate([lambda, -16, 0]);
+    lc.beginPath(); lpath({type:'Sphere'}); lc.fillStyle = L.bg; lc.fill();
+    if (ready) {
+      lc.beginPath(); land.features.forEach(f => lpath(f)); lc.fillStyle = L.ink; lc.fill();
+      lc.beginPath(); lpath(borders); lc.lineWidth = 0.6; lc.strokeStyle = rgba(L.bg, 0.55); lc.stroke();
+    }
+    lc.beginPath(); lpath({type:'Sphere'}); lc.lineWidth = 1.1; lc.strokeStyle = L.ink; lc.stroke();
+    lc.save(); lc.translate(lcx, lcy);
+    const a0 = ring*2.2, segs = 24; lc.beginPath(); lc.lineWidth = 1.4; lc.lineCap = 'round';
+    for (let s = 0; s <= segs; s++){ const t = s/segs, a = a0 + t*(Math.PI*0.55), x = Math.cos(a)*90, y = Math.sin(a)*90*0.62; s===0?lc.moveTo(x,y):lc.lineTo(x,y); }
+    lc.strokeStyle = rgba(L.ink, 0.32); lc.stroke(); lc.restore();
+    lc.save(); lc.translate(lcx, lcy);
+    particles.forEach(p => { p.angle += dt*p.speed; const trail = 7;
+      for (let k = trail; k >= 0; k--){ const a = p.angle - k*0.06, x = Math.cos(a)*p.radius, y = Math.sin(a)*p.radius*p.tilt;
+        const alpha = (1 - k/(trail+1))*0.7, sz = p.size*(1 - k/(trail+2));
+        lc.beginPath(); lc.arc(x, y, Math.max(sz,0.4), 0, Math.PI*2); lc.fillStyle = rgba(L.ink, alpha); lc.fill(); } });
+    lc.restore();
+  }
+  let usingRaf = false;
+  (function loop(t){ usingRaf = true; draw(t); if (!loaderDone) requestAnimationFrame(loop); })();
+  setTimeout(() => { if (!usingRaf && !loaderDone) setInterval(() => { if (!loaderDone) draw(performance.now()); }, 1000/60); }, 300);
+  draw(performance.now());
+})();
+
+/* ---------- boot ---------- */
+function finishLoad() {
+  const wait = Math.max(0, 650 - (performance.now() - bootAt));
+  setTimeout(() => {
+    const el = document.getElementById('loader');
+    el.classList.add('hide');
+    setTimeout(() => { el.remove(); loaderDone = true; }, 600);
+    setSheet(false);
+  }, wait);
+}
+
+window.addEventListener('resize', () => { layout(); measureSheet(); });
+applyTheme(savedTheme);
+layout();
+select(selectedId, true);
+measureSheet();
+</script>
+</body>
+</html>
