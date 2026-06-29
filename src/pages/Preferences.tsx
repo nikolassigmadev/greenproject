@@ -6,6 +6,7 @@ import {
 import { Leaf, Users, Heart, RotateCcw, Check, Sparkles } from "lucide-react";
 import { DS } from "@/styles/design-tokens";
 import { RegionPicker } from "@/components/RegionPicker";
+import { WatchlistEditor } from "@/components/WatchlistEditor";
 import { toast } from "sonner";
 
 // Three discrete weights (0–100). The label + effect line do the explaining so
@@ -126,6 +127,14 @@ export default function Preferences() {
 
   const handleChange = (key: keyof UserPriorities, value: number) => {
     const updated = { ...priorities, [key]: value };
+    // Priorities have to mean something relative to each other — so the three
+    // tunable values can't all sit on the same level (no all-Low / all-Medium /
+    // all-Critical). Reject a change that would flatten them and explain why.
+    const levels = priorityConfig.map((c) => levelIndex(updated[c.key]));
+    if (levels.every((l) => l === levels[0])) {
+      toast("Pick at least one that stands out — your values can't all be the same.");
+      return;
+    }
     setPriorities(updated);
     savePriorities(updated);
   };
@@ -221,6 +230,16 @@ export default function Preferences() {
               </button>
             )}
           </div>
+
+          {/* ── Brands — a personal avoid/trust list that moves scores ── */}
+          <p style={{
+            fontSize: 11, fontWeight: 800, color: DS.muted,
+            letterSpacing: "0.08em", textTransform: "uppercase",
+            margin: "8px 2px 0",
+          }}>
+            Brands
+          </p>
+          <WatchlistEditor />
 
           {/* ── Settings (appearance + location) — separate from values ── */}
           <p style={{

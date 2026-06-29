@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { createBrowserRouter, Outlet, useLocation } from "react-router-dom";
-import { ScrollToTop } from "./components/ScrollToTop";
+import { ScrollManager } from "./components/ScrollManager";
 import { HackerTransition } from "./components/HackerTransition";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { BottomNav, BottomNavProvider } from "./components/BottomNav";
@@ -49,22 +49,40 @@ function isInstalledExperience(): boolean {
   return isStandalonePWA();
 }
 
+// Desktop / laptop visitors can use the app straight from the browser — "Add to
+// Home Screen" is a mobile concept, so we never show them the install gate. We
+// treat a device as desktop when it has no mobile/tablet user-agent, isn't an
+// iPad masquerading as a Mac, and drives a fine pointer (mouse/trackpad).
+function isDesktopDevice(): boolean {
+  try {
+    const ua = navigator.userAgent || "";
+    const mobileUA = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini|Mobile|Tablet|Silk|Kindle/i;
+    const isMobileUA = mobileUA.test(ua);
+    const isIpadOS = navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+    if (isMobileUA || isIpadOS) return false;
+    return window.matchMedia?.("(pointer: fine)").matches ?? true;
+  } catch {
+    return false;
+  }
+}
+
 function RootLayout() {
   const location = useLocation();
 
-  // Hard install gate: in a regular browser the app is unusable until it's added
-  // to the Home Screen. When that's the case we render *only* the
-  // Add-to-Home-Screen screen — no app content, no escape — so every user must
-  // install and then pass through onboarding (incl. accepting the policies).
+  // Hard install gate: in a regular *mobile* browser the app is unusable until
+  // it's added to the Home Screen — we render only the Add-to-Home-Screen
+  // screen, so every mobile user installs and then passes through onboarding
+  // (incl. accepting the policies). Desktop/laptop visitors skip the gate.
   const [installGated, setInstallGated] = useState(
-    () => false && !isInstalledExperience(),
+    () => !isDesktopDevice() && !isInstalledExperience(),
   );
 
-  // One-time animated onboarding (country, city, priorities). Persisted to
-  // localStorage so it only ever runs once per device, and gated so it only
-  // ever runs inside the Home-Screen / installed app.
+  // One-time animated onboarding (country, city, priorities, consent). Persisted
+  // to localStorage so it only runs once per device. It runs inside the
+  // installed app *and* for desktop visitors (who never hit the install gate),
+  // so the policies are always accepted before the app is used.
   const [showOnboarding, setShowOnboarding] = useState(
-    () => isInstalledExperience() && !hasCompletedOnboarding(),
+    () => (isInstalledExperience() || isDesktopDevice()) && !hasCompletedOnboarding(),
   );
 
   if (installGated) {
@@ -73,7 +91,10 @@ function RootLayout() {
 
   return (
     <BottomNavProvider>
-      <ScrollToTop />
+      {/* Scrolls to top on forward navigation, but restores the previous scroll
+          position on Back — so returning from a policy page lands you exactly
+          where you tapped. */}
+      <ScrollManager />
       <HackerTransition />
       <ErrorBoundary key={location.pathname}>
         <div className="page-transition" style={{ isolation: 'auto' }}>

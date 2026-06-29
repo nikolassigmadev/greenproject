@@ -1,5 +1,6 @@
 import { personalizedScore, gradeFromScore } from "@/utils/personalizedScore";
 import { loadPriorities, type UserPriorities } from "@/utils/userPreferences";
+import { getBrandSentiment } from "@/utils/watchlist";
 
 export interface BasketItem {
   id: string;
@@ -101,6 +102,7 @@ export const getBasketEthicsReport = (
         nutriGrade: item.nutriscoreGrade,
         laborAllegations: item.laborAllegations,
         brand: item.brand,
+        userBrandSentiment: getBrandSentiment(item.brand),
       },
       priorities,
     ),

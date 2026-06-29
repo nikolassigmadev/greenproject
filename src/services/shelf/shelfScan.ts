@@ -7,6 +7,7 @@
 import { analyzeProductImage } from "@/services/api/backend-client";
 import { smartProductSearch } from "@/utils/smartProductSearch";
 import { personalizedScore, type Verdict } from "@/utils/personalizedScore";
+import { getBrandSentiment } from "@/utils/watchlist";
 import { getLaborAllegationCount } from "@/utils/laborCheck";
 import { loadPriorities } from "@/utils/userPreferences";
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
@@ -149,6 +150,7 @@ export async function scanShelf(imageBase64: string): Promise<ShelfScanResult> {
           nutriGrade: product?.nutriscoreGrade,
           laborAllegations: getLaborAllegationCount(brand, product?.productName ?? d.product),
           brand,
+          userBrandSentiment: getBrandSentiment(brand),
         },
         priorities,
       );

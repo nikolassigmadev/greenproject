@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { shareProductCard } from "@/utils/shareCard";
 import { BackButton } from "@/components/BackButton";
-import { isWatched, toggleWatchlist, WATCHLIST_EVENT } from "@/utils/watchlist";
+import { isWatched, toggleWatchlist, getBrandSentiment, WATCHLIST_EVENT } from "@/utils/watchlist";
 import { Logo, Wordmark } from "@/components/Logo";
 import { lookupBarcode, searchProducts } from "@/services/openfoodfacts";
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
@@ -1683,6 +1683,17 @@ function getVerdict(product: OpenFoodFactsResult, priorities: UserPriorities) {
     } else if (key === "AVOID") {
       key = "CAUTION"; reason = `${who} ${standing}, though environmental impact is high`;
     }
+  }
+
+  // The user's personal watchlist stance has the final say — it overrides the
+  // data-driven verdict for their own view (avoid sinks it, trust lifts it).
+  const sentiment = getBrandSentiment(product.brand);
+  if (sentiment === "avoid") {
+    key = "AVOID";
+    reason = `You marked ${product.brand} as a brand to avoid`;
+  } else if (sentiment === "trust") {
+    key = "BUY";
+    reason = `You marked ${product.brand} as a brand you trust`;
   }
 
   return { key, reason };

@@ -157,6 +157,8 @@ export const OB_CSS = `
   background:var(--green-soft); color:var(--text); font-size:13.5px; line-height:1.5; font-weight:500;
 }
 .gs-ob .impact-note svg { width:16px; height:16px; color:var(--green); flex:none; margin-top:1px; }
+.gs-ob .impact-note.warn { background:var(--coral-soft); color:var(--coral); }
+.gs-ob .impact-note.warn svg { color:var(--coral); }
 
 .gs-ob .priorities {
   margin-top:clamp(14px,2.6svh,30px); border-radius:var(--radius-card);

@@ -102,6 +102,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
   const [country, setCountry] = useState(existingRegion?.countryCode || guessCountryCode() || "");
   const [city, setCity] = useState(existingRegion?.city || "");
   const [priorities, setPriorities] = useState<UserPriorities>(() => loadPriorities());
+  const [priorityNote, setPriorityNote] = useState<string | null>(null);
   const [agreed, setAgreed] = useState(false);
 
   const step = STEPS[stepIdx];
@@ -135,8 +136,18 @@ export function Onboarding({ onComplete }: OnboardingProps) {
   };
   const back = () => setStepIdx((i) => Math.max(0, i - 1));
 
-  const setLevel = (key: keyof UserPriorities, value: number) =>
-    setPriorities((p) => ({ ...p, [key]: value }));
+  const setLevel = (key: keyof UserPriorities, value: number) => {
+    const updated = { ...priorities, [key]: value };
+    // The three values can't all land on the same level — priorities only mean
+    // something relative to each other.
+    const levels = PRIORITY_CONFIG.map((c) => levelIndex(updated[c.key]));
+    if (levels.every((l) => l === levels[0])) {
+      setPriorityNote("Pick at least one that stands out — your values can't all be the same.");
+      return;
+    }
+    setPriorityNote(null);
+    setPriorities(updated);
+  };
 
   const selected = COUNTRIES.find((c) => c.code === country);
   const ctaLabel =
@@ -273,9 +284,9 @@ export function Onboarding({ onComplete }: OnboardingProps) {
                 })}
               </div>
 
-              <div className="impact-note">
+              <div className={`impact-note${priorityNote ? " warn" : ""}`}>
                 <Sparkles />
-                <span>{summarizePriorities(priorities)}</span>
+                <span>{priorityNote ?? summarizePriorities(priorities)}</span>
               </div>
             </>
           )}

@@ -11,6 +11,7 @@ import { checkAnimalWelfareFlag } from "@/utils/animalWelfareFlags";
 import { checkBoycott } from "@/data/boycottBrands";
 import { findVerifiedEthics } from "@/utils/verifiedEthics";
 import { findChocolateEntry } from "@/data/chocolateDirectory";
+import type { BrandSentiment } from "@/utils/watchlist";
 
 export interface ScoreInput {
   ecoGrade?: string | null;
@@ -22,7 +23,18 @@ export interface ScoreInput {
   brand?: string | null;
   /** Product name — sharpens verified-ethics / chocolate-leader lookups. */
   productName?: string | null;
+  /**
+   * The user's personal stance on the brand from their watchlist. "avoid" caps
+   * the score down hard; "trust" lifts it. This is the user's own call and so
+   * overrides the data-driven score for their personalized view.
+   */
+  userBrandSentiment?: BrandSentiment | null;
 }
+
+// How far a personal watchlist stance moves the score. "avoid" caps it into
+// AVOID territory; "trust" floors it into BUY territory.
+const SENTIMENT_AVOID_CAP = 15;
+const SENTIMENT_TRUST_FLOOR = 80;
 
 export type Verdict = "BUY" | "CONSIDER" | "CAUTION" | "AVOID" | "UNKNOWN";
 
@@ -120,6 +132,14 @@ export function personalizedScore(
   }[];
 
   if (active.length === 0) {
+    // A personal watchlist stance is enough to render a verdict even when we have
+    // no other data on the product.
+    if (input.userBrandSentiment === "avoid") {
+      return { score: SENTIMENT_AVOID_CAP, grade: gradeFromScore(SENTIMENT_AVOID_CAP), verdict: verdictFromScore(SENTIMENT_AVOID_CAP) };
+    }
+    if (input.userBrandSentiment === "trust") {
+      return { score: SENTIMENT_TRUST_FLOOR, grade: gradeFromScore(SENTIMENT_TRUST_FLOOR), verdict: verdictFromScore(SENTIMENT_TRUST_FLOOR) };
+    }
     return { score: null, grade: "unknown", verdict: "UNKNOWN" };
   }
 
@@ -138,6 +158,10 @@ export function personalizedScore(
   for (const p of active) {
     if (p.weight >= 2.5 && p.sub <= 30) score = Math.min(score, p.sub);
   }
+
+  // The user's personal watchlist stance has the final say in their own score.
+  if (input.userBrandSentiment === "avoid") score = Math.min(score, SENTIMENT_AVOID_CAP);
+  else if (input.userBrandSentiment === "trust") score = Math.max(score, SENTIMENT_TRUST_FLOOR);
 
   const rounded = Math.round(Math.max(0, Math.min(100, score)));
   return { score: rounded, grade: gradeFromScore(rounded), verdict: verdictFromScore(rounded) };
