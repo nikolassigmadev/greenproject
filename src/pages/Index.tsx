@@ -5,8 +5,6 @@ import { Logo, Wordmark } from "@/components/Logo";
 import { DS, scoreTone, toneColor, toneBg } from "@/styles/design-tokens";
 import { loadScanHistory, type ScanHistoryEntry } from "@/utils/userPreferences";
 import { loadDecisions, DECISIONS_EVENT } from "@/utils/decisions";
-import { getVerifiedFlagForBrand } from "@/services/brandFlags";
-import type { FlagCategory } from "@/types/brandFlag";
 import {
   scanEntryToShowcase,
   hasCompleteEcoData,
@@ -311,29 +309,6 @@ function ImpactRow({ icon: Icon, tint, value, text }: {
 const GOOD_VERDICTS = new Set(["BUY", "CONSIDER"]);
 const BAD_VERDICTS = new Set(["CAUTION", "AVOID"]);
 
-// Human-readable concern phrases, heaviest first — used to spell out what the
-// brands a user avoided were actually flagged for.
-const CONCERN_LABEL: Partial<Record<FlagCategory, string>> = {
-  child_labour: "child labour",
-  forced_labour: "forced labour and modern slavery",
-  animal_welfare: "animal welfare",
-  unsafe_conditions: "unsafe working conditions",
-  wage_theft: "wage theft",
-  union_busting: "union busting",
-  discrimination: "discrimination",
-  environmental_harm: "environmental harm",
-  supply_chain_opacity: "opaque supply chains",
-  boycott_listed: "active boycotts",
-};
-const CONCERN_ORDER: FlagCategory[] = [
-  "child_labour", "forced_labour", "animal_welfare", "unsafe_conditions",
-  "wage_theft", "union_busting", "discrimination", "environmental_harm",
-  "supply_chain_opacity", "boycott_listed",
-];
-
-const joinAnd = (xs: string[]) =>
-  xs.length <= 1 ? (xs[0] ?? "") : `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`;
-
 /**
  * Decision-driven impact snapshot. Quality is measured only on what the user
  * actually chose to BUY (good picks %), and they get credit for the flagged
@@ -369,27 +344,13 @@ function StatsOverview({ history }: { history: ScanHistoryEntry[] }) {
   }
   co2Saved = Math.round(co2Saved * 10) / 10;
 
-  // Distinct flagged brands the user saw a problem with and chose to skip, plus
-  // the actual concern categories behind them (child labour, animal welfare, …).
-  const avoidedBrandSet = new Set<string>();
-  const avoidedCategories = new Set<FlagCategory>();
-  for (const d of skipped) {
-    if (!BAD_VERDICTS.has(verdictOf(d))) continue;
-    const key = (d.brand || "").toLowerCase().trim();
-    if (key) avoidedBrandSet.add(key);
-    const flag = getVerifiedFlagForBrand(d.brand);
-    if (flag) avoidedCategories.add(flag.category);
-  }
-  const brandsAvoided = avoidedBrandSet.size;
-  const concernLabels = CONCERN_ORDER
-    .filter((c) => avoidedCategories.has(c))
-    .map((c) => CONCERN_LABEL[c]!)
-    .slice(0, 3);
-  // Name the real categories when we know them; otherwise still speak to the
-  // kinds of harm these flags represent so the impact lands.
-  const concernClause = concernLabels.length
-    ? `flagged for ${joinAnd(concernLabels)}`
-    : "flagged for issues like child labour, modern slavery or poor animal welfare";
+  // Distinct brands the user saw a problem with and chose to skip.
+  const brandsAvoided = new Set(
+    skipped
+      .filter((d) => BAD_VERDICTS.has(verdictOf(d)))
+      .map((d) => (d.brand || "").toLowerCase().trim())
+      .filter(Boolean),
+  ).size;
 
   return (
     <div style={{
@@ -443,7 +404,7 @@ function StatsOverview({ history }: { history: ScanHistoryEntry[] }) {
           <div style={{ fontSize: 12.5, color: DS.ink, lineHeight: 1.45 }}>
             You walked away from{" "}
             <strong>{brandsAvoided} brand{brandsAvoided === 1 ? "" : "s"}</strong>{" "}
-            {concernClause}.
+            with labour concerns.
           </div>
         </div>
       )}

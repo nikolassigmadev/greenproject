@@ -3,6 +3,7 @@ import { useTheme } from "next-themes";
 import {
   ScanLine, ShieldCheck, Sparkles, MapPin, Users, Leaf, Heart,
   ArrowRight, ArrowLeft, ChevronDown, ChevronRight, FileText, Check, X,
+  AlertTriangle,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { DS } from "@/styles/design-tokens";
@@ -83,8 +84,17 @@ const PRIORITY_CONFIG = [
   { key: "animalWelfare" as keyof UserPriorities, cls: "c3", label: "Animal Welfare", Icon: Heart },
 ];
 
-type StepId = "welcome" | "location" | "priorities" | "consent";
-const STEPS: StepId[] = ["welcome", "location", "priorities", "consent"];
+type StepId = "welcome" | "location" | "priorities" | "disclaimer" | "consent";
+const STEPS: StepId[] = ["welcome", "location", "priorities", "disclaimer", "consent"];
+
+// The same things we tell users before showing a product result, adapted to the
+// pre-app context — so they go in understanding GoodScan's limits.
+const DISCLAIMER_POINTS: { title: string; text: string }[] = [
+  { title: "We can be wrong", text: "Scores, flags and verdicts are generated automatically from imperfect third-party data. They can be incomplete, out of date, or simply wrong." },
+  { title: "Not professional advice", text: "Nothing here is legal, medical, dietary or financial advice. Don't rely on GoodScan alone for health or purchasing decisions." },
+  { title: "Flags are based on public reports", text: "A flag doesn't mean a company is guilty of wrongdoing, and the absence of a flag doesn't mean a brand is clean — it may just not be researched yet." },
+  { title: "Always verify yourself", text: "Treat everything in the app as a starting point, not a conclusion. Do your own research before making a decision." },
+];
 
 interface OnboardingProps {
   onComplete: () => void;
@@ -151,7 +161,10 @@ export function Onboarding({ onComplete }: OnboardingProps) {
 
   const selected = COUNTRIES.find((c) => c.code === country);
   const ctaLabel =
-    step === "welcome" ? "Get started" : step === "consent" ? "Agree & continue" : "Continue";
+    step === "welcome" ? "Get started"
+    : step === "disclaimer" ? "I understand"
+    : step === "consent" ? "Agree & continue"
+    : "Continue";
 
   return (
     <div className="gs-ob" data-theme={theme} role="dialog" aria-modal="true">
@@ -195,8 +208,8 @@ export function Onboarding({ onComplete }: OnboardingProps) {
             <>
               <span className="icon-tile" style={{ marginBottom: 26 }}><MapPin /></span>
               <div className="eyebrow">
-                <span className="label">Step 1 of 3</span>
-                <span className="progress"><i className="on" /><i /><i /></span>
+                <span className="label">Step 1 of 4</span>
+                <span className="progress"><i className="on" /><i /><i /><i /></span>
               </div>
               <h1 className="title">Where do you shop?</h1>
               <p className="sub">
@@ -251,8 +264,8 @@ export function Onboarding({ onComplete }: OnboardingProps) {
             <>
               <span className="icon-tile" style={{ marginBottom: 26 }}><Sparkles /></span>
               <div className="eyebrow">
-                <span className="label">Step 2 of 3</span>
-                <span className="progress"><i className="on" /><i className="on" /><i /></span>
+                <span className="label">Step 2 of 4</span>
+                <span className="progress"><i className="on" /><i className="on" /><i /><i /></span>
               </div>
               <h1 className="title">What matters most to you?</h1>
               <p className="sub">This shapes every verdict and swap. You can fine-tune it later in Settings.</p>
@@ -291,12 +304,54 @@ export function Onboarding({ onComplete }: OnboardingProps) {
             </>
           )}
 
+          {step === "disclaimer" && (
+            <>
+              <span className="icon-tile" style={{ marginBottom: 26 }}><AlertTriangle /></span>
+              <div className="eyebrow">
+                <span className="label">Step 3 of 4</span>
+                <span className="progress"><i className="on" /><i className="on" /><i className="on" /><i /></span>
+              </div>
+              <h1 className="title">Before you rely on it</h1>
+              <p className="sub">
+                GoodScan helps you explore — it's a starting point, not the final word. Please read this first.
+              </p>
+
+              <div
+                style={{
+                  display: "flex", gap: 10, alignItems: "flex-start",
+                  background: "var(--gold-soft)", border: "1px solid var(--border)",
+                  borderRadius: 16, padding: "13px 14px", margin: "4px 0 16px",
+                }}
+              >
+                <AlertTriangle style={{ width: 18, height: 18, color: "var(--gold)", flex: "none", marginTop: 1 }} />
+                <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.5, color: "var(--text)" }}>
+                  <strong>Always verify information yourself.</strong> Our data comes from third-party databases and public reports, and it may be wrong, incomplete or outdated.
+                </p>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {DISCLAIMER_POINTS.map((item) => (
+                  <div
+                    key={item.title}
+                    style={{
+                      background: "var(--surface)", border: "1px solid var(--border)",
+                      borderRadius: 16, padding: "13px 15px",
+                    }}
+                  >
+                    <p style={{ margin: "0 0 3px", fontSize: 14, fontWeight: 700, color: "var(--text)" }}>{item.title}</p>
+                    <p style={{ margin: 0, fontSize: 13, lineHeight: 1.5, color: "var(--text-2)" }}>{item.text}</p>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
           {step === "consent" && (
             <>
               <span className="icon-tile" style={{ marginBottom: 26 }}><ShieldCheck /></span>
               <div className="eyebrow">
-                <span className="label">Step 3 of 3</span>
-                <span className="progress"><i className="on" /><i className="on" /><i className="on" /></span>
+                <span className="label">Step 4 of 4</span>
+                <span className="progress"><i className="on" /><i className="on" /><i className="on" /><i className="on" /></span>
               </div>
               <h1 className="title">A quick agreement</h1>
               <p className="sub">
