@@ -451,12 +451,11 @@ const Scan = () => {
   const [offResult, setOffResult] = useState<OpenFoodFactsResult | null>(null);
   const [offLoading, setOffLoading] = useState(false);
   const [barcodeInput, setBarcodeInput] = useState("");
-  // Photo scan is the PRIMARY scan experience (shown by default): the user
-  // snaps the product, OpenAI reads/researches its barcode, and that barcode
-  // drives the Open Food Facts lookup. The live ZXing barcode scanner is still
-  // available via the "Barcode" toggle up top — it shares the same camera
-  // stream and never stops it, so switching between the two is instant.
-  const [barcodeScannerOpen, setBarcodeScannerOpen] = useState(false);
+  // The BarcodeScannerOverlay IS the scan experience and is the only scan UI
+  // shown. It's fully self-contained: its own Barcode | Photo | Search segmented
+  // control switches modes internally, so the user never leaves it. Defaults
+  // open so the overlay is what you see the moment the camera is ready.
+  const [barcodeScannerOpen, setBarcodeScannerOpen] = useState(true);
   const [offSearchResults, setOffSearchResults] = useState<OpenFoodFactsResult[]>([]);
   const [offSearchLoading, setOffSearchLoading] = useState(false);
   const [productUnknown, setProductUnknown] = useState(false);
