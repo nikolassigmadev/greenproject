@@ -903,25 +903,6 @@ export function BarcodeScannerOverlay({ stream, onClose }: Props) {
               <button
                 role="tab"
                 aria-selected="false"
-                onClick={openPhoto}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 7,
-                  height: 44,
-                  padding: "0 17px",
-                  borderRadius: 999,
-                  background: "transparent",
-                  border: "none",
-                  cursor: "pointer",
-                }}
-              >
-                <Camera size={17} color="rgba(255,255,255,0.82)" strokeWidth={2} />
-                <span style={{ fontFamily: DS.font, fontWeight: 600, fontSize: "0.9rem", color: "rgba(255,255,255,0.82)" }}>Photo</span>
-              </button>
-              <button
-                role="tab"
-                aria-selected="false"
                 onClick={openSearch}
                 style={{
                   display: "flex",
