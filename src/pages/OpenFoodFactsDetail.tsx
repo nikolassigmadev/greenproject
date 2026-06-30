@@ -1620,7 +1620,7 @@ function getVerdict(product: OpenFoodFactsResult, priorities: UserPriorities) {
   const nutritionWeight = priorityMultiplier(priorities.nutrition);
 
   const scoreLabel = grade
-    ? `Eco-Score ${grade.toUpperCase()}`
+    ? `Eco-Score ${gradeLabel(grade)}`
     : score !== null && score !== undefined
     ? `Eco-Score ${score}/100`
     : "No eco-score data";
@@ -1633,7 +1633,7 @@ function getVerdict(product: OpenFoodFactsResult, priorities: UserPriorities) {
   // gentle nudge for those users (see the grade branches below) rather than
   // sinking the verdict; the concerns they *do* prioritise (labour, boycott,
   // animal welfare, nutrition) adjust it afterwards.
-  if (grade === "a" || grade === "b") {
+  if (grade === "a-plus" || grade === "a" || grade === "b") {
     key = "BUY"; reason = `${scoreLabel} — excellent environmental credentials`;
   } else if (grade === "c") {
     if (envWeight >= 2.0) { key = "CAUTION"; reason = `${scoreLabel} — moderate impact (environment is a top priority for you)`; }

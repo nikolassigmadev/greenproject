@@ -121,6 +121,7 @@ function relevanceScore(product: OpenFoodFactsResult, query: string): number {
 function gradeColor(grade: string | null): string {
   if (!grade) return "bg-muted text-muted-foreground";
   switch (grade.toLowerCase()) {
+    case "a-plus": return "bg-score-excellent text-white";
     case "a": return "bg-score-excellent text-white";
     case "b": return "bg-score-good text-white";
     case "c": return "bg-score-fair text-white";

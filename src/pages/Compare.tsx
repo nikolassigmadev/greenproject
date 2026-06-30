@@ -45,7 +45,7 @@ const QUICK_PAIRS: Array<{ a: string; b: string; tag: string }> = [
 function gradeRank(grade: string | null | undefined): number {
   if (!grade) return 6;
   const g = grade.toLowerCase();
-  return ({ a: 1, b: 2, c: 3, d: 4, e: 5 } as Record<string, number>)[g] ?? 6;
+  return ({ "a-plus": 0, a: 1, b: 2, c: 3, d: 4, e: 5 } as Record<string, number>)[g] ?? 6;
 }
 
 // ────────────────────────────────────────────────────────────

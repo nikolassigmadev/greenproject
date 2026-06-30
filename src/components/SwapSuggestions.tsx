@@ -18,7 +18,7 @@ import { loadPriorities } from "@/utils/userPreferences";
 import { RegionPicker } from "@/components/RegionPicker";
 import { toast } from "sonner";
 
-const GRADE_CO2: Record<string, number> = { a: 0.5, b: 1.2, c: 2.5, d: 4.0, e: 6.0 };
+const GRADE_CO2: Record<string, number> = { "a-plus": 0.3, a: 0.5, b: 1.2, c: 2.5, d: 4.0, e: 6.0 };
 
 function origCo2(p: OpenFoodFactsResult): number | null {
   return (

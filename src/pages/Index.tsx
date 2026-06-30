@@ -333,7 +333,7 @@ function StatsOverview({ history }: { history: ScanHistoryEntry[] }) {
 
   // CO₂ avoided by buying lower-impact products than an average choice. Grade
   // → kg CO₂e/kg estimates mirror getCarbonStats in userPreferences.
-  const GRADE_CO2: Record<string, number> = { a: 0.5, b: 1.2, c: 2.5, d: 4.0, e: 6.0 };
+  const GRADE_CO2: Record<string, number> = { "a-plus": 0.3, a: 0.5, b: 1.2, c: 2.5, d: 4.0, e: 6.0 };
   const BASELINE = 2.5, SERVING = 0.25; // kg CO₂e/kg, ~kg per product
   let co2Saved = 0;
   for (const d of bought) {

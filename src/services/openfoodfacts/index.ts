@@ -104,7 +104,7 @@ const ALLOWED_COUNTRY_TAGS = new Set([
 
 // Eco-score grades we accept. OFF returns "unknown" / "not-applicable"
 // for unscored products; normalizeProduct() already strips those to null.
-const VALID_ECOSCORE_GRADES = new Set(['a', 'b', 'c', 'd', 'e']);
+const VALID_ECOSCORE_GRADES = new Set(['a-plus', 'a', 'b', 'c', 'd', 'e']);
 
 /** True when the product has a real eco-score (A–E), not unknown/missing. */
 const hasEcoscore = (product: OpenFoodFactsResult): boolean => {
@@ -984,7 +984,7 @@ export const searchBetterAlternatives = async (
       rawProducts = browseData.products;
     }
 
-    const betterGrades = new Set(['a', 'b']);
+    const betterGrades = new Set(['a-plus', 'a', 'b']);
     const candidates = rawProducts
       .filter(p => p.code !== result.barcode)
       .map(normalizeProduct)

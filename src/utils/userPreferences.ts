@@ -198,13 +198,13 @@ export const getHistoryStats = (history: ScanHistoryEntry[]) => {
 
 // CO2 estimates by eco grade (kg CO2e per kg of product)
 const GRADE_CO2_ESTIMATE: Record<string, number> = {
-  a: 0.5, b: 1.2, c: 2.5, d: 4.0, e: 6.0,
+  "a-plus": 0.3, a: 0.5, b: 1.2, c: 2.5, d: 4.0, e: 6.0,
 };
 const BASELINE_CO2 = 2.5; // grade C = "average" product
 
 // All-time carbon stats vs. average consumer
 export const getCarbonStats = (history: ScanHistoryEntry[]) => {
-  const GRADE_CO2: Record<string, number> = { a: 0.5, b: 1.2, c: 2.5, d: 4.0, e: 6.0 };
+  const GRADE_CO2: Record<string, number> = { "a-plus": 0.3, a: 0.5, b: 1.2, c: 2.5, d: 4.0, e: 6.0 };
   const BASELINE = 2.5; // kg CO₂e/kg — grade C "average" product
   const SERVING_KG = 0.25; // assume 250g per scanned product
 

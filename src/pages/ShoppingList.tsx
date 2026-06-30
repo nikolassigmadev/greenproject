@@ -18,7 +18,7 @@ import { DS } from "@/styles/design-tokens";
 /** Map an A–E grade to the site's themed tone tokens. */
 function gradeTone(grade: string | null | undefined): { color: string; bg: string } {
   const g = grade?.toLowerCase();
-  if (g === "a" || g === "b") return { color: DS.good, bg: DS.goodBg };
+  if (g === "a-plus" || g === "a" || g === "b") return { color: DS.good, bg: DS.goodBg };
   if (g === "c") return { color: DS.warn, bg: DS.warnBg };
   if (g === "d" || g === "e") return { color: DS.bad, bg: DS.badBg };
   return { color: DS.muted, bg: DS.bg };
@@ -49,7 +49,7 @@ function GradePill({ grade, label }: { grade: string; label: string }) {
       fontSize: 10, fontWeight: 800, color: tone.color, background: tone.bg,
       borderRadius: 6, padding: "2px 7px", whiteSpace: "nowrap",
     }}>
-      {label}-{grade.toUpperCase()}
+      {label}-{grade.toLowerCase() === "a-plus" ? "A+" : grade.toUpperCase()}
     </span>
   );
 }

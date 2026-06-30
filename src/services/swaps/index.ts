@@ -87,7 +87,7 @@ export interface SwapResult {
 }
 
 // kg CO2e per kg of product, estimated from eco-grade when OFF lacks figures.
-const GRADE_CO2: Record<string, number> = { a: 0.5, b: 1.2, c: 2.5, d: 4.0, e: 6.0 };
+const GRADE_CO2: Record<string, number> = { "a-plus": 0.3, a: 0.5, b: 1.2, c: 2.5, d: 4.0, e: 6.0 };
 
 const SEVERITY_WEIGHT: Record<ConcernSeverity, number> = {
   critical: 4, high: 3, medium: 2, low: 1,

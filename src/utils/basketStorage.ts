@@ -53,7 +53,7 @@ export const clearBasket = (): void => {
 
 // ── CO2 estimates by eco grade (kg CO2e per kg of product) ──────────────────
 // Source: approximate Agribalyse averages per grade band
-const GRADE_CO2_KG: Record<string, number> = { a: 0.5, b: 1.2, c: 2.5, d: 4.0, e: 6.0 };
+const GRADE_CO2_KG: Record<string, number> = { "a-plus": 0.3, a: 0.5, b: 1.2, c: 2.5, d: 4.0, e: 6.0 };
 const BASELINE_CO2_KG = 2.5; // grade C = "average supermarket product"
 
 function itemCO2PerKg(item: BasketItem): number | null {

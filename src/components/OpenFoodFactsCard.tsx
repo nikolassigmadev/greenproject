@@ -20,6 +20,7 @@ interface OpenFoodFactsCardProps {
 const ecoscoreStyle: Record<string, {
   solid: string; text: string; ring: string; label: string; glow: string;
 }> = {
+  "a-plus": { solid: "bg-emerald-600", text: "text-white", ring: "ring-emerald-600/30", label: "Excellent", glow: "shadow-emerald-600/20" },
   a: { solid: "bg-emerald-500", text: "text-white", ring: "ring-emerald-500/30", label: "Excellent", glow: "shadow-emerald-500/20" },
   b: { solid: "bg-lime-500",    text: "text-white", ring: "ring-lime-500/30",    label: "Good",      glow: "shadow-lime-500/20"    },
   c: { solid: "bg-amber-400",   text: "text-white", ring: "ring-amber-400/30",   label: "Fair",      glow: "shadow-amber-400/20"   },
@@ -66,7 +67,7 @@ function GradeHero({ grade, score }: { grade: string; score: number | null }) {
         style.solid, style.ring, style.glow
       )}>
         <span className={cn("text-2xl font-black leading-none", style.text)}>
-          {grade.toUpperCase()}
+          {grade.toLowerCase() === "a-plus" ? "A+" : grade.toUpperCase()}
         </span>
         {score !== null && (
           <span className={cn("text-[10px] font-bold opacity-80 leading-none mt-0.5", style.text)}>
