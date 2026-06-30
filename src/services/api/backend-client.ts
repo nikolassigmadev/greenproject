@@ -90,34 +90,6 @@ export const sendChatMessage = async (
 };
 
 /**
- * Fetches a professional white-background catalog photo of a product from the
- * backend's image-search proxy (SerpAPI / Google Images). Used on the verdict
- * screen in place of the Open Food Facts cover. Returns null on any failure or
- * when image search isn't configured — callers should fall back to the OFF image.
- */
-export const fetchProductImage = async (params: {
-  brand?: string | null;
-  name?: string | null;
-  barcode?: string | null;
-}): Promise<string | null> => {
-  try {
-    const qs = new URLSearchParams();
-    if (params.brand) qs.set('brand', params.brand);
-    if (params.name) qs.set('name', params.name);
-    if (params.barcode) qs.set('barcode', params.barcode);
-    if (!qs.has('brand') && !qs.has('name')) return null;
-
-    const response = await fetch(`${BACKEND_URL}/api/product-image?${qs}`);
-    if (!response.ok) return null;
-    const data = await response.json();
-    return data.success && typeof data.imageUrl === 'string' ? data.imageUrl : null;
-  } catch (error) {
-    console.warn('Product image lookup failed:', error);
-    return null;
-  }
-};
-
-/**
  * Checks backend health status
  */
 export const checkBackendHealth = async (): Promise<boolean> => {
@@ -134,6 +106,5 @@ export const checkBackendHealth = async (): Promise<boolean> => {
 export default {
   analyzeProductImage,
   sendChatMessage,
-  fetchProductImage,
   checkBackendHealth,
 };

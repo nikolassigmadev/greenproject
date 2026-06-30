@@ -11,7 +11,7 @@ import { shareProductCard } from "@/utils/shareCard";
 import { BackButton } from "@/components/BackButton";
 import { isWatched, toggleWatchlist, getBrandSentiment, WATCHLIST_EVENT } from "@/utils/watchlist";
 import { Logo, Wordmark } from "@/components/Logo";
-import { lookupBarcode, searchProducts, scoreDataCompleteness } from "@/services/openfoodfacts";
+import { lookupBarcode, searchProducts, scoreDataCompleteness, imageQualityTier } from "@/services/openfoodfacts";
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
 import { loadPriorities, priorityMultiplier, saveScanToHistory, loadScanHistory, type UserPriorities } from "@/utils/userPreferences";
 import { logScan } from "@/utils/scanLogger";
@@ -35,7 +35,7 @@ import { SwapSuggestions } from "@/components/SwapSuggestions";
 import { DecisionBar } from "@/components/DecisionBar";
 import { useBottomNav } from "@/components/BottomNav";
 import { findIngredientFlagsInText } from "@/services/ingredientFlags";
-import { sendChatMessage, fetchProductImage } from "@/services/api/backend-client";
+import { sendChatMessage } from "@/services/api/backend-client";
 import { cn } from "@/lib/utils";
 import { DS } from "@/styles/design-tokens";
 import { toast } from "sonner";
@@ -90,6 +90,18 @@ const EDITORIAL = {
  */
 const hasMeaningfulData = (p: OpenFoodFactsResult): boolean =>
   !!(p.ecoscoreGrade || p.nutriscoreGrade || p.novaGroup !== null || p.ingredientsText || p.carbonFootprint100g !== null);
+
+/**
+ * Open Food Facts serves each product photo at 100 / 200 / 400 / full sizes
+ * (e.g. `front_en.311.400.jpg`). The verdict hero is the one place that
+ * deserves the sharpest available shot, so bump the size segment to `full`.
+ * Only rewrites recognised OFF image URLs; anything else passes through.
+ */
+const fullResOffImage = (url: string | null | undefined): string | null => {
+  if (!url) return url ?? null;
+  if (!/openfoodfacts\.org/.test(url)) return url;
+  return url.replace(/\.(100|200|400)\.jpg(\?.*)?$/i, ".full.jpg$2");
+};
 
 const GRADE_COLOR: Record<string, string> = {
   "a-plus": DS.good, a: DS.good, b: DS.good, c: DS.warn, d: "#C26544", e: DS.bad,
@@ -299,29 +311,12 @@ export default function OpenFoodFactsDetail() {
   // Whether the "Better swaps" section actually renders any picks (null = still
   // resolving). Drives whether the DecisionBar promises "see a cleaner pick".
   const [swapsAvailable, setSwapsAvailable] = useState<boolean | null>(null);
-  // A real, white-background catalog photo of the product fetched from the
-  // backend image search. Preferred over the OFF cover on the verdict hero;
-  // null until it resolves (or stays null if search is unavailable → OFF cover).
-  const [onlineImage, setOnlineImage]       = useState<string | null>(null);
   const heroRef = useRef<HTMLDivElement>(null);
   const swapsRef = useRef<HTMLDivElement>(null);
   const { setHidden: setBottomNavHidden } = useBottomNav();
   const scrollToSwaps = () => swapsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
 
   useEffect(() => { if (barcode) loadProduct(barcode); }, [barcode]);
-
-  // Fetch a professional white-background photo of the resolved product to show
-  // on the verdict hero in place of the OFF cover. Best-effort: on any miss we
-  // simply keep onlineImage null and the hero falls back to product.imageUrl.
-  useEffect(() => {
-    setOnlineImage(null);
-    if (!product) return;
-    let cancelled = false;
-    fetchProductImage({ brand: product.brand, name: product.productName, barcode: product.barcode })
-      .then((url) => { if (!cancelled && url) setOnlineImage(url); })
-      .catch(() => { /* keep OFF cover */ });
-    return () => { cancelled = true; };
-  }, [product?.barcode]);
 
   // Focused decision context: hide the floating bottom nav while a product is
   // shown so the fixed Decision bar owns the bottom. Restored when we leave.
@@ -338,13 +333,17 @@ export default function OpenFoodFactsDetail() {
         if (stored) {
           const parsed: OpenFoodFactsResult[] = JSON.parse(stored);
           // OFF often holds several entries for what is effectively the same
-          // product — many are near-empty stubs (just a name, no scores). Order
-          // the alternatives by how much data they carry and surface only the
-          // well-populated ones, so the shopper picks a record worth reading.
-          // Fall back to the full list if the data filter would empty it.
+          // product — many are near-empty stubs (just a name, no scores). Keep
+          // only the well-populated ones (don't sacrifice data), then surface
+          // the cleanest front-of-pack photo first so the shopper lands on the
+          // best-looking, best-documented record. Fall back to the full list if
+          // the data filter would empty it.
           const ordered = parsed
             .filter(c => c.barcode !== barcode)
-            .sort((a, b) => scoreDataCompleteness(b) - scoreDataCompleteness(a));
+            .sort((a, b) =>
+              imageQualityTier(b) - imageQualityTier(a) ||
+              scoreDataCompleteness(b) - scoreDataCompleteness(a),
+            );
           const rich = ordered.filter(hasMeaningfulData);
           setCandidates(rich.length > 0 ? rich : ordered);
         }
@@ -906,16 +905,16 @@ export default function OpenFoodFactsDetail() {
             opacity: mounted ? 1 : 0,
             transition: "opacity 0.5s ease, transform 0.5s ease",
           }}>
-            {(onlineImage || product.imageUrl) ? (
+            {product.imageUrl ? (
               <img
-                src={onlineImage || product.imageUrl}
+                src={fullResOffImage(product.imageUrl) || product.imageUrl}
                 alt={displayName}
                 onError={(e) => {
-                  // If the online image 404s/blocks hotlinking, fall back to the
-                  // OFF cover (and if that was the source, hide the broken image).
+                  // If the full-res variant is missing for this revision, drop
+                  // back to the original (smaller) OFF URL so we still show a photo.
                   const img = e.currentTarget;
-                  if (onlineImage && img.src !== product.imageUrl && product.imageUrl) {
-                    setOnlineImage(null);
+                  if (product.imageUrl && img.src !== product.imageUrl) {
+                    img.src = product.imageUrl;
                   }
                 }}
                 style={{ maxWidth: "88%", maxHeight: "88%", objectFit: "contain", filter: "drop-shadow(0 18px 24px rgba(0,0,0,0.30))" }}
