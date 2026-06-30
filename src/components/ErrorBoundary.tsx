@@ -8,21 +8,44 @@ interface Props {
 interface State {
   hasError: boolean;
   error: Error | null;
+  recovering: boolean;
 }
 
 export class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { hasError: false, error: null, recovering: false };
   }
 
   static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error };
+    return { hasError: true, error, recovering: false };
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
     console.error("ErrorBoundary caught:", error, info.componentStack);
   }
+
+  // A crash like "Can't find variable: …" almost always means the device is
+  // running a stale, cached build whose JS no longer matches the deployed app.
+  // A plain reload just re-serves that same broken bundle from cache, trapping
+  // the user on this screen. So before reloading we purge the cached app shell
+  // (Cache Storage + service worker) to force a fresh fetch of the current code.
+  handleReload = async () => {
+    this.setState({ recovering: true });
+    try {
+      if ("caches" in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((k) => caches.delete(k)));
+      }
+      if ("serviceWorker" in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map((r) => r.unregister()));
+      }
+    } catch {
+      // Best effort — reload regardless so the user is never stuck here.
+    }
+    window.location.reload();
+  };
 
   render() {
     if (!this.state.hasError) return this.props.children;
@@ -93,7 +116,8 @@ export class ErrorBoundary extends Component<Props, State> {
             </pre>
           )}
           <button
-            onClick={() => window.location.reload()}
+            onClick={this.handleReload}
+            disabled={this.state.recovering}
             style={{
               padding: "12px 28px",
               borderRadius: DS.radius.sm,
@@ -102,10 +126,11 @@ export class ErrorBoundary extends Component<Props, State> {
               border: "none",
               fontSize: 15,
               fontWeight: 600,
-              cursor: "pointer",
+              cursor: this.state.recovering ? "default" : "pointer",
+              opacity: this.state.recovering ? 0.6 : 1,
             }}
           >
-            Reload page
+            {this.state.recovering ? "Reloading…" : "Reload page"}
           </button>
         </div>
       </div>
