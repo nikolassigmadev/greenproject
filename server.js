@@ -126,6 +126,10 @@ function recordScan(rec) {
 const app = express();
 const PORT = process.env.PORT || 3001;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+// SerpAPI key powers /api/product-image — fetches a real, white-background
+// catalog photo of the scanned product from Google Images. Optional: if unset,
+// the endpoint returns 503 and the client silently falls back to the OFF cover.
+const SERPAPI_KEY = process.env.SERPAPI_KEY;
 // Hardcoded so login doesn't depend on Hostinger env vars.
 // Replace this string with a new bcrypt hash to rotate the password.
 const ADMIN_PASSWORD_HASH = '$2b$10$OwDevUsgK7kV0kkUWM./n.a7vX4zMYKxF.TdsA0b3624GCWPYHKj2';
@@ -1220,6 +1224,97 @@ app.get('/api/image-proxy', searchLimiter, async (req, res) => {
   } catch (e) {
     console.error('image-proxy error:', e.message);
     res.status(500).json({ success: false, error: 'Image proxy failed' });
+  }
+});
+
+// ── Product image lookup (SerpAPI / Google Images) ──────────────────────────
+// Persistent cache so we don't burn the (small, paid) SerpAPI quota re-fetching
+// the same product every time its verdict is viewed. Keyed by normalized query.
+const PRODUCT_IMAGE_CACHE_FILE = join(LOG_DIR, 'product-images.json');
+let productImageCache = {};
+try {
+  if (existsSync(PRODUCT_IMAGE_CACHE_FILE)) {
+    productImageCache = JSON.parse(readFileSync(PRODUCT_IMAGE_CACHE_FILE, 'utf8')) || {};
+  }
+} catch { productImageCache = {}; }
+const saveProductImageCache = () => {
+  try {
+    if (!existsSync(LOG_DIR)) mkdirSync(LOG_DIR, { recursive: true, mode: 0o700 });
+    writeFileSync(PRODUCT_IMAGE_CACHE_FILE, JSON.stringify(productImageCache), { mode: 0o600 });
+  } catch (e) { console.warn('product-image cache write failed:', e.message); }
+};
+
+// Only allow plausible https image hosts through (defense-in-depth: the URL we
+// hand back gets loaded as an <img> on the verdict screen).
+const looksLikeImageUrl = (u) => {
+  try {
+    const url = new URL(u);
+    return url.protocol === 'https:';
+  } catch { return false; }
+};
+
+/**
+ * GET /api/product-image?brand=<>&name=<>&barcode=<>
+ * Returns a real, professional white-background catalog photo of the product
+ * sourced from Google Images via SerpAPI: { success, imageUrl, source, cached }.
+ * The verdict screen shows this in place of the Open Food Facts cover. Falls
+ * back gracefully — a 503/404 here just means the client keeps the OFF image.
+ */
+app.get('/api/product-image', searchLimiter, async (req, res) => {
+  try {
+    if (!SERPAPI_KEY) {
+      return res.status(503).json({ success: false, error: 'Image search not configured' });
+    }
+    const brand = (typeof req.query.brand === 'string' ? req.query.brand : '').trim().slice(0, 80);
+    const name = (typeof req.query.name === 'string' ? req.query.name : '').trim().slice(0, 120);
+    const barcode = (typeof req.query.barcode === 'string' ? req.query.barcode : '').trim().slice(0, 32);
+    const baseTerms = [brand, name].filter(Boolean).join(' ').trim();
+    if (!baseTerms) {
+      return res.status(400).json({ success: false, error: 'Provide brand and/or name' });
+    }
+
+    // Cache key is the product identity; the white-background framing is constant.
+    const cacheKey = (barcode || baseTerms).toLowerCase().replace(/\s+/g, ' ');
+    if (productImageCache[cacheKey]) {
+      return res.json({ success: true, ...productImageCache[cacheKey], cached: true });
+    }
+
+    const q = `${baseTerms} product white background`;
+    const params = new URLSearchParams({
+      engine: 'google_images',
+      q,
+      // Bias Google toward white-dominant (i.e. clean white-background) shots.
+      tbs: 'ic:specific,isc:white',
+      ijn: '0',
+      api_key: SERPAPI_KEY,
+    });
+
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 9000);
+    const upstream = await fetch(`https://serpapi.com/search.json?${params}`, {
+      signal: ctrl.signal,
+    }).catch(() => null);
+    clearTimeout(t);
+    if (!upstream || !upstream.ok) {
+      return res.status(502).json({ success: false, error: 'Image search upstream failed' });
+    }
+    const data = await upstream.json().catch(() => ({}));
+    const results = Array.isArray(data.images_results) ? data.images_results : [];
+    const hit = results
+      .map((r) => ({ url: r.original || r.thumbnail, source: r.source || r.link || '' }))
+      .find((r) => looksLikeImageUrl(r.url));
+
+    if (!hit) {
+      return res.status(404).json({ success: false, error: 'No image found' });
+    }
+
+    const payload = { imageUrl: hit.url, source: hit.source };
+    productImageCache[cacheKey] = payload;
+    saveProductImageCache();
+    res.json({ success: true, ...payload, cached: false });
+  } catch (e) {
+    console.error('product-image error:', e.message);
+    res.status(500).json({ success: false, error: 'Product image lookup failed' });
   }
 });
 

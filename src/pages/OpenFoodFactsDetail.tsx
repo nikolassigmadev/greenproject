@@ -35,7 +35,7 @@ import { SwapSuggestions } from "@/components/SwapSuggestions";
 import { DecisionBar } from "@/components/DecisionBar";
 import { useBottomNav } from "@/components/BottomNav";
 import { findIngredientFlagsInText } from "@/services/ingredientFlags";
-import { sendChatMessage } from "@/services/api/backend-client";
+import { sendChatMessage, fetchProductImage } from "@/services/api/backend-client";
 import { cn } from "@/lib/utils";
 import { DS } from "@/styles/design-tokens";
 import { toast } from "sonner";
@@ -290,12 +290,29 @@ export default function OpenFoodFactsDetail() {
   // Whether the "Better swaps" section actually renders any picks (null = still
   // resolving). Drives whether the DecisionBar promises "see a cleaner pick".
   const [swapsAvailable, setSwapsAvailable] = useState<boolean | null>(null);
+  // A real, white-background catalog photo of the product fetched from the
+  // backend image search. Preferred over the OFF cover on the verdict hero;
+  // null until it resolves (or stays null if search is unavailable → OFF cover).
+  const [onlineImage, setOnlineImage]       = useState<string | null>(null);
   const heroRef = useRef<HTMLDivElement>(null);
   const swapsRef = useRef<HTMLDivElement>(null);
   const { setHidden: setBottomNavHidden } = useBottomNav();
   const scrollToSwaps = () => swapsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
 
   useEffect(() => { if (barcode) loadProduct(barcode); }, [barcode]);
+
+  // Fetch a professional white-background photo of the resolved product to show
+  // on the verdict hero in place of the OFF cover. Best-effort: on any miss we
+  // simply keep onlineImage null and the hero falls back to product.imageUrl.
+  useEffect(() => {
+    setOnlineImage(null);
+    if (!product) return;
+    let cancelled = false;
+    fetchProductImage({ brand: product.brand, name: product.productName, barcode: product.barcode })
+      .then((url) => { if (!cancelled && url) setOnlineImage(url); })
+      .catch(() => { /* keep OFF cover */ });
+    return () => { cancelled = true; };
+  }, [product?.barcode]);
 
   // Focused decision context: hide the floating bottom nav while a product is
   // shown so the fixed Decision bar owns the bottom. Restored when we leave.
@@ -871,8 +888,20 @@ export default function OpenFoodFactsDetail() {
             opacity: mounted ? 1 : 0,
             transition: "opacity 0.5s ease, transform 0.5s ease",
           }}>
-            {product.imageUrl ? (
-              <img src={product.imageUrl} alt={displayName} style={{ maxWidth: "88%", maxHeight: "88%", objectFit: "contain", filter: "drop-shadow(0 18px 24px rgba(0,0,0,0.30))" }} />
+            {(onlineImage || product.imageUrl) ? (
+              <img
+                src={onlineImage || product.imageUrl}
+                alt={displayName}
+                onError={(e) => {
+                  // If the online image 404s/blocks hotlinking, fall back to the
+                  // OFF cover (and if that was the source, hide the broken image).
+                  const img = e.currentTarget;
+                  if (onlineImage && img.src !== product.imageUrl && product.imageUrl) {
+                    setOnlineImage(null);
+                  }
+                }}
+                style={{ maxWidth: "88%", maxHeight: "88%", objectFit: "contain", filter: "drop-shadow(0 18px 24px rgba(0,0,0,0.30))" }}
+              />
             ) : (
               <Sprout style={{ width: 72, height: 72, color: "rgba(26,22,20,0.35)" }} />
             )}
