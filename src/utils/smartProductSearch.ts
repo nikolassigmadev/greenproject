@@ -55,7 +55,7 @@ async function fixProductQuery(raw: string): Promise<string> {
  * The caller MUST still validate the barcode against OFF; the model can return
  * a plausible-but-wrong number, so an unverified barcode is never trusted.
  */
-async function barcodeFromText(raw: string): Promise<string | null> {
+export async function barcodeFromText(raw: string): Promise<string | null> {
   try {
     const res = await fetch(`${getBackendUrl()}/api/openai/chat`, {
       method: 'POST',

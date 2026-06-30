@@ -24,6 +24,7 @@ import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
 import { DS } from "@/styles/design-tokens";
 import { getBackendUrl } from "@/config/backend";
 import { pickBestMatch, validateBarcodeResult, scoreRelevance, hasUsableBrandAnchor, type MatchResult } from "@/utils/productRelevance";
+import { barcodeFromText } from "@/utils/smartProductSearch";
 import { logScan } from "@/utils/scanLogger";
 import { pickVisualBestCandidate, findAiConfirmedMatch, type VisualPick } from "@/services/visualMatch";
 import { BarcodeScannerOverlay } from "@/components/BarcodeScannerOverlay";
@@ -1426,6 +1427,25 @@ const Scan = () => {
         return;
       }
 
+      // In PARALLEL with the name search below, ask OpenAI for THIS product's
+      // retail barcode and resolve it directly in Open Food Facts. This is the
+      // preferred workflow — a GTIN lookup is exact where a name search is fuzzy,
+      // so it rescues products (e.g. a specific lemonade) that the name search
+      // can't pin down. It's gated against hallucinated codes: OFF must actually
+      // hold the barcode AND the resolved product must pass the same relevance
+      // check we apply to a scanned barcode. Runs concurrently, so it adds no
+      // latency to the happy path. Skip if it just repeats the barcode the vision
+      // step already tried in Step 2.
+      const aiBarcodePromise: Promise<OpenFoodFactsResult | null> = barcodeFromText(rawQuery)
+        .then(async (bc) => {
+          if (!bc || bc === identified.barcode) return null;
+          const r = await lookupBarcode(bc);
+          if (!r.found) return null;
+          const { valid } = validateBarcodeResult(r, rawQuery);
+          return valid ? r : null;
+        })
+        .catch(() => null);
+
       const cleanedQuery = cleanOCRQuery(rawQuery);
       // Search order: lead with "Brand Product" since brand often disambiguates
       // generic product names (e.g. "Phish Food" → "Ben & Jerry's Phish Food").
@@ -1531,6 +1551,23 @@ const Scan = () => {
         const base = sessionStorage.getItem('scan_full_openai_response') || fullOpenaiResponse || '';
         const block = `OFF search variations tried (${searchAttempts.length}):\n${searchAttempts.join('\n')}`;
         sessionStorage.setItem('scan_full_openai_response', base ? `${base}\n\n${block}` : block);
+      }
+
+      // Prefer the AI-resolved barcode over the fuzzy name match: it's an exact
+      // GTIN hit that already passed the OFF lookup + relevance gate (the same
+      // trust level as a scanned barcode), so we navigate straight to it and skip
+      // colour verification — just like the visible-barcode path in Step 2/3.
+      const aiBarcodeHit = await aiBarcodePromise;
+      if (aiBarcodeHit) {
+        console.log(`✅ AI barcode resolved → ${aiBarcodeHit.barcode} "${aiBarcodeHit.productName}" (preferred over name search)`);
+        const alts = [...(bestMatch?.product ? [bestMatch.product] : []), ...allCandidates]
+          .filter((c, i, arr) =>
+            c.barcode !== aiBarcodeHit.barcode &&
+            arr.findIndex((x) => x.barcode === c.barcode) === i,
+          );
+        sessionStorage.setItem('scan_candidates', JSON.stringify([aiBarcodeHit, ...alts]));
+        navigate(`/product-off/${aiBarcodeHit.barcode}?from=scan`);
+        return;
       }
 
       if (!bestMatch || !bestMatch.product) {

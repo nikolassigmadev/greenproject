@@ -276,9 +276,10 @@ Return empty array [] if none found.`,
 
 Product: [product line + exact flavor/variant]
 Brand: [brand]
-Barcode: [digits or "none"]
+Barcode: [the product's standard retail barcode digits, or "none"]
 
 Rules:
+- Barcode: give THIS exact product+variant's standard retail barcode (EAN-13, UPC-A, or EAN-8) as plain digits. Read it off the pack if a barcode is visible; OTHERWISE provide it from your own knowledge, but ONLY if you are highly confident of the canonical retail barcode for this precise product and flavor. If you are not certain, return "none". NEVER guess, approximate, or fabricate digits — a wrong barcode is far worse than "none". Region-specific variants exist, so answer only when one canonical barcode is well known. This barcode is looked up directly in a product database, so accuracy matters more than coverage.
 - Brand is REQUIRED and is the single most important field. We query Open Food Facts as "Brand Product"; without the brand the search drifts to a different company's product. Always populate Brand with your best guess from the package, even if the brand text is small, stylized, or partially obscured.
 - Recognisable brands and their logos (e.g. M&M's, KitKat, Oreo, Pringles, Doritos, Coca-Cola, Lay's) must NEVER be returned as UNKNOWN — identify them from the logo alone, even with no other text. A short, symbol-heavy, or non-alphabetic brand name (e.g. "M&M's", "7Up", "V8") is still a valid brand: return it exactly as shown.
 - At minimum, EITHER Brand OR Product must be a real, searchable identifier. Never return a generic descriptor alone (e.g. "Chocolate", "Party Mix", "Cookies", "Crisps") as Product with Brand "UNKNOWN" — that is unsearchable. If you can see ANY logo or brand mark, you MUST name the Brand.
