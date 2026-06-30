@@ -451,11 +451,12 @@ const Scan = () => {
   const [offResult, setOffResult] = useState<OpenFoodFactsResult | null>(null);
   const [offLoading, setOffLoading] = useState(false);
   const [barcodeInput, setBarcodeInput] = useState("");
-  // Live barcode scanner is the PRIMARY scan experience (shown by default).
-  // The camera/OCR photo scan is reachable via the "Photo" toggle up top. The
-  // barcode overlay shares the live camera stream and never stops it, so the
-  // photo-scan pipeline underneath stays fully intact.
-  const [barcodeScannerOpen, setBarcodeScannerOpen] = useState(true);
+  // Photo scan is the PRIMARY scan experience (shown by default): the user
+  // snaps the product, OpenAI reads/researches its barcode, and that barcode
+  // drives the Open Food Facts lookup. The live ZXing barcode scanner is still
+  // available via the "Barcode" toggle up top — it shares the same camera
+  // stream and never stops it, so switching between the two is instant.
+  const [barcodeScannerOpen, setBarcodeScannerOpen] = useState(false);
   const [offSearchResults, setOffSearchResults] = useState<OpenFoodFactsResult[]>([]);
   const [offSearchLoading, setOffSearchLoading] = useState(false);
   const [productUnknown, setProductUnknown] = useState(false);
@@ -1291,7 +1292,7 @@ const Scan = () => {
   const processImageForOFF = useCallback(async (imageData: string) => {
     if (!requirePriorities()) return;
     setOffSearchLoading(true);
-    setScanStage("Identifying Product...");
+    setScanStage("Identifying barcode…");
     setScanProgress(10);
     setOffSearchResults([]);
     setOffSearchText("");
@@ -1306,9 +1307,8 @@ const Scan = () => {
     sessionStorage.removeItem('scan_image');
 
     try {
-      // Step 1: OpenAI identifies the product
+      // Step 1: OpenAI reads the product (and any on-pack barcode) from the photo
       const identified = await advancedProductOCR(imageData);
-      setScanStage("Product identified");
       setScanProgress(30);
 
       const isUnknownResponse = (s: string | null | undefined) =>
@@ -1359,52 +1359,12 @@ const Scan = () => {
       if (identified.compressedBase64) sessionStorage.setItem('scan_image', identified.compressedBase64);
       else sessionStorage.removeItem('scan_image');
 
-      // Step 1b: Check hardcoded barcode map before anything else
-      setScanStage("Checking local product database...");
-      setScanProgress(40);
-      const identifiedText = [identified.brandName, identified.productName].filter(Boolean).join(' ');
-      const hardcodedBarcodes = lookupHardcodedBarcodes(identifiedText);
-      if (hardcodedBarcodes.length > 0) {
-        console.log(`✅ Hardcoded barcode match: "${identifiedText}" → trying ${hardcodedBarcodes.length} barcode(s)`);
-        for (const barcode of hardcodedBarcodes) {
-          const result = await lookupBarcode(barcode);
-          if (result.found) {
-            const hardcodedImage = lookupHardcodedImage(identifiedText) || lookupHardcodedImage(barcode);
-            const finalResult = hardcodedImage ? { ...result, imageUrl: hardcodedImage } : result;
-            sessionStorage.setItem('scan_candidates', JSON.stringify([finalResult]));
-            navigate(`/product-off/${finalResult.barcode}?from=scan`);
-            return;
-          }
-          console.log(`⚠️ Barcode ${barcode} not found, trying next...`);
-        }
-      }
-
-      // Step 2: If a barcode was spotted, look it up directly — but validate against OCR text
-      setScanStage("Looking up barcode...");
-      setScanProgress(50);
-      if (identified.barcode && isValidBarcode(identified.barcode)) {
-        const barcodeResult = await lookupBarcode(identified.barcode);
-        if (barcodeResult.found) {
-          // Validate: the resolved product must share a distinctive token with the OCR query
-          const ocrText = [identified.brandName, identified.productName].filter(s => !isUnknownResponse(s)).join(' ');
-          const { valid, relevance } = validateBarcodeResult(barcodeResult, ocrText);
-          if (valid) {
-            const hardcodedImage = lookupHardcodedImage(identified.barcode);
-            const finalResult = hardcodedImage ? { ...barcodeResult, imageUrl: hardcodedImage } : barcodeResult;
-            sessionStorage.setItem('scan_candidates', JSON.stringify([finalResult]));
-            navigate(`/product-off/${finalResult.barcode}?from=scan`);
-            return;
-          }
-          console.warn(`⚠️ Barcode ${identified.barcode} resolved to "${barcodeResult.productName}" but failed relevance check against OCR "${ocrText}" (score=${relevance.score.toFixed(2)}, distinctiveOverlap=${relevance.distinctiveOverlap}) — falling through to text search`);
-        }
-      }
-
-      // Step 3: Build search queries — product name first (better for OpenFoodFacts),
-      // then combined, then brand-only as last resort.
-      // rawQuery includes brand for relevance scoring, but search order prioritises product name.
+      // The product text OpenAI read off the pack — used to research the barcode
+      // and to validate whatever barcode resolves.
       const prodOnly = identified.productName && !isUnknownResponse(identified.productName) ? identified.productName.trim() : '';
       const brandOnly = identified.brandName && !isUnknownResponse(identified.brandName) ? identified.brandName.trim() : '';
       const rawQuery = [brandOnly, prodOnly].filter(Boolean).join(' ');
+      const identifiedText = [identified.brandName, identified.productName].filter(Boolean).join(' ');
 
       if (!rawQuery) {
         logFailedScan(rawQuery);
@@ -1412,12 +1372,62 @@ const Scan = () => {
         return;
       }
 
-      // Guard against generic cross-brand drift when no usable brand was read.
-      // If the OCR brand has no Latin anchor token (blank, or non-Latin script
-      // like Arabic), a product-only search lands on a same-category product from
-      // a DIFFERENT brand — e.g. blank brand + "Protein Bar Peanut Caramel" →
-      // another company's peanut-caramel bar, or "Tea" → a random iced tea.
-      // Honest behaviour: prompt manual entry instead of guessing the brand.
+      // ── Barcode-first resolution ─────────────────────────────────────────
+      // The headline flow the user sees: get THIS product's barcode, then resolve
+      // it exactly in Open Food Facts. We try, in order: our curated map, the
+      // barcode OpenAI read off the pack, and — when none is legible — a barcode
+      // the model researches from its knowledge of the identified product. Every
+      // candidate must resolve in OFF AND pass the same relevance check we apply
+      // to a scanned barcode, so a confidently-wrong number can never win. If
+      // nothing verifies, we fall through to the name search below.
+      const resolveBarcode = async (bc: string | null | undefined, relevanceText: string): Promise<boolean> => {
+        if (!bc || !isValidBarcode(bc)) return false;
+        setScanStage(`Barcode found · ${bc}`);
+        setScanProgress(60);
+        const result = await lookupBarcode(bc);
+        if (!result.found) {
+          console.log(`⚠️ Barcode ${bc} not in Open Food Facts — trying next route`);
+          return false;
+        }
+        const { valid, relevance } = validateBarcodeResult(result, relevanceText);
+        if (!valid) {
+          console.warn(`⚠️ Barcode ${bc} resolved to "${result.productName}" but failed relevance vs "${relevanceText}" (score=${relevance.score.toFixed(2)}) — ignoring`);
+          return false;
+        }
+        setScanStage("Sending barcode to Open Food Facts…");
+        setScanProgress(80);
+        const hardcodedImage = lookupHardcodedImage(bc);
+        const finalResult = hardcodedImage ? { ...result, imageUrl: hardcodedImage } : result;
+        sessionStorage.setItem('scan_candidates', JSON.stringify([finalResult]));
+        navigate(`/product-off/${finalResult.barcode}?from=scan`);
+        return true;
+      };
+
+      // (1) Curated map — known product → known-good barcode (instant, exact).
+      for (const bc of lookupHardcodedBarcodes(identifiedText)) {
+        if (await resolveBarcode(bc, rawQuery)) return;
+      }
+
+      // (2) Barcode OpenAI read directly off the pack.
+      if (await resolveBarcode(identified.barcode, rawQuery)) return;
+
+      // (3) No legible barcode — have the model research this product's canonical
+      //     retail barcode, then verify it in Open Food Facts. Skipped when no
+      //     usable brand anchor was read (see the gate below): "research the
+      //     barcode of <generic product>" can only ever return a guess.
+      if (hasUsableBrandAnchor(brandOnly)) {
+        setScanStage("Researching barcode…");
+        setScanProgress(50);
+        const researched = await barcodeFromText(rawQuery);
+        if (researched && researched !== identified.barcode && (await resolveBarcode(researched, rawQuery))) return;
+      }
+
+      // ── Name-search fallback ─────────────────────────────────────────────
+      // No barcode could be verified, so fall back to the fuzzy brand/product
+      // search to still resolve the scan. First refuse a generic cross-brand
+      // guess when no usable brand anchor was read: a product-only search lands
+      // on a same-category product from a DIFFERENT brand — e.g. blank brand +
+      // "Protein Bar Peanut Caramel" → another company's peanut-caramel bar.
       // (Verified against a 128-product battery: 0 correctly-resolved scans had
       // an unreadable brand, so this never blocks a real match.)
       if (!hasUsableBrandAnchor(brandOnly)) {
@@ -1426,25 +1436,6 @@ const Scan = () => {
         setNotFoundQuery(prodOnly || rawQuery);
         return;
       }
-
-      // In PARALLEL with the name search below, ask OpenAI for THIS product's
-      // retail barcode and resolve it directly in Open Food Facts. This is the
-      // preferred workflow — a GTIN lookup is exact where a name search is fuzzy,
-      // so it rescues products (e.g. a specific lemonade) that the name search
-      // can't pin down. It's gated against hallucinated codes: OFF must actually
-      // hold the barcode AND the resolved product must pass the same relevance
-      // check we apply to a scanned barcode. Runs concurrently, so it adds no
-      // latency to the happy path. Skip if it just repeats the barcode the vision
-      // step already tried in Step 2.
-      const aiBarcodePromise: Promise<OpenFoodFactsResult | null> = barcodeFromText(rawQuery)
-        .then(async (bc) => {
-          if (!bc || bc === identified.barcode) return null;
-          const r = await lookupBarcode(bc);
-          if (!r.found) return null;
-          const { valid } = validateBarcodeResult(r, rawQuery);
-          return valid ? r : null;
-        })
-        .catch(() => null);
 
       const cleanedQuery = cleanOCRQuery(rawQuery);
       // Search order: lead with "Brand Product" since brand often disambiguates
@@ -1551,23 +1542,6 @@ const Scan = () => {
         const base = sessionStorage.getItem('scan_full_openai_response') || fullOpenaiResponse || '';
         const block = `OFF search variations tried (${searchAttempts.length}):\n${searchAttempts.join('\n')}`;
         sessionStorage.setItem('scan_full_openai_response', base ? `${base}\n\n${block}` : block);
-      }
-
-      // Prefer the AI-resolved barcode over the fuzzy name match: it's an exact
-      // GTIN hit that already passed the OFF lookup + relevance gate (the same
-      // trust level as a scanned barcode), so we navigate straight to it and skip
-      // colour verification — just like the visible-barcode path in Step 2/3.
-      const aiBarcodeHit = await aiBarcodePromise;
-      if (aiBarcodeHit) {
-        console.log(`✅ AI barcode resolved → ${aiBarcodeHit.barcode} "${aiBarcodeHit.productName}" (preferred over name search)`);
-        const alts = [...(bestMatch?.product ? [bestMatch.product] : []), ...allCandidates]
-          .filter((c, i, arr) =>
-            c.barcode !== aiBarcodeHit.barcode &&
-            arr.findIndex((x) => x.barcode === c.barcode) === i,
-          );
-        sessionStorage.setItem('scan_candidates', JSON.stringify([aiBarcodeHit, ...alts]));
-        navigate(`/product-off/${aiBarcodeHit.barcode}?from=scan`);
-        return;
       }
 
       if (!bestMatch || !bestMatch.product) {
