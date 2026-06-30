@@ -1,9 +1,14 @@
 /**
  * Animal Welfare Flag Badge Component
- * Displays a warning badge for products from companies with poor animal welfare records
+ * Displays a warning card for products from companies with poor animal welfare
+ * records. Styled to match the verdict page's concern cards (boycott / labour):
+ * a neutral card with a soft-yellow icon chip, using the shared DS tokens so it
+ * sits consistently alongside the other ethics flags rather than as a loud,
+ * differently-shaped box.
  */
 
-import { checkAnimalWelfareFlag, getAnimalWelfareFlagEmoji, getAnimalWelfareFlagColor } from '@/utils/animalWelfareFlags';
+import { PawPrint } from 'lucide-react';
+import { checkAnimalWelfareFlag } from '@/utils/animalWelfareFlags';
 import { DS } from '@/styles/design-tokens';
 
 interface AnimalWelfareFlagBadgeProps {
@@ -18,56 +23,68 @@ export function AnimalWelfareFlagBadge({ brand, showDetails = true }: AnimalWelf
     return null;
   }
 
-  const emoji = getAnimalWelfareFlagEmoji(flag.severity);
-  const color = getAnimalWelfareFlagColor(flag.severity);
   const company = flag.company!;
+  // Animal welfare reads as yellow across the app's palette, regardless of the
+  // underlying BBFAW severity tier.
+  const accent = DS.warn;
+  const accentSoft = DS.warnBg;
 
   return (
     <div
       style={{
-        backgroundColor: `${color}15`,
-        border: `2px solid ${color}`,
-        borderRadius: '0.75rem',
-        padding: '1rem',
-        marginBottom: '1.5rem',
-        display: 'flex',
-        gap: '1rem',
-        alignItems: 'flex-start',
+        background: DS.card,
+        border: `1px solid ${DS.hair}`,
+        borderRadius: 22,
+        padding: '18px 20px',
+        display: 'grid',
+        gridTemplateColumns: '46px 1fr',
+        gap: 14,
+        alignItems: 'start',
       }}
     >
-      <div style={{ fontSize: '1.5rem', flexShrink: 0 }}>{emoji}</div>
-      <div style={{ flex: 1 }}>
-        <h3 style={{ fontWeight: 'bold', color, marginBottom: '0.25rem' }}>
-          Animal Welfare Concern
-        </h3>
-        <p style={{ color: DS.ink2, fontSize: '0.9rem', marginBottom: showDetails ? '0.75rem' : 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 10,
+            background: accentSoft,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <PawPrint style={{ width: 20, height: 20, color: accent }} />
+        </div>
+      </div>
+      <div>
+        <div style={{ fontSize: 19, lineHeight: 1.15, color: DS.ink, letterSpacing: -0.3, fontWeight: 700 }}>
+          Animal welfare concern
+        </div>
+        <div style={{ fontSize: 12.5, color: DS.ink2, marginTop: 6, lineHeight: 1.45 }}>
           {company.companyName} has poor animal welfare practices according to the BBFAW (Business Benchmark on Farm
           Animal Welfare).
-        </p>
+        </div>
 
-        {showDetails && company && (
-          <div style={{ fontSize: '0.85rem', color: DS.ink2 }}>
-            <p style={{ marginBottom: '0.5rem' }}>
-              <strong>BBFAW Tier:</strong> {company.bbfawTier} ({company.bbfawScore})
-            </p>
+        {showDetails && (
+          <div style={{ fontSize: 12, color: DS.ink2, marginTop: 10, lineHeight: 1.5 }}>
+            <div>
+              <span style={{ fontWeight: 700, color: DS.ink2 }}>BBFAW tier: </span>
+              {company.bbfawTier} ({company.bbfawScore})
+            </div>
             {company.concerns.length > 0 && (
-              <div>
-                <p style={{ marginBottom: '0.25rem' }}>
-                  <strong>Concerns:</strong>
-                </p>
-                <ul style={{ margin: '0.25rem 0 0 1.25rem', paddingLeft: 0 }}>
-                  {company.concerns.slice(0, 3).map((concern, i) => (
-                    <li key={i} style={{ marginBottom: '0.25rem' }}>
-                      {concern}
-                    </li>
-                  ))}
-                  {company.concerns.length > 3 && <li>+ {company.concerns.length - 3} more</li>}
-                </ul>
-              </div>
+              <ul style={{ margin: '6px 0 0', paddingLeft: 16 }}>
+                {company.concerns.slice(0, 3).map((concern, i) => (
+                  <li key={i} style={{ marginBottom: 2 }}>
+                    {concern}
+                  </li>
+                ))}
+                {company.concerns.length > 3 && <li>+ {company.concerns.length - 3} more</li>}
+              </ul>
             )}
-            <p style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: DS.muted, fontStyle: 'italic' }}>
+            <div style={{ marginTop: 8, fontSize: 11, color: DS.muted, fontStyle: 'italic' }}>
               Source: BBFAW 2024/2025 Report, World Animal Protection
-            </p>
+            </div>
           </div>
         )}
       </div>

@@ -11,7 +11,7 @@ import { shareProductCard } from "@/utils/shareCard";
 import { BackButton } from "@/components/BackButton";
 import { isWatched, toggleWatchlist, getBrandSentiment, WATCHLIST_EVENT } from "@/utils/watchlist";
 import { Logo, Wordmark } from "@/components/Logo";
-import { lookupBarcode, searchProducts } from "@/services/openfoodfacts";
+import { lookupBarcode, searchProducts, scoreDataCompleteness } from "@/services/openfoodfacts";
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
 import { loadPriorities, priorityMultiplier, saveScanToHistory, loadScanHistory, type UserPriorities } from "@/utils/userPreferences";
 import { logScan } from "@/utils/scanLogger";
@@ -81,6 +81,15 @@ const EDITORIAL = {
   blue: "#2E5A7A",
   gold: "#9A7B1F",
 } as const;
+
+/**
+ * A candidate is worth offering only if it carries some substantive data beyond
+ * a bare name/brand — an eco- or nutri-score, NOVA group, ingredients, or a
+ * carbon figure. Pure stubs are dropped from the "select the correct product"
+ * list so the shopper isn't sent to an empty record.
+ */
+const hasMeaningfulData = (p: OpenFoodFactsResult): boolean =>
+  !!(p.ecoscoreGrade || p.nutriscoreGrade || p.novaGroup !== null || p.ingredientsText || p.carbonFootprint100g !== null);
 
 const GRADE_COLOR: Record<string, string> = {
   "a-plus": DS.good, a: DS.good, b: DS.good, c: DS.warn, d: "#C26544", e: DS.bad,
@@ -328,7 +337,16 @@ export default function OpenFoodFactsDetail() {
         const stored = sessionStorage.getItem("scan_candidates");
         if (stored) {
           const parsed: OpenFoodFactsResult[] = JSON.parse(stored);
-          setCandidates(parsed.filter(c => c.barcode !== barcode));
+          // OFF often holds several entries for what is effectively the same
+          // product — many are near-empty stubs (just a name, no scores). Order
+          // the alternatives by how much data they carry and surface only the
+          // well-populated ones, so the shopper picks a record worth reading.
+          // Fall back to the full list if the data filter would empty it.
+          const ordered = parsed
+            .filter(c => c.barcode !== barcode)
+            .sort((a, b) => scoreDataCompleteness(b) - scoreDataCompleteness(a));
+          const rich = ordered.filter(hasMeaningfulData);
+          setCandidates(rich.length > 0 ? rich : ordered);
         }
       } catch { /* ignore */ }
     }
