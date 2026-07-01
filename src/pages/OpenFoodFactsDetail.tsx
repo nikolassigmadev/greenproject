@@ -1611,13 +1611,11 @@ function getVerdictKey(product: OpenFoodFactsResult, priorities: UserPriorities)
 function getVerdict(product: OpenFoodFactsResult, priorities: UserPriorities) {
   const grade = product.ecoscoreGrade?.toLowerCase();
   const score = product.ecoscoreScore;
-  const nutriGrade = product.nutriscoreGrade?.toLowerCase();
   const laborRecord = findLaborAllegations(product);
   const laborCount = laborRecord?.allegations.length || 0;
   const envWeight = priorityMultiplier(priorities.environment);
   const laborWeight = priorityMultiplier(priorities.laborRights);
   const animalWeight = priorityMultiplier(priorities.animalWelfare);
-  const nutritionWeight = priorityMultiplier(priorities.nutrition);
 
   const scoreLabel = grade
     ? `Eco-Score ${gradeLabel(grade)}`
@@ -1693,16 +1691,9 @@ function getVerdict(product: OpenFoodFactsResult, priorities: UserPriorities) {
     }
   }
 
-  if (nutriGrade && nutritionWeight > 0) {
-    const nutriLabel = `Nutri-Score ${nutriGrade.toUpperCase()}`;
-    if ((nutriGrade === "d" || nutriGrade === "e") && nutritionWeight >= 2.0 && (key === "BUY" || key === "CONSIDER" || key === "UNKNOWN")) {
-      key = "CAUTION"; reason = `${nutriLabel} — poor nutrition (nutrition is a top priority for you)`;
-    } else if ((nutriGrade === "d" || nutriGrade === "e") && nutritionWeight >= 1.0 && (key === "BUY" || key === "UNKNOWN")) {
-      key = "CONSIDER"; reason = `${nutriLabel} — poor nutrition (nutrition matters to you)`;
-    } else if (nutriGrade === "e" && nutritionWeight >= 3.0) {
-      key = "AVOID"; reason = `${nutriLabel} — very poor nutrition (nutrition is critical for you)`;
-    }
-  }
+  // Nutrition is no longer a user-selectable priority, so a poor Nutri-Score no
+  // longer flips the top-line verdict. It still appears in the numeric score
+  // breakdown, but it never drives the Buy/Consider/Avoid decision or its reason.
 
   // Positive ethics is a real UPWARD force — symmetric to the penalties above.
   // A verified ethical brand or a Chocolate Scorecard "leader"/"better" (e.g.

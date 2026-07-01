@@ -2100,19 +2100,6 @@ const Scan = () => {
             : <div style={{ position: 'absolute', inset: 0, background: '#111' }} />
         )}
 
-        {/* Scan line when loading */}
-        {offSearchLoading && (
-          <div style={{
-            position: 'absolute', top: '30%', left: '14%', right: '14%',
-            height: '2px',
-            background: 'linear-gradient(90deg, transparent, #4ade80, transparent)',
-            boxShadow: '0 0 12px #4ade80, 0 0 28px rgba(74,222,128,0.6)',
-            animation: 'scanLine 1.8s ease-in-out infinite',
-            zIndex: 8,
-            borderRadius: 99,
-          }} />
-        )}
-
         {/* Scanning bracket corners — only shown once camera is live */}
         {cameraActive && (['tl','tr','bl','br'] as const).map(corner => {
           const isTop = corner.startsWith('t');
@@ -2660,11 +2647,6 @@ const Scan = () => {
 
       {/* CSS animations */}
       <style>{`
-        @keyframes scanLine {
-          0%   { top: 15%; opacity: 0.9; }
-          50%  { top: 70%; opacity: 0.5; }
-          100% { top: 15%; opacity: 0.9; }
-        }
         @keyframes spin {
           from { transform: rotate(0deg); }
           to   { transform: rotate(360deg); }
