@@ -34,4 +34,15 @@ describe('personalizedScore — ethics priority lifts ethical leaders', () => {
     );
     expect(r.verdict).not.toBe('BUY');
   });
+
+  it('a single labour allegation at medium weight caps to CAUTION (matches detail-page getVerdict)', () => {
+    // Regression: previously this averaged to ~73 → BUY on the cart/shelf while
+    // the product-detail page showed CAUTION. Both engines must now agree.
+    const r = personalizedScore(
+      { brand: 'Some Brand', productName: 'Snack', ecoGrade: 'b', laborAllegations: 1 },
+      P({}), // all medium
+    );
+    expect(r.verdict).toBe('CAUTION');
+    expect(r.score!).toBeLessThan(45);
+  });
 });

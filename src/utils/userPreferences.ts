@@ -165,12 +165,17 @@ export const clearScanHistory = (): void => {
 
 // Get stats from history
 export const getHistoryStats = (history: ScanHistoryEntry[]) => {
+  // Classify by the verdict LABEL (BUY/CONSIDER/CAUTION/AVOID/UNKNOWN) that is
+  // actually stored. History entries are written with an empty `emoji`, so the
+  // old emoji-based counts were always zero — matching the BUY+CONSIDER "good"
+  // split used elsewhere (Index StatsOverview).
+  const verdictKey = (h: ScanHistoryEntry) => (h.verdict.label || '').toUpperCase();
   const total = history.length;
-  const good = history.filter(h => h.verdict.emoji === '✅').length;
-  const moderate = history.filter(h => h.verdict.emoji === '🤔').length;
-  const caution = history.filter(h => h.verdict.emoji === '⚠️').length;
-  const avoid = history.filter(h => h.verdict.emoji === '🚫').length;
-  const unknown = history.filter(h => h.verdict.emoji === '❓').length;
+  const good = history.filter(h => verdictKey(h) === 'BUY').length;
+  const moderate = history.filter(h => verdictKey(h) === 'CONSIDER').length;
+  const caution = history.filter(h => verdictKey(h) === 'CAUTION').length;
+  const avoid = history.filter(h => verdictKey(h) === 'AVOID').length;
+  const unknown = history.filter(h => verdictKey(h) === 'UNKNOWN').length;
 
   const withLaborConcerns = history.filter(h => h.scores.laborAllegations > 0).length;
   const avgEcoScore = history
@@ -184,7 +189,10 @@ export const getHistoryStats = (history: ScanHistoryEntry[]) => {
     const start = now - (w + 1) * weekMs;
     const end = now - w * weekMs;
     const weekEntries = history.filter(h => h.timestamp >= start && h.timestamp < end);
-    const goodCount = weekEntries.filter(h => h.verdict.emoji === '✅' || h.verdict.emoji === '🤔').length;
+    const goodCount = weekEntries.filter(h => {
+      const k = (h.verdict.label || '').toUpperCase();
+      return k === 'BUY' || k === 'CONSIDER';
+    }).length;
     return {
       week: w === 0 ? 'This Week' : w === 1 ? 'Last Week' : `${w + 1} Weeks Ago`,
       total: weekEntries.length,

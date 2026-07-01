@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { lookupHardcodedBarcodes, lookupHardcodedImage } from "@/data/productBarcodeMap";
 import { useNavigate, useLocation, Link } from "react-router-dom";
-import { Camera, Upload, Search, Loader2, AlertCircle, AlertTriangle, RefreshCw, X, ScanLine, ScanBarcode, Image as ImageIcon, Plus, Leaf, BarChart3, QrCode, Settings, Users, Heart, Apple, ChevronRight, Check, Zap } from "lucide-react";
+import { Camera, Upload, Search, Loader2, AlertCircle, AlertTriangle, RefreshCw, X, ScanLine, ScanBarcode, Image as ImageIcon, Plus, Leaf, BarChart3, QrCode, Settings, Users, Heart, ChevronRight, Check, Zap } from "lucide-react";
 import { useBottomNav } from "@/components/BottomNav";
 import { Input } from "@/components/ui/input";
 import { CalAIButton, ButtonGroup } from "@/components/CalAIButton";
@@ -1882,7 +1882,7 @@ const Scan = () => {
               Set your<br />values first
             </h2>
             <p style={{ fontSize: '0.88rem', color: DS.muted, lineHeight: 1.6 }}>
-              Tell us what matters to you — labour rights, environment, animal welfare, or nutrition. Every scan result is personalised to your priorities.
+              Tell us what matters to you — labour rights, environment, or animal welfare. Every scan result is personalised to your priorities.
             </p>
           </div>
 
@@ -1892,7 +1892,6 @@ const Scan = () => {
               { icon: Users,  label: 'Labour Rights',  color: DS.bad,            bg: DS.badBg,   border: 'rgba(178,58,43,0.2)' },
               { icon: Leaf,   label: 'Environment',    color: DS.good,           bg: DS.goodBg,  border: 'rgba(31,107,78,0.2)' },
               { icon: Heart,  label: 'Animal Welfare', color: DS.warn,           bg: 'var(--ds-animal-bg, #F0E1C2)',  border: 'rgba(192,130,42,0.2)' },
-              { icon: Apple,  label: 'Nutrition',      color: DS.warn,           bg: DS.warnBg,  border: 'rgba(192,130,42,0.2)' },
             ].map(({ icon: Icon, label, color, bg, border }) => (
               <div key={label} style={{
                 background: bg, border: `1px solid ${border}`,

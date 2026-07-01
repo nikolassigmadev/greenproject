@@ -69,7 +69,7 @@ export default function Privacy({ embedded = false }: { embedded?: boolean } = {
           </Section>
 
           <Section title="Local Storage">
-            Your ethical priority preferences (e.g. weighting for labour rights, environment, nutrition) live on your device. An anonymous snapshot of these weights is attached to each scan record, as described under "Scan Records", so we can understand how priorities relate to the products people scan. They are not otherwise shared.
+            Your ethical priority preferences (e.g. weighting for labour rights, environment, animal welfare) live on your device. An anonymous snapshot of these weights is attached to each scan record, as described under "Scan Records", so we can understand how priorities relate to the products people scan. They are not otherwise shared.
           </Section>
 
           <Section title="Children">

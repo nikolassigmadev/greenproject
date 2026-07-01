@@ -1,4 +1,5 @@
 import { toneColor, toneBg, scoreTone } from "@/styles/design-tokens";
+import { gradeToScore } from "@/utils/personalizedScore";
 import type { ScanHistoryEntry } from "@/utils/userPreferences";
 
 /**
@@ -19,16 +20,10 @@ export interface ShowcaseProduct {
   categories: { label: string; value: number; color: string }[];
 }
 
-// Eco-Score / Nutri-Score letter grades → a representative 0-100 value so a
-// graded product can fill the same numeric ring + bars the demo uses.
-const GRADE_SCORE: Record<string, number> = { a: 92, b: 74, c: 50, d: 30, e: 14, f: 8 };
 // NOVA processing groups (1 = unprocessed … 4 = ultra-processed) → 0-100.
 const NOVA_SCORE: Record<number, number> = { 1: 90, 2: 66, 3: 40, 4: 18 };
-
-const gradeToScore = (grade?: string | null): number | null => {
-  if (!grade) return null;
-  return GRADE_SCORE[grade.toLowerCase()] ?? null;
-};
+// Letter-grade → 0-100 uses the shared canonical map (see gradeToScore import)
+// so a grade means the same number here as in the cart / detail scoring.
 
 // Guards against out-of-range scores persisted in scan history before scores
 // were clamped at ingestion (e.g. an OFF eco-score of 101 saved to localStorage).
@@ -91,6 +86,15 @@ export const scanEntryToShowcase = (entry: ScanHistoryEntry): ShowcaseProduct =>
     categories.push({ label: "Processing", value: processing, color: catColor(processing) });
   }
 
+  // Headline score — the average of the metrics actually shown on the card, so
+  // the big "/100" number always agrees with the bars beneath it (and mirrors
+  // the demo card, whose score ≈ mean of its categories). Previously this was the
+  // environment score alone, which could read e.g. "90/100" next to an AVOID
+  // verdict driven by a labour flag.
+  const overallScore = clampScore(Math.round(
+    categories.reduce((sum, c) => sum + c.value, 0) / categories.length,
+  ));
+
   // Description — a concise factual line from whatever grades we have.
   const bits: string[] = [];
   if (entry.scores.ecoGrade) bits.push(`Eco-Score ${entry.scores.ecoGrade.toUpperCase()}`);
@@ -107,7 +111,7 @@ export const scanEntryToShowcase = (entry: ScanHistoryEntry): ShowcaseProduct =>
   return {
     name: entry.productName || "Unknown product",
     subtitle: entry.brand || "Unknown brand",
-    score: envScore,
+    score: overallScore,
     verdict: VERDICT_LABEL[key] ?? key,
     verdictColor: toneColor(tone),
     verdictBg: toneBg(tone),

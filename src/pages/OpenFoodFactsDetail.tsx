@@ -104,7 +104,7 @@ const fullResOffImage = (url: string | null | undefined): string | null => {
 };
 
 const GRADE_COLOR: Record<string, string> = {
-  "a-plus": DS.good, a: DS.good, b: DS.good, c: DS.warn, d: "#C26544", e: DS.bad,
+  "a-plus": DS.good, a: DS.good, b: DS.good, c: DS.warn, d: "var(--ds-caution, #C26544)", e: DS.bad,
 };
 
 const GRADE_BG: Record<string, string> = {
@@ -122,7 +122,7 @@ const NOVA_COLOR: Record<number, string> = {
 const VERDICT_CONFIG = {
   BUY:      { color: EDITORIAL.green, bg: EDITORIAL.greenSoft, Icon: CheckCircle2, label: "Buy" },
   CONSIDER: { color: EDITORIAL.amber, bg: EDITORIAL.amberSoft, Icon: Clock,        label: "Consider" },
-  CAUTION:  { color: "#C26544",       bg: "var(--ds-caution-bg, #FBE9E2)", Icon: AlertTriangle, label: "Caution" },
+  CAUTION:  { color: "var(--ds-caution, #C26544)", bg: "var(--ds-caution-bg, #FBE9E2)", Icon: AlertTriangle, label: "Caution" },
   AVOID:    { color: EDITORIAL.red,   bg: EDITORIAL.redSoft,   Icon: XCircle,       label: "Avoid" },
   UNKNOWN:  { color: EDITORIAL.ink3,  bg: "var(--ds-neutral-bg, #EDE6D2)", Icon: Clock,        label: "Unknown" },
 };
@@ -131,7 +131,7 @@ const CO2_BARS = [
   { key: "co2_agriculture",    label: "Agriculture",  Icon: Wheat,           color: EDITORIAL.green },
   { key: "co2_processing",     label: "Processing",   Icon: Factory,         color: EDITORIAL.blue },
   { key: "co2_packaging",      label: "Packaging",    Icon: Package,         color: EDITORIAL.amber },
-  { key: "co2_transportation", label: "Transport",    Icon: Truck,           color: "#C26544" },
+  { key: "co2_transportation", label: "Transport",    Icon: Truck,           color: "var(--ds-caution, #C26544)" },
   { key: "co2_distribution",   label: "Distribution", Icon: Store,           color: EDITORIAL.gold },
   { key: "co2_consumption",    label: "Consumption",  Icon: UtensilsCrossed, color: "#9B4E63" },
 ] as const;
@@ -1642,7 +1642,6 @@ function getVerdict(product: OpenFoodFactsResult, priorities: UserPriorities) {
     else { key = "CONSIDER"; reason = `${scoreLabel} — high environmental impact (environment is not a priority for you)`; }
   } else if (grade === "e" || grade === "f") {
     if (envWeight >= 1.0) { key = "AVOID"; reason = `${scoreLabel} — very high environmental impact`; }
-    else if (envWeight >= 0.35) { key = "CAUTION"; reason = `${scoreLabel} — very high environmental impact`; }
     else { key = "CONSIDER"; reason = `${scoreLabel} — very high environmental impact (environment is not a priority for you)`; }
   } else if (score !== null && score !== undefined) {
     const good = 60 + (envWeight - 1) * 20;
@@ -1685,7 +1684,7 @@ function getVerdict(product: OpenFoodFactsResult, priorities: UserPriorities) {
     } else if (welfare.severity === "high") {
       if (animalWeight >= 2.0 && (key === "BUY" || key === "CONSIDER" || key === "UNKNOWN")) {
         key = "CAUTION"; reason = `${welfare.company!.companyName} has animal welfare concerns`;
-      } else if (animalWeight >= 0.35 && (key === "BUY" || key === "UNKNOWN")) {
+      } else if (animalWeight > 0 && (key === "BUY" || key === "UNKNOWN")) {
         key = "CONSIDER"; reason = `${welfare.company!.companyName} has animal welfare concerns`;
       }
     }

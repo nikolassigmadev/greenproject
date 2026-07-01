@@ -20,6 +20,7 @@
   --ds-good: #1F6B4E;
   --ds-warn: #C0822A;
   --ds-bad: #B23A2B;
+  --ds-caution: #C26544;
   --ds-good-bg: #D8E5DA;
   --ds-warn-bg: #F0E1C2;
   --ds-bad-bg: #F0DAD3;
@@ -117,6 +118,7 @@
   --ds-good: #3DBA82;
   --ds-warn: #E5A83E;
   --ds-bad: #E05A4A;
+  --ds-caution: #D97D57;
   --ds-good-bg: #1A2E22;
   --ds-warn-bg: #2E2618;
   --ds-bad-bg: #2E1A18;

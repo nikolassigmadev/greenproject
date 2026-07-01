@@ -59,25 +59,30 @@ describe('scanEntryToShowcase', () => {
 
   it('derives the environment value from the eco grade', () => {
     const env = scanEntryToShowcase(baseEntry()).categories.find((c) => c.label === 'Environment');
-    expect(env?.value).toBe(74); // grade "b"
-    expect(scanEntryToShowcase(baseEntry()).score).toBe(74);
+    expect(env?.value).toBe(70); // grade "b" (shared canonical grade→score map)
   });
 
-  it('prefers a numeric eco score over the grade', () => {
+  it('scores the card as the average of its visible metrics', () => {
+    // Environment 70 (grade b) + Labour 88 (clean) + Nutrition 50 (grade c)
+    // + Processing 18 (NOVA 4) → 226 / 4 = 56.5 → 57. (Was previously the
+    // environment score alone, which contradicted the other bars + verdict.)
+    expect(scanEntryToShowcase(baseEntry()).score).toBe(57);
+  });
+
+  it('prefers a numeric eco score over the grade for the environment metric', () => {
     const s = scanEntryToShowcase(baseEntry({ scores: { ...baseEntry().scores, ecoScore: 61 } }));
-    expect(s.score).toBe(61);
+    expect(s.categories.find((c) => c.label === 'Environment')?.value).toBe(61);
   });
 
   it('clamps an out-of-range eco score to the 0-100 scale', () => {
     // OFF eco-scores with bonuses can exceed 100 and were once persisted to
     // history, surfacing as "101 / 100" in the home hero. Guard against it.
     const over = scanEntryToShowcase(baseEntry({ scores: { ...baseEntry().scores, ecoGrade: null, ecoScore: 101 } }));
-    expect(over.score).toBe(100);
     expect(over.categories.find((c) => c.label === 'Environment')?.value).toBe(100);
     expect(over.description).toContain('Eco-Score 100/100');
 
     const under = scanEntryToShowcase(baseEntry({ scores: { ...baseEntry().scores, ecoScore: -8 } }));
-    expect(under.score).toBe(0);
+    expect(under.categories.find((c) => c.label === 'Environment')?.value).toBe(0);
   });
 
   it('lowers the Labour bar as allegations rise', () => {

@@ -35,13 +35,13 @@ const SCORE_MAP: Record<string, { bg: string; fg: string }> = {
   A: { bg: DS.goodBg, fg: DS.good },
   B: { bg: DS.goodBg, fg: DS.good },
   C: { bg: DS.warnBg, fg: DS.warn },
-  D: { bg: "var(--ds-caution-bg, #FBE9E2)", fg: "#C26544" },
+  D: { bg: "var(--ds-caution-bg, #FBE9E2)", fg: "var(--ds-caution, #C26544)" },
   E: { bg: DS.badBg, fg: DS.bad },
 };
 const RISK_MAP: Record<string, { bg: string; fg: string }> = {
   low:      { bg: DS.goodBg, fg: DS.good },
   medium:   { bg: DS.warnBg, fg: DS.warn },
-  high:     { bg: "var(--ds-caution-bg, #FBE9E2)", fg: "#C26544" },
+  high:     { bg: "var(--ds-caution-bg, #FBE9E2)", fg: "var(--ds-caution, #C26544)" },
   critical: { bg: DS.badBg, fg: DS.bad },
   unknown:  { bg: "var(--ds-neutral-bg, #EDE6D2)", fg: DS.muted },
   "not-applicable": { bg: "var(--ds-neutral-bg, #EDE6D2)", fg: DS.muted },

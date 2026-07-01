@@ -613,7 +613,7 @@ export default function Index() {
             {[
               { step: "1", title: "Scan or search", desc: "Point your camera at a barcode, upload a photo, or type a product name." },
               { step: "2", title: "We analyse it", desc: "We check environmental impact, labour practices, nutrition, and certifications using open data." },
-              { step: "3", title: "Get a clear score", desc: "See a simple 0–100 score plus a traffic-light verdict: Buy, Consider, or Avoid." },
+              { step: "3", title: "Get a clear score", desc: "See a simple 0–100 score plus a clear verdict: Buy, Consider, Caution, or Avoid." },
             ].map((item) => (
               <div key={item.step} style={{
                 background: DS.card, borderRadius: DS.radius.md, padding: 16,
@@ -662,9 +662,10 @@ export default function Index() {
           <h2 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 14px" }}>Score meanings</h2>
           <div style={{ background: DS.card, borderRadius: DS.radius.md, overflow: "hidden", boxShadow: "0 2px 6px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)" }}>
             {[
-              { range: "70–100", label: "Looks great", tone: "good" as const, desc: "Low impact, good practices" },
-              { range: "45–69", label: "Mixed", tone: "warn" as const, desc: "Some concerns worth noting" },
-              { range: "0–44", label: "Avoid", tone: "bad" as const, desc: "Significant ethical or environmental issues" },
+              { range: "70–100", label: "Buy", color: DS.good, desc: "Low impact, good practices" },
+              { range: "45–69", label: "Consider", color: DS.warn, desc: "Some concerns worth weighing" },
+              { range: "25–44", label: "Caution", color: "var(--ds-caution, #C26544)", desc: "Notable ethical or environmental issues" },
+              { range: "0–24", label: "Avoid", color: DS.bad, desc: "Serious concerns — best skipped" },
             ].map((row, i) => (
               <div key={row.range} style={{
                 display: "flex", alignItems: "center", gap: 12, padding: "14px 16px",
@@ -672,7 +673,7 @@ export default function Index() {
               }}>
                 <div style={{
                   width: 36, height: 36, borderRadius: 18,
-                  background: toneColor(row.tone), color: DS.card,
+                  background: row.color, color: DS.card,
                   display: "flex", alignItems: "center", justifyContent: "center",
                   fontSize: 12, fontWeight: 800, flexShrink: 0,
                 }}>{row.range.split("–")[0]}</div>
@@ -719,7 +720,7 @@ export default function Index() {
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {[
               { icon: BarChart3, title: "Greener Swaps", desc: "We suggest lower-impact alternatives in the same category." },
-              { icon: Award, title: "Personalised scoring", desc: "Set your values (environment, labour, nutrition, animal welfare) and every score is weighted to you." },
+              { icon: Award, title: "Personalised scoring", desc: "Set your values (environment, labour, animal welfare) and every score is weighted to you." },
               { icon: Shield, title: "Transparency", desc: "Every flag has a citation. See an issue? Email us and we'll look into it." },
             ].map((feat) => (
               <div key={feat.title} style={{

@@ -45,7 +45,13 @@ export interface PersonalizedScore {
   verdict: Verdict;
 }
 
-const GRADE_SCORE: Record<string, number> = { a: 90, b: 70, c: 50, d: 30, e: 10 };
+// Canonical letter-grade → 0–100 map, shared across the app (imported by the
+// home showcase too) so a given grade means the same number everywhere.
+// "a-plus"/"f" are included so the best eco grade isn't dropped and nutri/nova
+// edge grades resolve.
+export const GRADE_SCORE: Record<string, number> = {
+  "a-plus": 95, a: 90, b: 70, c: 50, d: 30, e: 10, f: 5,
+};
 
 /** Letter grade from a 0–100 score (shared thresholds used app-wide). */
 export function gradeFromScore(score: number): "a" | "b" | "c" | "d" | "e" {
@@ -56,7 +62,7 @@ export function gradeFromScore(score: number): "a" | "b" | "c" | "d" | "e" {
   return "e";
 }
 
-function gradeToScore(grade?: string | null): number | null {
+export function gradeToScore(grade?: string | null): number | null {
   if (!grade) return null;
   return GRADE_SCORE[grade.toLowerCase()] ?? null;
 }
@@ -157,6 +163,29 @@ export function personalizedScore(
   }
   for (const p of active) {
     if (p.weight >= 2.5 && p.sub <= 30) score = Math.min(score, p.sub);
+  }
+
+  // Live ethical concerns cap the verdict the same way the product-detail
+  // getVerdict() escalates them (labour allegations, boycott, animal-welfare
+  // flags), so the cart / shelf / watchlist never rate a product "Buy" that the
+  // detail page flags as Caution or Avoid. Caps only lower the score. Bands
+  // mirror verdictFromScore: AVOID ≤24, CAUTION 25–44, CONSIDER 45–69.
+  const laborWeight = priorityMultiplier(priorities.laborRights);
+  const animalWeight = priorityMultiplier(priorities.animalWelfare);
+  const allegationCount = typeof input.laborAllegations === "number" ? input.laborAllegations : 0;
+  if (allegationCount > 0 && laborWeight > 0) {
+    const eff = allegationCount * laborWeight;
+    if (eff >= 2.0 || (allegationCount >= 3 && laborWeight >= 0.35)) score = Math.min(score, 20);
+    else if (eff >= 1.0) score = Math.min(score, 40);
+    else if (eff >= 0.35) score = Math.min(score, 60);
+  }
+  if (input.brand && laborWeight > 0 && checkBoycott(input.brand)) {
+    score = Math.min(score, laborWeight >= 2.0 ? 40 : 60);
+  }
+  if (input.brand && animalWeight > 0) {
+    const welfare = checkAnimalWelfareFlag(input.brand);
+    if (welfare.isFlagged && welfare.severity === "critical") score = Math.min(score, animalWeight >= 2.0 ? 20 : 40);
+    else if (welfare.isFlagged && welfare.severity === "high") score = Math.min(score, animalWeight >= 2.0 ? 40 : 60);
   }
 
   // The user's personal watchlist stance has the final say in their own score.

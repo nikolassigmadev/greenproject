@@ -45,11 +45,12 @@ const buildPrioritySummary = (p: {
   animalWelfare: number;
   nutrition: number;
 }): string => {
+  // Nutrition is no longer a user-tunable priority, so it is not presented as
+  // one here — only the three values the user can actually set are summarised.
   const entries: [string, number][] = [
     ["environment", p.environment],
     ["labor rights", p.laborRights],
     ["animal welfare", p.animalWelfare],
-    ["nutrition", p.nutrition],
   ];
   const top = entries.filter(([, v]) => v >= 63).map(([k]) => k);   // critical
   const low = entries.filter(([, v]) => v <= 37).map(([k]) => k);   // low
@@ -120,9 +121,7 @@ export function buildContextBrief(ctx: AppContext): string {
   lines.push(
     `User priorities — env:${levelLabel(p.environment)}, labor:${levelLabel(
       p.laborRights,
-    )}, animal:${levelLabel(p.animalWelfare)}, nutrition:${levelLabel(
-      p.nutrition,
-    )}. ${p.summary}`,
+    )}, animal:${levelLabel(p.animalWelfare)}. ${p.summary}`,
   );
 
   if (ctx.watchlist.length) {

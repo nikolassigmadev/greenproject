@@ -14,6 +14,7 @@ import type { BrandFlagV2, FlagCategory } from "@/types/brandFlag";
 import { smartProductSearch } from "@/utils/smartProductSearch";
 import { identifyLabelFromImage, fileToDataUrl } from "@/utils/identifyFromImage";
 import { loadPriorities, priorityMultiplier, type UserPriorities } from "@/utils/userPreferences";
+import { getBrandSentiment } from "@/utils/watchlist";
 import { toast } from "sonner";
 
 type Slot = "A" | "B";
@@ -78,6 +79,8 @@ interface VerdictPoint {
   note?: string;
   dimension: PriorityDim;
   weight: number; // priorityMultiplier(priorities[dimension]) → 0.3 (low) … 5.0 (critical)
+  /** Overrides the dimension-derived weight (watchlist stance = decisive; nutrition = 0). */
+  fixedWeight?: number;
 }
 
 interface VerdictResult {
@@ -138,7 +141,37 @@ function computeVerdict(
     raw.push({ label: "Clean ethics record", icon: ShieldCheck, winner: "B", dimension: CATEGORY_DIMENSION[aFlag.category] ?? "laborRights" });
   }
 
-  const points: VerdictPoint[] = raw.map((p) => ({ ...p, weight: weightFor(p.dimension) }));
+  // The user's personal watchlist stance is decisive — mirror the scan detail
+  // page, where "avoid" sinks a product and "trust" lifts it. A large fixed
+  // weight lets it dominate the head-to-head when only one side is flagged.
+  const SENTIMENT_WEIGHT = 10;
+  const aSent = getBrandSentiment(a.brand);
+  const bSent = getBrandSentiment(b.brand);
+  if ((aSent === "avoid") !== (bSent === "avoid")) {
+    const avoided = aSent === "avoid" ? "A" : "B";
+    const avoidedBrand = (avoided === "A" ? a.brand : b.brand) || "that brand";
+    raw.push({
+      label: "On your watchlist", icon: ShieldCheck, winner: avoided === "A" ? "B" : "A",
+      dimension: "laborRights", fixedWeight: SENTIMENT_WEIGHT,
+      note: `You marked ${avoidedBrand} as a brand to avoid`,
+    });
+  }
+  if ((aSent === "trust") !== (bSent === "trust")) {
+    const trusted = aSent === "trust" ? "A" : "B";
+    const trustedBrand = (trusted === "A" ? a.brand : b.brand) || "that brand";
+    raw.push({
+      label: "You trust this brand", icon: ShieldCheck, winner: trusted,
+      dimension: "laborRights", fixedWeight: SENTIMENT_WEIGHT,
+      note: `You marked ${trustedBrand} as a brand you trust`,
+    });
+  }
+
+  // Nutrition is no longer a user priority, so the Nutri-score comparison is
+  // shown for reference (weight 0 → renders muted) but never sways the winner.
+  const points: VerdictPoint[] = raw.map((p) => ({
+    ...p,
+    weight: p.fixedWeight ?? (p.dimension === "nutrition" ? 0 : weightFor(p.dimension)),
+  }));
 
   const aWins = points.filter((p) => p.winner === "A").length;
   const bWins = points.filter((p) => p.winner === "B").length;
