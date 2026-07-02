@@ -124,11 +124,23 @@ function recordScan(rec) {
 }
 
 const app = express();
+// In production this server sits behind one reverse-proxy hop (Hostinger), so
+// the real client IP arrives in X-Forwarded-For. Trusting exactly ONE hop makes
+// req.ip the actual client for rate limiting and the community-flag IP hash —
+// without it every visitor shares the proxy's IP (one user can exhaust the
+// rate limits for everyone). Exactly 1, never `true`: trusting arbitrary hops
+// would let clients spoof X-Forwarded-For to evade the limits.
+app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3001;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-// Hardcoded so login doesn't depend on Hostinger env vars.
-// Replace this string with a new bcrypt hash to rotate the password.
-const ADMIN_PASSWORD_HASH = '$2b$10$OwDevUsgK7kV0kkUWM./n.a7vX4zMYKxF.TdsA0b3624GCWPYHKj2';
+// Env var wins when set (both .env files define it); the hardcoded hash is the
+// fallback so login doesn't depend on Hostinger env vars. Ignore the
+// placeholder value that shipped in old .env files.
+const envAdminHash = process.env.ADMIN_PASSWORD_HASH;
+const ADMIN_PASSWORD_HASH =
+  envAdminHash && !envAdminHash.includes('REPLACE_THIS')
+    ? envAdminHash
+    : '$2b$10$OwDevUsgK7kV0kkUWM./n.a7vX4zMYKxF.TdsA0b3624GCWPYHKj2';
 
 // In-memory session store (replace with Redis/DB in production)
 const adminSessions = new Map();
@@ -194,11 +206,32 @@ app.use((req, res, next) => {
   next();
 });
 
-// ── Body limits: 2MB global, image routes get 10MB via per-route middleware ──
-app.use(express.json({ limit: '2mb' }));
-app.use(express.urlencoded({ limit: '2mb' }));
+// ── Body limits: 2MB default; specific routes declare their own parser ──
+// IMPORTANT: express.json only parses a body once, so the global parser must
+// SKIP any route that declares its own limit — otherwise the per-route limits
+// (10MB for image payloads, 4KB anti-spam caps, 4MB scan logs) are never
+// enforced and every route silently inherits the 2MB default.
+const globalJson = express.json({ limit: '2mb' });
+const largeBody = express.json({ limit: '10mb' }); // base64 image payloads
+const scanBody = express.json({ limit: '4mb' });   // scan log incl. compressed photo (scanStore caps the image at ~3MB)
+const pushBody = express.json({ limit: '16kb' });  // push subscription + up to 50 watched brands
 
-const largeBody = express.json({ limit: '10mb' });
+const JSON_PARSER_OVERRIDES = [
+  '/api/chatgpt/analyze-product',
+  '/api/openai/analyze-image',
+  '/api/openai/verify-product-match',
+  '/api/community-flags',
+  '/api/admin/community-flags/', // trailing slash = prefix match (PATCH /:id)
+  '/api/push/subscribe',
+  '/api/push/unsubscribe',
+  '/api/admin/push/trigger-demo',
+  '/api/scans',
+];
+const hasOwnJsonParser = (path) =>
+  JSON_PARSER_OVERRIDES.some((p) => (p.endsWith('/') ? path.startsWith(p) : path === p));
+
+app.use((req, res, next) => (hasOwnJsonParser(req.path) ? next() : globalJson(req, res, next)));
+app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 
 // ── Rate limiting ──
 const openaiLimiter = rateLimit({
@@ -705,7 +738,7 @@ function normaliseWatchedBrands(list) {
  * Public -- registers a Web Push subscription. Dedupes by subscription.endpoint;
  * an existing record for that endpoint is replaced.
  */
-app.post('/api/push/subscribe', smallBody, (req, res) => {
+app.post('/api/push/subscribe', pushBody, (req, res) => {
   try {
     const { subscription, watchedBrands } = req.body || {};
     if (!isValidPushSubscription(subscription)) {
@@ -1383,7 +1416,9 @@ app.get('/api/openfoodfacts/product/:barcode', async (req, res) => {
       return res.status(400).json({ status: 0, status_verbose: 'Invalid barcode format (8-14 digits required)' });
     }
 
-    const fields = 'code,product_name,product_name_en,brands,ecoscore_grade,ecoscore_score,ecoscore_data,nutriscore_grade,nutriscore_score,nova_group,nutriments,labels_tags,labels,categories_tags,categories,origins,ingredients_text,ingredients_text_en,image_front_url,image_url,countries_tags,carbon_footprint_percent_of_known_ingredients,states_tags';
+    // Same name-fallback fields the client's direct-OFF path requests
+    // (generic_name / abbreviated_product_name), plus the carbon coverage field.
+    const fields = 'code,product_name,product_name_en,generic_name,generic_name_en,abbreviated_product_name,brands,ecoscore_grade,ecoscore_score,ecoscore_data,nutriscore_grade,nutriscore_score,nova_group,nutriments,labels_tags,labels,categories_tags,categories,origins,ingredients_text,ingredients_text_en,image_front_url,image_url,countries_tags,carbon_footprint_percent_of_known_ingredients,states_tags';
 
     const endpoints = [
       `https://world.openfoodfacts.org/api/v2/product/${barcode}?fields=${fields}`,
@@ -1460,6 +1495,10 @@ app.post('/api/openfoodfacts/search', async (req, res) => {
       });
     }
 
+    // Coerce limit to a sane integer — a non-numeric value would otherwise
+    // propagate NaN into the OFF page_size params.
+    limit = Math.min(Math.max(parseInt(limit, 10) || 50, 1), 50);
+
     // Open Food Facts indexes brands WITHOUT apostrophes ("Harry's" → "harrys",
     // "Lay's" → "lays"). A raw apostrophe in the full-text / brand-tag query
     // suppresses the real brand and surfaces generic same-category products
@@ -1468,14 +1507,10 @@ app.post('/api/openfoodfacts/search', async (req, res) => {
     // "Harry's …" returns 0 Harry's hits, "Harrys …" returns the real products.
     query = query.replace(/[''’`´]/g, '');
 
-    const fields = [
-      'code', 'product_name', 'product_name_en', 'brands',
-      'ecoscore_grade', 'ecoscore_score', 'ecoscore_data',
-      'nutriscore_grade', 'nutriscore_score', 'nova_group',
-      'nutriments', 'labels_tags', 'labels', 'categories_tags', 'categories',
-      'origins', 'ingredients_text', 'ingredients_text_en',
-      'image_front_url', 'image_url', 'countries_tags', 'states_tags',
-    ].join(',');
+    // Shared field list (includes generic_name / abbreviated_product_name —
+    // the client's English-name fallback needs them; the old inline list here
+    // silently dropped them for proxied searches).
+    const fields = OFF_SEARCH_FIELDS;
 
     const pageSize = String(Math.min(limit, 50));
 
@@ -1489,11 +1524,12 @@ app.post('/api/openfoodfacts/search', async (req, res) => {
     const searchTimeout = 7000;
     const headers = { 'User-Agent': 'Scan2Source/1.0 (ethical-shopper)' };
 
+    // Nickname → canonical brand tag. ONLY nicknames that are not themselves an
+    // OFF brand belong here: Sprite and Fanta ARE their own brands_tags on OFF,
+    // so aliasing them to "coca-cola" surfaced Coca-Cola products for a Sprite
+    // search instead of actual Sprite entries.
     const BRAND_ALIASES = {
       'coke': 'coca-cola',
-      'pepsi': 'pepsi',
-      'sprite': 'coca-cola',
-      'fanta': 'coca-cola',
       'diet-coke': 'coca-cola',
       'coke-zero': 'coca-cola',
     };
@@ -1768,9 +1804,9 @@ app.post('/api/openfoodfacts/search', async (req, res) => {
         const haystack = [p.product_name, p.product_name_en, p.brands].filter(Boolean).join(' ');
         return patterns.some((re) => re.test(haystack));
       });
-      // Only apply the filter if it leaves at least one result. If the entire
-      // pool was unrelated, return the filtered (empty) set so the client gets
-      // a clean "no match" instead of nonsense.
+      // Always apply the filter — even when it empties the pool. If every
+      // candidate was unrelated, an empty set gives the client a clean
+      // "no match" instead of nonsense.
       data.products = filtered;
       data.count = filtered.length;
     }
@@ -1965,7 +2001,7 @@ const scanLimiter = rateLimit({
  * it) or 'NO' (skipped). Stored in ai_scans.openai_response /
  * ai_scans.full_openai_response / ai_scans.bought.
  */
-app.post('/api/scans', scanLimiter, smallBody, (req, res) => {
+app.post('/api/scans', scanLimiter, scanBody, (req, res) => {
   try {
     const {
       barcode, name, brand, ecoGrade, country, city, anonId, openaiResponse, fullOpenaiResponse, bought,
@@ -2062,6 +2098,14 @@ if (existsSync(distPath)) {
 // =====================================================
 
 app.use((err, req, res, next) => {
+  // Body-parser errors carry a proper status (413 too large, 400 bad JSON) —
+  // pass those through instead of masking them as a 500.
+  if (err?.type === 'entity.too.large') {
+    return res.status(413).json({ success: false, error: 'Request body too large' });
+  }
+  if (err?.type === 'entity.parse.failed') {
+    return res.status(400).json({ success: false, error: 'Invalid JSON body' });
+  }
   console.error('Unhandled Error:', err);
   res.status(500).json({ success: false, error: 'Internal server error' });
 });

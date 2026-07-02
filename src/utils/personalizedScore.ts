@@ -5,6 +5,13 @@
 // result down (a bad top-priority pillar caps the whole score). Every pillar with
 // data still counts at least a little — the lowest level is "Low", not off. See
 // priorityMultiplier().
+//
+// Known divergence from the product-detail page: nutrition still contributes to
+// THIS numeric score (at the user's nutrition weight, default Medium), while the
+// detail page's getVerdict() deliberately ignores nutrition for its top-line
+// Buy/Consider/Avoid. A product with a poor Nutri-Score can therefore read
+// slightly worse in the cart/shelf than on its detail page. Both behaviours are
+// intentional; change them together if this is ever unified.
 
 import { priorityMultiplier, type UserPriorities } from "@/utils/userPreferences";
 import { checkAnimalWelfareFlag } from "@/utils/animalWelfareFlags";

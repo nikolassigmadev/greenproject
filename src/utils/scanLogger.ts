@@ -93,7 +93,10 @@ export function logScan(input: ScanLogInput): void {
       headers: { "Content-Type": "application/json" },
       body,
       signal: AbortSignal.timeout(4000),
-      keepalive: true,
+      // keepalive lets the log survive page navigation, but browsers reject
+      // keepalive bodies over 64KB outright — a scan photo blows past that, so
+      // image-bearing logs must be sent as a normal fetch or they never leave.
+      keepalive: body.length < 60_000,
     }).catch(() => {
       // server down / offline — analytics are best-effort, ignore
     });

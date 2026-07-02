@@ -1002,12 +1002,13 @@ export const searchBetterAlternatives = async (
     const withCleanImage = candidates.filter(hasCleanFrontImage);
     const finalCandidates = withCleanImage.length > 0 ? withCleanImage : candidates;
 
-    // Sort by CO2 total (ascending) - prefer lowest carbon footprint
-    finalCandidates.sort((a, b) => {
-      const aCO2 = a.ecoscoreData?.agribalyse?.co2_total ?? a.carbonFootprint100g ?? Infinity;
-      const bCO2 = b.ecoscoreData?.agribalyse?.co2_total ?? b.carbonFootprint100g ?? Infinity;
-      return aCO2 - bCO2;
-    });
+    // Sort by CO2 total (ascending) - prefer lowest carbon footprint.
+    // Units must match across the fallback: co2_total is kg CO₂e per kg,
+    // carbonFootprint100g is grams per 100g → /100 converts it to kg/kg.
+    const co2PerKg = (p: OpenFoodFactsResult): number =>
+      p.ecoscoreData?.agribalyse?.co2_total
+        ?? (p.carbonFootprint100g != null ? p.carbonFootprint100g / 100 : Infinity);
+    finalCandidates.sort((a, b) => co2PerKg(a) - co2PerKg(b));
 
     const results = finalCandidates.slice(0, limit);
     cacheSet(cacheKey, results);

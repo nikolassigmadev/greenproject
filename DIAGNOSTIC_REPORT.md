@@ -1,3 +1,5 @@
+> ⚠️ **Historical document (March 2026).** Describes the scan pipeline as it was before the search-accuracy overhaul (June 2026) and later fixes — the failure points below have since been addressed. See `CODEBASE_MAP.md` for the current architecture.
+
 # OCR → OpenFoodFacts Search Failure Diagnostic Report
 
 ## Executive Summary

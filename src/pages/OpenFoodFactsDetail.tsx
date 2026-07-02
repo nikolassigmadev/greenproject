@@ -748,7 +748,17 @@ export default function OpenFoodFactsDetail() {
   const laborRecord     = findLaborAllegations(product);
   const boycottMatch    = checkBoycott(product.brand);
   const welfare         = checkAnimalWelfareFlag(product.brand);
-  const verifiedEthics  = findVerifiedEthics(product.brand, product.productName);
+  // Positive-ethics display follows the same precedence as the scorer
+  // (personalizedScore) and getVerdict below: a live concern (allegation,
+  // boycott, serious welfare flag) suppresses the green "verified ethics"
+  // card/badges. Otherwise a brand like Ben & Jerry's — genuinely a B Corp but
+  // also boycott-listed via Unilever — would show an all-clear green card
+  // directly under a red warning.
+  const cleanEthicsRecord = !laborRecord && !boycottMatch
+    && !(welfare.isFlagged && (welfare.severity === "critical" || welfare.severity === "high"));
+  const verifiedEthics  = cleanEthicsRecord
+    ? findVerifiedEthics(product.brand, product.productName)
+    : null;
   const chocolateEntry  = findChocolateEntry(product.brand, product.productName);
   const ecoGrade     = product.ecoscoreGrade?.toLowerCase();
   const nutriGrade   = product.nutriscoreGrade?.toLowerCase();

@@ -362,8 +362,6 @@ export const getScoreBreakdown = (product: Product): ScoreBreakdown => {
   const transport = transportScore(product);
   console.log('Transport score result:', transport);
   
-  // Add null check to prevent undefined error
-  const certs = (product.certifications || []).map((c) => c.toLowerCase());
   const certsScore = certificationScore(product);
   console.log('Certifications score result:', certsScore);
 
@@ -423,7 +421,7 @@ export const getScoreBreakdown = (product: Product): ScoreBreakdown => {
         direction: "bonus",
         inputLabel: "CO₂ emissions",
         inputValue: `${product.carbonFootprint} kg CO₂`,
-        description: `${product.carbonFootprint} kg CO₂ = ${carbon} points (${carbon <= 0.5 ? '≤0.5kg = 20pts' : carbon <= 2 ? '0.5-2kg = 16pts' : carbon <= 5 ? '2-5kg = 11pts' : carbon <= 10 ? '5-10kg = 6pts' : '>10kg = 2pts'})`,
+        description: `${product.carbonFootprint} kg CO₂ = ${carbon} points (${product.carbonFootprint <= 0.5 ? '≤0.5kg = 20pts' : product.carbonFootprint <= 2 ? '0.5-2kg = 16pts' : product.carbonFootprint <= 5 ? '2-5kg = 11pts' : product.carbonFootprint <= 10 ? '5-10kg = 6pts' : '>10kg = 2pts'})`,
       },
       {
         key: "transport",
@@ -441,13 +439,13 @@ export const getScoreBreakdown = (product: Product): ScoreBreakdown => {
         key: "certifications",
         label: "Certifications",
         cap: 10,
-        impact: certs,
+        impact: certsScore,
         direction: "bonus",
         inputLabel: "Certifications",
         inputValue: product.certifications.length > 0 ? product.certifications.join(", ") : "None",
-        description: product.certificationManualPoints !== undefined 
+        description: product.certificationManualPoints !== undefined
           ? `Manually set to ${product.certificationManualPoints}/10 points`
-          : `${product.certifications.length} certifications = ${certs} points (${certs} pts total)`,
+          : `${product.certifications.length} certifications = ${certsScore} points`,
       },
     ],
   };

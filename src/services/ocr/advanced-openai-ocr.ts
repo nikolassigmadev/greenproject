@@ -241,20 +241,3 @@ export const checkOpenAIHealth = async (): Promise<boolean> => {
     return false;
   }
 };
-
-/**
- * Get OCR statistics and performance metrics
- */
-export const getOCRStats = (): {
-  apiConfigured: boolean;
-  model: string;
-  temperature: number;
-  maxTokens: number;
-} => {
-  return {
-    apiConfigured: true,
-    model: 'gpt-4o',
-    temperature: 0.3,
-    maxTokens: 2048,
-  };
-};

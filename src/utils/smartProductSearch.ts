@@ -4,7 +4,7 @@
  *
  * Pipeline:
  *   1. AI typo / formatting fix (with 3s timeout fallback).
- *   2. Pull a pool of OpenFoodFacts candidates (default 12).
+ *   2. Pull a pool of OpenFoodFacts candidates (default 30).
  *   3. Filter by word-containment so unrelated products are dropped.
  *   4. Score the survivors with productRelevance.pickBestMatch.
  *   5. Prefer ties by eco-data completeness so the chosen product is usable.
@@ -147,7 +147,7 @@ function applyDataFloor(candidates: OpenFoodFactsResult[]): OpenFoodFactsResult[
 }
 
 export interface SmartSearchOptions {
-  /** How many OFF candidates to pull before filtering. Default 12. */
+  /** How many OFF candidates to pull before filtering. Default 30. */
   poolSize?: number;
   /** Skip the AI typo-fix step (use raw query directly). Default false. */
   skipAiFix?: boolean;

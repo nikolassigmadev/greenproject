@@ -2,9 +2,11 @@
  * Brands associated with companies on the BDS boycott list.
  * Source: https://boycott-israel.org/boycott.html
  *
- * This file maps normalised brand‑name fragments to a short reason.
- * Matching is case-insensitive and uses "includes" so sub-strings work
- * (e.g. "coca" matches "Coca-Cola", "The Coca-Cola Company", etc.)
+ * This file maps normalised brand-name fragments to a short reason.
+ * Matching is case-insensitive, diacritic/apostrophe-insensitive, and
+ * WHOLE-WORD: a fragment must not sit inside a longer word, so "axe" cannot
+ * match "Waxelene" and "tempo" cannot match "Contempo". A trailing plural /
+ * possessive "s" is tolerated ("mcdonald" still matches "McDonalds").
  */
 
 export interface BoycottMatch {
@@ -14,9 +16,17 @@ export interface BoycottMatch {
   reason: string;
 }
 
+interface BoycottEntry extends BoycottMatch {
+  /**
+   * False-positive guard: skip the match when this pattern ALSO appears in the
+   * brand (e.g. "walkers" must not flag the independent Walkers Shortbread).
+   */
+  exclude?: RegExp;
+}
+
 // Each key is a LOWERCASE fragment that will be matched against the product brand.
 // Keep fragments short enough to catch variations but long enough to avoid false positives.
-const boycottMap: Record<string, BoycottMatch> = {
+const boycottMap: Record<string, BoycottEntry> = {
   // ── Food & Beverages ──────────────────────────
   "coca-cola":   { parent: "The Coca-Cola Company", reason: "Operates in Israel through Central Bottling Company" },
   "coca cola":   { parent: "The Coca-Cola Company", reason: "Operates in Israel through Central Bottling Company" },
@@ -41,7 +51,9 @@ const boycottMap: Record<string, BoycottMatch> = {
   "doritos":     { parent: "PepsiCo", reason: "PepsiCo subsidiary" },
   "cheetos":     { parent: "PepsiCo", reason: "PepsiCo subsidiary" },
   "quaker":      { parent: "PepsiCo", reason: "PepsiCo subsidiary" },
-  "walkers":     { parent: "PepsiCo", reason: "PepsiCo subsidiary" },
+  // Walkers crisps are PepsiCo; Walkers Shortbread is an unrelated independent
+  // Scottish company and must never be flagged.
+  "walkers":     { parent: "PepsiCo", reason: "PepsiCo subsidiary", exclude: /shortbread/ },
 
   "nestlé":      { parent: "Nestlé", reason: "Major investments and operations in Israel" },
   "nestle":      { parent: "Nestlé", reason: "Major investments and operations in Israel" },
@@ -91,7 +103,10 @@ const boycottMap: Record<string, BoycottMatch> = {
   "knorr":       { parent: "Unilever", reason: "Unilever subsidiary" },
   "hellmann":    { parent: "Unilever", reason: "Unilever subsidiary" },
   "magnum":      { parent: "Unilever", reason: "Unilever subsidiary" },
-  "dove":        { parent: "Unilever", reason: "Unilever subsidiary" },
+  // NOTE: "dove" is deliberately NOT listed. In a food-scanning app the brand
+  // "Dove" is almost always Mars' Dove CHOCOLATE (see laborCheck.ts, which maps
+  // "dove chocolate" to Mars); Unilever's Dove is personal care. A bare "dove"
+  // fragment wrongly flagged Mars chocolate as a Unilever product.
   "axe":         { parent: "Unilever", reason: "Unilever subsidiary" },
   "rexona":      { parent: "Unilever", reason: "Unilever subsidiary" },
   "vaseline":    { parent: "Unilever", reason: "Unilever subsidiary" },
@@ -119,18 +134,45 @@ const boycottMap: Record<string, BoycottMatch> = {
   "caterpillar": { parent: "Caterpillar", reason: "Equipment used in demolitions" },
 };
 
+/** Lowercase, strip diacritics ("Nestlé" → "nestle") and apostrophes ("Lay's" → "lays"). */
+const normalizeBrand = (s: string): string =>
+  s
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/['’‘`´]/g, '');
+
+const isWordChar = (c: string | undefined): boolean => !!c && /[a-z0-9]/.test(c);
+
+/**
+ * Whole-word containment of `fragment` in `hay` (both already normalized).
+ * A trailing "s" on the brand is tolerated so "mcdonald" matches "mcdonalds"
+ * and "stouffer" matches "stouffers".
+ */
+function containsFragment(hay: string, fragment: string): boolean {
+  let from = 0;
+  while (true) {
+    const idx = hay.indexOf(fragment, from);
+    if (idx === -1) return false;
+    let end = idx + fragment.length;
+    if (hay[end] === 's') end++; // plural / possessive
+    if (!isWordChar(hay[idx - 1]) && !isWordChar(hay[end])) return true;
+    from = idx + 1;
+  }
+}
+
 /**
  * Check whether a brand name matches any boycotted brand.
  * Returns the match info or null.
  */
 export function checkBoycott(brand: string | undefined | null): BoycottMatch | null {
   if (!brand) return null;
-  const lower = brand.toLowerCase();
+  const hay = normalizeBrand(brand);
 
-  for (const [fragment, match] of Object.entries(boycottMap)) {
-    if (lower.includes(fragment)) {
-      return match;
-    }
+  for (const [fragment, entry] of Object.entries(boycottMap)) {
+    if (!containsFragment(hay, normalizeBrand(fragment))) continue;
+    if (entry.exclude && entry.exclude.test(hay)) continue;
+    return { parent: entry.parent, reason: entry.reason };
   }
   return null;
 }

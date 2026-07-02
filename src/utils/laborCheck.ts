@@ -1,5 +1,12 @@
 // Shared labor allegations database — single source of truth used by both the
 // product detail page and the basket, so they always show the same data.
+//
+// NOTE: this is one of TWO labor datasets in the app. This one (9 parent-company
+// regexes) drives SCORING and the allegation list; `src/data/brandFlags.v2.ts`
+// (via `src/services/brandFlags`) drives the verified flag BANNERS with
+// tier-sourced citations. They cover overlapping brands — when adding or
+// removing a company here, check brandFlags.v2 stays consistent (and vice
+// versa) so a banner never contradicts the score.
 
 export interface LaborAllegation {
   issue: string;

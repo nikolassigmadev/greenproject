@@ -224,8 +224,11 @@ export const getCarbonStats = (history: ScanHistoryEntry[]) => {
     const grade = scan.scores.ecoGrade?.toLowerCase();
     if (!grade && scan.carbonFootprint100g == null) continue;
     scoredCount++;
+    // carbonFootprint100g is grams CO₂e per 100g (OFF nutriment unit), so
+    // kg CO₂e per kg of product = value / 100 — same conversion as
+    // getImpactStats below. (A previous ×10 treated grams as kg: 1000× off.)
     const co2PerKg = scan.carbonFootprint100g != null
-      ? scan.carbonFootprint100g * 10
+      ? scan.carbonFootprint100g / 100
       : (GRADE_CO2[grade!] ?? BASELINE);
     totalUserCO2 += co2PerKg * SERVING_KG;
     totalBaselineCO2 += BASELINE * SERVING_KG;

@@ -1,3 +1,5 @@
+> ⚠️ **Historical document (March 2026).** Snapshot of a past milestone; the scan/search code has changed substantially since. See `CODEBASE_MAP.md` for the current architecture.
+
 # Phase 1 Complete: OCR Search Diagnostic & Debug Infrastructure
 
 ## 🎯 What Was Accomplished
