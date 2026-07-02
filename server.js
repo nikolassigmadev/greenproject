@@ -1418,7 +1418,7 @@ app.get('/api/openfoodfacts/product/:barcode', async (req, res) => {
 
     // Same name-fallback fields the client's direct-OFF path requests
     // (generic_name / abbreviated_product_name), plus the carbon coverage field.
-    const fields = 'code,product_name,product_name_en,generic_name,generic_name_en,abbreviated_product_name,brands,ecoscore_grade,ecoscore_score,ecoscore_data,nutriscore_grade,nutriscore_score,nova_group,nutriments,labels_tags,labels,categories_tags,categories,origins,ingredients_text,ingredients_text_en,image_front_url,image_url,countries_tags,carbon_footprint_percent_of_known_ingredients,states_tags';
+    const fields = 'code,product_name,product_name_en,generic_name,generic_name_en,abbreviated_product_name,brands,ecoscore_grade,ecoscore_score,ecoscore_data,nutriscore_grade,nutriscore_score,nova_group,nutriments,labels_tags,labels,categories_tags,categories,origins,ingredients_text,ingredients_text_en,ingredients_analysis_tags,allergens_tags,traces_tags,image_front_url,image_url,countries_tags,carbon_footprint_percent_of_known_ingredients,states_tags';
 
     const endpoints = [
       `https://world.openfoodfacts.org/api/v2/product/${barcode}?fields=${fields}`,
@@ -1477,6 +1477,7 @@ const OFF_SEARCH_FIELDS = [
   'nutriscore_grade', 'nutriscore_score', 'nova_group',
   'nutriments', 'labels_tags', 'labels', 'categories_tags', 'categories',
   'origins', 'ingredients_text', 'ingredients_text_en',
+  'ingredients_analysis_tags', 'allergens_tags', 'traces_tags',
   'image_front_url', 'image_url', 'countries_tags', 'states_tags',
 ].join(',');
 

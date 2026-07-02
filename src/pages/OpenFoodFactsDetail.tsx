@@ -28,6 +28,8 @@ import { computeAnimalWelfareScore, welfareScoreColor } from "@/utils/animalWelf
 import { addToBasket, removeFromBasket, loadBasket } from "@/utils/basketStorage";
 import { findLaborAllegations as findLaborAllegationsUtil, getLaborAllegationCount } from "@/utils/laborCheck";
 import { findVerifiedEthics, CERTIFICATION_BADGES, getPrimaryCertification, CATEGORY_LABELS, type CertificationType } from "@/utils/verifiedEthics";
+import { checkDietaryConflicts, loadDietaryPrefs, hasDietaryPrefs, DIETARY_EVENT, type DietaryPrefs } from "@/utils/dietaryPreferences";
+import { DietaryConflictBanner } from "@/components/DietaryConflictBanner";
 import { findChocolateEntry, VERDICT_META, type ChocolateVerdict } from "@/data/chocolateDirectory";
 import { EnvironmentalImpactCard } from "@/components/EnvironmentalImpactCard";
 import { IngredientConcernsCard } from "@/components/IngredientConcernsCard";
@@ -297,6 +299,7 @@ export default function OpenFoodFactsDetail() {
   const [loading, setLoading]               = useState(true);
   const [error, setError]                   = useState<string | null>(null);
   const [priorities, setPriorities]         = useState<UserPriorities>(loadPriorities());
+  const [dietaryPrefs, setDietaryPrefs]     = useState<DietaryPrefs>(() => loadDietaryPrefs());
   const [confirmDismissed, setConfirmDismissed] = useState(false);
   const [showCandidates, setShowCandidates] = useState(false);
   const [candidates, setCandidates]         = useState<OpenFoodFactsResult[]>([]);
@@ -355,6 +358,12 @@ export default function OpenFoodFactsDetail() {
     const handler = () => setPriorities(loadPriorities());
     window.addEventListener("prioritiesUpdated", handler);
     return () => window.removeEventListener("prioritiesUpdated", handler);
+  }, []);
+
+  useEffect(() => {
+    const handler = () => setDietaryPrefs(loadDietaryPrefs());
+    window.addEventListener(DIETARY_EVENT, handler);
+    return () => window.removeEventListener(DIETARY_EVENT, handler);
   }, []);
 
   useEffect(() => {
@@ -769,6 +778,9 @@ export default function OpenFoodFactsDetail() {
     labels: product.labels,
     ingredientsText: product.ingredientsText,
   });
+  const dietaryCheck = checkDietaryConflicts(product, dietaryPrefs);
+  // Only whisper "couldn't check" when the user actually has dietary needs set.
+  const showDietaryNoData = dietaryCheck.noData && hasDietaryPrefs(dietaryPrefs);
 
   const co2Values = CO2_BARS
     .map(b => agri?.[b.key as keyof typeof agri] as number | undefined)
@@ -998,6 +1010,9 @@ export default function OpenFoodFactsDetail() {
         </div>
 
         <div style={{ padding: "0 22px 18px", display: "flex", flexDirection: "column", gap: 10 }}>
+          {(dietaryCheck.conflicts.length > 0 || showDietaryNoData) && (
+            <DietaryConflictBanner check={dietaryCheck} />
+          )}
           {brandWatched && product.brand && (
             <div style={{
               background: EDITORIAL.redSoft, borderRadius: 14, padding: "12px 14px",

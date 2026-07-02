@@ -120,6 +120,12 @@ export interface OpenFoodFactsProduct {
   ingredients_text?: string;
   ingredients_text_en?: string;
 
+  // Ingredient analysis (vegan / vegetarian / palm-oil status) and allergens —
+  // power the personal dietary-conflict warnings.
+  ingredients_analysis_tags?: string[];
+  allergens_tags?: string[];
+  traces_tags?: string[];
+
   // Images
   image_url?: string;
   image_front_url?: string;

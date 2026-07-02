@@ -3,7 +3,7 @@ import { useTheme } from "next-themes";
 import {
   ScanLine, ShieldCheck, Sparkles, MapPin, Users, Leaf, Heart,
   ArrowRight, ArrowLeft, ChevronDown, ChevronRight, FileText, Check, X,
-  AlertTriangle,
+  AlertTriangle, UtensilsCrossed,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { DS } from "@/styles/design-tokens";
@@ -16,6 +16,10 @@ import {
 import {
   loadPriorities, savePriorities, summarizePriorities, type UserPriorities,
 } from "@/utils/userPreferences";
+import {
+  loadDietaryPrefs, saveDietaryPrefs, DIET_OPTIONS, ALLERGEN_OPTIONS,
+  type DietaryPrefs, type DietKey, type AllergenKey,
+} from "@/utils/dietaryPreferences";
 import { OB_CSS } from "@/components/onboardingTheme";
 
 const ONBOARDING_KEY = "goodscan-onboarding-complete";
@@ -84,8 +88,25 @@ const PRIORITY_CONFIG = [
   { key: "animalWelfare" as keyof UserPriorities, cls: "c3", label: "Animal Welfare", Icon: Heart },
 ];
 
-type StepId = "welcome" | "location" | "priorities" | "disclaimer" | "consent";
-const STEPS: StepId[] = ["welcome", "location", "priorities", "disclaimer", "consent"];
+type StepId = "welcome" | "location" | "priorities" | "dietary" | "disclaimer" | "consent";
+const STEPS: StepId[] = ["welcome", "location", "priorities", "dietary", "disclaimer", "consent"];
+
+// Numbered steps (everything after the welcome screen).
+const NUMBERED_STEPS = STEPS.length - 1;
+
+// "Step N of M" label + progress dots, shared by every numbered step.
+function Eyebrow({ n }: { n: number }) {
+  return (
+    <div className="eyebrow">
+      <span className="label">Step {n} of {NUMBERED_STEPS}</span>
+      <span className="progress">
+        {Array.from({ length: NUMBERED_STEPS }, (_, i) => (
+          <i key={i} className={i < n ? "on" : ""} />
+        ))}
+      </span>
+    </div>
+  );
+}
 
 // The same things we tell users before showing a product result, adapted to the
 // pre-app context — so they go in understanding GoodScan's limits.
@@ -113,6 +134,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
   const [city, setCity] = useState(existingRegion?.city || "");
   const [priorities, setPriorities] = useState<UserPriorities>(() => loadPriorities());
   const [priorityNote, setPriorityNote] = useState<string | null>(null);
+  const [dietary, setDietary] = useState<DietaryPrefs>(() => loadDietaryPrefs());
   const [agreed, setAgreed] = useState(false);
 
   const step = STEPS[stepIdx];
@@ -132,6 +154,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
       saveRegion({ countryCode: match.code, country: match.name, city: city.trim() || undefined });
     }
     savePriorities(priorities);
+    saveDietaryPrefs(dietary);
     recordConsent();
     markOnboardingComplete();
     (document.activeElement as HTMLElement | null)?.blur?.();
@@ -162,6 +185,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
   const selected = COUNTRIES.find((c) => c.code === country);
   const ctaLabel =
     step === "welcome" ? "Get started"
+    : step === "dietary" && dietary.diets.length + dietary.allergens.length === 0 ? "Skip for now"
     : step === "disclaimer" ? "I understand"
     : step === "consent" ? "Agree & continue"
     : "Continue";
@@ -207,10 +231,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
           {step === "location" && (
             <>
               <span className="icon-tile" style={{ marginBottom: 26 }}><MapPin /></span>
-              <div className="eyebrow">
-                <span className="label">Step 1 of 4</span>
-                <span className="progress"><i className="on" /><i /><i /><i /></span>
-              </div>
+              <Eyebrow n={1} />
               <h1 className="title">Where do you shop?</h1>
               <p className="sub">
                 We use this for one thing — suggesting greener swaps that are actually sold near you.
@@ -263,10 +284,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
           {step === "priorities" && (
             <>
               <span className="icon-tile" style={{ marginBottom: 26 }}><Sparkles /></span>
-              <div className="eyebrow">
-                <span className="label">Step 2 of 4</span>
-                <span className="progress"><i className="on" /><i className="on" /><i /><i /></span>
-              </div>
+              <Eyebrow n={2} />
               <h1 className="title">What matters most to you?</h1>
               <p className="sub">This shapes every verdict and swap. You can fine-tune it later in Settings.</p>
 
@@ -304,13 +322,81 @@ export function Onboarding({ onComplete }: OnboardingProps) {
             </>
           )}
 
+          {step === "dietary" && (() => {
+            const toggleDiet = (key: DietKey) =>
+              setDietary((p) => ({
+                ...p,
+                diets: p.diets.includes(key) ? p.diets.filter((d) => d !== key) : [...p.diets, key],
+              }));
+            const toggleAllergen = (key: AllergenKey) =>
+              setDietary((p) => ({
+                ...p,
+                allergens: p.allergens.includes(key)
+                  ? p.allergens.filter((a) => a !== key)
+                  : [...p.allergens, key],
+              }));
+            const chip = (active: boolean): React.CSSProperties => ({
+              display: "inline-flex", alignItems: "center", gap: 6,
+              padding: "9px 14px", borderRadius: 999,
+              border: `1px solid ${active ? "var(--green)" : "var(--border-strong)"}`,
+              background: active ? "var(--green-soft)" : "var(--surface)",
+              color: active ? "var(--text)" : "var(--text-2)",
+              fontSize: 13.5, fontWeight: 700, cursor: "pointer",
+              fontFamily: "var(--font)",
+              transition: "background 0.15s, color 0.15s, border-color 0.15s",
+            });
+            const sectionLabel: React.CSSProperties = {
+              fontSize: 11, fontWeight: 800, color: "var(--text-3)",
+              letterSpacing: "0.07em", textTransform: "uppercase",
+              margin: "0 0 10px",
+            };
+            return (
+              <>
+                <span className="icon-tile" style={{ marginBottom: 26 }}><UtensilsCrossed /></span>
+                <Eyebrow n={3} />
+                <h1 className="title">Anything you avoid?</h1>
+                <p className="sub">
+                  Optional — pick what applies and we'll warn you whenever a product
+                  contains it. You can change this any time in Settings.
+                </p>
+
+                <div style={{ marginBottom: 22 }}>
+                  <p style={sectionLabel}>Diet</p>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                    {DIET_OPTIONS.map((o) => {
+                      const active = dietary.diets.includes(o.key);
+                      return (
+                        <button key={o.key} type="button" aria-pressed={active} style={chip(active)} onClick={() => toggleDiet(o.key)}>
+                          {active && <Check size={13} strokeWidth={3} style={{ color: "var(--green)" }} />}
+                          {o.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div>
+                  <p style={sectionLabel}>Allergies & intolerances</p>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                    {ALLERGEN_OPTIONS.map((o) => {
+                      const active = dietary.allergens.includes(o.key);
+                      return (
+                        <button key={o.key} type="button" aria-pressed={active} style={chip(active)} onClick={() => toggleAllergen(o.key)}>
+                          {active && <Check size={13} strokeWidth={3} style={{ color: "var(--green)" }} />}
+                          {o.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </>
+            );
+          })()}
+
           {step === "disclaimer" && (
             <>
               <span className="icon-tile" style={{ marginBottom: 26 }}><AlertTriangle /></span>
-              <div className="eyebrow">
-                <span className="label">Step 3 of 4</span>
-                <span className="progress"><i className="on" /><i className="on" /><i className="on" /><i /></span>
-              </div>
+              <Eyebrow n={4} />
               <h1 className="title">Before you rely on it</h1>
               <p className="sub">
                 GoodScan helps you explore — it's a starting point, not the final word. Please read this first.
@@ -349,10 +435,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
           {step === "consent" && (
             <>
               <span className="icon-tile" style={{ marginBottom: 26 }}><ShieldCheck /></span>
-              <div className="eyebrow">
-                <span className="label">Step 4 of 4</span>
-                <span className="progress"><i className="on" /><i className="on" /><i className="on" /><i className="on" /></span>
-              </div>
+              <Eyebrow n={5} />
               <h1 className="title">A quick agreement</h1>
               <p className="sub">
                 Before you start, please review and accept the documents below. Tap any to read the full text.

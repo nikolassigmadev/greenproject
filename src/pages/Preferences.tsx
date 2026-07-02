@@ -7,6 +7,7 @@ import { Leaf, Users, Heart, RotateCcw, Check, Sparkles } from "lucide-react";
 import { DS } from "@/styles/design-tokens";
 import { RegionPicker } from "@/components/RegionPicker";
 import { WatchlistEditor } from "@/components/WatchlistEditor";
+import { DietaryEditor } from "@/components/DietaryEditor";
 import { toast } from "sonner";
 
 // Three discrete weights (0–100). The label + effect line do the explaining so
@@ -233,6 +234,16 @@ export default function Preferences() {
               </button>
             )}
           </div>
+
+          {/* ── Dietary needs — hard constraints checked on every product ── */}
+          <p style={{
+            fontSize: 11, fontWeight: 800, color: DS.muted,
+            letterSpacing: "0.08em", textTransform: "uppercase",
+            margin: "8px 2px 0",
+          }}>
+            Dietary
+          </p>
+          <DietaryEditor />
 
           {/* ── Brands — a personal avoid/trust list that moves scores ── */}
           <p style={{

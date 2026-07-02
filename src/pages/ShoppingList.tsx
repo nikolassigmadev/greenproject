@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import {
   ShoppingCart, Search, X, Trash2, AlertTriangle, Loader2, Plus,
-  ShoppingBag, Users, ChevronRight, CheckCircle2, TrendingDown,
+  ShoppingBag, Users, ChevronRight, CheckCircle2, TrendingDown, Sparkles,
 } from "lucide-react";
 import { searchProducts as searchOffProducts } from "@/services/openfoodfacts";
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
@@ -11,6 +11,16 @@ import {
   loadBasket, addToBasket, removeFromBasket, clearBasket,
   getBasketEthicsReport, type BasketItem,
 } from "@/utils/basketStorage";
+import {
+  loadSmartList, addSmartListItem, removeSmartListItem,
+  SMART_LIST_EVENT, type SmartListItem,
+} from "@/utils/smartListStorage";
+import {
+  getCategoryRecommendations, detectCategoryFromText, type SwapSuggestion,
+} from "@/services/swaps";
+import { CERTIFICATION_BADGES } from "@/utils/verifiedEthics";
+import { loadRegion } from "@/utils/userRegion";
+import { loadPriorities } from "@/utils/userPreferences";
 import { DS } from "@/styles/design-tokens";
 
 // ── helpers ────────────────────────────────────────────────────────────────
@@ -80,6 +90,237 @@ function Stat({ value, label, color }: { value: string; label: string; color: st
         {value}
       </div>
       <div style={{ fontSize: 10.5, fontWeight: 600, color: DS.muted, marginTop: 6 }}>{label}</div>
+    </div>
+  );
+}
+
+// ── smart list ───────────────────────────────────────────────────────────────
+
+/** Resolution state for one smart-list item's brand recommendation. */
+type RecState =
+  | { status: "loading" }
+  | { status: "done"; pick: SwapSuggestion | null };
+
+const QUICK_ADDS = ["Coffee", "Tea", "Chocolate", "Eggs", "Milk", "Cereal"];
+
+/**
+ * "Type what you need, we pick the brand" — generic items mapped to the swap
+ * catalog and resolved to the best curated ethical brand for the user's
+ * priorities and region.
+ */
+function SmartList({ onAddToBasket, inBasket }: {
+  onAddToBasket: (result: OpenFoodFactsResult) => void;
+  inBasket: (barcode: string) => boolean;
+}) {
+  const [items, setItems] = useState<SmartListItem[]>(() => loadSmartList());
+  const [input, setInput] = useState("");
+  const [recs, setRecs] = useState<Record<string, RecState>>({});
+  const inFlight = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    const handler = () => setItems(loadSmartList());
+    window.addEventListener(SMART_LIST_EVENT, handler);
+    return () => window.removeEventListener(SMART_LIST_EVENT, handler);
+  }, []);
+
+  // Resolve a recommendation once per item; region + priorities are read at
+  // resolution time so fresh items always reflect current settings.
+  useEffect(() => {
+    for (const item of items) {
+      if (!item.category || inFlight.current.has(item.id)) continue;
+      inFlight.current.add(item.id);
+      setRecs((prev) => ({ ...prev, [item.id]: { status: "loading" } }));
+      getCategoryRecommendations(item.category, {
+        region: loadRegion(),
+        priorities: loadPriorities(),
+        limit: 1,
+      })
+        .then(([pick]) => setRecs((prev) => ({ ...prev, [item.id]: { status: "done", pick: pick ?? null } })))
+        .catch(() => setRecs((prev) => ({ ...prev, [item.id]: { status: "done", pick: null } })));
+    }
+  }, [items]);
+
+  const add = (label: string) => {
+    const name = label.trim();
+    if (!name) return;
+    addSmartListItem(name, detectCategoryFromText(name));
+    setInput("");
+  };
+
+  const remove = (id: string) => {
+    inFlight.current.delete(id);
+    removeSmartListItem(id);
+  };
+
+  return (
+    <div style={{ background: DS.card, borderRadius: 18, boxShadow: SHADOW, overflow: "hidden" }}>
+      <div style={{ padding: "14px 16px" }}>
+        <p style={{
+          fontSize: 11.5, fontWeight: 700, color: DS.muted, textTransform: "uppercase",
+          letterSpacing: 0.5, margin: "0 0 4px", display: "flex", alignItems: "center", gap: 5,
+        }}>
+          <Sparkles size={11} style={{ color: DS.good }} /> Smart list
+        </p>
+        <p style={{ fontSize: 12, color: DS.muted, margin: "0 0 10px", lineHeight: 1.45 }}>
+          Add what you need — we'll suggest the most ethical brand for your values, sold near you.
+        </p>
+        <form
+          onSubmit={(e) => { e.preventDefault(); add(input); }}
+          style={{ display: "flex", gap: 8 }}
+        >
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="e.g. coffee, chocolate, eggs…"
+            style={{
+              flex: 1, height: 44, background: DS.bg, border: `1px solid ${DS.hair}`,
+              borderRadius: 12, color: DS.ink, fontSize: 14, padding: "0 14px",
+              outline: "none", fontFamily: DS.font, boxSizing: "border-box", minWidth: 0,
+            }}
+          />
+          <button
+            type="submit"
+            disabled={!input.trim()}
+            aria-label="Add to smart list"
+            style={{
+              width: 44, height: 44, borderRadius: 12, border: "none", flexShrink: 0,
+              background: input.trim() ? DS.ink : DS.hair,
+              color: input.trim() ? DS.card : DS.muted,
+              cursor: input.trim() ? "pointer" : "not-allowed",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}
+          >
+            <Plus size={17} />
+          </button>
+        </form>
+
+        {items.length === 0 && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
+            {QUICK_ADDS.map((label) => (
+              <button
+                key={label}
+                type="button"
+                onClick={() => add(label)}
+                style={{
+                  padding: "6px 12px", borderRadius: 999, border: `1px solid ${DS.hair}`,
+                  background: DS.bg, color: DS.muted, fontSize: 12, fontWeight: 700,
+                  cursor: "pointer", fontFamily: DS.font,
+                }}
+              >
+                + {label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {items.length > 0 && (
+        <div style={{ borderTop: `1px solid ${DS.hair}` }}>
+          {items.map((item, i) => {
+            const rec = item.category ? recs[item.id] : undefined;
+            const pick = rec?.status === "done" ? rec.pick : null;
+            const already = pick?.barcode ? inBasket(pick.barcode) : false;
+            return (
+              <div key={item.id} style={{
+                padding: "12px 16px",
+                borderBottom: i < items.length - 1 ? `1px solid ${DS.hair}` : "none",
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{
+                    flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 800, color: DS.ink,
+                    textTransform: "capitalize", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                  }}>
+                    {item.label}
+                  </span>
+                  <button
+                    onClick={() => remove(item.id)}
+                    aria-label={`Remove ${item.label} from smart list`}
+                    style={{
+                      width: 28, height: 28, borderRadius: 8, border: "none", flexShrink: 0,
+                      background: DS.bg, color: DS.muted, cursor: "pointer",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                    }}
+                  >
+                    <X size={13} />
+                  </button>
+                </div>
+
+                {!item.category ? (
+                  <p style={{ fontSize: 12, color: DS.muted, margin: "6px 0 0", lineHeight: 1.4 }}>
+                    No curated pick for this yet — try the product search below.
+                  </p>
+                ) : rec?.status !== "done" ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 8 }}>
+                    <Loader2 size={13} style={{ color: DS.muted, animation: "spin 1s linear infinite" }} />
+                    <span style={{ fontSize: 12, color: DS.muted }}>Finding the best brand…</span>
+                  </div>
+                ) : !pick ? (
+                  <p style={{ fontSize: 12, color: DS.muted, margin: "6px 0 0", lineHeight: 1.4 }}>
+                    Couldn't find a recommendation right now — try the search below.
+                  </p>
+                ) : (
+                  <div style={{
+                    display: "flex", alignItems: "center", gap: 11, marginTop: 9,
+                    background: DS.goodBg, borderRadius: 13, padding: "10px 12px",
+                  }}>
+                    <Thumb url={pick.imageUrl} size={42} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{
+                        fontSize: 13, fontWeight: 800, color: DS.ink, margin: "0 0 2px",
+                        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                      }}>
+                        {pick.brand}
+                      </p>
+                      <p style={{
+                        fontSize: 11.5, color: DS.muted, margin: "0 0 4px",
+                        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                      }}>
+                        {pick.productName}
+                      </p>
+                      <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
+                        {pick.certifications.slice(0, 2).map((cert) => {
+                          const badge = CERTIFICATION_BADGES[cert];
+                          return badge ? (
+                            <span key={cert} style={{
+                              fontSize: 9.5, fontWeight: 800, color: badge.color, background: badge.bg,
+                              borderRadius: 6, padding: "2px 6px", whiteSpace: "nowrap",
+                            }}>
+                              {badge.shortLabel}
+                            </span>
+                          ) : null;
+                        })}
+                        <span style={{ fontSize: 10.5, color: DS.muted, whiteSpace: "nowrap" }}>
+                          {pick.availabilityLabel}
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        if (pick.product && !already) {
+                          onAddToBasket(pick.product);
+                          remove(item.id);
+                        }
+                      }}
+                      disabled={!pick.product || already}
+                      aria-label={already ? "Already in basket" : `Add ${pick.brand} to basket`}
+                      style={{
+                        width: 34, height: 34, borderRadius: 10, border: "none", flexShrink: 0,
+                        background: already ? DS.goodBg : pick.product ? DS.ink : DS.hair,
+                        color: already ? DS.good : pick.product ? DS.card : DS.muted,
+                        cursor: pick.product && !already ? "pointer" : "default",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                      }}
+                    >
+                      {already ? <CheckCircle2 size={16} /> : <Plus size={16} />}
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -263,6 +504,9 @@ export default function ShoppingList() {
               )}
             </div>
           )}
+
+          {/* ── Smart list — generic needs resolved to best-brand picks ── */}
+          <SmartList onAddToBasket={handleAdd} inBasket={inBasket} />
 
           {/* ── Add product ── */}
           <div style={{ background: DS.card, borderRadius: 18, boxShadow: SHADOW, overflow: "hidden" }}>

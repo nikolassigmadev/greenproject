@@ -462,6 +462,106 @@ export async function getSwaps(
   return { diagnosis, region, suggestions };
 }
 
+// ── Category recommendations (smart shopping list) ──────────────────────────
+//
+// The proactive path: no scanned product, just "I need coffee". We rank the
+// curated candidates for a category by the user's region and priorities and
+// resolve the best one(s) to live OFF products — same plumbing as getSwaps,
+// minus the diagnosis.
+
+/** How strongly a candidate speaks to what the user says they care about. */
+function priorityAffinity(c: AltCandidate, p: UserPriorities): number {
+  let score = 0;
+  if (c.addresses.includes("labor")) score += priorityMultiplier(p.laborRights);
+  if (c.addresses.includes("eco")) score += priorityMultiplier(p.environment);
+  if (c.addresses.includes("animal_welfare")) score += priorityMultiplier(p.animalWelfare);
+  return score;
+}
+
+/**
+ * Pure ranking half of getCategoryRecommendations — network-free so it can be
+ * unit-tested. Custom picks first, then in-market, then affinity with the
+ * user's priorities, then confirmed availability, then richer certifications.
+ */
+export function rankCategoryCandidates(
+  categoryKey: SwapCategoryKey,
+  country: string | null,
+  priorities: UserPriorities = DEFAULT_PRIORITIES,
+): AltCandidate[] {
+  const merged = dedupeByBrand([
+    ...getCustomCandidates(categoryKey),
+    ...getCandidates(categoryKey),
+    ...getVerifiedEthicsCandidates(categoryKey),
+    ...getChocolateDirectoryCandidates(categoryKey),
+  ]);
+
+  // Only recommend things the user can actually buy, when we know enough.
+  let pool = merged;
+  if (country) {
+    const inMarket = pool.filter((c) => isInMarket(c, country));
+    if (inMarket.length >= 2) pool = inMarket;
+  }
+
+  return pool.sort((a, b) => {
+    if (!!a.custom !== !!b.custom) return a.custom ? -1 : 1;
+    const am = isInMarket(a, country) ? 1 : 0;
+    const bm = isInMarket(b, country) ? 1 : 0;
+    if (am !== bm) return bm - am;
+    const ap = priorityAffinity(a, priorities);
+    const bp = priorityAffinity(b, priorities);
+    if (ap !== bp) return bp - ap;
+    const ac = a.assumeAvailable === false ? 0 : 1;
+    const bc = b.assumeAvailable === false ? 0 : 1;
+    if (ac !== bc) return bc - ac;
+    return b.certifications.length - a.certifications.length;
+  });
+}
+
+/** Map free text like "coffee" or "dark chocolate" onto a catalog category. */
+export function detectCategoryFromText(text: string): SwapCategoryKey | null {
+  return detectSwapCategory({ productName: text });
+}
+
+export interface CategoryRecommendationOptions {
+  region?: UserRegion | null;
+  priorities?: UserPriorities;
+  limit?: number;
+}
+
+/**
+ * Best curated brand(s) for a generic category, tuned to the user's region and
+ * priorities and resolved to live OFF products where possible.
+ */
+export async function getCategoryRecommendations(
+  categoryKey: SwapCategoryKey,
+  opts: CategoryRecommendationOptions = {},
+): Promise<SwapSuggestion[]> {
+  const region = opts.region ?? null;
+  const priorities = opts.priorities ?? DEFAULT_PRIORITIES;
+  const limit = opts.limit ?? 1;
+  const country = region?.countryCode ?? null;
+  const countryTag = country ? findCountry(country)?.offTag ?? null : null;
+
+  const candidates = rankCategoryCandidates(categoryKey, country, priorities)
+    .slice(0, Math.max(limit + 2, 4)); // resolve a few extra, trim after
+
+  const resolved = await Promise.all(candidates.map((c) => resolveCandidate(c, countryTag)));
+
+  return candidates
+    .map((c, i) => buildSuggestion(c, resolved[i], null, region))
+    .sort((a, b) => {
+      const aAvail = (a.availableInRegion === true ? 2 : 0) + (a.regionAvailable ? 1 : 0);
+      const bAvail = (b.availableInRegion === true ? 2 : 0) + (b.regionAvailable ? 1 : 0);
+      if (aAvail !== bAvail) return bAvail - aAvail;
+      if (a.custom !== b.custom) return a.custom ? -1 : 1;
+      const aEco = a.ecoGrade ? ECO_RANK[a.ecoGrade] ?? 0 : 0;
+      const bEco = b.ecoGrade ? ECO_RANK[b.ecoGrade] ?? 0 : 0;
+      if (aEco !== bEco) return bEco - aEco;
+      return (a.co2Kg ?? Infinity) - (b.co2Kg ?? Infinity);
+    })
+    .slice(0, limit);
+}
+
 /** Concern → short human label, used by cards and the impact dashboard. */
 export const CONCERN_LABEL: Record<ConcernType, string> = {
   labor: "labour concern",

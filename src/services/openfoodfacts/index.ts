@@ -455,7 +455,7 @@ const lookupBarcodeInternal = async (barcode: string): Promise<OpenFoodFactsResu
   }
 
   // Fallback: direct API call with field filtering to reduce response size
-  const fields = 'code,product_name,product_name_en,generic_name,generic_name_en,abbreviated_product_name,brands,ecoscore_grade,ecoscore_score,ecoscore_data,nutriscore_grade,nutriscore_score,nova_group,nutriments,labels_tags,labels,categories_tags,categories,origins,ingredients_text,ingredients_text_en,image_front_url,image_url,countries_tags,states_tags';
+  const fields = 'code,product_name,product_name_en,generic_name,generic_name_en,abbreviated_product_name,brands,ecoscore_grade,ecoscore_score,ecoscore_data,nutriscore_grade,nutriscore_score,nova_group,nutriments,labels_tags,labels,categories_tags,categories,origins,ingredients_text,ingredients_text_en,ingredients_analysis_tags,allergens_tags,traces_tags,image_front_url,image_url,countries_tags,states_tags';
 
   const endpoints = [
     `${OFF_API_BASE}/api/v2/product/${barcode}?fields=${fields}`,
@@ -826,6 +826,7 @@ const searchProductsGlobal = async (
     'nutriscore_grade', 'nutriscore_score', 'nova_group',
     'nutriments', 'labels_tags', 'labels', 'categories_tags', 'categories',
     'origins', 'ingredients_text', 'ingredients_text_en',
+    'ingredients_analysis_tags', 'allergens_tags', 'traces_tags',
     'image_front_url', 'image_url', 'countries_tags', 'states_tags',
   ].join(',');
 
@@ -952,6 +953,7 @@ export const searchBetterAlternatives = async (
         'nutriscore_grade', 'nutriscore_score', 'nova_group',
         'nutriments', 'labels_tags', 'labels', 'categories_tags', 'categories',
         'origins', 'ingredients_text', 'ingredients_text_en',
+        'ingredients_analysis_tags', 'allergens_tags', 'traces_tags',
         'image_front_url', 'image_url', 'countries_tags', 'states_tags',
       ].join(','),
     });
@@ -1080,6 +1082,7 @@ export const browseProducts = async (options: BrowseOptions = {}): Promise<Brows
         'nutriscore_grade', 'nutriscore_score', 'nova_group',
         'nutriments', 'labels_tags', 'labels', 'categories_tags', 'categories',
         'origins', 'ingredients_text', 'ingredients_text_en',
+        'ingredients_analysis_tags', 'allergens_tags', 'traces_tags',
         'image_front_url', 'image_url', 'countries_tags', 'states_tags',
       ].join(','),
     });

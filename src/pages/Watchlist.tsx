@@ -1,6 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Eye, Trash2, ExternalLink, AlertTriangle, CheckCircle2 } from "lucide-react";
+import {
+  Eye, Trash2, ExternalLink, AlertTriangle, CheckCircle2, Bell, BellOff, Megaphone,
+} from "lucide-react";
 import { BackButton } from "@/components/BackButton";
 import { DS } from "@/styles/design-tokens";
 import {
@@ -12,6 +14,11 @@ import {
 import { getVerifiedFlagForBrand } from "@/services/brandFlags";
 import type { BrandFlagV2 } from "@/types/brandFlag";
 import { findLaborAllegations } from "@/utils/laborCheck";
+import { getBrandTimeline, markEventsSeen, type BrandEvent } from "@/utils/brandEvents";
+import {
+  isPushSupported, getLocalPushStatus, enablePushNotifications,
+  disablePushNotifications, PUSH_EVENT, type PushStatus,
+} from "@/utils/pushNotifications";
 
 function FlagRow({ flag }: { flag: BrandFlagV2 }) {
   const top = flag.sources[0];
@@ -44,6 +51,172 @@ function FlagRow({ flag }: { flag: BrandFlagV2 }) {
           {top.publisher}
         </a>
       )}
+    </div>
+  );
+}
+
+// ── Alerts toggle — local notifications when a watched brand gets an update ──
+
+function AlertsCard() {
+  const [status, setStatus] = useState<PushStatus>(() => getLocalPushStatus());
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    const handler = () => setStatus(getLocalPushStatus());
+    window.addEventListener(PUSH_EVENT, handler);
+    return () => window.removeEventListener(PUSH_EVENT, handler);
+  }, []);
+
+  if (!isPushSupported()) return null;
+
+  const subscribed = status === "subscribed";
+  const denied = status === "denied";
+
+  const toggle = async () => {
+    if (busy || denied) return;
+    setBusy(true);
+    try {
+      if (subscribed) await disablePushNotifications();
+      else await enablePushNotifications();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div style={{
+      background: DS.card, borderRadius: 16, padding: "13px 16px", marginBottom: 16,
+      boxShadow: "0 2px 6px rgba(0,0,0,0.05)",
+      display: "flex", alignItems: "center", gap: 12,
+    }}>
+      {subscribed
+        ? <Bell style={{ width: 17, height: 17, color: DS.good, flexShrink: 0 }} />
+        : <BellOff style={{ width: 17, height: 17, color: DS.muted, flexShrink: 0 }} />}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 13.5, fontWeight: 700, color: DS.ink }}>
+          {subscribed ? "Alerts on" : "Brand alerts"}
+        </div>
+        <div style={{ fontSize: 11.5, color: DS.muted, lineHeight: 1.4 }}>
+          {denied
+            ? "Notifications are blocked in your browser settings."
+            : subscribed
+              ? "We'll notify you when a brand you watch gets a new flag or boycott listing."
+              : "Get notified when a watched brand gets a new flag or boycott listing."}
+        </div>
+      </div>
+      {!denied && (
+        <button
+          onClick={toggle}
+          disabled={busy}
+          style={{
+            flexShrink: 0, padding: "8px 14px", borderRadius: 10, border: "none",
+            background: subscribed ? DS.bg : DS.ink,
+            color: subscribed ? DS.muted : DS.card,
+            fontSize: 12, fontWeight: 700, cursor: busy ? "wait" : "pointer",
+            fontFamily: DS.font,
+          }}
+        >
+          {subscribed ? "Turn off" : "Enable"}
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ── Activity timeline — what's happened to the brands you watch ─────────────
+
+function severityTone(severity?: BrandEvent["severity"]): string {
+  if (severity === "critical" || severity === "high") return DS.bad;
+  return DS.warn;
+}
+
+function EventRow({ event, divider }: { event: BrandEvent; divider: boolean }) {
+  const tone = event.type === "boycott" ? DS.warn : severityTone(event.severity);
+  const Icon = event.type === "boycott" ? Megaphone : AlertTriangle;
+  const dateLabel = event.date
+    ? new Date(event.date).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })
+    : "Ongoing";
+
+  return (
+    <div style={{
+      display: "flex", gap: 11, padding: "13px 16px",
+      borderTop: divider ? `1px solid ${DS.hair}` : "none",
+    }}>
+      <div style={{
+        width: 28, height: 28, borderRadius: 9, flexShrink: 0, marginTop: 1,
+        background: `color-mix(in srgb, ${tone} 14%, transparent)`,
+        display: "flex", alignItems: "center", justifyContent: "center",
+      }}>
+        <Icon style={{ width: 13, height: 13, color: tone }} />
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 13, fontWeight: 800, color: DS.ink }}>{event.brand}</span>
+          <span style={{ fontSize: 12, color: DS.muted }}>· {event.title}</span>
+          {event.isNew && (
+            <span style={{
+              fontSize: 9, fontWeight: 800, letterSpacing: "0.06em",
+              color: DS.card, background: DS.bad, borderRadius: 6, padding: "2px 6px",
+            }}>
+              NEW
+            </span>
+          )}
+        </div>
+        <p style={{ fontSize: 12, color: DS.ink, opacity: 0.85, margin: "4px 0 0", lineHeight: 1.45 }}>
+          {event.detail}
+        </p>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 5 }}>
+          <span style={{ fontSize: 10.5, color: DS.muted }}>{dateLabel}</span>
+          {event.sourceUrl && (
+            <a
+              href={event.sourceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 3,
+                color: DS.muted, fontSize: 10.5, fontWeight: 600, textDecoration: "none",
+              }}
+            >
+              <ExternalLink style={{ width: 9, height: 9 }} />
+              {event.publisher ?? "Source"}
+            </a>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ActivityTimeline({ watchlist }: { watchlist: string[] }) {
+  // Recompute when the watchlist changes; capture the NEW state at read time so
+  // badges stay visible for this visit even after we mark them seen below.
+  const events = useMemo(() => getBrandTimeline(watchlist), [watchlist]);
+
+  // Viewing the timeline clears the NEW badges for next time.
+  useEffect(() => {
+    const unseen = events.filter((e) => e.isNew);
+    if (unseen.length > 0) markEventsSeen(unseen);
+  }, [events]);
+
+  if (events.length === 0) return null;
+
+  return (
+    <div style={{ marginTop: 22 }}>
+      <p style={{
+        fontSize: 11, fontWeight: 800, color: DS.muted,
+        letterSpacing: "0.08em", textTransform: "uppercase",
+        margin: "0 2px 8px",
+      }}>
+        Activity
+      </p>
+      <div style={{
+        background: DS.card, borderRadius: 16, overflow: "hidden",
+        boxShadow: "0 2px 6px rgba(0,0,0,0.05)",
+      }}>
+        {events.map((event, i) => (
+          <EventRow key={event.id} event={event} divider={i > 0} />
+        ))}
+      </div>
     </div>
   );
 }
@@ -97,6 +270,8 @@ export default function Watchlist() {
             </p>
           </div>
         </header>
+
+        <AlertsCard />
 
         <form onSubmit={handleAdd} style={{ display: "flex", gap: 8, marginBottom: 16 }}>
           <input
@@ -202,6 +377,8 @@ export default function Watchlist() {
             })}
           </div>
         )}
+
+        <ActivityTimeline watchlist={watchlist} />
       </main>
     </div>
   );
