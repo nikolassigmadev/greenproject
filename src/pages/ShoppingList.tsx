@@ -96,6 +96,10 @@ function Stat({ value, label, color }: { value: string; label: string; color: st
 
 // ── smart list ───────────────────────────────────────────────────────────────
 
+// Archived 2026-07 — flip to true to bring the Smart list back. The engine
+// (getCategoryRecommendations) and storage (smartListStorage) stay tested.
+const SMART_LIST_ENABLED = false;
+
 /** Resolution state for one smart-list item's brand recommendation. */
 type RecState =
   | { status: "loading" }
@@ -506,7 +510,7 @@ export default function ShoppingList() {
           )}
 
           {/* ── Smart list — generic needs resolved to best-brand picks ── */}
-          <SmartList onAddToBasket={handleAdd} inBasket={inBasket} />
+          {SMART_LIST_ENABLED && <SmartList onAddToBasket={handleAdd} inBasket={inBasket} />}
 
           {/* ── Add product ── */}
           <div style={{ background: DS.card, borderRadius: 18, boxShadow: SHADOW, overflow: "hidden" }}>

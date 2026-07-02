@@ -55,6 +55,24 @@ const COMMODITY_LABELS: Record<Commodity, string> = {
 
 export { COMMODITY_LABELS };
 
+/**
+ * Plain-English badge labels for each greenwash-risk level. "Greenwash risk:
+ * Medium" is industry jargon that means nothing to shoppers — these say what
+ * the rating actually measures: how well the company's sustainability
+ * marketing holds up against independent evidence.
+ */
+export const GREENWASH_RISK_LABELS: Record<GreenwashRisk, string> = {
+  'Low': 'Green claims check out',
+  'Low-Medium': 'Green claims mostly check out',
+  'Medium': 'Green claims partly backed',
+  'Medium-High': 'Green claims overstated',
+  'High': 'Green claims misleading',
+};
+
+/** One-line explanation of the rating, for tooltips / captions. */
+export const GREENWASH_RISK_EXPLAINER =
+  "How well this company's sustainability marketing is backed by independent evidence.";
+
 // ---------------------------------------------------------------------------
 // Palm Oil
 // ---------------------------------------------------------------------------

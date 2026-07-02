@@ -17,6 +17,8 @@ import { AlertTriangle, ExternalLink } from 'lucide-react';
 import {
   getCommodityRecordsByBrand,
   greenwashRiskTone,
+  GREENWASH_RISK_LABELS,
+  GREENWASH_RISK_EXPLAINER,
   COMMODITY_LABELS,
   COMMODITY_ICON,
   type CommodityCompany,
@@ -32,6 +34,7 @@ function RiskBadge({ risk }: { risk: CommodityCompany['greenwashRisk'] }) {
   const color = toneColor(tone);
   return (
     <span
+      title={GREENWASH_RISK_EXPLAINER}
       style={{
         fontSize: 10.5,
         fontWeight: 800,
@@ -44,7 +47,7 @@ function RiskBadge({ risk }: { risk: CommodityCompany['greenwashRisk'] }) {
         padding: '2px 9px',
       }}
     >
-      Greenwash risk: {risk}
+      {GREENWASH_RISK_LABELS[risk]}
     </span>
   );
 }
