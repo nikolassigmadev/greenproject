@@ -1,5 +1,6 @@
 import { Component, type ReactNode } from "react";
 import { DS } from "@/styles/design-tokens";
+import { reportClientError } from "@/utils/errorReporter";
 
 interface Props {
   children: ReactNode;
@@ -23,6 +24,11 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
     console.error("ErrorBoundary caught:", error, info.componentStack);
+    reportClientError({
+      message: error.message,
+      stack: error.stack ?? info.componentStack ?? undefined,
+      source: "boundary",
+    });
   }
 
   // A crash like "Can't find variable: …" almost always means the device is

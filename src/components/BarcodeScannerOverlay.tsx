@@ -233,7 +233,14 @@ export function BarcodeScannerOverlay({ stream, onClose }: Props) {
 
     (async () => {
       // 1) Native Shape-Detection API where supported.
-      const BD = (window as unknown as { BarcodeDetector?: any }).BarcodeDetector;
+      const BD = (window as unknown as {
+        BarcodeDetector?: {
+          new (options?: { formats?: string[] }): {
+            detect: (s: CanvasImageSource) => Promise<Array<{ rawValue: string }>>;
+          };
+          getSupportedFormats?: () => Promise<string[]>;
+        };
+      }).BarcodeDetector;
       if (BD) {
         try {
           const supported: string[] = (await BD.getSupportedFormats?.()) || [];

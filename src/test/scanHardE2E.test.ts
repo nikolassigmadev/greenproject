@@ -30,7 +30,7 @@ const SCAN_PROMPT = (() => {
 
 const cleanOCRQuery = (raw: string): string => {
   let q = raw
-    .replace(/\d+[\.,]?\d*\s*(g|kg|mg|ml|l|cl|oz|fl\.?\s*oz|lb|lbs|liter|litre|%)\b/gi, ' ')
+    .replace(/\d+[.,]?\d*\s*(g|kg|mg|ml|l|cl|oz|fl\.?\s*oz|lb|lbs|liter|litre|%)\b/gi, ' ')
     .replace(/\b\d+\b/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();

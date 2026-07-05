@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { createBrowserRouter, Outlet, useLocation } from "react-router-dom";
 import { ScrollManager } from "./components/ScrollManager";
 import { HackerTransition } from "./components/HackerTransition";
@@ -6,33 +6,56 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { BottomNav, BottomNavProvider } from "./components/BottomNav";
 import { Onboarding, hasCompletedOnboarding } from "./components/Onboarding";
 import { AddToHomeScreen, isStandalonePWA } from "./components/AddToHomeScreen";
+// The two entry points stay eager so first paint never waits on a chunk fetch;
+// every other page is code-split and loads on navigation.
 import Index from "./pages/Index";
-import Products from "./pages/Products";
-import ProductDetail from "./pages/ProductDetail";
-import OpenFoodFactsDetail from "./pages/OpenFoodFactsDetail";
 import Scan from "./pages/Scan";
-import Database from "./pages/Database";
 import NotFound from "./pages/NotFound";
-import Preferences from "./pages/Preferences";
-import Dashboard from "./pages/Dashboard";
-import ShoppingList from "./pages/ShoppingList";
-import AboutUs from "./pages/AboutUs";
-import SupplyChain from "./pages/SupplyChain";
-import Methodology from "./pages/Methodology";
-import ChocolateDirectory from "./pages/ChocolateDirectory";
-import Privacy from "./pages/Privacy";
-import TermsOfService from "./pages/TermsOfService";
-import TermsAndConditions from "./pages/TermsAndConditions";
-import { CalAIShowcase } from "./components/CalAIShowcase";
-import ChatGPTScan from "./pages/ChatGPTScan";
-import Watchlist from "./pages/Watchlist";
-import Compare from "./pages/Compare";
-import SubmitFlag from "./pages/SubmitFlag";
-import ShelfScan from "./pages/ShelfScan";
+
+const Products = lazy(() => import("./pages/Products"));
+const ProductDetail = lazy(() => import("./pages/ProductDetail"));
+const OpenFoodFactsDetail = lazy(() => import("./pages/OpenFoodFactsDetail"));
+const Database = lazy(() => import("./pages/Database"));
+const Preferences = lazy(() => import("./pages/Preferences"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const ShoppingList = lazy(() => import("./pages/ShoppingList"));
+const AboutUs = lazy(() => import("./pages/AboutUs"));
+const SupplyChain = lazy(() => import("./pages/SupplyChain"));
+const Methodology = lazy(() => import("./pages/Methodology"));
+const ChocolateDirectory = lazy(() => import("./pages/ChocolateDirectory"));
+const Privacy = lazy(() => import("./pages/Privacy"));
+const TermsOfService = lazy(() => import("./pages/TermsOfService"));
+const TermsAndConditions = lazy(() => import("./pages/TermsAndConditions"));
+const CalAIShowcase = lazy(() => import("./components/CalAIShowcase"));
+const ChatGPTScan = lazy(() => import("./pages/ChatGPTScan"));
+const Watchlist = lazy(() => import("./pages/Watchlist"));
+const Compare = lazy(() => import("./pages/Compare"));
+const SubmitFlag = lazy(() => import("./pages/SubmitFlag"));
+const ShelfScan = lazy(() => import("./pages/ShelfScan"));
 
 // Import admin components - uncomment to enable
-// import Admin from "./pages/Admin";
-// import AdminLogin from "./pages/AdminLogin";
+// const Admin = lazy(() => import("./pages/Admin"));
+// const AdminLogin = lazy(() => import("./pages/AdminLogin"));
+
+// Shown while a lazy page chunk downloads. Neutral (no theme assumptions) and
+// deliberately minimal — on a decent connection it flashes for <100ms.
+function PageLoading() {
+  return (
+    <div style={{ minHeight: "60vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div
+        style={{
+          width: 28,
+          height: 28,
+          border: "3px solid rgba(128,128,128,0.25)",
+          borderTopColor: "#00c853",
+          borderRadius: "50%",
+          animation: "spin 0.7s linear infinite",
+        }}
+      />
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+}
 
 
 // Onboarding (country, city, priorities) is part of the *installed* experience.
@@ -98,7 +121,9 @@ function RootLayout() {
       <HackerTransition />
       <ErrorBoundary key={location.pathname}>
         <div className="page-transition" style={{ isolation: 'auto' }}>
-          <Outlet />
+          <Suspense fallback={<PageLoading />}>
+            <Outlet />
+          </Suspense>
         </div>
       </ErrorBoundary>
       {/* Footer is mounted once at the layout level so it stays fixed across

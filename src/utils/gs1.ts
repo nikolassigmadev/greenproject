@@ -44,6 +44,7 @@ function gtinFromElementString(raw: string): string | null {
   // FNC1 form: AI "01" is fixed-length 14, at the start or after a GS (\x1d)
   // separator. Must stay 14 here — there's no delimiter, so the length is how
   // we know where the GTIN ends before the next AI.
+  // eslint-disable-next-line no-control-regex -- \x1d IS the GS1 group separator
   const fnc1 = s.match(/(?:^|\x1d)01(\d{14})/);
   if (fnc1) return fnc1[1];
   return null;

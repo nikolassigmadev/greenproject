@@ -20,6 +20,15 @@ const ProductDetail = () => {
   const products = useProducts();
   const product = products.find((p) => p.id === `#${id}`);
 
+  // Hooks must run on every render — keep this above the not-found early return.
+  const offQuery = useQuery({
+    queryKey: ['openfoodfacts', product?.barcode],
+    queryFn: () => lookupBarcode(product!.barcode!),
+    enabled: !!product?.barcode && isValidBarcode(product.barcode),
+    staleTime: 1000 * 60 * 30,
+    retry: 1,
+  });
+
   if (!product) {
     return (
       <div className="min-h-screen flex flex-col">
@@ -53,14 +62,6 @@ const ProductDetail = () => {
     labels: product.certifications,
   });
   const alternatives = findAlternatives(product, products);
-
-  const offQuery = useQuery({
-    queryKey: ['openfoodfacts', product.barcode],
-    queryFn: () => lookupBarcode(product.barcode!),
-    enabled: !!product.barcode && isValidBarcode(product.barcode),
-    staleTime: 1000 * 60 * 30,
-    retry: 1,
-  });
 
   const laborRiskConfig = {
     low: { label: 'Low Risk', color: 'hsl(152 48% 30%)', bg: 'hsl(152 42% 96%)', progress: 20, desc: 'Minimal indicators of child or forced labor in supply chain.' },

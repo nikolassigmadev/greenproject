@@ -227,9 +227,9 @@ const Admin = () => {
     }
   };
 
-  const updateEditingProduct = (field: string, value: any) => {
+  const updateEditingProduct = (field: string, value: unknown) => {
     if (!editingProduct) return;
-    
+
     if (field.includes('.')) {
       const [parent, child] = field.split('.');
       setEditingProduct({
@@ -238,9 +238,9 @@ const Admin = () => {
           ...(editingProduct[parent as keyof Product] as object),
           [child]: value
         }
-      });
+      } as Product);
     } else {
-      setEditingProduct({ ...editingProduct, [field]: value });
+      setEditingProduct({ ...editingProduct, [field]: value } as Product);
     }
   };
 

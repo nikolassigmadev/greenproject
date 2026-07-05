@@ -27,7 +27,7 @@ const Products = () => {
   const categories = ["All", ...Array.from(new Set(products.map((p) => p.category)))];
 
   const filteredProducts = useMemo(() => {
-    let filtered = products.filter((product) => {
+    const filtered = products.filter((product) => {
       const matchesSearch =
         product.name.toLowerCase().includes(search.toLowerCase()) ||
         product.brand.toLowerCase().includes(search.toLowerCase()) ||

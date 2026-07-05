@@ -22,7 +22,7 @@ const IMG_DIR = process.env.IMG_DIR || '/tmp/scan_tests';
 // Faithful copy of Scan.tsx cleanOCRQuery (strip units/numbers, dedupe words).
 const cleanOCRQuery = (raw: string): string => {
   let q = raw
-    .replace(/\d+[\.,]?\d*\s*(g|kg|mg|ml|l|cl|oz|fl\.?\s*oz|lb|lbs|liter|litre|%)\b/gi, ' ')
+    .replace(/\d+[.,]?\d*\s*(g|kg|mg|ml|l|cl|oz|fl\.?\s*oz|lb|lbs|liter|litre|%)\b/gi, ' ')
     .replace(/\b\d+\b/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();

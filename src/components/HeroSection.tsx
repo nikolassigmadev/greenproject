@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Camera, Database, ArrowRight, Leaf, Globe, Shield, Sparkles, TrendingUp } from "lucide-react";
+import { Camera, Database, ArrowRight, Leaf, Globe, Shield, Sparkles, TrendingUp, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import heroImage from "@/assets/hero-illustration.jpg";
@@ -113,7 +113,7 @@ export function HeroSection() {
   );
 }
 
-function FeatureCard({ icon: Icon, title, description }: { icon: any; title: string; description: string }) {
+function FeatureCard({ icon: Icon, title, description }: { icon: LucideIcon; title: string; description: string }) {
   return (
     <div className="group p-6 rounded-2xl bg-card/80 backdrop-blur-sm border border-border/50 shadow-soft hover:shadow-elevated hover:-translate-y-2 transition-all duration-500 hover:bg-card">
       <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/10 to-primary/20 flex items-center justify-center mb-4 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">

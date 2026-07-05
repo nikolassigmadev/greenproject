@@ -172,7 +172,7 @@ function isBrandHit(query: string, brand: string | null | undefined): boolean {
   if (primary.startsWith(q)) return true;
   if (q.startsWith(primary) && primary.length >= 4) return true;
   // Hyphen / space agnostic: "coca-cola" vs "coca cola"
-  const stripped = (s: string) => s.replace(/[\s\-]+/g, '');
+  const stripped = (s: string) => s.replace(/[\s-]+/g, '');
   return stripped(primary) === stripped(q);
 }
 

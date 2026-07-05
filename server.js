@@ -226,6 +226,7 @@ const JSON_PARSER_OVERRIDES = [
   '/api/push/unsubscribe',
   '/api/admin/push/trigger-demo',
   '/api/scans',
+  '/api/client-errors',
 ];
 const hasOwnJsonParser = (path) =>
   JSON_PARSER_OVERRIDES.some((p) => (p.endsWith('/') ? path.startsWith(p) : path === p));
@@ -2035,6 +2036,67 @@ app.post('/api/scans', scanLimiter, scanBody, (req, res) => {
   } catch (e) {
     console.error('scan log error:', e.message);
     res.status(500).json({ success: false, error: 'Failed to log scan' });
+  }
+});
+
+// ── Client error log ──
+// Fire-and-forget crash reports from the frontend (ErrorBoundary + global
+// window handlers) — without this, client-side breakage is invisible unless a
+// user emails about it. Stored privately at data/client-errors.jsonl (same
+// non-served directory as the other logs), capped so a crash loop on one
+// device can't fill the disk.
+const CLIENT_ERRORS_FILE = join(LOG_DIR, 'client-errors.jsonl');
+const CLIENT_ERRORS_MAX = 2000;
+
+const clientErrorLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many error reports - slow down' },
+});
+
+app.post('/api/client-errors', clientErrorLimiter, smallBody, (req, res) => {
+  try {
+    const { message, stack, source, url, userAgent } = req.body || {};
+    if (typeof message !== 'string' || !message.trim()) {
+      return res.status(400).json({ success: false, error: 'message is required' });
+    }
+    const clip = (v, n) => (typeof v === 'string' ? v.slice(0, n) : undefined);
+    const record = {
+      id: `ce_${crypto.randomBytes(6).toString('hex')}`,
+      timestamp: new Date().toISOString(),
+      message: clip(message, 500),
+      stack: clip(stack, 2000),
+      source: clip(source, 40),
+      url: clip(url, 300),
+      userAgent: clip(userAgent, 300),
+    };
+    if (!existsSync(LOG_DIR)) mkdirSync(LOG_DIR, { recursive: true, mode: 0o700 });
+    appendFileSync(CLIENT_ERRORS_FILE, JSON.stringify(record) + '\n', { mode: 0o600 });
+    const records = readJsonlRecords(CLIENT_ERRORS_FILE);
+    if (records.length > CLIENT_ERRORS_MAX * 2) {
+      writeJsonlRecords(CLIENT_ERRORS_FILE, records.slice(-CLIENT_ERRORS_MAX));
+    }
+    res.json({ success: true });
+  } catch (e) {
+    console.error('client-error log error:', e.message);
+    res.status(500).json({ success: false, error: 'Failed to log error' });
+  }
+});
+
+/**
+ * GET /api/admin/client-errors?limit= — admin-gated view of recent frontend
+ * crash reports, newest first.
+ */
+app.get('/api/admin/client-errors', requireAdmin, (req, res) => {
+  try {
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 200, 1), 2000);
+    const records = readJsonlRecords(CLIENT_ERRORS_FILE);
+    res.json({ success: true, total: records.length, errors: records.slice(-limit).reverse() });
+  } catch (e) {
+    console.error('client-errors read error:', e.message);
+    res.status(500).json({ success: false, error: 'Failed to read error log' });
   }
 });
 

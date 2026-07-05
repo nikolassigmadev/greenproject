@@ -371,7 +371,9 @@ function SlotInput({
 
 /** Sync an external value into local state when it changes (e.g. parent reset). */
 function useSyncedValue(external: string, setter: (v: string) => void) {
-  useEffect(() => { setter(external); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [external]);
+  // Deliberately re-runs only when the external value changes, not the setter.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { setter(external); }, [external]);
 }
 
 // ────────────────────────────────────────────────────────────

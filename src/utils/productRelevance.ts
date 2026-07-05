@@ -110,13 +110,13 @@ export const normalize = (s: string): string =>
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .replace(/['\u2019\u2018`\u00b4]/g, '')
-    .replace(/[^a-z0-9\s\-]/g, ' ')
+    .replace(/[^a-z0-9\s-]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 
 /** Tokenize a normalized string into words >= 2 chars */
 export const tokenize = (s: string): string[] =>
-  normalize(s).split(/[\s\-]+/).filter(w => w.length >= 2);
+  normalize(s).split(/[\s-]+/).filter(w => w.length >= 2);
 
 /**
  * Does this brand string carry a usable Latin anchor token (>= 3 Latin letters)?

@@ -60,8 +60,8 @@ export function SimpleLivestockForm({ category, livestockData, onChange }: Simpl
     return null;
   }
 
-  const updateField = (field: keyof SimpleLivestockData, value: any) => {
-    onChange({ ...livestockData, [field]: value });
+  const updateField = (field: keyof SimpleLivestockData, value: string) => {
+    onChange({ ...livestockData, [field]: value } as SimpleLivestockData);
   };
 
   return (

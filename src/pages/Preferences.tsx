@@ -1,9 +1,10 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import {
   loadPriorities, savePriorities, summarizePriorities, DEFAULT_PRIORITIES, type UserPriorities,
 } from "@/utils/userPreferences";
-import { Leaf, Users, Heart, RotateCcw, Check, Sparkles } from "lucide-react";
+import { serializeBackup, restoreBackup, backupFilename } from "@/utils/dataBackup";
+import { Leaf, Users, Heart, RotateCcw, Check, Sparkles, Download, Upload } from "lucide-react";
 import { DS } from "@/styles/design-tokens";
 import { RegionPicker } from "@/components/RegionPicker";
 import { WatchlistEditor } from "@/components/WatchlistEditor";
@@ -118,6 +119,39 @@ function ValueRow({
 
 export default function Preferences() {
   const [priorities, setPriorities] = useState<UserPriorities>(DEFAULT_PRIORITIES);
+  const importInputRef = useRef<HTMLInputElement>(null);
+
+  const handleExport = () => {
+    try {
+      const blob = new Blob([serializeBackup()], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = backupFilename();
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("Backup downloaded", {
+        description: "Keep the file somewhere safe — it holds your history, watchlist and settings.",
+        position: "top-center",
+      });
+    } catch {
+      toast.error("Couldn't create the backup file.", { position: "top-center" });
+    }
+  };
+
+  const handleImportFile = async (file: File) => {
+    const result = restoreBackup(await file.text());
+    if (result.ok === false) {
+      toast.error(result.error, { position: "top-center" });
+      return;
+    }
+    toast.success("Backup restored", {
+      description: "Reloading with your data…",
+      position: "top-center",
+    });
+    // Every page reads localStorage on mount, so a reload picks everything up.
+    setTimeout(() => window.location.reload(), 900);
+  };
 
   useEffect(() => {
     setPriorities(loadPriorities());
@@ -277,6 +311,55 @@ export default function Preferences() {
             <div style={{ fontSize: 15, fontWeight: 700, color: DS.ink, marginBottom: 2 }}>Appearance</div>
             <div style={{ fontSize: 11.5, color: DS.muted, marginBottom: 14 }}>Pick your theme</div>
             <ThemeToggle />
+          </div>
+
+          {/* Backup — everything lives on this device only, so give users a
+              way off the island (new phone, cleared browser data). */}
+          <div style={{
+            background: DS.card, borderRadius: 18, padding: 16,
+            boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04)",
+          }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: DS.ink, marginBottom: 2 }}>Your data</div>
+            <div style={{ fontSize: 11.5, color: DS.muted, marginBottom: 14 }}>
+              Scans, watchlist and settings are stored on this device. Export a backup file to move them to a new phone or keep them safe.
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                onClick={handleExport}
+                style={{
+                  flex: 1, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6,
+                  background: DS.ink, color: DS.card, border: "none",
+                  borderRadius: 11, padding: "10px 12px",
+                  fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: DS.font,
+                }}
+              >
+                <Download style={{ width: 14, height: 14 }} />
+                Export backup
+              </button>
+              <button
+                onClick={() => importInputRef.current?.click()}
+                style={{
+                  flex: 1, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6,
+                  background: "transparent", color: DS.ink, border: `1px solid ${DS.hair}`,
+                  borderRadius: 11, padding: "10px 12px",
+                  fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: DS.font,
+                }}
+              >
+                <Upload style={{ width: 14, height: 14 }} />
+                Import backup
+              </button>
+              <input
+                ref={importInputRef}
+                type="file"
+                accept="application/json,.json"
+                style={{ display: "none" }}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = "";
+                  if (file) handleImportFile(file);
+                }}
+              />
+            </div>
           </div>
 
         </div>

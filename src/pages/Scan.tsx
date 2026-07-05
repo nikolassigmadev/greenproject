@@ -155,7 +155,7 @@ const resultContainsQueryWord = (query: string, productText: string): boolean =>
 const cleanOCRQuery = (raw: string): string => {
   let q = raw
     // Remove numbers with units: 500g, 250ml, 1.5L, 12oz, 100%, 330cl etc.
-    .replace(/\d+[\.,]?\d*\s*(g|kg|mg|ml|l|cl|oz|fl\.?\s*oz|lb|lbs|liter|litre|%)\b/gi, ' ')
+    .replace(/\d+[.,]?\d*\s*(g|kg|mg|ml|l|cl|oz|fl\.?\s*oz|lb|lbs|liter|litre|%)\b/gi, ' ')
     // Remove standalone numbers
     .replace(/\b\d+\b/g, ' ')
     // Normalise whitespace
@@ -204,7 +204,7 @@ const computeRelevance = (result: OpenFoodFactsResult, words: string[]): number 
 
 // Function to filter and select best products
 const filterBestProducts = (results: OpenFoodFactsResult[], query?: string): OpenFoodFactsResult[] => {
-  let pool = results;
+  const pool = results;
 
   if (query && query.trim()) {
     // Only keep words ≥3 chars to avoid single-letter noise matching
@@ -547,7 +547,7 @@ const Scan = () => {
   }, []);
 
   useEffect(() => {
-    if ((location.state as any)?.prioritiesJustSaved) {
+    if ((location.state as { prioritiesJustSaved?: boolean } | null)?.prioritiesJustSaved) {
       setPrioritiesJustSaved(true);
       // Clear the navigation state so refresh doesn't re-trigger
       window.history.replaceState({}, '');
@@ -633,31 +633,41 @@ const Scan = () => {
       }
 
       // Check browser support with fallbacks for different browser APIs
+      type LegacyGetUserMedia = (
+        constraints: MediaStreamConstraints,
+        onSuccess: (stream: MediaStream) => void,
+        onError: (err: Error) => void,
+      ) => void;
+      const legacyNav = navigator as Navigator & {
+        webkitGetUserMedia?: LegacyGetUserMedia;
+        mozGetUserMedia?: LegacyGetUserMedia;
+        msGetUserMedia?: LegacyGetUserMedia;
+      };
       const getMediaDevices = async () => {
         if (navigator.mediaDevices?.getUserMedia) {
           return navigator.mediaDevices;
         }
         // Fallback for iOS WKWebView (Capacitor) where mediaDevices may need a polyfill
         if (!navigator.mediaDevices) {
-          (navigator as any).mediaDevices = {};
+          (navigator as unknown as { mediaDevices: Partial<MediaDevices> }).mediaDevices = {};
         }
         if (!navigator.mediaDevices.getUserMedia) {
-          const getUserMedia = (navigator as any).webkitGetUserMedia ||
-            (navigator as any).mozGetUserMedia ||
-            (navigator as any).msGetUserMedia;
+          const getUserMedia = legacyNav.webkitGetUserMedia ||
+            legacyNav.mozGetUserMedia ||
+            legacyNav.msGetUserMedia;
           if (getUserMedia) {
-            navigator.mediaDevices.getUserMedia = (constraints: any) =>
-              new Promise((resolve, reject) => {
-                getUserMedia.call(navigator, constraints, resolve, reject);
+            navigator.mediaDevices.getUserMedia = (constraints?: MediaStreamConstraints) =>
+              new Promise<MediaStream>((resolve, reject) => {
+                getUserMedia.call(navigator, constraints as MediaStreamConstraints, resolve, reject);
               });
             return navigator.mediaDevices;
           }
         }
         // Fallback for older browsers
-        if ((navigator as any).webkitGetUserMedia) {
+        if (legacyNav.webkitGetUserMedia) {
           return {
-            getUserMedia: (constraints: any) => new Promise((resolve, reject) => {
-              (navigator as any).webkitGetUserMedia(constraints, resolve, reject);
+            getUserMedia: (constraints?: MediaStreamConstraints) => new Promise<MediaStream>((resolve, reject) => {
+              legacyNav.webkitGetUserMedia!(constraints as MediaStreamConstraints, resolve, reject);
             })
           };
         }
@@ -1210,7 +1220,7 @@ const Scan = () => {
       setIsProcessing(false);
       setIsScanning(false);
     }
-  }, [searchProducts, toast]);
+  }, [searchProducts, toast, navigate]);
 
   // Block scanning if priorities not set
   const requirePriorities = useCallback((): boolean => {
@@ -1284,7 +1294,7 @@ const Scan = () => {
     } finally {
       setOffLoading(false);
     }
-  }, [toast, requirePriorities]);
+  }, [toast, requirePriorities, navigate]);
 
   // Process image for OpenFoodFacts search
   // Flow: OpenAI identifies product → search OFF → navigate to first result

@@ -10,7 +10,7 @@ const SCAN_PROMPT = (() => readFileSync(`${process.cwd()}/server.js`, 'utf8').ma
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 const cleanOCRQuery = (raw: string): string => {
-  let q = raw.replace(/\d+[\.,]?\d*\s*(g|kg|mg|ml|l|cl|oz|fl\.?\s*oz|lb|lbs|liter|litre|%)\b/gi, ' ').replace(/\b\d+\b/g, ' ').replace(/\s+/g, ' ').trim();
+  let q = raw.replace(/\d+[.,]?\d*\s*(g|kg|mg|ml|l|cl|oz|fl\.?\s*oz|lb|lbs|liter|litre|%)\b/gi, ' ').replace(/\b\d+\b/g, ' ').replace(/\s+/g, ' ').trim();
   const seen = new Set<string>(); q = q.split(' ').filter((w) => { const lo = w.toLowerCase(); if (seen.has(lo)) return false; seen.add(lo); return true; }).join(' '); return q;
 };
 const buildQueries = (b: string, p: string): string[] => {
