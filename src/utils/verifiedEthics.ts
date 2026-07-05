@@ -144,14 +144,10 @@ const VERIFIED_ETHICS_DATABASE: VerifiedEthicsBrand[] = [
       { label: "Fair Trade Certified", detail: "Commits to sourcing 100% of cocoa on Fairtrade terms; one of the largest Fairtrade chocolate-bar brands in the US.", source: "Feastables", sourceUrl: SRC[4], certification: "fair_trade" },
     ],
   },
-  {
-    brandPattern: /green\s*&?\s*black'?s/i,
-    brandName: "Green & Black's",
-    category: "chocolate",
-    highlights: [
-      { label: "Organic & Fairtrade Lines", detail: "Carries organic and Fairtrade lines (e.g. Maya Gold). Owned by Mondelez International — shows how an ethical label can sit inside a large conglomerate.", source: "Bar & Cocoa", sourceUrl: SRC[5], certification: "fair_trade" },
-    ],
-  },
+  // NB: Green & Black's was removed from the verified-ethics list. It is
+  // Mondelēz-owned; the app carries a verified Mondelēz child-labour flag and
+  // its chocolate directory rates Mondelēz "avoid", so a green badge here
+  // contradicted the app's own data (and leaked into swap recommendations).
 
   // ═══════════════════════════════════════════════════════════════════════════
   // 2. COFFEE & TEA
@@ -240,15 +236,10 @@ const VERIFIED_ETHICS_DATABASE: VerifiedEthicsBrand[] = [
       { label: "Organic", detail: "Wide allergen-friendly range with organic ingredients.", source: "B Lab US/Canada", sourceUrl: SRC[18], certification: "organic" },
     ],
   },
-  {
-    brandPattern: /ben\s*&?\s*jerry'?s/i,
-    brandName: "Ben & Jerry's",
-    category: "packaged_grocery",
-    highlights: [
-      { label: "Certified B Corp", detail: "Certified B Corp; Fairtrade ingredients; Caring Dairy program. Owned by Unilever but retains B Corp status and a social-mission board.", source: "ReqoData", sourceUrl: SRC[16], certification: "b_corp" },
-      { label: "Fairtrade Ingredients", detail: "Uses Fairtrade certified ingredients across product lines.", source: "ReqoData", sourceUrl: SRC[16], certification: "fair_trade" },
-    ],
-  },
+  // NB: Ben & Jerry's was removed from the verified-ethics list. It is a
+  // genuine B Corp, but it is Unilever-owned and boycott-listed by this app's
+  // own data — the entry could never display (the red signals suppress it) and
+  // it leaked into swap recommendations via verifiedEthicsSwaps.
   {
     brandPattern: /king\s*arthur\s*(baking|flour)?/i,
     brandName: "King Arthur Baking",

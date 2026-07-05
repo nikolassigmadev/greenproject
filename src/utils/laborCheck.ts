@@ -53,7 +53,9 @@ const LABOR_DATABASE: BrandLaborRecord[] = [
   },
   {
     // Mars, Inc. + all sub-brands / Wrigley
-    brandPattern: /\bmars\b|mars\s*(inc\.?|incorporated|chocolate|petcare|food)?|m\s*&\s*m'?s?|snickers|twix|milky way|bounty\s*bar|skittles|starburst|dove\s*chocolate|galaxy\s*chocolate|maltesers|uncle ben'?s?|ben'?s original|pedigree\b|whiskas|royal canin|iams\b|eukanuba|cesar\s*dog|chapstick|extra\s*gum|orbit\s*gum|doublemint|eclipse\s*gum|airwaves|wrigley'?s?|juicy fruit|hubba bubba|altoids|lifesavers|5\s*gum/i,
+    // NB: only \bmars\b — an unanchored "mars…" alternative used to match
+    // inside "marshmallow" and flag innocent brands.
+    brandPattern: /\bmars\b|m\s*&\s*m'?s?|snickers|twix|milky way|bounty\s*bar|skittles|starburst|dove\s*chocolate|galaxy\s*chocolate|maltesers|uncle ben'?s?|ben'?s original|pedigree\b|whiskas|royal canin|iams\b|eukanuba|cesar\s*dog|chapstick|extra\s*gum|orbit\s*gum|doublemint|eclipse\s*gum|airwaves|wrigley'?s?|juicy fruit|hubba bubba|altoids|lifesavers|5\s*gum/i,
     parentCompany: "Mars, Inc.",
     allegations: [
       { issue: "Child Labor in Cocoa Supply Chain", details: "Mars has been named in reports documenting child labor in West African cocoa farms. Despite pledges to eliminate child labor, progress has been slow.", source: "Washington Post Investigation", sourceUrl: "https://www.washingtonpost.com/graphics/2019/business/hershey-nestle-mars-chocolate-child-labor-west-africa/", year: "2019" },
@@ -79,7 +81,11 @@ const LABOR_DATABASE: BrandLaborRecord[] = [
   },
   {
     // Unilever + all sub-brands
-    brandPattern: /unilever(\s*(plc|nv|corp\.?|company))?|dove\b|axe\s*(deodorant|body)?|lynx\b|lipton\b|knorr\b|hellmann'?s?|ben\s*&\s*jerry'?s?|breyer'?s?|magnum\s*(ice cream|bar)|cornetto|heartbrand|flora\s*(margarine)?|becel|rama\s*margarine|vaseline|persil\b|surf\s*(laundry|detergent)?|omo\b|comfort\s*fabric|domestos|cif\b|sunlight\b|sunsilk|tresemm[eé]|clear\s*shampoo|pond'?s?\b|rexona|lux\b|signal\s*toothpaste|closeup\s*toothpaste|talenti|so\s*delicious|seventh\s*generation|7th\s*generation|pukka\s*herbs|t2\s*tea|marmite|bovril|colman'?s?|lea\s*&\s*perrins|pot\s*noodle|slim.?fast/i,
+    // NB: \baxe\b (not bare "axe…", which matched inside "Waxelene") and
+    // surf REQUIRES a laundry qualifier (bare "surf" matched Surf Sweets).
+    // Pukka Herbs (sold with ekaterra to Lipton Teas & Infusions, 2022) and
+    // So Delicious (Danone/WhiteWave brand) are deliberately NOT listed here.
+    brandPattern: /unilever(\s*(plc|nv|corp\.?|company))?|dove\b|\baxe\b|lynx\b|lipton\b|knorr\b|hellmann'?s?|ben\s*&\s*jerry'?s?|breyer'?s?|magnum\s*(ice cream|bar)|cornetto|heartbrand|flora\s*(margarine)?|becel|rama\s*margarine|vaseline|persil\b|surf\s+(laundry|detergent)|omo\b|comfort\s*fabric|domestos|cif\b|sunlight\b|sunsilk|tresemm[eé]|clear\s*shampoo|pond'?s?\b|rexona|lux\b|signal\s*toothpaste|closeup\s*toothpaste|talenti|seventh\s*generation|7th\s*generation|t2\s*tea|marmite|bovril|colman'?s?|lea\s*&\s*perrins|pot\s*noodle|slim.?fast/i,
     parentCompany: "Unilever",
     allegations: [
       { issue: "Tea Plantation Labor Abuses", details: "Workers on Unilever's tea plantations in Kenya reported poverty wages, unsafe conditions, and sexual harassment.", source: "BBC Investigation", sourceUrl: "https://www.bbc.com/news/", year: "2019" },
@@ -96,7 +102,11 @@ const LABOR_DATABASE: BrandLaborRecord[] = [
   },
   {
     // Danone + all sub-brands
-    brandPattern: /danone(\s*(s\.?a\.?|group|corp\.?|company))?|dannon\b|activia\b|evian\b|volvic\b|aptamil\b|nutricia\b|alpro\b|silk\s*(milk|soy|almond)?|oikos\b|actimel|danonino|babybel|la\s*serre|blédina|cow\s*&\s*gate|karicare|nutrilon|dumex|international\s*delight|stonyfield|follow\s*your\s*heart|vega\b/i,
+    // NB: Stonyfield is deliberately NOT listed — Danone sold it to Lactalis
+    // in 2017, and it's a verified-ethics brand in this app. So Delicious
+    // (WhiteWave/Danone) moved here from the Unilever pattern, where it was
+    // misfiled.
+    brandPattern: /danone(\s*(s\.?a\.?|group|corp\.?|company))?|dannon\b|activia\b|evian\b|volvic\b|aptamil\b|nutricia\b|alpro\b|silk\s*(milk|soy|almond)?|oikos\b|actimel|danonino|babybel|la\s*serre|blédina|cow\s*&\s*gate|karicare|nutrilon|dumex|international\s*delight|so\s*delicious|follow\s*your\s*heart|vega\b/i,
     parentCompany: "Danone",
     allegations: [
       { issue: "Supply Chain Labor Concerns", details: "Danone has faced criticism over labor conditions in its dairy supply chains, including low wages for farmworkers in developing markets.", source: "Oxfam Behind the Brands Report", sourceUrl: "https://www.oxfam.org/en/tags/behind-brands", year: "2018" },

@@ -1633,7 +1633,9 @@ function getVerdictKey(product: OpenFoodFactsResult, priorities: UserPriorities)
   return getVerdict(product, priorities).key;
 }
 
-function getVerdict(product: OpenFoodFactsResult, priorities: UserPriorities) {
+// Exported for the verdict-page audit harness (src/test/verdictPageAudit.test.ts),
+// which runs the real page logic across hundreds of synthetic products.
+export function getVerdict(product: OpenFoodFactsResult, priorities: UserPriorities) {
   const grade = product.ecoscoreGrade?.toLowerCase();
   const score = product.ecoscoreScore;
   const laborRecord = findLaborAllegations(product);

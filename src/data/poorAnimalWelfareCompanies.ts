@@ -207,7 +207,9 @@ export const POOR_ANIMAL_WELFARE_COMPANIES: PoorAnimalWelfareCompany[] = [
   {
     id: 'walmart',
     companyName: 'Walmart Inc.',
-    brands: ['Walmart', 'Whole Foods'],
+    // NB: Whole Foods is owned by Amazon, not Walmart — it was misattributed
+    // here (the chocolate directory correctly lists "Whole Foods (Amazon)").
+    brands: ['Walmart'],
     bbfawTier: '4',
     bbfawScore: '26-50%',
     concerns: [
@@ -216,7 +218,7 @@ export const POOR_ANIMAL_WELFARE_COMPANIES: PoorAnimalWelfareCompany[] = [
       'No global position to address cruelest farming practices',
       'No elimination of cage confinement, painful mutilations, inhumane slaughter',
       'No supply chain transparency',
-      'Ranked F despite owning Whole Foods',
+      'Ranked F on the Humane Society Food Industry Scorecard',
     ],
     severity: 'high',
     sources: [

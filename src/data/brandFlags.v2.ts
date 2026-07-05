@@ -794,7 +794,10 @@ export const brandFlagsV2: BrandFlagV2[] = [
   {
     id: 'fanjul-asr-forced-labour-sugar-2022',
     brandName: 'ASR Group / Fanjul Corp.',
-    brandAliases: ['domino', 'c&h', 'florida crystals', 'redpath', 'tate & lyle'],
+    // 'domino sugar' (not bare 'domino') so Domino's Pizza never matches a
+    // sugar-industry flag — the matcher's trailing-s tolerance would bridge
+    // "domino" → "Domino's" otherwise.
+    brandAliases: ['domino sugar', 'domino foods', 'c&h', 'florida crystals', 'redpath', 'tate & lyle'],
     category: 'forced_labour',
     severity: 'critical',
     summary: 'U.S. Customs and Border Protection banned sugar imports from Central Romana (ASR Group\'s primary supplier) in 2022 after finding evidence of forced labor.',
@@ -1225,18 +1228,59 @@ export const brandFlagsV2: BrandFlagV2[] = [
 // Lookup helpers (compatible surface area with the legacy getBrandFlag)
 // ---------------------------------------------------------------------------
 
+/** Lowercase, strip diacritics ("Nestlé" → "nestle") and apostrophes ("Lay's" → "lays"). */
+const normalizeBrandText = (s: string): string =>
+  s
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/['’‘`´]/g, '');
+
+const isWordChar = (c: string | undefined): boolean => !!c && /[a-z0-9]/.test(c);
+
+/**
+ * Whole-word containment of `phrase` in `hay` (both already normalized).
+ * A trailing "s" is tolerated so "stouffer" matches "stouffers", but a phrase
+ * can never match inside a longer word — "illy" must not match "philly" and
+ * "mars" must not match "marshmallow". (Same rules as the boycott matcher.)
+ */
+function containsWholePhrase(hay: string, phrase: string): boolean {
+  if (!phrase) return false;
+  let from = 0;
+  while (true) {
+    const idx = hay.indexOf(phrase, from);
+    if (idx === -1) return false;
+    let end = idx + phrase.length;
+    if (hay[end] === 's') end++; // plural / possessive
+    if (!isWordChar(hay[idx - 1]) && !isWordChar(hay[end])) return true;
+    from = idx + 1;
+  }
+}
+
+/**
+ * Does a flag apply to this brand string? Word-boundary matching on the brand
+ * name (either direction) and on aliases (alias contained in the query).
+ * Shared by getBrandFlagV2 and the services/brandFlags read layer so the
+ * banner and every other consumer agree on what matches.
+ */
+export function flagMatchesBrand(flag: BrandFlagV2, brandQuery: string): boolean {
+  const q = normalizeBrandText(brandQuery.trim());
+  if (!q) return false;
+  const name = normalizeBrandText(flag.brandName);
+  if (containsWholePhrase(name, q) || containsWholePhrase(q, name)) return true;
+  return (flag.brandAliases ?? []).some((alias) =>
+    containsWholePhrase(q, normalizeBrandText(alias)),
+  );
+}
+
 /**
  * Look up a v2 flag for a given brand string.
- * Matches against brandName and brandAliases (case-insensitive, includes).
+ * Matches against brandName and brandAliases (case-insensitive, whole-word).
  */
 export function getBrandFlagV2(brand: string | null | undefined): BrandFlagV2 | null {
   if (!brand) return null;
-  const lower = brand.toLowerCase();
   for (const flag of brandFlagsV2) {
-    if (flag.brandName.toLowerCase().includes(lower)) return flag;
-    if (flag.brandAliases?.some((alias) => lower.includes(alias) || alias.includes(lower))) {
-      return flag;
-    }
+    if (flagMatchesBrand(flag, brand)) return flag;
   }
   return null;
 }

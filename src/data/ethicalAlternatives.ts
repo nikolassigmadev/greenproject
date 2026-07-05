@@ -115,7 +115,8 @@ export const ETHICAL_ALTERNATIVES: Record<SwapCategoryKey, AltCandidate[]> = {
     { brand: "Alter Eco", productName: "Alter Eco Dark Chocolate", searchQuery: "Alter Eco dark chocolate", certifications: ["b_corp", "fair_trade", "organic"], strengths: ["B Corp + Fairtrade", "Regenerative, carbon-neutral cocoa", "Dark, dairy-free — no dairy-welfare footprint"], addresses: ["labor", "eco", "animal_welfare"], markets: ["US", "CA", "AU", "GB"], fallbackEcoGrade: "b" },
     { brand: "Divine Chocolate", productName: "Divine Milk Chocolate", searchQuery: "Divine chocolate", certifications: ["fair_trade"], strengths: ["Co-owned by Ghanaian cocoa farmers", "Fairtrade certified"], addresses: ["labor"], markets: ["GB", "IE", "US"], fallbackEcoGrade: "c" },
     { brand: "Equal Exchange", productName: "Equal Exchange Organic Chocolate", searchQuery: "Equal Exchange organic chocolate", certifications: ["fair_trade", "organic", "worker_coop"], strengths: ["Worker co-op owned", "Audited fair-trade supply chain", "Vegan dark range — no dairy-welfare footprint"], addresses: ["labor", "eco", "animal_welfare"], markets: US_CA, fallbackEcoGrade: "b" },
-    { brand: "Green & Black's", productName: "Green & Black's Organic", searchQuery: "Green & Black's organic chocolate", certifications: ["fair_trade", "organic"], strengths: ["Organic", "Fairtrade Maya Gold line"], addresses: ["labor", "eco"], markets: [...UK, ...EU, "AU"], fallbackEcoGrade: "c" },
+    // NB: Green & Black's was removed — it's Mondelēz-owned, and the app's own
+    // chocolate directory rates Mondelēz "avoid" (verified child-labour flag).
     { brand: "Beyond Good", productName: "Beyond Good Chocolate", searchQuery: "Beyond Good chocolate", certifications: ["direct_trade"], strengths: ["Direct relationship — farmers earn ~6x industry standard", "2025 'Good Egg' award from Chocolate Scorecard"], addresses: ["labor"], markets: US_CA, fallbackEcoGrade: "c" },
     { brand: "Fairafric", productName: "Fairafric Chocolate", searchQuery: "Fairafric chocolate", certifications: ["fair_trade", "organic"], strengths: ["Bean-to-bar made IN Ghana", "Keeps manufacturing jobs in the producing country"], addresses: ["labor"], markets: UK_EU, fallbackEcoGrade: "c" },
     { brand: "Theo Chocolate", productName: "Theo Organic Fair Trade Chocolate", searchQuery: "Theo chocolate organic", certifications: ["fair_trade", "organic"], strengths: ["Transparency-focused bean-to-bar maker", "Fairtrade & organic", "Vegan dark bars — no dairy-welfare footprint"], addresses: ["labor", "eco", "animal_welfare"], markets: US_CA, fallbackEcoGrade: "c" },
@@ -152,7 +153,8 @@ export const ETHICAL_ALTERNATIVES: Record<SwapCategoryKey, AltCandidate[]> = {
   ],
 
   snack_bars: [
-    { brand: "Clif Bar", productName: "Clif Bar Energy Bar", searchQuery: "Clif Bar", certifications: ["fair_trade", "organic"], strengths: ["Organic, Fairtrade ingredients", "Climate-action commitments"], addresses: ["labor", "eco"], markets: [...ANGLO], fallbackEcoGrade: "c" },
+    // NB: Clif Bar was removed — acquired by Mondelēz in 2022, which carries a
+    // verified child-labour flag in this app's own dataset.
     { brand: "Nakd", productName: "Nakd Fruit & Nut Bar", searchQuery: "Nakd bar", certifications: [], strengths: ["Whole-food, no refined sugar", "Low-footprint ingredients", "Vegan — no animal-welfare footprint"], addresses: ["eco", "animal_welfare"], markets: UK_EU, fallbackEcoGrade: "b" },
     { brand: "Eat Natural", productName: "Eat Natural Bar", searchQuery: "Eat Natural bar", certifications: ["fair_trade"], strengths: ["Fairtrade dark chocolate range", "Simple whole ingredients"], addresses: ["labor"], markets: UK_EU, fallbackEcoGrade: "c" },
     { brand: "88 Acres", productName: "88 Acres Seed Bar", searchQuery: "88 Acres bar", certifications: [], strengths: ["Allergen-friendly, own bakery", "Carbon-neutral facility", "Vegan seed bars — no animal-welfare footprint"], addresses: ["eco", "labor", "animal_welfare"], markets: US_CA, fallbackEcoGrade: "b" },
@@ -197,7 +199,9 @@ export const ETHICAL_ALTERNATIVES: Record<SwapCategoryKey, AltCandidate[]> = {
     { brand: "Stonyfield Organic", productName: "Stonyfield Organic Yogurt", searchQuery: "Stonyfield organic yogurt", certifications: ["b_corp", "organic"], strengths: ["B Corp — audited labour & sourcing standards", "Organic dairy, no synthetic inputs"], addresses: ["animal_welfare", "eco", "labor"], markets: US_CA, fallbackEcoGrade: "c" },
     { brand: "Organic Valley", productName: "Organic Valley Grassmilk Yogurt", searchQuery: "Organic Valley yogurt", certifications: ["organic"], strengths: ["Farmer co-op owned — fair farmer pay", "Organic, pasture-raised"], addresses: ["animal_welfare", "labor", "eco"], markets: US_CA, fallbackEcoGrade: "c" },
     { brand: "The Coconut Collaborative", productName: "Coconut Collaborative Dairy-Free Yogurt", searchQuery: "Coconut Collaborative", certifications: [], strengths: ["Dairy-free", "No animal-welfare footprint"], addresses: ["animal_welfare", "eco"], markets: UK_EU, fallbackEcoGrade: "b" },
-    { brand: "Alpro", productName: "Alpro Plant Yogurt", searchQuery: "Alpro yogurt", certifications: [], strengths: ["Plant-based", "Lower-carbon than dairy"], addresses: ["animal_welfare", "eco"], markets: UK_EU, fallbackEcoGrade: "b" },
+    // NB: Alpro was removed — Danone-owned, and scanning it shows the Danone
+    // labour-allegations banner; recommending it alongside that banner is
+    // contradictory.
     { brand: "Brown Cow", productName: "Brown Cow Cream Top Yogurt", searchQuery: "Brown Cow yogurt", certifications: ["organic"], strengths: ["Organic options", "No artificial growth hormones"], addresses: ["animal_welfare"], markets: US_CA, fallbackEcoGrade: "c" },
   ],
 
@@ -209,7 +213,9 @@ export const ETHICAL_ALTERNATIVES: Record<SwapCategoryKey, AltCandidate[]> = {
   ],
 
   ice_cream: [
-    { brand: "Ben & Jerry's", productName: "Ben & Jerry's Fairtrade Ice Cream", searchQuery: "Ben & Jerry's", certifications: ["b_corp", "fair_trade"], strengths: ["B Corp", "Fairtrade cocoa, sugar & vanilla"], addresses: ["labor"], markets: BROAD, fallbackEcoGrade: "d" },
+    // NB: Ben & Jerry's was removed — a genuine B Corp, but Unilever-owned and
+    // boycott-listed by this app's own data; the app cannot red-banner a brand
+    // on scan and recommend it as a swap at the same time.
     { brand: "Booja-Booja", productName: "Booja-Booja Organic Ice Cream", searchQuery: "Booja-Booja", certifications: ["organic"], strengths: ["Organic, dairy-free", "No animal-welfare footprint"], addresses: ["animal_welfare", "eco"], markets: UK_EU, fallbackEcoGrade: "c" },
     { brand: "Jeni's", productName: "Jeni's Splendid Ice Creams", searchQuery: "Jeni's ice cream", certifications: ["b_corp", "direct_trade"], strengths: ["B Corp", "Direct-trade ingredients"], addresses: ["labor"], markets: US_CA, fallbackEcoGrade: "d" },
     { brand: "Northern Bloc", productName: "Northern Bloc Ice Cream", searchQuery: "Northern Bloc ice cream", certifications: [], strengths: ["Carbon-neutral, plastic-free", "Natural ingredients"], addresses: ["eco"], markets: UK, fallbackEcoGrade: "c" },
@@ -268,8 +274,9 @@ export const ETHICAL_ALTERNATIVES: Record<SwapCategoryKey, AltCandidate[]> = {
     // Ethical sugar brands
     { brand: "Wholesome Sweeteners", productName: "Wholesome Organic Fairtrade Sugar", searchQuery: "Wholesome Sweeteners organic sugar", certifications: ["fair_trade", "organic"], strengths: ["Pioneered Fairtrade sugar in the US (2005)", ">$9M paid in social premiums to farmer co-ops"], addresses: ["labor", "eco"], markets: ["US", "CA"], fallbackEcoGrade: "c" },
     { brand: "Equal Exchange", productName: "Equal Exchange Fairtrade Sugar", searchQuery: "Equal Exchange sugar", certifications: ["fair_trade", "worker_coop"], strengths: ["Worker- & farmer-co-op sugar", "Guaranteed minimum price + premium"], addresses: ["labor"], markets: ["US", "CA"], fallbackEcoGrade: "c" },
-    { brand: "Tate & Lyle Sugars Fairtrade", productName: "Tate & Lyle Fairtrade Sugar", searchQuery: "Tate Lyle Fairtrade sugar", certifications: ["fair_trade"], strengths: ["First UK brand to make whole range Fairtrade"], addresses: ["labor"], markets: UK, fallbackEcoGrade: "c" },
-    { brand: "Billington's", productName: "Billington's Unrefined Cane Sugar", searchQuery: "Billington's sugar", certifications: ["fair_trade"], strengths: ["Unrefined cane sugars", "Some Fairtrade lines"], addresses: ["labor"], markets: UK, fallbackEcoGrade: "c" },
+    // NB: Tate & Lyle Sugars (ASR Group — verified forced-labour flag) and
+    // Billington's (ABF — verified child-labour flag) were removed: both trip
+    // the app's own verified labour flags.
     // Lower-impact sweetener substitutes
     { brand: "Date Lady", productName: "Date Lady Organic Date Syrup", searchQuery: "Date Lady date syrup", certifications: ["organic"], strengths: ["Whole dried dates — retains fiber & minerals", "Minimal processing"], addresses: ["eco"], markets: ["US", "CA"], fallbackEcoGrade: "b" },
     { brand: "Coombs Family Farms", productName: "Coombs Family Farms Pure Maple Syrup", searchQuery: "Coombs maple syrup organic", certifications: ["organic"], strengths: ["Tapped from standing forests, no land conversion", "Supports intact woodland"], addresses: ["eco"], markets: ["US", "CA"], fallbackEcoGrade: "b" },

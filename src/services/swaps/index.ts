@@ -128,12 +128,25 @@ export function diagnoseProduct(
   priorities: UserPriorities = DEFAULT_PRIORITIES,
 ): SwapDiagnosis {
   const concerns: ProductConcern[] = [];
-  const selfEthical = !!findVerifiedEthics(product.brand, product.productName);
 
-  // ── Labour: legacy allegations DB + verified v2 flags ──
+  // Red signals first. A verified-ethics badge only suppresses concerns when
+  // the record is otherwise clean — the same cleanEthicsRecord gate the detail
+  // page uses. Without this gate, a boycott-listed B Corp (e.g. Ben & Jerry's)
+  // read as "self-ethical": the page showed a red banner while the swap engine
+  // reported no concerns and offered no alternatives.
   const labor = findLaborAllegations(product.brand, product.productName);
   const v2Flags = getVerifiedFlagsForBrand(product.brand || "");
   const labourFlags = v2Flags.filter((f) => LABOUR_FLAG_CATEGORIES.has(f.category));
+  const boycottSignal = checkBoycott(product.brand);
+  const welfareSignal = checkAnimalWelfareFlag(product.brand);
+  const hasRedSignal =
+    !!labor ||
+    labourFlags.length > 0 ||
+    !!boycottSignal ||
+    (welfareSignal.isFlagged && (welfareSignal.severity === "critical" || welfareSignal.severity === "high"));
+  const selfEthical = !hasRedSignal && !!findVerifiedEthics(product.brand, product.productName);
+
+  // ── Labour: legacy allegations DB + verified v2 flags ──
   if (!selfEthical && (labor || labourFlags.length > 0)) {
     const count = labor?.allegations.length ?? labourFlags.length;
     const company = labor?.parentCompany ?? labourFlags[0]?.brandName ?? product.brand ?? "This brand";
@@ -151,7 +164,7 @@ export function diagnoseProduct(
   }
 
   // ── Boycott ──
-  const boycott = checkBoycott(product.brand);
+  const boycott = boycottSignal;
   if (!selfEthical && boycott) {
     concerns.push({
       type: "boycott",
@@ -163,7 +176,7 @@ export function diagnoseProduct(
   }
 
   // ── Animal welfare ──
-  const welfare = checkAnimalWelfareFlag(product.brand);
+  const welfare = welfareSignal;
   if (!selfEthical && welfare.isFlagged) {
     const sev: ConcernSeverity = welfare.severity === "critical"
       ? "critical"
@@ -253,12 +266,28 @@ export function assessUnmetDemand(
     ];
     swapAvailable = candidates.some(
       (c) =>
+        isCandidateClean(c) &&
         candidateAddresses(c, primary.type) &&
         c.assumeAvailable !== false && // unverifiable-availability entries don't count
         isInMarket(c, countryCode),
     );
   }
   return { category: categoryKey, primaryConcern: primary.type, swapAvailable };
+}
+
+/**
+ * Never recommend a brand the app itself red-flags: boycott-listed, carrying
+ * labour allegations or a verified labour flag, or a critical/high animal-
+ * welfare record. The curated catalogs are screened at build time by the
+ * verdict-page audit, but this runtime guard keeps them honest if the flag
+ * datasets and the catalogs ever drift apart again.
+ */
+function isCandidateClean(c: AltCandidate): boolean {
+  if (checkBoycott(c.brand)) return false;
+  if (findLaborAllegations(c.brand, c.productName)) return false;
+  const welfare = checkAnimalWelfareFlag(c.brand);
+  if (welfare.isFlagged && (welfare.severity === "critical" || welfare.severity === "high")) return false;
+  return !getVerifiedFlagsForBrand(c.brand).some((f) => LABOUR_FLAG_CATEGORIES.has(f.category));
 }
 
 function sameBrand(a: string, b: string | null | undefined): boolean {
@@ -404,12 +433,14 @@ export async function getSwaps(
   // Candidate sources, in priority order (dedupe keeps the first per brand):
   //   1. hand-curated customSwaps.json   2. built-in catalog
   //   3. the verified-ethics database (mapped to fine categories)
-  const merged = dedupeByBrand([
-    ...getCustomCandidates(diagnosis.categoryKey),
-    ...getCandidates(diagnosis.categoryKey),
-    ...getVerifiedEthicsCandidates(diagnosis.categoryKey),
-    ...getChocolateDirectoryCandidates(diagnosis.categoryKey),
-  ]);
+  const merged = dedupeByBrand(
+    [
+      ...getCustomCandidates(diagnosis.categoryKey),
+      ...getCandidates(diagnosis.categoryKey),
+      ...getVerifiedEthicsCandidates(diagnosis.categoryKey),
+      ...getChocolateDirectoryCandidates(diagnosis.categoryKey),
+    ].filter(isCandidateClean),
+  );
   let pool = merged.filter((c) => !sameBrand(c.brand, product.brand));
 
   // Only suggest things the user can actually buy. When the user has a country
@@ -488,12 +519,14 @@ export function rankCategoryCandidates(
   country: string | null,
   priorities: UserPriorities = DEFAULT_PRIORITIES,
 ): AltCandidate[] {
-  const merged = dedupeByBrand([
-    ...getCustomCandidates(categoryKey),
-    ...getCandidates(categoryKey),
-    ...getVerifiedEthicsCandidates(categoryKey),
-    ...getChocolateDirectoryCandidates(categoryKey),
-  ]);
+  const merged = dedupeByBrand(
+    [
+      ...getCustomCandidates(categoryKey),
+      ...getCandidates(categoryKey),
+      ...getVerifiedEthicsCandidates(categoryKey),
+      ...getChocolateDirectoryCandidates(categoryKey),
+    ].filter(isCandidateClean),
+  );
 
   // Only recommend things the user can actually buy, when we know enough.
   let pool = merged;

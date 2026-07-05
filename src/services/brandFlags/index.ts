@@ -8,7 +8,7 @@
 
 import type { BrandFlagV2 } from '@/types/brandFlag';
 import { meetsSourcingBar } from '@/types/brandFlag';
-import { brandFlagsV2 } from '@/data/brandFlags.v2';
+import { brandFlagsV2, flagMatchesBrand } from '@/data/brandFlags.v2';
 
 // ---------------------------------------------------------------------------
 // Internal helpers
@@ -18,12 +18,10 @@ function isLive(flag: BrandFlagV2): boolean {
   return flag.status === 'verified' && meetsSourcingBar(flag);
 }
 
-function matchesBrand(flag: BrandFlagV2, query: string): boolean {
-  const lower = query.toLowerCase();
-  if (flag.brandName.toLowerCase().includes(lower)) return true;
-  if (flag.brandAliases?.some((alias) => lower.includes(alias) || alias.includes(lower))) return true;
-  return false;
-}
+// Word-boundary matching shared with the dataset (flagMatchesBrand). The old
+// substring matching here flagged "Philly Swirl" for illycaffè and "Domino's
+// Pizza" for Domino Sugar.
+const matchesBrand = flagMatchesBrand;
 
 // ---------------------------------------------------------------------------
 // Public API
