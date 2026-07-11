@@ -99,7 +99,7 @@ const SEEDS: CompanySeed[] = [
   { id: "chiquita", name: "Chiquita", owner: "Chiquita Brands International", hq: "Fort Lauderdale, FL, USA", lon: -80.14, lat: 26.12, category: "Produce",
     products: ["Chiquita bananas", "Fresh Express"],
     supply: "Bananas from Ecuador, Guatemala, Honduras & Colombia" },
-  { id: "dole", name: "Dole", owner: "Dole plc", hq: "Charlotte, NC, USA", lon: -80.84, lat: 35.23, category: "Produce",
+  { id: "dole", name: "Dole", owner: "Dole plc (world HQ: Dublin)", hq: "Charlotte, NC, USA (Americas HQ)", lon: -80.84, lat: 35.23, category: "Produce",
     products: ["Dole bananas", "Dole pineapple", "Dole salads"],
     supply: "Bananas & pineapple from Latin America and the Philippines" },
   { id: "delmonte", name: "Del Monte", owner: "Del Monte Foods / Fresh Del Monte", hq: "Walnut Creek, CA, USA", lon: -122.06, lat: 37.9, category: "Produce",
@@ -131,7 +131,7 @@ const SEEDS: CompanySeed[] = [
   { id: "dominos", name: "Domino's Pizza", owner: "Domino's Pizza, Inc.", hq: "Ann Arbor, MI, USA", lon: -83.74, lat: 42.28, category: "Fast food",
     products: ["Domino's pizza"],
     supply: "Pork, poultry, dairy & wheat contracts" },
-  { id: "papajohns", name: "Papa John's", owner: "Papa John's International", hq: "Louisville, KY, USA", lon: -85.68, lat: 38.3, category: "Fast food",
+  { id: "papajohns", name: "Papa John's", owner: "Papa John's International", hq: "Atlanta, GA, USA (co-HQ Louisville)", lon: -84.46, lat: 33.89, category: "Fast food",
     products: ["Papa John's pizza"],
     supply: "Pork, poultry, dairy & wheat contracts" },
   { id: "leclerc", name: "E.Leclerc", owner: "E.Leclerc", hq: "Ivry-sur-Seine, France", lon: 2.39, lat: 48.81, category: "Retailer",
@@ -154,9 +154,11 @@ const SEEDS: CompanySeed[] = [
   { id: "puma", name: "Puma", owner: "Puma SE", hq: "Herzogenaurach, Germany", lon: 10.88, lat: 49.57, category: "Consumer goods",
     products: ["Puma footwear & apparel"],
     supply: "Footwear & apparel from Vietnam, China & Bangladesh" },
-  { id: "strauss", name: "Strauss Group / Sabra", owner: "Strauss Group", hq: "Petah Tikva, Israel", lon: 34.89, lat: 32.09, category: "Manufacturer",
-    products: ["Sabra hummus", "Elite", "Strauss dairy"],
-    supply: "Dairy, snacks & dips for Israel and export markets" },
+  // NB: Sabra is deliberately not listed here — it's PepsiCo-owned, so its
+  // scan signals (and map pin) belong to the PepsiCo entry.
+  { id: "strauss", name: "Strauss Group", owner: "Strauss Group Ltd.", hq: "Petah Tikva, Israel", lon: 34.89, lat: 32.09, category: "Manufacturer",
+    products: ["Elite", "Strauss dairy"],
+    supply: "Dairy, coffee & snacks for Israel and export markets" },
   { id: "ahava", name: "AHAVA", owner: "AHAVA Dead Sea Laboratories", hq: "Airport City, Israel", lon: 34.96, lat: 31.99, category: "Consumer goods",
     products: ["AHAVA skincare"],
     supply: "Dead Sea mineral cosmetics" },
@@ -241,11 +243,13 @@ const SEEDS: CompanySeed[] = [
 const BDS_SOURCE = { label: "BDS movement — consumer boycott list", url: "https://boycott-israel.org/boycott.html" };
 const BBFAW_SOURCE = { label: "Business Benchmark on Farm Animal Welfare (BBFAW)", url: "https://www.bbfaw.com/" };
 
-function tierFor(score: number, hasPositiveEthics: boolean): MapCompany["verdict"] {
+function tierFor(score: number, hasPositiveEthics: boolean, hasNegativeSignal: boolean): MapCompany["verdict"] {
+  // A live concern (flag, allegation, boycott, welfare) can never be
+  // "Recommended", whatever the blended number says.
+  if (hasNegativeSignal) return score < 25 ? "avoid" : "caution";
   if (score >= 85 || (hasPositiveEthics && score >= 70)) return "leader";
   if (score >= 70) return "better";
-  if (score >= 25) return "caution";
-  return "avoid";
+  return "caution";
 }
 
 function truncate(s: string, n: number): string {
@@ -258,24 +262,33 @@ function truncate(s: string, n: number): string {
  */
 export function getVerdictMapCompanies(): MapCompany[] {
   return SEEDS.map((seed) => {
+    // A company is scanned under many brand strings (corporate name, owner,
+    // shelf brands); each dataset matches some of those and not others. Probe
+    // them all so no signal is missed.
+    const candidates = [seed.name, seed.owner, ...seed.products];
     const probe = `${seed.name} ${seed.owner}`;
     const flags = getVerifiedFlagsForBrand(seed.name).concat(getVerifiedFlagsForBrand(seed.owner))
       .filter((f, i, a) => a.findIndex((x) => x.id === f.id) === i);
     const allegations = findLaborAllegations(probe, null);
-    const welfare = checkAnimalWelfareFlag(seed.name);
-    const boycott = checkBoycott(seed.name) ?? checkBoycott(seed.owner);
-    const ethics = findVerifiedEthics(seed.name, null);
+    const welfare = candidates.map((c) => checkAnimalWelfareFlag(c)).find((w) => w.isFlagged)
+      ?? checkAnimalWelfareFlag(seed.name);
+    const boycott = candidates.map((c) => checkBoycott(c)).find(Boolean) ?? null;
+    const ethics = findVerifiedEthics(seed.name, null) ?? findVerifiedEthics(seed.owner, null);
 
-    // Score with the app's own engine. Labour input mirrors the scanner
-    // (laborCheck count), raised to the flag severity when the verified-flag
-    // dataset knows more than the 9-company scoring DB.
+    // Labour input mirrors the scanner (laborCheck count), raised to the flag
+    // severity when the verified-flag dataset knows more than the 9-company
+    // scoring DB.
     const severityWeight = flags.some((f) => f.severity === "critical") ? 2 : flags.length > 0 ? 1 : 0;
     const laborAllegations = Math.max(getLaborAllegationCount(probe, null), severityWeight);
-    const ps = personalizedScore(
-      { brand: seed.name, productName: null, laborAllegations },
-      DEFAULT_PRIORITIES,
-    );
-    const score = ps.score ?? 50;
+    const hasNegative = flags.length > 0 || laborAllegations > 0 || welfare.isFlagged || !!boycott;
+
+    // Score every brand string with the app's own engine. With a live concern
+    // the company is shown at its worst-scoring brand (what a shopper would
+    // see scanning that product); otherwise at its best.
+    const scores = candidates
+      .map((c) => personalizedScore({ brand: c, productName: null, laborAllegations }, DEFAULT_PRIORITIES).score)
+      .filter((s): s is number => s !== null);
+    const score = scores.length === 0 ? 50 : hasNegative ? Math.min(...scores) : Math.max(...scores);
 
     // Summary: one line per live signal, strongest first.
     const parts: string[] = [];
@@ -312,7 +325,7 @@ export function getVerdictMapCompanies(): MapCompany[] {
       lon: seed.lon,
       lat: seed.lat,
       category: seed.category,
-      verdict: tierFor(score, !!ethics),
+      verdict: tierFor(score, !!ethics, hasNegative),
       score,
       sourcing: seed.supply,
       summary,
