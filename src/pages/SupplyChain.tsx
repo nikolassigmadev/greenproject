@@ -3,21 +3,45 @@ import { useTheme } from "next-themes";
 import { DS } from "@/styles/design-tokens";
 import { getVerdictMapCompanies } from "@/data/verdictMapCompanies";
 
+/** Measure an env(safe-area-inset-*) value in px — iframes can't read env()
+ *  themselves, so the host passes its insets to the map via the URL. */
+function measureSafeInset(edge: "top" | "bottom"): number {
+  const probe = document.createElement("div");
+  probe.style.cssText =
+    `position:fixed;${edge}:0;width:0;visibility:hidden;` +
+    `height:env(safe-area-inset-${edge}, 0px);`;
+  document.body.appendChild(probe);
+  const px = probe.getBoundingClientRect().height;
+  probe.remove();
+  return Math.round(px);
+}
+
+// Room the map's bottom sheet needs to clear the app's floating nav pill
+// (56px pill + 22px offset + breathing room).
+const NAV_CLEARANCE = 88;
+
 /**
- * Global supply chain tracking — the interactive sourcing globe.
+ * Global supply chain tracking — the interactive sourcing globe, full screen.
  *
  * The map itself is the standalone build in public/sourcing-map.html
  * (D3 orthographic globe + bottom sheet). On load it announces
  * `goodscan-map-ready`; we then inject every verdict-affecting company from
  * the app's datasets via `goodscan-companies`, and keep its theme in sync
- * with the app through `goodscan-theme` messages.
+ * with the app through `goodscan-theme` messages. The bottom nav floats
+ * above the map (z 9999 vs 60), and the map lays out around it via the
+ * inset-top / inset-bottom params.
  */
 export default function SupplyChain() {
   const { resolvedTheme } = useTheme();
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  // Theme at mount decides the iframe URL; later switches go via postMessage
-  // so the globe doesn't reload mid-session.
-  const [initialTheme] = useState(() => (resolvedTheme === "dark" ? "dark" : "light"));
+  // Theme + insets at mount decide the iframe URL; later theme switches go
+  // via postMessage so the globe doesn't reload mid-session.
+  const [src] = useState(() => {
+    const theme = resolvedTheme === "dark" ? "dark" : "light";
+    const insetTop = measureSafeInset("top");
+    const insetBottom = measureSafeInset("bottom") + NAV_CLEARANCE;
+    return `/sourcing-map.html?theme=${theme}&inset-top=${insetTop}&inset-bottom=${insetBottom}`;
+  });
 
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
@@ -37,31 +61,14 @@ export default function SupplyChain() {
   }, [resolvedTheme]);
 
   return (
-    <div style={{
-      height: "100dvh", display: "flex", flexDirection: "column",
-      background: DS.bg, fontFamily: DS.font, color: DS.ink, overflow: "hidden",
-    }}>
-      <div style={{
-        padding: "max(48px, calc(env(safe-area-inset-top, 0px) + 12px)) 20px 12px",
-        flexShrink: 0,
-      }}>
-        <h1 style={{ fontSize: 24, fontWeight: 800, letterSpacing: -0.5, margin: 0 }}>
-          Global supply chain tracking
-        </h1>
-        <div style={{ fontSize: 13.5, color: DS.muted, marginTop: 4, lineHeight: 1.4 }}>
-          Every company that moves a product's verdict — tap a pin for the evidence.
-        </div>
-      </div>
-
+    <div style={{ position: "fixed", inset: 0, zIndex: 60, background: DS.bg }}>
       <iframe
         ref={iframeRef}
-        src={`/sourcing-map.html?theme=${initialTheme}`}
+        src={src}
         title="Global supply chain map"
         style={{
-          flex: 1, width: "calc(100% - 24px)", margin: "0 12px",
-          marginBottom: "calc(env(safe-area-inset-bottom, 0px) + 92px)",
-          border: `1px solid ${DS.hair}`, borderRadius: 20,
-          background: DS.card, display: "block",
+          position: "absolute", inset: 0, width: "100%", height: "100%",
+          border: "none", display: "block", background: DS.bg,
         }}
       />
     </div>

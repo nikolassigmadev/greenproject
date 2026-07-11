@@ -1502,8 +1502,14 @@ window.addEventListener('message', (e) => {
 });
 let savedTheme = 'light';
 try {
-  const fromUrl = new URLSearchParams(location.search).get('theme');
-  savedTheme = fromUrl || localStorage.getItem('goodscan-theme') || 'light';
+  const qp = new URLSearchParams(location.search);
+  savedTheme = qp.get('theme') || localStorage.getItem('goodscan-theme') || 'light';
+  // env(safe-area-inset-*) doesn't reach inside an iframe, so a full-screen
+  // host passes its measured insets (plus room for its floating nav) instead.
+  const insetTop = parseFloat(qp.get('inset-top'));
+  const insetBot = parseFloat(qp.get('inset-bottom'));
+  if (!isNaN(insetTop)) document.documentElement.style.setProperty('--safe-top', insetTop + 'px');
+  if (!isNaN(insetBot)) document.documentElement.style.setProperty('--safe-bot', insetBot + 'px');
 } catch (e) {}
 
 /* ---------- loader globe ---------- */
