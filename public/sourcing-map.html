@@ -276,7 +276,7 @@
   .bar-row { display: grid; grid-template-columns: 110px 1fr 30px; align-items: center; gap: 10px; }
   .bar-row .lbl { font-size: 12.5px; color: var(--ink-2); }
   .track { height: 6px; background: var(--line); border-radius: 100px; overflow: hidden; }
-  .fill { height: 100%; border-radius: 100px; width: 0; transition: width .7s cubic-bezier(.4,0,.2,1); }
+  .fill { display: block; height: 100%; border-radius: 100px; width: 0; transition: width .7s cubic-bezier(.4,0,.2,1); }
   .fill.good { background: var(--good); }
   .fill.bad { background: var(--bad); }
   .bar-row .val { font-size: 12px; font-variant-numeric: tabular-nums; color: var(--ink); text-align: right; }
@@ -431,7 +431,7 @@
       <div class="detail" id="detail"></div>
       <div class="list-wrap">
         <div class="list-head">
-          <span class="h">All chocolate brands</span>
+          <span class="h">All tracked companies</span>
           <span class="seg" id="seg">
             <button data-f="all" class="on">All</button>
             <button data-f="rec">Recommended</button>
@@ -879,6 +879,35 @@ const SOURCES_OF = {
 function sourcesFor(c){ return SOURCES_OF[c.id] || ['scorecard']; }
 function originLabel(c){ return c.origins.map(o => ORIGINS[o].name).join(' · '); }
 
+/* ---------- app-injected companies ----------
+   The host app posts every verdict-affecting company from its own datasets
+   (verified brand flags, labour allegations, boycott list, animal-welfare
+   flags, verified-ethics leaders) as `goodscan-companies`. They arrive with
+   final HQ coordinates, a computed verdict/score, and structured `sources`
+   [{label,url}], and are marked `ext` so cocoa-specific labels are skipped. */
+function injectCompanies(list) {
+  const norm = s => (s || '').toLowerCase().normalize('NFD').replace(/[^a-z0-9]/g, '');
+  const have = new Set();
+  COMPANIES.forEach(c => { have.add(norm(c.name)); have.add(norm(c.owner)); });
+  let added = 0;
+  list.forEach(c => {
+    const n = norm(c.name);
+    if (!n || have.has(n) || have.has(norm(c.owner))) return;   // chocolate entry is richer — keep it
+    c.ext = true;
+    c.origins = [];
+    // nudge same-city entries apart so they never sit on the exact same point
+    const h = hashStr(c.id + 'hq');
+    c.lon += ((h % 100) / 100 - 0.5) * 0.24;
+    c.lat += (((h >> 7) % 100) / 100 - 0.5) * 0.24;
+    COMPANIES.push(c);
+    have.add(n); have.add(norm(c.owner));
+    added++;
+  });
+  if (!added) return;
+  updateCounts();
+  renderList();
+}
+
 /* verdict metadata + helpers */
 const VERDICT = {
   leader:  { label:'Leader',  blurb:'Buy these' },
@@ -895,11 +924,12 @@ function passFilter(c){
 
 /* deterministic per-company metric breakdown, anchored to verdict tier */
 const AXES = ['Traceability','Living income','Child-labour','Deforestation','Transparency'];
+const EXT_AXES = ['Traceability','Labour rights','Animal welfare','Environment','Transparency'];
 function hashStr(s){ let h=2166136261; for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); } return h>>>0; }
 function metricsFor(c){
   const base = { leader:88, better:75, caution:48, avoid:27 }[c.verdict];
   const m = {};
-  AXES.forEach(ax => {
+  (c.ext ? EXT_AXES : AXES).forEach(ax => {
     const jitter = (hashStr(c.id + ax) % 17) - 8;        // -8..8
     m[ax] = Math.max(6, Math.min(98, Math.round(base + jitter)));
   });
@@ -1327,7 +1357,7 @@ function renderPeek(s) {
       <div>
         <span class="status ${s.verdict}"><span class="dot"></span>${v.label} · ${v.blurb}</span>
         <h2>${s.name}</h2>
-        <div class="meta">${s.category}<span class="sep">/</span>cocoa from ${ORIGINS[s.origins[0]].name}</div>
+        <div class="meta">${s.category}<span class="sep">/</span>${s.ext ? s.hq : 'cocoa from ' + ORIGINS[s.origins[0]].name}</div>
       </div>
       <div class="grade">${grade}<small>score ${s.score}</small></div>
     </div>
@@ -1346,17 +1376,22 @@ function renderDetail(s) {
       <span class="val">${v}</span>
     </div>`).join('');
   const chips = s.products.map(p => `<span class="chip">${p}</span>`).join('');
-  const srcItems = sourcesFor(s).map(id => {
-    const sc = SOURCES[id]; if (!sc) return '';
-    return `<li>${sc.url ? `<a href="${sc.url}" target="_blank" rel="noopener">${sc.label}</a>` : sc.label}</li>`;
-  }).join('');
+  // App-injected companies carry their own structured citations; chocolate
+  // entries keep the shared SOURCES catalogue.
+  const srcItems = (s.ext && Array.isArray(s.sources) ? s.sources : sourcesFor(s).map(id => SOURCES[id]))
+    .filter(Boolean)
+    .map(sc => `<li>${sc.url ? `<a href="${sc.url}" target="_blank" rel="noopener">${sc.label}</a>` : sc.label}</li>`)
+    .join('');
+  const facts = s.ext ? `
+      <div class="fact"><span class="fk">Owner / HQ</span><span class="fv">${s.owner} · ${s.hq}</span></div>
+      <div class="fact"><span class="fk">Supply chain</span><span class="fv">${s.sourcing}</span></div>` : `
+      <div class="fact"><span class="fk">Owner / HQ</span><span class="fv">${s.owner} · ${s.hq}</span></div>
+      <div class="fact"><span class="fk">Sourcing regions</span><span class="fv">${originLabel(s)}</span></div>
+      <div class="fact"><span class="fk">Where cocoa is sourced</span><span class="fv">${s.sourcing}</span></div>`;
   const d = document.getElementById('detail');
   d.innerHTML = `
     <p class="summary">${s.summary}</p>
-    <div class="facts">
-      <div class="fact"><span class="fk">Owner / HQ</span><span class="fv">${s.owner} · ${s.hq}</span></div>
-      <div class="fact"><span class="fk">Sourcing regions</span><span class="fv">${originLabel(s)}</span></div>
-      <div class="fact"><span class="fk">Where cocoa is sourced</span><span class="fv">${s.sourcing}</span></div>
+    <div class="facts">${facts}
     </div>
     <div class="bars">${bars}</div>
     <div class="products">
@@ -1367,7 +1402,12 @@ function renderDetail(s) {
       <div class="h">Sources</div>
       <ul class="srclist">${srcItems}</ul>
     </div>`;
-  requestAnimationFrame(() => d.querySelectorAll('.fill').forEach(f => { f.style.width = f.dataset.w + '%'; }));
+  // Fill the bars. rAF gives the nice 0→value sweep, but it never fires while
+  // the page/iframe isn't painting (throttled embed, background tab) — so a
+  // timeout backstop applies the widths regardless. Both paths are idempotent.
+  const fillBars = () => d.querySelectorAll('.fill').forEach(f => { f.style.width = f.dataset.w + '%'; });
+  requestAnimationFrame(fillBars);
+  setTimeout(fillBars, 300);
 }
 
 function renderList() {
@@ -1387,9 +1427,12 @@ function renderList() {
   });
 }
 
-document.getElementById('recCount').textContent = COMPANIES.filter(s => RECOMMENDED.has(s.verdict)).length;
-document.getElementById('cautionCount').textContent = COMPANIES.filter(s => s.verdict === 'caution').length;
-document.getElementById('avoidCount').textContent = COMPANIES.filter(s => s.verdict === 'avoid').length;
+function updateCounts() {
+  document.getElementById('recCount').textContent = COMPANIES.filter(s => RECOMMENDED.has(s.verdict)).length;
+  document.getElementById('cautionCount').textContent = COMPANIES.filter(s => s.verdict === 'caution').length;
+  document.getElementById('avoidCount').textContent = COMPANIES.filter(s => s.verdict === 'avoid').length;
+}
+updateCounts();
 
 /* ---------- filter ---------- */
 document.getElementById('seg').addEventListener('click', e => {
@@ -1453,8 +1496,9 @@ function applyTheme(mode) {
    param on first load and live `postMessage` updates afterwards (no in-map
    toggle, since the app owns the theme switch). */
 window.addEventListener('message', (e) => {
-  const t = e.data && e.data.type === 'goodscan-theme' ? e.data.theme : null;
-  if (t === 'light' || t === 'dark') applyTheme(t);
+  const d = e.data || {};
+  if (d.type === 'goodscan-theme' && (d.theme === 'light' || d.theme === 'dark')) applyTheme(d.theme);
+  else if (d.type === 'goodscan-companies' && Array.isArray(d.companies)) injectCompanies(d.companies);
 });
 let savedTheme = 'light';
 try {
@@ -1523,6 +1567,8 @@ applyTheme(savedTheme);
 layout();
 select(selectedId, true);
 measureSheet();
+/* tell the host app we're ready to receive `goodscan-companies` */
+try { if (window.parent !== window) window.parent.postMessage({ type: 'goodscan-map-ready' }, '*'); } catch (e) {}
 </script>
 </body>
 </html>
