@@ -195,7 +195,7 @@ git log --oneline --graph --all
 git show <commit-hash>
 
 # Show who changed each line of a file
-git blame <file>
+git blame <file> h
 
 
 --------------------------------------------------------------
