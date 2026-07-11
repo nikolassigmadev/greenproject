@@ -346,6 +346,15 @@ export default function ShoppingList() {
     return () => window.removeEventListener("basketUpdated", handler);
   }, []);
 
+  // The ethics report is priority-weighted; re-render when priorities change
+  // so the "Basket impact" card recomputes with the new weights.
+  const [, setPrioritiesVersion] = useState(0);
+  useEffect(() => {
+    const handler = () => setPrioritiesVersion((n) => n + 1);
+    window.addEventListener("prioritiesUpdated", handler);
+    return () => window.removeEventListener("prioritiesUpdated", handler);
+  }, []);
+
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (!query.trim() || query.trim().length < 2) { setSearchResults([]); return; }

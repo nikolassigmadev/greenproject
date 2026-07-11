@@ -4,7 +4,7 @@ import { ChevronRight, Camera, Leaf, Shield, BarChart3, Users, Award, Zap, Check
 import { Logo, Wordmark } from "@/components/Logo";
 import { DS, scoreTone, toneColor, toneBg } from "@/styles/design-tokens";
 import { loadScanHistory, type ScanHistoryEntry } from "@/utils/userPreferences";
-import { loadDecisions, DECISIONS_EVENT } from "@/utils/decisions";
+import { YourImpactCard } from "@/components/YourImpactCard";
 import {
   scanEntryToShowcase,
   hasCompleteEcoData,
@@ -283,134 +283,6 @@ function ScoreBadge({ score }: { score: number }) {
 
 /* ── Returning-user history surfaces ──────────────────────────────────── */
 
-function ImpactRow({ icon: Icon, tint, value, text }: {
-  icon: React.ElementType;
-  tint: string;
-  value: React.ReactNode;
-  text: string;
-}) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-      <div style={{
-        width: 34, height: 34, borderRadius: 10, flexShrink: 0,
-        background: `color-mix(in srgb, ${tint} 15%, transparent)`,
-        display: "flex", alignItems: "center", justifyContent: "center",
-      }}>
-        <Icon style={{ width: 17, height: 17, color: tint }} />
-      </div>
-      <div style={{ fontSize: 13.5, lineHeight: 1.35 }}>
-        <span style={{ fontWeight: 800, color: DS.ink }}>{value}</span>{" "}
-        <span style={{ color: DS.ink2 }}>{text}</span>
-      </div>
-    </div>
-  );
-}
-
-const GOOD_VERDICTS = new Set(["BUY", "CONSIDER"]);
-const BAD_VERDICTS = new Set(["CAUTION", "AVOID"]);
-
-/**
- * Decision-driven impact snapshot. Quality is measured only on what the user
- * actually chose to BUY (good picks %), and they get credit for the flagged
- * products they SAW and SKIPPED — scans they never acted on don't count.
- */
-function StatsOverview({ history }: { history: ScanHistoryEntry[] }) {
-  // Re-read decisions whenever one is recorded so the card stays live.
-  const [, bump] = useState(0);
-  useEffect(() => {
-    const refresh = () => bump((n) => n + 1);
-    window.addEventListener(DECISIONS_EVENT, refresh);
-    return () => window.removeEventListener(DECISIONS_EVENT, refresh);
-  }, []);
-
-  const decisions = loadDecisions();
-  const verdictOf = (d: { verdict: string }) => (d.verdict || "").toUpperCase();
-  const bought = decisions.filter((d) => d.outcome === "bought");
-  const skipped = decisions.filter((d) => d.outcome === "rejected");
-  const goodBought = bought.filter((d) => GOOD_VERDICTS.has(verdictOf(d))).length;
-  const goodPct = bought.length ? Math.round((goodBought / bought.length) * 100) : 0;
-  const scanned = history.length;
-
-  // CO₂ avoided by buying lower-impact products than an average choice. Grade
-  // → kg CO₂e/kg estimates mirror getCarbonStats in userPreferences.
-  const GRADE_CO2: Record<string, number> = { "a-plus": 0.3, a: 0.5, b: 1.2, c: 2.5, d: 4.0, e: 6.0 };
-  const BASELINE = 2.5, SERVING = 0.25; // kg CO₂e/kg, ~kg per product
-  let co2Saved = 0;
-  for (const d of bought) {
-    const co2 = GRADE_CO2[(d.ecoGrade || "").toLowerCase()];
-    if (co2 == null) continue;
-    const saved = (BASELINE - co2) * SERVING;
-    if (saved > 0) co2Saved += saved;
-  }
-  co2Saved = Math.round(co2Saved * 10) / 10;
-
-  // Distinct brands the user saw a problem with and chose to skip.
-  const brandsAvoided = new Set(
-    skipped
-      .filter((d) => BAD_VERDICTS.has(verdictOf(d)))
-      .map((d) => (d.brand || "").toLowerCase().trim())
-      .filter(Boolean),
-  ).size;
-
-  return (
-    <div style={{
-      background: DS.card, borderRadius: DS.radius.lg, padding: 22,
-      boxShadow: "0 6px 20px rgba(26,22,20,0.11), 0 0 0 1px rgba(26,22,20,0.05)",
-    }}>
-      {/* Hero — the quality of what they actually bought. Coloured by tone so a
-          weak buy record reads honestly (red/amber), not a misleading green. */}
-      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-        <span style={{
-          fontSize: 48, fontWeight: 800, lineHeight: 0.85, letterSpacing: -1.5,
-          color: bought.length ? toneColor(scoreTone(goodPct)) : DS.muted,
-        }}>
-          {bought.length ? `${goodPct}%` : "—"}
-        </span>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 16.5, fontWeight: 800, color: DS.ink, letterSpacing: -0.2 }}>Good picks</div>
-          <div style={{ fontSize: 12.5, color: DS.muted, marginTop: 3, lineHeight: 1.35 }}>
-            {bought.length
-              ? `of the ${bought.length} product${bought.length > 1 ? "s" : ""} you chose to buy`
-              : "Buy or skip a scanned product to start tracking"}
-          </div>
-        </div>
-      </div>
-
-      {/* Progress — good share of what was bought. */}
-      {bought.length > 0 && (
-        <div style={{ height: 10, borderRadius: 999, overflow: "hidden", marginTop: 16, background: DS.bg }}>
-          <div style={{ height: "100%", borderRadius: 999, background: toneColor(scoreTone(goodPct)), width: `${Math.max(goodPct, 2)}%` }} />
-        </div>
-      )}
-
-      {/* Impact details — fuller, spelled-out metrics. */}
-      <div style={{
-        marginTop: 18, paddingTop: 16, borderTop: `1px solid ${DS.hair}`,
-        display: "flex", flexDirection: "column", gap: 14,
-      }}>
-        <ImpactRow icon={Leaf} tint={DS.good}
-          value={`${co2Saved} kg`} text="CO₂ saved vs. buying average products" />
-        <ImpactRow icon={ScanLine} tint={DS.ink}
-          value={scanned} text={`product${scanned === 1 ? "" : "s"} scanned in total`} />
-      </div>
-
-      {/* Ethical statement — names what the avoided brands were flagged for. */}
-      {brandsAvoided > 0 && (
-        <div style={{
-          marginTop: 14, display: "flex", gap: 10, alignItems: "flex-start",
-          background: DS.goodBg, borderRadius: 12, padding: "12px 14px",
-        }}>
-          <Shield style={{ width: 16, height: 16, color: DS.good, flexShrink: 0, marginTop: 1 }} />
-          <div style={{ fontSize: 12.5, color: DS.ink, lineHeight: 1.45 }}>
-            You walked away from{" "}
-            <strong>{brandsAvoided} brand{brandsAvoided === 1 ? "" : "s"}</strong>{" "}
-            with labour concerns.
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
 
 function RecentScans({ recent }: { recent: ScanHistoryEntry[] }) {
   return (
@@ -525,7 +397,7 @@ export default function Index() {
           <>
             <section style={{ marginBottom: 28 }}>
               <h2 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 14px" }}>Your impact</h2>
-              <StatsOverview history={history} />
+              <YourImpactCard />
             </section>
 
             {recentEco && (
