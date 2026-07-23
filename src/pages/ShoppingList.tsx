@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { searchProducts as searchOffProducts } from "@/services/openfoodfacts";
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
+import { isBannedSearchTerm, INVALID_ENTRY_MESSAGE } from "@/utils/profanityFilter";
 import { getLaborAllegationCount } from "@/utils/laborCheck";
 import {
   loadBasket, addToBasket, removeFromBasket, clearBasket,
@@ -336,6 +337,7 @@ export default function ShoppingList() {
   const [query, setQuery] = useState("");
   const [searchResults, setSearchResults] = useState<OpenFoodFactsResult[]>([]);
   const [searching, setSearching] = useState(false);
+  const [invalidQuery, setInvalidQuery] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -357,7 +359,10 @@ export default function ShoppingList() {
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (!query.trim() || query.trim().length < 2) { setSearchResults([]); return; }
+    if (!query.trim() || query.trim().length < 2) { setSearchResults([]); setInvalidQuery(false); return; }
+    // Reject slurs / hate speech before hitting the search API.
+    if (isBannedSearchTerm(query.trim())) { setSearchResults([]); setInvalidQuery(true); setSearching(false); return; }
+    setInvalidQuery(false);
     debounceRef.current = setTimeout(async () => {
       setSearching(true);
       try { setSearchResults(await searchOffProducts(query.trim(), 5)); }
@@ -583,7 +588,13 @@ export default function ShoppingList() {
               </div>
             )}
 
-            {searchResults.length === 0 && query.trim().length >= 2 && !searching && (
+            {invalidQuery && (
+              <div style={{ padding: "12px 16px", borderTop: `1px solid ${DS.hair}` }}>
+                <p style={{ fontSize: 13, color: DS.muted, margin: 0 }}>{INVALID_ENTRY_MESSAGE}</p>
+              </div>
+            )}
+
+            {!invalidQuery && searchResults.length === 0 && query.trim().length >= 2 && !searching && (
               <div style={{ padding: "12px 16px", borderTop: `1px solid ${DS.hair}` }}>
                 <p style={{ fontSize: 13, color: DS.muted, margin: 0 }}>No results for "{query}"</p>
               </div>

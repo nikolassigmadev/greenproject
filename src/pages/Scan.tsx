@@ -21,6 +21,7 @@ import { copySingleProductCode } from "@/utils/productExporter";
 import { loadPriorities, DEFAULT_PRIORITIES, hasSavedPriorities, type UserPriorities } from "@/utils/userPreferences";
 import { lookupBarcode, isValidBarcode, searchProducts as searchOffProducts, searchVisualCandidates, imageQualityTier } from "@/services/openfoodfacts";
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
+import { isBannedSearchTerm, INVALID_ENTRY_MESSAGE } from "@/utils/profanityFilter";
 import { DS } from "@/styles/design-tokens";
 import { getBackendUrl } from "@/config/backend";
 import { pickBestMatch, validateBarcodeResult, scoreRelevance, hasUsableBrandAnchor, type MatchResult } from "@/utils/productRelevance";
@@ -1834,9 +1835,13 @@ const Scan = () => {
   // Manual search
   const handleManualSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (manualSearch.trim()) {
-      searchProducts(manualSearch);
+    const query = manualSearch.trim();
+    if (!query) return;
+    if (isBannedSearchTerm(query)) {
+      toast({ title: INVALID_ENTRY_MESSAGE, variant: "destructive" });
+      return;
     }
+    searchProducts(query);
   };
 
   const handleShutter = () => {

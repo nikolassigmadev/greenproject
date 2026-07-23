@@ -6,6 +6,7 @@ import { calculateScore } from "@/data/products";
 import { useProducts } from "@/hooks/useProducts";
 import { cn } from "@/lib/utils";
 import { useSearchParams } from "react-router-dom";
+import { isBannedSearchTerm, INVALID_ENTRY_MESSAGE } from "@/utils/profanityFilter";
 
 const Products = () => {
   const products = useProducts();
@@ -26,7 +27,11 @@ const Products = () => {
 
   const categories = ["All", ...Array.from(new Set(products.map((p) => p.category)))];
 
+  // Reject slurs / hate speech typed into the search box.
+  const searchIsBanned = useMemo(() => isBannedSearchTerm(search), [search]);
+
   const filteredProducts = useMemo(() => {
+    if (searchIsBanned) return [];
     const filtered = products.filter((product) => {
       const matchesSearch =
         product.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -46,7 +51,7 @@ const Products = () => {
     });
 
     return filtered;
-  }, [products, search, selectedCategory, sortBy, minScore]);
+  }, [products, search, searchIsBanned, selectedCategory, sortBy, minScore]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -137,9 +142,13 @@ const Products = () => {
               </div>
             ) : (
               <div className="text-center py-16 bg-card rounded-2xl border border-border/60">
-                <div className="text-4xl mb-3">🔍</div>
-                <p className="text-sm font-semibold text-foreground mb-1">No products found</p>
-                <p className="text-xs text-muted-foreground">Try adjusting your search or filters</p>
+                <div className="text-4xl mb-3">{searchIsBanned ? "🚫" : "🔍"}</div>
+                <p className="text-sm font-semibold text-foreground mb-1">
+                  {searchIsBanned ? INVALID_ENTRY_MESSAGE : "No products found"}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {searchIsBanned ? "That search isn't allowed." : "Try adjusting your search or filters"}
+                </p>
               </div>
             )}
           </div>

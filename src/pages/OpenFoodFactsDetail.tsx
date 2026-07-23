@@ -41,6 +41,7 @@ import { sendChatMessage } from "@/services/api/backend-client";
 import { cn } from "@/lib/utils";
 import { DS } from "@/styles/design-tokens";
 import { toast } from "sonner";
+import { isBannedSearchTerm, INVALID_ENTRY_MESSAGE } from "@/utils/profanityFilter";
 
 // ─── Helpers (logic) ──────────────────────────────────────────────────────────
 
@@ -487,6 +488,10 @@ export default function OpenFoodFactsDetail() {
   const handleManualProductSearch = async () => {
     const query = manualSearchInput.trim();
     if (!query) return;
+    if (isBannedSearchTerm(query)) {
+      toast.error(INVALID_ENTRY_MESSAGE);
+      return;
+    }
     setManualSearchLoading(true);
     try {
       const results = await searchProducts(query, 5);

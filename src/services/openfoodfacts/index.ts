@@ -10,6 +10,7 @@ import { validateAndCleanBarcode, getAlternativeFormats } from '../../utils/barc
 import { ocrSearchLogger } from '../../utils/ocrSearchLogger';
 import { getProductOverride } from '../../data/productOverrides';
 import { getPinnedBarcodes } from '../../data/brandSearchPins';
+import { isBannedSearchTerm } from '../../utils/profanityFilter';
 
 const OFF_API_BASE = 'https://world.openfoodfacts.org';
 // OFF's modern Elasticsearch-backed search engine ("Search-a-licious").
@@ -652,6 +653,15 @@ export const searchProducts = async (
 ): Promise<OpenFoodFactsResult[]> => {
   const trimmed = query.trim();
   if (!trimmed) return [];
+
+  // Reject slurs / hate speech outright. Some slurs coincidentally match real
+  // product tokens, so without this guard typing one could surface products.
+  // The UI surfaces show an "Invalid entry" message; this is defense-in-depth
+  // so no caller (OCR, swaps, shopping list) can ever return results for one.
+  if (isBannedSearchTerm(trimmed)) {
+    console.warn('🚫 [SEARCH] rejected banned query');
+    return [];
+  }
 
   // Canonical brand pins. A few iconic spreads (Marmite, Vegemite) share their
   // name with the generic ingredient "yeast extract", so the progressive
