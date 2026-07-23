@@ -1690,6 +1690,10 @@ const Scan = () => {
   const handleManualCorrectionSearch = useCallback(async () => {
     const raw = manualCorrectionInput.trim();
     if (!raw) return;
+    if (isBannedSearchTerm(raw)) {
+      toast({ title: INVALID_ENTRY_MESSAGE, variant: "destructive" });
+      return;
+    }
 
     setShowManualCorrection(false);
     setNotFoundQuery(null);

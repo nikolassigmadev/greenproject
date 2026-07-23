@@ -8,6 +8,18 @@ describe("isBannedSearchTerm", () => {
     }
   });
 
+  it("blocks swear words typed directly", () => {
+    for (const q of ["fuck", "FUCK", "  shit ", "bitch", "cunt", "asshole", "dick", "bullshit", "motherfucker"]) {
+      expect(isBannedSearchTerm(q)).toBe(true);
+    }
+  });
+
+  it("blocks a swear word split by spaces/punctuation (exact whole-input)", () => {
+    for (const q of ["f u c k", "f-u-c-k", "f.u.c.k", "fuuuck", "sh1t"]) {
+      expect(isBannedSearchTerm(q)).toBe(true);
+    }
+  });
+
   it("blocks leetspeak and separator obfuscation", () => {
     for (const q of ["n1gger", "n i g g e r", "n-i-g-g-e-r", "f@ggot", "niiiggggaaa"]) {
       expect(isBannedSearchTerm(q)).toBe(true);
@@ -27,9 +39,11 @@ describe("isBannedSearchTerm", () => {
     const legit = [
       "spicy doritos", "spice mix", "cocktail sauce", "cockerel",
       "assam tea", "grape juice", "niger seed", "shiitake mushrooms",
-      "scunthorpe crisps", "coconut water", "analgesic cream",
+      "shitake", "scunthorpe crisps", "coconut water", "analgesic cream",
       "class assortment", "pistachio", "hummus", "dark chocolate",
-      "gooseberry jam", "grassy fields honey",
+      "gooseberry jam", "grassy fields honey", "cumin seeds", "damson jam",
+      "prickly pear", "crappie fillet", "assorted nuts", "arsenic free rice",
+      "peacock tea", "dickinson's jam",
     ];
     for (const q of legit) {
       expect(isBannedSearchTerm(q), `"${q}" should be allowed`).toBe(false);
