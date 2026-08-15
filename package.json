@@ -14,7 +14,8 @@
     "server": "node server.js",
     "server:dev": "nodemon server.js",
     "dev:all": "concurrently \"npm run dev\" \"npm run server\"",
-    "start": "npm run dev:all"
+    "start": "npm run dev:all",
+    "db:verify": "node scripts/verify-schema.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.2.0",
@@ -83,6 +84,7 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.5",
     "@eslint/js": "^9.32.0",
     "@tailwindcss/typography": "^0.5.16",
     "@testing-library/jest-dom": "^6.6.0",

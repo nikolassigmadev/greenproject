@@ -154,6 +154,62 @@ CREATE TABLE IF NOT EXISTS community_flags (
 );
 CREATE INDEX IF NOT EXISTS idx_community_flags_status ON community_flags (status);
 CREATE INDEX IF NOT EXISTS idx_community_flags_brand  ON community_flags (lower(brand_name));
+
+-- ── Enum constraints ──
+-- The app already filters these through oneOf() before insert. That guards the
+-- one path we control; it does not guard a hand-written UPDATE in the Supabase
+-- console, a future second writer, or a refactor that forgets the sanitiser.
+-- The database is the only place a rule can be enforced for everyone.
+--
+-- Two deliberate choices:
+--  * NOT VALID — enforced on every INSERT and UPDATE from here on, but existing
+--    rows are not re-scanned. This blob runs on every server start, so a
+--    constraint that could fail on legacy data would take scan logging down at
+--    boot. Once you have checked the old rows, promote a constraint with:
+--      ALTER TABLE ai_scans VALIDATE CONSTRAINT ai_scans_verdict_chk;
+--  * No IS NULL clauses — a CHECK passes on NULL by definition, and NULL is how
+--    this schema spells "not applicable" throughout.
+--
+-- Postgres has no ADD CONSTRAINT IF NOT EXISTS, so the DO block below checks
+-- pg_constraint first. That keeps the schema self-applying and idempotent.
+DO $$
+DECLARE
+  c record;
+BEGIN
+  FOR c IN
+    SELECT * FROM (VALUES
+      ('ai_scans', 'ai_scans_verdict_chk',
+       'verdict IN (''BUY'',''CONSIDER'',''CAUTION'',''AVOID'',''UNKNOWN'')'),
+      ('ai_scans', 'ai_scans_verdict_base_chk',
+       'verdict_base IN (''BUY'',''CONSIDER'',''CAUTION'',''AVOID'',''UNKNOWN'')'),
+      ('ai_scans', 'ai_scans_primary_concern_chk',
+       'primary_concern IN (''labor'',''boycott'',''animal_welfare'',''eco'')'),
+      ('ai_scans', 'ai_scans_bought_chk',
+       'bought IN (''YES'',''NO'')'),
+      ('ai_scans', 'ai_scans_source_chk',
+       'source IN (''scan'',''decision'',''swap_click'',''chatgpt/analyze-product'')'),
+      ('ai_scans', 'ai_scans_swap_gap_reason_chk',
+       'swap_gap_reason IN (''no_candidate_in_catalog'',''wrong_concern'',''failed_clean'',''not_sold_here'')'),
+      ('ai_scans', 'ai_scans_dwell_ms_chk',
+       'dwell_ms >= 0 AND dwell_ms <= 600000'),
+      ('community_flags', 'community_flags_status_chk',
+       'status IN (''pending_review'',''approved'',''rejected'')'),
+      ('community_flags', 'community_flags_severity_chk',
+       'severity IN (''critical'',''high'',''medium'',''low'')')
+    ) AS t(tbl, name, expr)
+  LOOP
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_constraint
+       WHERE conname = c.name AND conrelid = c.tbl::regclass
+    ) THEN
+      BEGIN
+        EXECUTE format('ALTER TABLE %I ADD CONSTRAINT %I CHECK (%s) NOT VALID', c.tbl, c.name, c.expr);
+      EXCEPTION
+        WHEN duplicate_object THEN NULL;  -- lost a race with another booting instance
+      END;
+    END IF;
+  END LOOP;
+END $$;
 `;
 
 /**
