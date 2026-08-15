@@ -18,6 +18,8 @@ import {
   beginScanEvent, getScanEventId, getDwellMs, getSwapEngagement,
   markSwapShown, markSwapClicked, MAX_DWELL_MS,
 } from "@/utils/scanSession";
+// @ts-expect-error — server-side JS module, no type declarations
+import { imageData } from "../../db/scanStore.js";
 
 function makeProduct(over: Partial<OpenFoodFactsResult>): OpenFoodFactsResult {
   return {
@@ -142,6 +144,51 @@ describe("scanSession", () => {
   it("reports nulls rather than false when there is no live event", () => {
     // false would mean "we looked and it didn't happen"; null means "we don't know".
     expect(getSwapEngagement("nope")).toEqual({ swapShown: null, swapClicked: null });
+  });
+});
+
+// ── image validation ─────────────────────────────────────────────────────────
+
+describe("imageData", () => {
+  // A real 1x1 JPEG, so the happy path is tested against actual bytes rather
+  // than something hand-assembled to satisfy the check.
+  const JPEG_1PX =
+    "/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0a" +
+    "HBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAALCAABAAEBAREA/8QAFAABAAAAAAAA" +
+    "AAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8AKp//2Q==";
+
+  it("accepts a real JPEG, with or without the data: prefix", () => {
+    expect(imageData(JPEG_1PX)).toBe(JPEG_1PX);
+    expect(imageData(`data:image/jpeg;base64,${JPEG_1PX}`)).toBe(JPEG_1PX);
+  });
+
+  it("accepts line-wrapped base64", () => {
+    const wrapped = JPEG_1PX.match(/.{1,76}/g)!.join("\n");
+    expect(imageData(wrapped)).toBe(JPEG_1PX);
+  });
+
+  it("rejects a PNG — right shape, wrong format", () => {
+    // PNG magic is 89 50 4E 47. Long enough to pass any length check.
+    const png = Buffer.from("89504e470d0a1a0a" + "00".repeat(200), "hex").toString("base64");
+    expect(imageData(png)).toBeNull();
+  });
+
+  it("rejects text that merely looks like base64", () => {
+    // This is the case a length-only check waves through.
+    const text = Buffer.from("this is not an image, it is a sentence".repeat(20)).toString("base64");
+    expect(imageData(text)).toBeNull();
+  });
+
+  it("rejects non-base64 characters instead of letting Buffer silently drop them", () => {
+    expect(imageData("!!!!" + JPEG_1PX)).toBeNull();
+    expect(imageData("<script>alert(1)</script>")).toBeNull();
+  });
+
+  it("still rejects empty, oversized and non-string input", () => {
+    expect(imageData("")).toBeNull();
+    expect(imageData(null)).toBeNull();
+    expect(imageData(123)).toBeNull();
+    expect(imageData("/9j/" + "A".repeat(3_000_001))).toBeNull();
   });
 });
 

@@ -229,14 +229,39 @@ const SWAP_GAP_REASONS = new Set([
 ]);
 const PRIORITY_KEYS = ['environment', 'laborRights', 'animalWelfare', 'nutrition'];
 
-// Accept a scanned photo as base64. Strips any `data:image/...;base64,` prefix
-// and caps length so a runaway payload can never bloat a row. Returns clean
-// base64 (no prefix) or null. Caller (client) already downscales to ~512px.
-function imageData(s) {
+// Exported for src/test/scanTelemetry.test.ts — it's a pure sanitiser, and the
+// rejection rules are worth pinning down.
+//
+// Accept a scanned photo as base64. Strips any `data:image/...;base64,` prefix,
+// caps length, and — importantly — checks the bytes are actually a JPEG.
+//
+// A length check alone accepts any base64-ish blob of the right size: a text
+// file, a JSON payload, someone else's binary. This column is read back by the
+// miss-corpus tooling and rendered in the admin view, so "it was the right
+// length" is not a strong enough claim about what's in it.
+//
+// Returns clean base64 (no prefix) or null. Every capture path in the client
+// (BarcodeScannerOverlay, ShelfScan, the OCR pipeline) encodes image/jpeg, so
+// anything that isn't one is a bug or an abuse.
+export function imageData(s) {
   if (typeof s !== 'string') return null;
-  const b64 = (s.includes(',') ? s.slice(s.indexOf(',') + 1) : s).trim();
+  // Strip the data: prefix, then any whitespace — MIME base64 is line-wrapped
+  // at 76 chars and we'd rather accept that than reject a valid photo.
+  const b64 = (s.includes(',') ? s.slice(s.indexOf(',') + 1) : s).replace(/\s+/g, '');
   // ~3M base64 chars ≈ 2.25MB decoded — generous ceiling for a 512px JPEG.
   if (!b64 || b64.length > 3_000_000) return null;
+  // Reject anything that isn't valid base64 before asking Buffer to decode it;
+  // Buffer.from is famously lenient and silently drops characters it dislikes.
+  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(b64)) return null;
+  // JPEG SOI + first marker: FF D8 FF. Only the first 4 base64 chars are needed
+  // to recover the first 3 bytes, so this stays O(1) on a multi-megabyte string.
+  let head;
+  try {
+    head = Buffer.from(b64.slice(0, 4), 'base64');
+  } catch {
+    return null;
+  }
+  if (head.length < 3 || head[0] !== 0xff || head[1] !== 0xd8 || head[2] !== 0xff) return null;
   return b64;
 }
 
