@@ -432,39 +432,93 @@ export function logScan(rec = {}) {
 }
 
 /**
- * Insert one user-submitted community flag into Postgres. Fire-and-forget; the
- * JSONL file remains the on-disk backup. Idempotent on id.
+ * Insert one user-submitted community flag into Postgres, awaitable.
+ *
+ * The request path doesn't want to wait for this (see logCommunityFlag below),
+ * but scripts/reconcile-community-flags.mjs does — it needs to know whether each
+ * row actually landed. Both go through THIS function so the replay path can
+ * never drift from the live path: same columns, same clamps, same conflict rule.
+ *
+ * @param {object} record the same record written to community-flags.jsonl
+ * @returns {Promise<boolean>} true if a row was inserted, false if the id already existed
+ */
+export async function insertCommunityFlag(record = {}) {
+  if (!ready || !pool) throw new Error('scanStore is not connected');
+  const sub = record.submission || {};
+  const res = await pool.query(
+    `INSERT INTO community_flags
+       (id, status, brand_name, category, severity, summary, sources,
+        submitter_email, meets_sourcing_bar, ip_hash, submitted_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9,$10,$11)
+     ON CONFLICT (id) DO NOTHING
+     RETURNING id`,
+    [
+      clip(record.id, 64),
+      clip(record.status, 32) || 'pending_review',
+      clip(sub.brandName, 80),
+      clip(sub.category, 64),
+      clip(sub.severity, 32),
+      clip(sub.summary, 300),
+      sub.sources != null ? JSON.stringify(sub.sources) : null,
+      clip(sub.submitterEmail, 200),
+      typeof record.meetsSourcingBar === 'boolean' ? record.meetsSourcingBar : null,
+      clip(record.ipHash, 128),
+      record.submittedAt || new Date().toISOString(),
+    ],
+  );
+  return res.rowCount > 0;
+}
+
+/**
+ * Fire-and-forget wrapper for the request path. The JSONL file remains the
+ * on-disk source of truth; this is the queryable copy. Idempotent on id.
  *
  * @param {object} record the same record written to community-flags.jsonl
  */
 export function logCommunityFlag(record = {}) {
   if (!ready || !pool) return;
-  try {
-    const sub = record.submission || {};
-    pool
-      .query(
-        `INSERT INTO community_flags
-           (id, status, brand_name, category, severity, summary, sources,
-            submitter_email, meets_sourcing_bar, ip_hash, submitted_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9,$10,$11)
-         ON CONFLICT (id) DO NOTHING`,
-        [
-          clip(record.id, 64),
-          clip(record.status, 32) || 'pending_review',
-          clip(sub.brandName, 80),
-          clip(sub.category, 64),
-          clip(sub.severity, 32),
-          clip(sub.summary, 300),
-          sub.sources != null ? JSON.stringify(sub.sources) : null,
-          clip(sub.submitterEmail, 200),
-          typeof record.meetsSourcingBar === 'boolean' ? record.meetsSourcingBar : null,
-          clip(record.ipHash, 128),
-          record.submittedAt || new Date().toISOString(),
-        ],
-      )
-      .catch((e) => console.error('scanStore: community flag insert failed —', e.message));
-  } catch (e) {
-    console.error('scanStore: logCommunityFlag error —', e.message);
+  insertCommunityFlag(record).catch((e) =>
+    console.error('scanStore: community flag insert failed —', e.message),
+  );
+}
+
+/**
+ * Every community flag Postgres currently holds, for drift comparison against
+ * the JSONL. Read-only.
+ *
+ * @returns {Promise<Array<{id: string, status: string, brand_name: string, moderated_at: Date|null}>>}
+ */
+export async function listCommunityFlags() {
+  if (!ready || !pool) throw new Error('scanStore is not connected');
+  const res = await pool.query(
+    `SELECT id, status, brand_name, moderated_at FROM community_flags ORDER BY submitted_at`,
+  );
+  return res.rows;
+}
+
+/**
+ * Awaitable status update, for the reconciliation script. The request path uses
+ * the fire-and-forget updateCommunityFlagStatus() below.
+ *
+ * @returns {Promise<boolean>} true if a row was actually updated
+ */
+export async function setCommunityFlagStatus(id, status, note) {
+  if (!ready || !pool) throw new Error('scanStore is not connected');
+  const res = await pool.query(
+    `UPDATE community_flags
+        SET status = $2, moderator_note = $3, moderated_at = now()
+      WHERE id = $1`,
+    [clip(id, 64), clip(status, 32), note != null ? clip(note, 500) : null],
+  );
+  return res.rowCount > 0;
+}
+
+/** Close the pool so a one-shot script can exit instead of hanging on it. */
+export async function closeScanStore() {
+  if (pool) {
+    await pool.end();
+    pool = null;
+    ready = false;
   }
 }
 
@@ -474,16 +528,7 @@ export function logCommunityFlag(record = {}) {
  */
 export function updateCommunityFlagStatus(id, status, note) {
   if (!ready || !pool) return;
-  try {
-    pool
-      .query(
-        `UPDATE community_flags
-            SET status = $2, moderator_note = $3, moderated_at = now()
-          WHERE id = $1`,
-        [clip(id, 64), clip(status, 32), note != null ? clip(note, 500) : null],
-      )
-      .catch((e) => console.error('scanStore: community flag update failed —', e.message));
-  } catch (e) {
-    console.error('scanStore: updateCommunityFlagStatus error —', e.message);
-  }
+  setCommunityFlagStatus(id, status, note).catch((e) =>
+    console.error('scanStore: community flag update failed —', e.message),
+  );
 }
