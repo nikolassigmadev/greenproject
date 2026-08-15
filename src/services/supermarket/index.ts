@@ -43,10 +43,56 @@ import {
 } from '@/services/baseline';
 import { primeRemoteCounts } from '@/utils/storeSightings';
 
+/** Which of the user's priorities a reason speaks to, so it can be ranked. */
+export type ReasonPillar = 'labour' | 'environment' | 'animal' | 'nutrition' | 'other';
+
 /** One line of the plain-English breakdown. No jargon, no numbers on their own. */
 export interface PlainReason {
   tone: 'good' | 'bad' | 'neutral';
   text: string;
+  pillar: ReasonPillar;
+}
+
+/**
+ * Order reasons by what this shopper actually said they care about.
+ *
+ * Someone who set labour rights to Critical and environment to Low should read
+ * the labour line first — the card only shows three before "More", so the
+ * ordering decides what most people ever see. Bad news outranks good within a
+ * pillar: a problem they care about is the single most useful thing to surface.
+ */
+export function orderReasonsByPriority(
+  reasons: PlainReason[],
+  priorities: UserPriorities,
+): PlainReason[] {
+  const weight: Record<ReasonPillar, number> = {
+    labour: priorities.laborRights,
+    environment: priorities.environment,
+    animal: priorities.animalWelfare,
+    nutrition: priorities.nutrition,
+    other: 40, // certifications and the like — mid-table, never top
+  };
+  const toneRank = { bad: 2, good: 1, neutral: 0 };
+  return [...reasons].sort((a, b) => {
+    const w = weight[b.pillar] - weight[a.pillar];
+    if (w !== 0) return w;
+    return toneRank[b.tone] - toneRank[a.tone];
+  });
+}
+
+/** The priorities a shopper has actually dialled up, strongest first. */
+export function activePriorityLabels(priorities: UserPriorities): string[] {
+  return (
+    [
+      ['Labour rights', priorities.laborRights],
+      ['Environment', priorities.environment],
+      ['Animal welfare', priorities.animalWelfare],
+      ['Nutrition', priorities.nutrition],
+    ] as const
+  )
+    .filter(([, v]) => v > 62)          // "Critical" on the 3-level scale
+    .sort((a, b) => b[1] - a[1])
+    .map(([label]) => label);
 }
 
 export interface ShelfPick {
@@ -112,18 +158,19 @@ export function buildReasons(
     out.push({
       tone: 'bad',
       text: `${n} labour ${n === 1 ? 'concern' : 'concerns'} reported against ${labour.parentCompany}`,
+      pillar: 'labour',
     });
   }
   const boycott = checkBoycott(brand);
   if (boycott) {
-    out.push({ tone: 'bad', text: `${boycott.parent} is on a consumer boycott list` });
+    out.push({ tone: 'bad', text: `${boycott.parent} is on a consumer boycott list`, pillar: 'labour' });
   }
   const welfare = checkAnimalWelfareFlag(brand);
   if (welfare.isFlagged && (welfare.severity === 'critical' || welfare.severity === 'high')) {
-    out.push({ tone: 'bad', text: 'Animal-welfare concerns reported for this company' });
+    out.push({ tone: 'bad', text: 'Animal-welfare concerns reported for this company', pillar: 'animal' });
   }
   if (!labour && !boycott) {
-    out.push({ tone: 'good', text: 'No labour or boycott flags on this brand' });
+    out.push({ tone: 'good', text: 'No labour or boycott flags on this brand', pillar: 'labour' });
   }
 
   // Certifications, spelled out rather than shown as badges only.
@@ -134,6 +181,7 @@ export function buildReasons(
       text: ethics
         ? `Independently certified — ${certifications.length} ${certifications.length === 1 ? 'scheme' : 'schemes'}`
         : `Carries ${certifications.length} ethical ${certifications.length === 1 ? 'certification' : 'certifications'}`,
+      pillar: 'other',
     });
   }
 
@@ -146,22 +194,23 @@ export function buildReasons(
         text: comparison.co2PercentBetter
           ? `Lower carbon than most ${cat} — about ${comparison.co2PercentBetter}% below average`
           : `Lower carbon than most ${cat}`,
+        pillar: 'environment',
       });
     } else if (comparison.co2SavedKg < 0) {
-      out.push({ tone: 'bad', text: `Higher carbon than the average ${cat}` });
+      out.push({ tone: 'bad', text: `Higher carbon than the average ${cat}`, pillar: 'environment' });
     } else {
-      out.push({ tone: 'neutral', text: `About average carbon for ${cat}` });
+      out.push({ tone: 'neutral', text: `About average carbon for ${cat}`, pillar: 'environment' });
     }
   } else if (product) {
-    out.push({ tone: 'neutral', text: 'No carbon data published for this one' });
+    out.push({ tone: 'neutral', text: 'No carbon data published for this one', pillar: 'environment' });
   }
 
   // Eco-score, only when it adds something the carbon line didn't.
   const grade = product?.ecoscoreGrade?.toLowerCase();
   if (grade === 'a' || grade === 'a-plus' || grade === 'b') {
-    out.push({ tone: 'good', text: `Strong environmental rating (Eco-Score ${grade.toUpperCase()})` });
+    out.push({ tone: 'good', text: `Strong environmental rating (Eco-Score ${grade.toUpperCase()})`, pillar: 'environment' });
   } else if (grade === 'e' || grade === 'd') {
-    out.push({ tone: 'bad', text: `Weak environmental rating (Eco-Score ${grade.toUpperCase()})` });
+    out.push({ tone: 'bad', text: `Weak environmental rating (Eco-Score ${grade.toUpperCase()})`, pillar: 'environment' });
   }
 
   return out;
@@ -274,7 +323,10 @@ async function cataloguePicks(
       product: s.product,
       score: scored.score,
       verdict: scored.verdict,
-      reasons: buildReasons(s.product, s.brand, s.productName, s.certifications, comparison),
+      reasons: orderReasonsByPriority(
+        buildReasons(s.product, s.brand, s.productName, s.certifications, comparison),
+        priorities,
+      ),
       availability: assessAvailability(s.product, retailer, {
         barcode: s.barcode,
         soldInMarket: s.regionAvailable || s.inMarket,
@@ -333,7 +385,7 @@ async function searchPicks(
       product: p,
       score: scored.score,
       verdict: scored.verdict,
-      reasons: buildReasons(p, brand, name, certs, null),
+      reasons: orderReasonsByPriority(buildReasons(p, brand, name, certs, null), priorities),
       availability: assessAvailability(p, retailer, {
         barcode: p.barcode,
         // A live OFF hit tells us nothing about the chain; only the country tag

@@ -19,7 +19,9 @@ import {
   normaliseStoreTag, storeTagsMatchRetailer,
 } from '@/data/retailers';
 import { assessAvailability, CONFIDENCE_RANK } from '@/services/retailers';
+import { orderReasonsByPriority, activePriorityLabels, type PlainReason } from '@/services/supermarket';
 import { COUNTRIES } from '@/utils/userRegion';
+import type { UserPriorities } from '@/utils/userPreferences';
 
 describe('retailer data', () => {
   it('has unique ids', () => {
@@ -129,6 +131,48 @@ describe('availability claims', () => {
     expect(CONFIDENCE_RANK.confirmed_here).toBeGreaterThan(CONFIDENCE_RANK.seen_at_chain);
     expect(CONFIDENCE_RANK.seen_at_chain).toBeGreaterThan(CONFIDENCE_RANK.sold_in_market);
     expect(CONFIDENCE_RANK.sold_in_market).toBeGreaterThan(CONFIDENCE_RANK.unknown);
+  });
+});
+
+describe('breakdown responds to the user’s priorities', () => {
+  const P = (o: Partial<UserPriorities>): UserPriorities =>
+    ({ environment: 50, laborRights: 50, animalWelfare: 50, nutrition: 50, ...o });
+
+  const reasons: PlainReason[] = [
+    { tone: 'good', text: 'No labour or boycott flags on this brand', pillar: 'labour' },
+    { tone: 'good', text: 'Lower carbon than most chocolate', pillar: 'environment' },
+    { tone: 'bad', text: 'Animal-welfare concerns reported', pillar: 'animal' },
+    { tone: 'good', text: 'Carries 2 ethical certifications', pillar: 'other' },
+  ];
+
+  it('leads with the pillar the shopper marked critical', () => {
+    // The card shows three lines before "More", so ordering decides what most
+    // people ever read.
+    expect(orderReasonsByPriority(reasons, P({ laborRights: 100 }))[0].pillar).toBe('labour');
+    expect(orderReasonsByPriority(reasons, P({ environment: 100 }))[0].pillar).toBe('environment');
+    expect(orderReasonsByPriority(reasons, P({ animalWelfare: 100 }))[0].pillar).toBe('animal');
+  });
+
+  it('puts bad news above good news within the same pillar', () => {
+    // A problem in something they care about is the most useful thing on screen.
+    const mixed: PlainReason[] = [
+      { tone: 'good', text: 'good env', pillar: 'environment' },
+      { tone: 'bad', text: 'bad env', pillar: 'environment' },
+    ];
+    expect(orderReasonsByPriority(mixed, P({ environment: 100 }))[0].tone).toBe('bad');
+  });
+
+  it('never drops a reason while reordering', () => {
+    const out = orderReasonsByPriority(reasons, P({ environment: 100 }));
+    expect(out).toHaveLength(reasons.length);
+    expect(new Set(out.map((r) => r.text))).toEqual(new Set(reasons.map((r) => r.text)));
+  });
+
+  it('names only the priorities actually dialled up', () => {
+    expect(activePriorityLabels(P({}))).toEqual([]);                       // all balanced
+    expect(activePriorityLabels(P({ laborRights: 100 }))).toEqual(['Labour rights']);
+    expect(activePriorityLabels(P({ laborRights: 100, environment: 100 })))
+      .toEqual(['Labour rights', 'Environment']);
   });
 });
 

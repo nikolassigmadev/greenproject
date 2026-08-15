@@ -6,6 +6,9 @@ export interface UserPriorities {
   nutrition: number;      // 0-100 weight
 }
 
+/** Fired whenever priorities are saved, so open views can re-rank. */
+export const PRIORITIES_EVENT = 'prioritiesUpdated';
+
 export const DEFAULT_PRIORITIES: UserPriorities = {
   environment: 50,
   laborRights: 50,
@@ -78,7 +81,7 @@ export const savePriorities = (priorities: UserPriorities): void => {
   try {
     localStorage.setItem(PRIORITIES_KEY, JSON.stringify(priorities));
     localStorage.setItem(PRIORITIES_SET_KEY, 'true');
-    window.dispatchEvent(new Event('prioritiesUpdated'));
+    window.dispatchEvent(new Event(PRIORITIES_EVENT));
   } catch (error) {
     console.error('Failed to save priorities:', error);
   }
