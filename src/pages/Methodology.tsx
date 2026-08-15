@@ -3,7 +3,7 @@ import { getMostRecentVerifiedDate } from "@/services/brandFlags";
 import { getVerifiedFlags } from "@/data/brandFlags.v2";
 import {
   Shield, FileText, AlertTriangle, Info,
-  Scale, Database, ExternalLink, GitBranch, Sparkles,
+  Scale, Database, ExternalLink, GitBranch, Sparkles, Store,
 } from "lucide-react";
 import { BackButton } from "@/components/BackButton";
 import { DS } from "@/styles/design-tokens";
@@ -342,8 +342,53 @@ export default function Methodology() {
           </div>
         </Section>
 
-        {/* 06 — What We Don't Do */}
-        <Section icon={Info} iconColor={DS.muted} number="06" title="What We Don't Do">
+        {/* 06 — Supermarket availability */}
+        <Section icon={Store} iconColor={DS.muted} number="06" title="What “Available Here” Means">
+          <p style={{ fontSize: "0.82rem", color: DS.muted, lineHeight: 1.6, marginBottom: 14 }}>
+            The shop feature ranks products by how likely a chain is to carry them. It is not stock
+            information, and it cannot be: no supermarket publishes live inventory that we may
+            lawfully use, and scraping their sites would breach both their terms and, in the UK and
+            EU, their database rights. So we say what we actually know, on a ladder.
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
+            {[
+              { t: "Seen at [chain]", d: "Another shopper confirmed seeing it there in the last six months. Confirmations expire, because a shelf from two years ago tells you nothing." },
+              { t: "Listed at [chain]", d: "Open Food Facts records the product as sold by that chain. The entry has no date and no branch — it means the chain carries it, not that it's there today." },
+              { t: "Sold in your country", d: "The brand trades in your market, but we have nothing linking it to that chain specifically." },
+              { t: "Availability unknown", d: "No signal at all. Shown as-is rather than hidden, so a gap in our data doesn't look like a judgement." },
+            ].map((row) => (
+              <div key={row.t} style={{ padding: "10px 12px", borderRadius: 10, background: DS.bg }}>
+                <p style={{ fontSize: "0.78rem", fontWeight: 700, color: DS.ink, marginBottom: 2 }}>{row.t}</p>
+                <p style={{ fontSize: "0.75rem", color: DS.muted, lineHeight: 1.55 }}>{row.d}</p>
+              </div>
+            ))}
+          </div>
+          <p style={{ fontSize: "0.82rem", fontWeight: 700, color: DS.ink, marginBottom: 6 }}>
+            Comparisons
+          </p>
+          <p style={{ fontSize: "0.78rem", color: DS.muted, lineHeight: 1.6, marginBottom: 12 }}>
+            When we say a pick is better, it is measured against the average for that category as
+            sold in your country, sampled from Open Food Facts. The sample size and date appear next
+            to every figure. Where a market has too few products to average — which is common outside
+            western Europe — we fall back to the global average and say so rather than quietly
+            comparing your local shelf to someone else's. Carbon numbers are Agribalyse life-cycle
+            estimates for a <em>type</em> of product, not measurements of an individual item.
+          </p>
+          <div style={{
+            borderRadius: 10, background: DS.warnBg, border: `1px solid ${DS.warn}`,
+            padding: "12px 14px",
+          }}>
+            <p style={{ fontSize: "0.78rem", color: ORANGE, lineHeight: 1.6, fontWeight: 500 }}>
+              We have no relationship with any retailer named in this app. We use shop names only so
+              you can tell us which shop you're in. Our ethical flags concern the companies that{" "}
+              <span style={{ fontWeight: 700 }}>make</span> products, never the shops that sell them —
+              we make no claim about any retailer's own conduct or buying standards.
+            </p>
+          </div>
+        </Section>
+
+        {/* 07 — What We Don't Do */}
+        <Section icon={Info} iconColor={DS.muted} number="07" title="What We Don't Do">
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             {[
               "Include brand flags without at least one source that meets the tier bar.",
@@ -364,7 +409,7 @@ export default function Methodology() {
         </Section>
 
         {/* 07 — Database Status */}
-        <Section icon={Database} iconColor={ACCENT} number="07" title="Database Status">
+        <Section icon={Database} iconColor={ACCENT} number="08" title="Database Status">
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             {[
               { label: "Last Verified", value: lastUpdate ? lastUpdate.slice(0, 10) : "—", color: GREEN },

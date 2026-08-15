@@ -25,6 +25,7 @@ import { createRequire } from 'module';
 import {
   initScanStore, logScan, scanStoreReady, logCommunityFlag, updateCommunityFlagStatus,
   countScansForAnonId, deleteScansForAnonId,
+  recordStoreSighting, getStoreSightingCounts,
 } from './db/scanStore.js';
 
 console.log('server.js: imports loaded');
@@ -241,6 +242,7 @@ const JSON_PARSER_OVERRIDES = [
   '/api/admin/push/trigger-demo',
   '/api/scans',
   '/api/client-errors',
+  '/api/store-sightings',
 ];
 const hasOwnJsonParser = (path) =>
   JSON_PARSER_OVERRIDES.some((p) => (p.endsWith('/') ? path.startsWith(p) : path === p));
@@ -2177,6 +2179,60 @@ app.get('/api/admin/scans', requireAdmin, (req, res) => {
   } catch (e) {
     console.error('scan query error:', e.message);
     res.status(500).json({ success: false, error: 'Failed to query scans' });
+  }
+});
+
+// ── Store sightings ──
+// "I saw this product at this chain." The only per-chain availability signal we
+// can build honestly, since no retailer publishes inventory we may lawfully
+// use. Deliberately narrow: product + chain + country, keyed to the same
+// anonymous device id the scan log already uses. No GPS, no branch, no name.
+
+const sightingLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many sightings - slow down' },
+});
+
+app.post('/api/store-sightings', sightingLimiter, smallBody, async (req, res) => {
+  try {
+    const { anonId, barcode, retailerId, countryCode, city } = req.body || {};
+    if (!anonId || !barcode || !retailerId) {
+      return res.status(400).json({ success: false, error: 'anonId, barcode and retailerId are required' });
+    }
+    if (!scanStoreReady()) {
+      // Not an error the user should see: their local copy still counts, and
+      // the sighting is a nice-to-have, not part of the purchase flow.
+      return res.json({ success: true, stored: false });
+    }
+    await recordStoreSighting({ anonId, barcode, retailerId, countryCode, city });
+    res.json({ success: true, stored: true });
+  } catch (e) {
+    console.error('store sighting error:', e.message);
+    res.status(500).json({ success: false, error: 'Failed to record sighting' });
+  }
+});
+
+/**
+ * GET /api/store-sightings?retailerId=&barcodes=a,b,c
+ * Public read: how many distinct devices confirmed each product at this chain.
+ * Counts only, never who reported them.
+ */
+app.get('/api/store-sightings', sightingLimiter, async (req, res) => {
+  try {
+    const retailerId = typeof req.query.retailerId === 'string' ? req.query.retailerId : '';
+    const barcodes = typeof req.query.barcodes === 'string' ? req.query.barcodes.split(',') : [];
+    if (!retailerId || barcodes.length === 0) {
+      return res.status(400).json({ success: false, error: 'retailerId and barcodes are required' });
+    }
+    if (!scanStoreReady()) return res.json({ success: true, counts: [] });
+    const counts = await getStoreSightingCounts(retailerId, barcodes);
+    res.json({ success: true, counts });
+  } catch (e) {
+    console.error('store sighting read error:', e.message);
+    res.status(500).json({ success: false, error: 'Failed to read sightings' });
   }
 });
 

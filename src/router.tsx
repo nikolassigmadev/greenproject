@@ -17,6 +17,7 @@ const ProductDetail = lazy(() => import("./pages/ProductDetail"));
 const OpenFoodFactsDetail = lazy(() => import("./pages/OpenFoodFactsDetail"));
 const Database = lazy(() => import("./pages/Database"));
 const Preferences = lazy(() => import("./pages/Preferences"));
+const Supermarket = lazy(() => import("./pages/Supermarket"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const ShoppingList = lazy(() => import("./pages/ShoppingList"));
 const AboutUs = lazy(() => import("./pages/AboutUs"));
@@ -166,6 +167,10 @@ export const router = createBrowserRouter([
       {
         path: "/preferences",
         element: <Preferences />,
+      },
+      {
+        path: "/supermarket",
+        element: <Supermarket />,
       },
       {
         path: "/dashboard",

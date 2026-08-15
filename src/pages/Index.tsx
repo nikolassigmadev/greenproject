@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { ChevronRight, Camera, Leaf, Shield, BarChart3, Users, Award, Zap, CheckCircle2, AlertTriangle as AlertTriangleIcon, Search, GitCompareArrows, ScanLine, Eye, Flag, FileText } from "lucide-react";
+import { ChevronRight, Camera, Leaf, Shield, BarChart3, Users, Award, Zap, CheckCircle2, AlertTriangle as AlertTriangleIcon, Search, GitCompareArrows, ScanLine, Eye, Flag, FileText, Store } from "lucide-react";
 import { Logo, Wordmark } from "@/components/Logo";
 import { DS, scoreTone, toneColor, toneBg } from "@/styles/design-tokens";
 import { loadScanHistory, type ScanHistoryEntry } from "@/utils/userPreferences";
@@ -391,6 +391,31 @@ export default function Index() {
           </div>
         </Link>
         </div>
+
+        {/* Shop-first entry point. Scanning answers "is this one okay?"; this
+            answers "what should I put in the basket?", which is the question
+            people actually have while standing in an aisle. */}
+        <Link to="/supermarket" style={{ textDecoration: "none", display: "block", marginBottom: 28 }}>
+          <div style={{
+            background: DS.card, borderRadius: DS.radius.lg, padding: 18,
+            display: "flex", alignItems: "center", gap: 14,
+            boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04)",
+          }}>
+            <div style={{
+              width: 44, height: 44, borderRadius: 22, background: DS.goodBg,
+              display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+            }}>
+              <Store style={{ width: 21, height: 21, color: DS.good }} />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 16, fontWeight: 700, color: DS.ink }}>Shop by supermarket</div>
+              <div style={{ fontSize: 12.5, color: DS.muted, marginTop: 2 }}>
+                The cleanest picks your shop is likely to carry
+              </div>
+            </div>
+            <ChevronRight style={{ width: 18, height: 18, color: DS.muted, flexShrink: 0 }} />
+          </div>
+        </Link>
 
         {/* Returning users lead with their own history; new users see the demo. */}
         {isReturning ? (

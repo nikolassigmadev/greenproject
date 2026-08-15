@@ -163,6 +163,24 @@ CREATE TABLE IF NOT EXISTS community_flags (
 CREATE INDEX IF NOT EXISTS idx_community_flags_status ON community_flags (status);
 CREATE INDEX IF NOT EXISTS idx_community_flags_brand  ON community_flags (lower(brand_name));
 
+-- ── Store sightings ──
+-- "I saw this product at this chain." The only per-chain availability data we
+-- can honestly build, because shoppers are the only people who actually look.
+-- One row per (device, product, chain): confirming twice does not count twice,
+-- or one enthusiastic user becomes a consensus.
+CREATE TABLE IF NOT EXISTS store_sightings (
+  anon_id      TEXT NOT NULL,
+  barcode      TEXT NOT NULL,
+  retailer_id  TEXT NOT NULL,
+  country_code TEXT,
+  city         TEXT,
+  seen_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (anon_id, barcode, retailer_id)
+);
+CREATE INDEX IF NOT EXISTS idx_sightings_lookup ON store_sightings (retailer_id, barcode);
+CREATE INDEX IF NOT EXISTS idx_sightings_seen   ON store_sightings (seen_at DESC);
+ALTER TABLE store_sightings ADD COLUMN IF NOT EXISTS city TEXT;
+
 -- ── Enum constraints ──
 -- The app already filters these through oneOf() before insert. That guards the
 -- one path we control; it does not guard a hand-written UPDATE in the Supabase
@@ -569,6 +587,52 @@ export async function setCommunityFlagStatus(id, status, note) {
     [clip(id, 64), clip(status, 32), note != null ? clip(note, 500) : null],
   );
   return res.rowCount > 0;
+}
+
+/**
+ * Record one "I saw it here". Idempotent per device: re-confirming refreshes
+ * the date rather than adding a second vote.
+ */
+export async function recordStoreSighting({ anonId, barcode, retailerId, countryCode, city }) {
+  if (!ready || !pool) throw new Error('scanStore is not connected');
+  const id = clip(anonId, 64);
+  const code = clip(barcode, 64);
+  const retailer = clip(retailerId, 64);
+  if (!id || !code || !retailer) throw new Error('anonId, barcode and retailerId are required');
+  await pool.query(
+    `INSERT INTO store_sightings (anon_id, barcode, retailer_id, country_code, city)
+     VALUES ($1,$2,$3,$4,$5)
+     ON CONFLICT (anon_id, barcode, retailer_id)
+       DO UPDATE SET seen_at = now(), city = EXCLUDED.city`,
+    [id, code, retailer, clip(countryCode, 8), clip(city, 120)],
+  );
+}
+
+/**
+ * How many distinct devices have confirmed each barcode at one chain.
+ *
+ * Only counts sightings from the last 180 days. A confirmation from two years
+ * ago describes a shelf that has been reset many times since, and letting it
+ * keep voting would turn stale data into apparent consensus.
+ */
+export async function getStoreSightingCounts(retailerId, barcodes) {
+  if (!ready || !pool) throw new Error('scanStore is not connected');
+  const retailer = clip(retailerId, 64);
+  const codes = (Array.isArray(barcodes) ? barcodes : [])
+    .map((b) => clip(b, 64))
+    .filter(Boolean)
+    .slice(0, 50);
+  if (!retailer || codes.length === 0) return [];
+  const res = await pool.query(
+    `SELECT barcode, count(DISTINCT anon_id)::int AS count
+       FROM store_sightings
+      WHERE retailer_id = $1
+        AND barcode = ANY($2::text[])
+        AND seen_at > now() - interval '180 days'
+      GROUP BY barcode`,
+    [retailer, codes],
+  );
+  return res.rows;
 }
 
 /**
