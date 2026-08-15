@@ -571,6 +571,18 @@ export async function setCommunityFlagStatus(id, status, note) {
   return res.rowCount > 0;
 }
 
+/**
+ * Run a parameterised read against the scan store. For the analysis scripts in
+ * scripts/ — the server itself should use a named function above rather than
+ * hand-rolling SQL at the call site.
+ *
+ * Parameterised only: text goes in $1..$n, never interpolated into `sql`.
+ */
+export async function queryScanStore(sql, params = []) {
+  if (!ready || !pool) throw new Error('scanStore is not connected');
+  return pool.query(sql, params);
+}
+
 /** Close the pool so a one-shot script can exit instead of hanging on it. */
 export async function closeScanStore() {
   if (pool) {
