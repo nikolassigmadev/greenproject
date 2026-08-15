@@ -24,12 +24,39 @@ export function getAnonId(): string {
   }
 }
 
-/** Opt-out toggle (no UI yet, but honoured if a user sets it). */
+/** Fires when the opt-out changes, so any mounted toggle stays in sync. */
+export const SCAN_LOGGING_EVENT = "scanLoggingChanged";
+
+/**
+ * Has this user turned off anonymous scan logging?
+ *
+ * Checked at the top of every logScan() call, so it gates every write path
+ * without each caller having to remember. Exposed in the UI at
+ * Preferences → "Anonymous scan data".
+ */
 export function isScanLoggingOptedOut(): boolean {
   try {
     return localStorage.getItem(OPTOUT_KEY) === "true";
   } catch {
     return false;
+  }
+}
+
+/**
+ * Turn anonymous scan logging on or off. Takes effect immediately — the next
+ * logScan() call returns without sending anything.
+ *
+ * This only stops FUTURE writes. Rows already recorded are removed via
+ * DELETE /api/admin/scans/:anonId, which is why the settings card shows the
+ * anonymous id: it's the only handle a user has on their own data.
+ */
+export function setScanLoggingOptedOut(optedOut: boolean): void {
+  try {
+    if (optedOut) localStorage.setItem(OPTOUT_KEY, "true");
+    else localStorage.removeItem(OPTOUT_KEY);
+    window.dispatchEvent(new Event(SCAN_LOGGING_EVENT));
+  } catch {
+    // storage disabled (private mode) — nothing is being logged anyway
   }
 }
 

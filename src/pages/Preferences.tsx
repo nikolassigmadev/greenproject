@@ -9,6 +9,7 @@ import { DS } from "@/styles/design-tokens";
 import { RegionPicker } from "@/components/RegionPicker";
 import { WatchlistEditor } from "@/components/WatchlistEditor";
 import { DietaryEditor } from "@/components/DietaryEditor";
+import { ScanLoggingCard } from "@/components/ScanLoggingCard";
 import { toast } from "sonner";
 
 // Three discrete weights (0–100). The label + effect line do the explaining so
@@ -312,6 +313,10 @@ export default function Preferences() {
             <div style={{ fontSize: 11.5, color: DS.muted, marginBottom: 14 }}>Pick your theme</div>
             <ThemeToggle />
           </div>
+
+          {/* Anonymous scan logging — honoured by logScan() since it was built,
+              but until now there was no way for a user to reach it. */}
+          <ScanLoggingCard />
 
           {/* Backup — everything lives on this device only, so give users a
               way off the island (new phone, cleared browser data). */}
