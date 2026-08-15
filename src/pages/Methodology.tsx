@@ -3,7 +3,7 @@ import { getMostRecentVerifiedDate } from "@/services/brandFlags";
 import { getVerifiedFlags } from "@/data/brandFlags.v2";
 import {
   Shield, FileText, AlertTriangle, Info,
-  Scale, Database, ExternalLink, GitBranch,
+  Scale, Database, ExternalLink, GitBranch, Sparkles,
 } from "lucide-react";
 import { BackButton } from "@/components/BackButton";
 import { DS } from "@/styles/design-tokens";
@@ -277,8 +277,73 @@ export default function Methodology() {
           </p>
         </Section>
 
-        {/* 05 — What We Don't Do */}
-        <Section icon={Info} iconColor={DS.muted} number="05" title="What We Don't Do">
+        {/* 05 — Where AI Is Used */}
+        <Section icon={Sparkles} iconColor={DS.muted} number="05" title="Where AI Is Used">
+          <p style={{ fontSize: "0.82rem", color: DS.muted, lineHeight: 1.6, marginBottom: 14 }}>
+            This page used to describe the tier system and stop there, which left out that a second,
+            completely different mechanism produces a large share of what the app shows you.
+          </p>
+
+          <div style={{
+            borderRadius: 12, background: DS.bg, padding: "14px 16px",
+            border: `2px dashed ${DS.hair}`, marginBottom: 12,
+          }}>
+            <p style={{ fontSize: "0.82rem", fontWeight: 700, color: DS.ink, marginBottom: 6 }}>
+              The model: OpenAI GPT-4o-mini
+            </p>
+            <p style={{ fontSize: "0.78rem", color: DS.muted, lineHeight: 1.6, marginBottom: 8 }}>
+              When you scan a product we have no verified data for, we ask GPT-4o-mini to analyse it
+              from its training knowledge. It returns a labour-risk level, A–E scores for environment
+              and nutrition, certifications and suggested alternatives.
+            </p>
+            <p style={{ fontSize: "0.78rem", color: DS.muted, lineHeight: 1.6 }}>
+              <span style={{ fontWeight: 700, color: DS.ink }}>None of it is cited.</span>{" "}
+              The model cannot tell us where any particular claim came from, and it can be
+              confidently wrong. It also rates its own confidence — that number is the model's
+              opinion of itself, not a measure of whether it is right.
+            </p>
+          </div>
+
+          <p style={{ fontSize: "0.82rem", fontWeight: 700, color: DS.ink, marginBottom: 8 }}>
+            How to tell them apart
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
+            {[
+              {
+                what: "Sourced flags",
+                how: "Solid card, a severity heading, and a \"View sources\" link that opens a list of documents you can go and read.",
+              },
+              {
+                what: "AI estimates",
+                how: "A dashed card headed \"AI estimate — not source-verified\", shown above the result rather than beneath it. No green confidence badge, and never the same badge component as a verified flag.",
+              },
+            ].map((row) => (
+              <div key={row.what} style={{
+                display: "flex", gap: 10, padding: "10px 12px",
+                borderRadius: 10, background: DS.bg,
+              }}>
+                <div>
+                  <p style={{ fontSize: "0.78rem", fontWeight: 700, color: DS.ink, marginBottom: 2 }}>{row.what}</p>
+                  <p style={{ fontSize: "0.75rem", color: DS.muted, lineHeight: 1.55 }}>{row.how}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{
+            borderRadius: 10, background: DS.warnBg, border: `1px solid ${DS.warn}`,
+            padding: "12px 14px",
+          }}>
+            <p style={{ fontSize: "0.78rem", color: ORANGE, lineHeight: 1.6, fontWeight: 500 }}>
+              Coverage is {totalVerified} verified brands. That is a small number against a
+              supermarket. Everything outside it falls through to the AI path — so for most products
+              you scan, what you are reading is an estimate, not a sourced finding.
+            </p>
+          </div>
+        </Section>
+
+        {/* 06 — What We Don't Do */}
+        <Section icon={Info} iconColor={DS.muted} number="06" title="What We Don't Do">
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             {[
               "Include brand flags without at least one source that meets the tier bar.",
@@ -298,8 +363,8 @@ export default function Methodology() {
           </div>
         </Section>
 
-        {/* 06 — Database Status */}
-        <Section icon={Database} iconColor={ACCENT} number="06" title="Database Status">
+        {/* 07 — Database Status */}
+        <Section icon={Database} iconColor={ACCENT} number="07" title="Database Status">
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             {[
               { label: "Last Verified", value: lastUpdate ? lastUpdate.slice(0, 10) : "—", color: GREEN },

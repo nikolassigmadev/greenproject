@@ -5,6 +5,7 @@ import { BackButton } from "@/components/BackButton";
 import { buildAppContext, buildContextBrief } from "@/utils/appContext";
 import { getAnonId } from "@/utils/scanLogger";
 import { loadRegion } from "@/utils/userRegion";
+import { AiEstimateBanner } from "@/components/AiEstimateBanner";
 import {
   Search, Camera, Loader2, Leaf, Users, Heart, Apple,
   ShieldCheck, Sparkles, AlertTriangle, ChevronRight,
@@ -319,10 +320,15 @@ export default function ChatGPTScan() {
         {r && !loading && (
           <div style={{ padding: "0 16px", display: "flex", flexDirection: "column", gap: 12 }}>
 
+            {/* Everything on this screen came from a language model with no
+                citations. It says so BEFORE any of it is shown — a disclosure
+                placed under the result is one most people scroll past. */}
+            <AiEstimateBanner confidence={r.confidence} disclaimer={r.disclaimer} />
+
             {/* Product Hero Card */}
             <div style={{
               background: DS.card, borderRadius: 22, padding: "22px 20px",
-              border: `1px solid ${DS.hair}`,
+              border: `1px dashed ${DS.hair}`,
               opacity: mounted ? 1 : 0, transform: mounted ? "translateY(0)" : "translateY(12px)",
               transition: "all 0.5s cubic-bezier(0.16,1,0.3,1)",
             }}>
@@ -341,10 +347,13 @@ export default function ChatGPTScan() {
                     <Pill bg={scoreColor(r.overallScore).bg} fg={scoreColor(r.overallScore).fg}>
                       Score {r.overallScore}
                     </Pill>
-                    <Pill bg={r.confidence === "high" ? DS.goodBg : r.confidence === "medium" ? DS.warnBg : DS.badBg}
-                          fg={r.confidence === "high" ? DS.good : r.confidence === "medium" ? DS.warn : DS.bad}>
-                      <ShieldCheck size={10} />{r.confidence}
-                    </Pill>
+                    {/* Was a green ShieldCheck "high confidence" pill — the same
+                        badge language the app uses for a US DOL finding, applied
+                        to a model's opinion of itself. The more confident the
+                        model sounded, the more verified it looked. The model's
+                        self-report now appears in the banner above, described as
+                        exactly that. */}
+                    <AiEstimateBanner compact />
                   </div>
                 </div>
               </div>
