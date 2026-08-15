@@ -3,7 +3,7 @@
  * Local viewer for the scan-analytics database (data/scans.db).
  *
  * Two private ways to see scans (both gated to you only):
- *   1. scripts/pull-scans.sh — downloads the report over HTTPS using your admin
+ *   1. scripts/pull-sqlite-counts.sh — downloads the report over HTTPS using your admin
  *      password (works from your Mac, no SSH). Use this for the LIVE server.
  *   2. this script — reads a local data/scans.db file directly (handy for local
  *      testing, or after you SFTP the production DB down).

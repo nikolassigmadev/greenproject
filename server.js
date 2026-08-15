@@ -2131,8 +2131,11 @@ app.get('/api/admin/client-errors', requireAdmin, (req, res) => {
 /**
  * GET /api/admin/scans?q=&limit= — admin-gated (admin password only, same as
  * the OpenAI logs and flag submissions). Returns totals + most-scanned
- * products (grouped by barcode, falling back to name). Read privately via
- * scripts/pull-scans.sh. Read-only: never deletes or mutates any scan.
+ * products (grouped by barcode, falling back to name) from the lightweight
+ * SQLite COUNTER — not the rich Postgres log. Verdicts, decisions, priorities,
+ * swap signals and dwell live in ai_scans and are not exposed here.
+ * Read privately via scripts/pull-sqlite-counts.sh.
+ * Read-only: never deletes or mutates any scan.
  */
 app.get('/api/admin/scans', requireAdmin, (req, res) => {
   if (!scanDb) return res.status(503).json({ success: false, error: 'Scan DB unavailable' });

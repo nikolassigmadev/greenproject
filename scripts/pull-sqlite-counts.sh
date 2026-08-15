@@ -1,11 +1,20 @@
 #!/usr/bin/env bash
-# pull-scans.sh
-# Downloads the most-scanned-products report from goodscan.shop to ~/Downloads.
-# This is the private, admin-password-gated way to see every product users scan.
-# Usage:  ./scripts/pull-scans.sh
-# Search:          Q="coffee" ./scripts/pull-scans.sh
-# More rows:       LIMIT=2000 ./scripts/pull-scans.sh
-# Override server: BACKEND=http://localhost:3001 ./scripts/pull-scans.sh
+# pull-sqlite-counts.sh
+# Downloads the most-scanned-products COUNTER from goodscan.shop to ~/Downloads.
+#
+# This reads the lightweight SQLite tally (data/scans.db) — one aggregated row
+# per product, with a scan count. It is NOT the rich log: verdicts, decisions,
+# priorities, swap signals, dwell and the scanned photos all live in Postgres
+# (ai_scans) and none of them appear here.
+#
+# The old name (pull-scans.sh) invited exactly that confusion, which is how
+# someone eventually answers a question about user behaviour with a popularity
+# counter. For the rich log, query ai_scans directly — see db/schema.sql.
+#
+# Usage:  ./scripts/pull-sqlite-counts.sh
+# Search:          Q="coffee" ./scripts/pull-sqlite-counts.sh
+# More rows:       LIMIT=2000 ./scripts/pull-sqlite-counts.sh
+# Override server: BACKEND=http://localhost:3001 ./scripts/pull-sqlite-counts.sh
 
 set -e
 
