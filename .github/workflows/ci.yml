@@ -28,5 +28,14 @@ jobs:
       - name: Unit tests
         run: npx vitest run
 
+      # Offline mode only. The homepage check is deterministic and is the one
+      # that must never regress — citing an organisation's front page next to a
+      # specific allegation is a failure this repo already shipped once.
+      # Liveness depends on other people's servers and would flake the build for
+      # reasons that aren't ours; run the full audit by hand before publishing:
+      #   npx tsx scripts/verify-sources.ts --csv docs/source-audit.csv
+      - name: Source citations point at documents, not homepages
+        run: npx tsx scripts/verify-sources.ts --offline
+
       - name: Build
         run: npx vite build

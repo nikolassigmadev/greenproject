@@ -402,7 +402,9 @@ const SEAFOOD: CommodityCompany[] = [
     certifications: 'MSC (some), Dolphin Safe, ProSea',
     greenwashRisk: 'Medium',
     claimsVsReality: 'Most-reformed major after 2015 scandal; reforms real but Asian supply risk persists',
-    sourceUrl: 'https://www.thaiunion.com/en/blog/sustainability/545/tackling-slavery-at-sea',
+    // Thai Union removed the original post; cited via the Internet Archive so the
+    // document a reader is asked to check still exists.
+    sourceUrl: 'https://web.archive.org/web/20211026025651/https://www.thaiunion.com/en/blog/sustainability/545/tackling-slavery-at-sea',
     dataQuality: 'Corroborated',
   },
   {

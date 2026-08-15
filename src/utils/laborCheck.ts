@@ -16,13 +16,16 @@ export interface LaborAllegation {
   year: string;
 }
 
-interface BrandLaborRecord {
+export interface BrandLaborRecord {
   brandPattern: RegExp;
   parentCompany: string;
   allegations: LaborAllegation[];
 }
 
-const LABOR_DATABASE: BrandLaborRecord[] = [
+// Exported so scripts/verify-sources.ts can audit every sourceUrl in here, and
+// so the cross-dataset reconciliation test can compare it against brandFlags.v2
+// without keeping a second copy of the list.
+export const LABOR_DATABASE: BrandLaborRecord[] = [
   {
     // Nestlé + all sub-brands / product lines
     brandPattern: /nestl[eé]|nestle\s*(s\.?a\.?|corp|company|group)?|kit\s?kat|nescaf[eé]|maggi|nespresso|cheerios|gerber|purina|perrier|san pellegrino|häagen.?dazs|dreyer'?s?|edy'?s?|stouffer'?s?|lean cuisine|lean pocket|hot pocket|digiorno|tombstone|buitoni|carnation|coffee.?mate|milo|nesquik|butterfinger|baby ruth|raisinets|sno.?cap|after eight|smarties|aero|lion bar|polo mint|quality street|rowntree|cailler|toll.?house|powerbar|boost|resource|optifast|novasource|gerber|jenny craig/i,
@@ -30,7 +33,7 @@ const LABOR_DATABASE: BrandLaborRecord[] = [
     allegations: [
       { issue: "Child Labor in Cocoa Supply Chain", details: "Nestlé has faced ongoing lawsuits and reports regarding child labor in cocoa farms in Côte d'Ivoire and Ghana. A 2020 University of Chicago study found 1.56 million children working in cocoa production in these countries.", source: "U.S. Department of Labor", sourceUrl: "https://www.dol.gov/agencies/ilab/reports/child-labor/list-of-goods", year: "2020" },
       { issue: "Forced Labor in Thai Fishing Industry", details: "Nestlé's own internal investigation found forced labor in its Thai seafood supply chain, including workers being held against their will on fishing boats.", source: "Associated Press Investigation", sourceUrl: "https://www.ap.org/explore/seafood-from-slaves/", year: "2015" },
-      { issue: "Coffee Supply Chain Labor Abuses", details: "Reports have linked Nestlé's coffee supply chain to forced labor conditions on Brazilian coffee farms.", source: "Danwatch Investigation", sourceUrl: "https://danwatch.dk/en/", year: "2016" },
+      { issue: "Coffee Supply Chain Labor Abuses", details: "Reports have linked Nestlé's coffee supply chain to forced labor conditions on Brazilian coffee farms.", source: "Danwatch — Bitter Coffee", sourceUrl: "https://old.danwatch.dk/en/undersogelse/bitter-kaffe/", year: "2016" },
     ],
   },
   {
@@ -39,7 +42,7 @@ const LABOR_DATABASE: BrandLaborRecord[] = [
     parentCompany: "The Coca-Cola Company",
     allegations: [
       { issue: "Sugar Supply Chain Child Labor", details: "Coca-Cola's sugar supply chain has been linked to child labor in sugarcane fields in countries including the Philippines, El Salvador, and Brazil.", source: "U.S. Department of Labor", sourceUrl: "https://www.dol.gov/agencies/ilab/reports/child-labor/list-of-goods", year: "2018" },
-      { issue: "Labor Rights Violations in Colombia", details: "Reports of violence against union workers at Coca-Cola bottling plants in Colombia, including threats and killings of labor organizers.", source: "Human Rights Watch", sourceUrl: "https://www.hrw.org/", year: "2008" },
+      { issue: "Labor Rights Violations in Colombia", details: "Reports of violence against union workers at Coca-Cola bottling plants in Colombia, including threats and killings of labor organizers.", source: "Business & Human Rights Resource Centre — SINALTRAINAL litigation", sourceUrl: "https://www.business-humanrights.org/en/latest-news/colombian-union-suing-coca-cola-in-death-squad-case/", year: "2008" },
     ],
   },
   {
@@ -75,8 +78,8 @@ const LABOR_DATABASE: BrandLaborRecord[] = [
     brandPattern: /ferrero(\s*(group|rocher|spa))?|nutella|kinder(\s*(bueno|surprise|joy|chocolate|schoko|country))?|tic\s*tac|raffaello|duplo\s*chocolate|hanuta|mon\s*ch[eé]ri|rocher\b|pocket\s*coffee|rondnoir|gran\s*rocher/i,
     parentCompany: "Ferrero Group",
     allegations: [
-      { issue: "Hazelnut Supply Chain Child Labor", details: "Ferrero's hazelnut supply chain in Turkey has been linked to child labor, with children as young as 6 working during harvest season.", source: "BBC Investigation / Fair Labor Association", sourceUrl: "https://www.fairlabor.org/", year: "2019" },
-      { issue: "Palm Oil Supply Chain Abuses", details: "Ferrero has faced criticism over palm oil sourcing linked to deforestation and labor exploitation in Indonesia and Malaysia.", source: "Rainforest Action Network", sourceUrl: "https://www.ran.org/", year: "2018" },
+      { issue: "Hazelnut Supply Chain Child Labor", details: "Ferrero's hazelnut supply chain in Turkey has been linked to child labor, with children as young as 6 working during harvest season.", source: "Fair Labor Association — Hazelnut Harvest programme", sourceUrl: "https://www.fairlabor.org/projects/piloting-strategies-to-reduce-child-labor-in-the-hazelnut-harvest/", year: "2019" },
+      { issue: "Palm Oil Supply Chain Abuses", details: "Ferrero has faced criticism over palm oil sourcing linked to deforestation and labor exploitation in Indonesia and Malaysia.", source: "Rainforest Action Network — Snack Food 20 scorecard", sourceUrl: "https://www.ran.org/sf20scorecard/", year: "2018" },
     ],
   },
   {
@@ -88,7 +91,7 @@ const LABOR_DATABASE: BrandLaborRecord[] = [
     brandPattern: /unilever(\s*(plc|nv|corp\.?|company))?|dove\b|\baxe\b|lynx\b|lipton\b|knorr\b|hellmann'?s?|ben\s*&\s*jerry'?s?|breyer'?s?|magnum\s*(ice cream|bar)|cornetto|heartbrand|flora\s*(margarine)?|becel|rama\s*margarine|vaseline|persil\b|surf\s+(laundry|detergent)|omo\b|comfort\s*fabric|domestos|cif\b|sunlight\b|sunsilk|tresemm[eé]|clear\s*shampoo|pond'?s?\b|rexona|lux\b|signal\s*toothpaste|closeup\s*toothpaste|talenti|seventh\s*generation|7th\s*generation|t2\s*tea|marmite|bovril|colman'?s?|lea\s*&\s*perrins|pot\s*noodle|slim.?fast/i,
     parentCompany: "Unilever",
     allegations: [
-      { issue: "Tea Plantation Labor Abuses", details: "Workers on Unilever's tea plantations in Kenya reported poverty wages, unsafe conditions, and sexual harassment.", source: "BBC Investigation", sourceUrl: "https://www.bbc.com/news/", year: "2019" },
+      { issue: "Tea Plantation Labor Abuses", details: "Workers on Unilever's tea plantations in Kenya reported poverty wages, unsafe conditions, and sexual harassment.", source: "BBC Africa Eye / Panorama — Sex for Work: The True Cost of Our Tea", sourceUrl: "https://www.bbc.com/news/uk-64662056", year: "2023" },
       { issue: "Palm Oil Supply Chain Forced Labor", details: "Unilever's palm oil suppliers have been linked to forced labor, debt bondage, and child labor in Indonesia.", source: "Amnesty International", sourceUrl: "https://www.amnesty.org/en/latest/news/2016/11/palm-oil-global-brands-profiting-from-child-and-forced-labour/", year: "2016" },
     ],
   },

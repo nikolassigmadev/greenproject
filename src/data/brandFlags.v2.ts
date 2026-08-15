@@ -142,16 +142,35 @@ const HRW_ECUADOR_2002: FlagSource = {
   jurisdiction: 'EC',
 };
 
-const BHRRC: FlagSource = {
-  url: 'https://www.business-humanrights.org',
-  title: 'Business & Human Rights Resource Centre — company profile',
-  publisher: 'Business & Human Rights Resource Centre',
-  type: 'ngo_report',
-  tier: 'tier2',
-  publishedDate: '2024-01-01',
-  accessedDate: '2026-04-29',
-  jurisdiction: 'Global',
-};
+/**
+ * BHRRC keeps a dossier per company. This used to be ONE shared source object
+ * pointing at business-humanrights.org — the organisation's front page — reused
+ * across six flags. A homepage cannot verify a specific claim: a reader who
+ * clicked through to check us found a search box. That's worse than citing
+ * nothing, because the citation implied there was something to find.
+ *
+ * Each flag now links its own company dossier. Every URL below returned 200 on
+ * the accessed date (scripts/verify-sources.ts).
+ */
+function bhrrcProfile(slug: string, company: string): FlagSource {
+  return {
+    url: `https://www.business-humanrights.org/en/companies/${slug}/`,
+    title: `${company} — company dossier (allegations and company responses)`,
+    publisher: 'Business & Human Rights Resource Centre',
+    type: 'ngo_report',
+    tier: 'tier2',
+    publishedDate: '2024-01-01',
+    accessedDate: '2026-08-15',
+    jurisdiction: 'Global',
+  };
+}
+
+const BHRRC_STARBUCKS = bhrrcProfile('starbucks', 'Starbucks');
+const BHRRC_TATA = bhrrcProfile('tata-group', 'Tata Group');
+const BHRRC_CHIQUITA = bhrrcProfile('chiquita', 'Chiquita Brands International');
+const BHRRC_DOLE = bhrrcProfile('dole', 'Dole');
+const BHRRC_DEL_MONTE = bhrrcProfile('fresh-del-monte-produce', 'Fresh Del Monte Produce');
+const BHRRC_GODIVA = bhrrcProfile('godiva', 'Godiva');
 
 const LINDT_SUSTAINABILITY_2023: FlagSource = {
   url: 'https://www.lindt-spruengli.com/sustainability',
@@ -551,7 +570,7 @@ export const brandFlagsV2: BrandFlagV2[] = [
     details: "A Channel 4 Dispatches investigation found child labor on all five Starbucks-linked coffee farms visited in Guatemala, with children as young as 8 working on farms supplying its certified supply chain. The Business & Human Rights Resource Centre documented a 2024 Brazilian lawsuit in which workers alleged forced labor conditions at a Starbucks-certified supplier farm. Coffee is listed by the U.S. DOL as produced with child or forced labor.",
     sources: [
       DOL_TVPRA_COFFEE,
-      BHRRC,
+      BHRRC_STARBUCKS,
       {
         url: 'https://www.channel4.com/press/news/dispatches-starbucks-and-nespresso-truth-about-your-coffee',
         title: 'Dispatches: Starbucks and Nespresso — The Truth About Your Coffee',
@@ -656,7 +675,7 @@ export const brandFlagsV2: BrandFlagV2[] = [
     summary: 'A BBC investigation found degrading working conditions on Indian tea estates in Assam supplying Tetley, including inadequate equipment, housing, and sanitation.',
     details: "A BBC investigation found degrading working conditions on Indian tea estates in Assam supplying Tetley. Workers lacked proper protective equipment, adequate housing, and sanitation. The Business & Human Rights Resource Centre has tracked subsequent NGO responses and company statements. A Columbia Law School human rights clinic documented systemic issues on Assam tea estates.",
     sources: [
-      BHRRC,
+      BHRRC_TATA,
       {
         url: 'https://www.bbc.com/news/world-asia-india-34173532',
         title: 'Assam tea estate workers — living and working conditions',
@@ -1066,7 +1085,7 @@ export const brandFlagsV2: BrandFlagV2[] = [
     details: "A 2002 Human Rights Watch report found children as young as 8 working 12-hour days on banana plantations in Ecuador supplying Chiquita. In 2024, a U.S. federal court found Chiquita Brands International guilty of knowingly financing Colombian paramilitary groups (AUC) designated as a foreign terrorist organization, resulting in a civil verdict for families of victims. The Business & Human Rights Resource Centre has tracked ongoing litigation.",
     sources: [
       HRW_ECUADOR_2002,
-      BHRRC,
+      BHRRC_CHIQUITA,
       {
         url: 'https://www.earthrights.org/case/doe-v-chiquita-brands-international',
         title: 'U.S. Federal Court — Chiquita Brands International civil verdict (AUC financing)',
@@ -1096,7 +1115,7 @@ export const brandFlagsV2: BrandFlagV2[] = [
     details: "A 2002 Human Rights Watch report documented child labor and toxic pesticide exposure on banana plantations in Ecuador supplying Dole. Workers on Dole supply plantations in the Philippines have reported harassment and intimidation against organizers. The Business & Human Rights Resource Centre has tracked subsequent litigation and company responses.",
     sources: [
       HRW_ECUADOR_2002,
-      BHRRC,
+      BHRRC_DOLE,
     ],
     status: 'verified',
     lastVerified: '2026-05-05',
@@ -1116,7 +1135,7 @@ export const brandFlagsV2: BrandFlagV2[] = [
     details: "A 2002 Human Rights Watch report found children working on banana plantations in Ecuador supplying Del Monte. Workers on those plantations were exposed to toxic pesticides without adequate protection and faced restrictions on unionization. The Business & Human Rights Resource Centre has tracked subsequent company responses.",
     sources: [
       HRW_ECUADOR_2002,
-      BHRRC,
+      BHRRC_DEL_MONTE,
     ],
     status: 'verified',
     lastVerified: '2026-05-05',
@@ -1255,7 +1274,7 @@ export const brandFlagsV2: BrandFlagV2[] = [
         accessedDate: '2026-04-29',
         jurisdiction: 'Global',
       },
-      BHRRC,
+      BHRRC_GODIVA,
     ],
     status: 'verified',
     lastVerified: '2026-05-05',
