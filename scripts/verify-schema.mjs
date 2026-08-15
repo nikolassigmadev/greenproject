@@ -67,7 +67,10 @@ const cols = (
   await db.query(`SELECT column_name FROM information_schema.columns WHERE table_name = 'ai_scans'`)
 ).rows.map((r) => r.column_name);
 
-for (const c of ['scan_event_id', 'verdict_base', 'swap_gap_reason', 'swap_shown', 'swap_clicked', 'dwell_ms']) {
+for (const c of [
+  'scan_event_id', 'verdict_base', 'swap_gap_reason',
+  'swap_shown', 'swap_clicked', 'dwell_ms', 'swap_taken',
+]) {
   check(cols.includes(c), `ai_scans.${c} exists`);
 }
 for (const c of ['carbon_footprint_100g', 'image_hash', 'image_url', 'model', 'query', 'ocr_text']) {
@@ -103,6 +106,9 @@ const cases = [
   ['negative dwell', `INSERT INTO ai_scans (dwell_ms) VALUES (-1)`, 'reject'],
   ['dwell past the 10-minute clamp', `INSERT INTO ai_scans (dwell_ms) VALUES (600001)`, 'reject'],
   ['in-range dwell', `INSERT INTO ai_scans (dwell_ms) VALUES (4200)`, 'accept'],
+  ['swap_outcome source', `INSERT INTO ai_scans (source) VALUES ('swap_outcome')`, 'accept'],
+  ['bogus swap_taken', `INSERT INTO ai_scans (swap_taken) VALUES ('kind of')`, 'reject'],
+  ['real swap_taken', `INSERT INTO ai_scans (swap_taken) VALUES ('bought_anyway')`, 'accept'],
   ['bogus flag status', `INSERT INTO community_flags (id, status, brand_name) VALUES ('a','whatever','B')`, 'reject'],
   ['real flag status', `INSERT INTO community_flags (id, status, brand_name) VALUES ('b','approved','B')`, 'accept'],
   ['bogus severity', `INSERT INTO community_flags (id, severity, brand_name) VALUES ('c','apocalyptic','B')`, 'reject'],

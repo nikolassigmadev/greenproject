@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS ai_scans (
   swap_shown      BOOLEAN,       -- did the swap section actually render picks? (conversion rows only)
   swap_clicked    BOOLEAN,       -- did the user tap one? (conversion rows only)
   dwell_ms        INTEGER,       -- ms from page open to the buy/skip press, clamped at 600000
+  swap_taken      TEXT,          -- self-reported outcome after a skip: alternative | nothing | bought_anyway
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -56,6 +57,7 @@ ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS swap_gap_reason TEXT;
 ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS swap_shown      BOOLEAN;
 ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS swap_clicked    BOOLEAN;
 ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS dwell_ms        INTEGER;
+ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS swap_taken      TEXT;
 
 CREATE INDEX IF NOT EXISTS idx_ai_scans_created_at ON ai_scans (created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_ai_scans_user_id    ON ai_scans (user_id);
@@ -137,7 +139,9 @@ BEGIN
       ('ai_scans', 'ai_scans_bought_chk',
        'bought IN (''YES'',''NO'')'),
       ('ai_scans', 'ai_scans_source_chk',
-       'source IN (''scan'',''decision'',''swap_click'',''chatgpt/analyze-product'')'),
+       'source IN (''scan'',''decision'',''swap_click'',''swap_outcome'',''chatgpt/analyze-product'')'),
+      ('ai_scans', 'ai_scans_swap_taken_chk',
+       'swap_taken IN (''alternative'',''nothing'',''bought_anyway'')'),
       ('ai_scans', 'ai_scans_swap_gap_reason_chk',
        'swap_gap_reason IN (''no_candidate_in_catalog'',''wrong_concern'',''failed_clean'',''not_sold_here'')'),
       ('ai_scans', 'ai_scans_dwell_ms_chk',

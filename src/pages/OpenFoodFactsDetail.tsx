@@ -450,6 +450,7 @@ export default function OpenFoodFactsDetail() {
     // conversion row the DecisionBar writes later carry the same one.
     const scanEventId = beginScanEvent(product.barcode);
     logScan({
+      source: "scan",
       barcode: product.barcode,
       name: product.productName || "Unknown Product",
       brand: product.brand,

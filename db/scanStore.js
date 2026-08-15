@@ -47,6 +47,7 @@ CREATE TABLE IF NOT EXISTS ai_scans (
   swap_shown      BOOLEAN,       -- did the swap section actually render picks? (conversion rows only)
   swap_clicked    BOOLEAN,       -- did the user tap one? (conversion rows only)
   dwell_ms        INTEGER,       -- ms between page open and the buy/skip press (conversion rows only)
+  swap_taken      TEXT,          -- self-reported outcome after a skip: alternative | nothing | bought_anyway
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 -- Idempotent upgrades for tables created before these columns existed.
@@ -94,6 +95,13 @@ ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS swap_clicked    BOOLEAN;
 -- Milliseconds from page open to the buy/skip press, clamped at 10 min so an
 -- abandoned tab can't poison the average. Conversion rows only.
 ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS dwell_ms        INTEGER;
+-- What the shopper actually did after skipping, self-reported: alternative |
+-- nothing | bought_anyway. Sampled (~1 in 5 skips) via a one-question prompt.
+-- Skipping in the app is a stated intention; this is the closest we get to the
+-- outcome, and it is the only column that can distinguish "we changed a
+-- purchase" from "we annoyed someone who bought it anyway".
+-- Lives on its own source='swap_outcome' row, joined back by scan_event_id.
+ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS swap_taken      TEXT;
 -- Drop columns we no longer store.
 ALTER TABLE ai_scans DROP COLUMN IF EXISTS carbon_footprint_100g;
 ALTER TABLE ai_scans DROP COLUMN IF EXISTS image_hash;
@@ -187,7 +195,9 @@ BEGIN
       ('ai_scans', 'ai_scans_bought_chk',
        'bought IN (''YES'',''NO'')'),
       ('ai_scans', 'ai_scans_source_chk',
-       'source IN (''scan'',''decision'',''swap_click'',''chatgpt/analyze-product'')'),
+       'source IN (''scan'',''decision'',''swap_click'',''swap_outcome'',''chatgpt/analyze-product'')'),
+      ('ai_scans', 'ai_scans_swap_taken_chk',
+       'swap_taken IN (''alternative'',''nothing'',''bought_anyway'')'),
       ('ai_scans', 'ai_scans_swap_gap_reason_chk',
        'swap_gap_reason IN (''no_candidate_in_catalog'',''wrong_concern'',''failed_clean'',''not_sold_here'')'),
       ('ai_scans', 'ai_scans_dwell_ms_chk',
@@ -283,6 +293,8 @@ const CONCERNS = new Set(['labor', 'boycott', 'animal_welfare', 'eco']);
 const SWAP_GAP_REASONS = new Set([
   'no_candidate_in_catalog', 'wrong_concern', 'failed_clean', 'not_sold_here',
 ]);
+// Self-reported outcome after a skip. Mirrors SwapTaken in src/utils/scanLogger.
+const SWAP_TAKEN = new Set(['alternative', 'nothing', 'bought_anyway']);
 const PRIORITY_KEYS = ['environment', 'laborRights', 'animalWelfare', 'nutrition'];
 
 // Exported for src/test/scanTelemetry.test.ts — it's a pure sanitiser, and the
@@ -374,6 +386,7 @@ function priorityJson(p) {
  * @param {boolean} [rec.swapShown]   did the swap section render picks? (conversion rows only)
  * @param {boolean} [rec.swapClicked] did the user tap one? (conversion rows only)
  * @param {number} [rec.dwellMs]      ms from page open to the buy/skip press (conversion rows only)
+ * @param {string} [rec.swapTaken]    self-reported outcome after a skip: alternative|nothing|bought_anyway
  */
 export function logScan(rec = {}) {
   if (!ready || !pool) return;
@@ -408,6 +421,7 @@ export function logScan(rec = {}) {
       bool(rec.swapShown),
       bool(rec.swapClicked),
       num(rec.dwellMs, 600000),
+      oneOf(rec.swapTaken, SWAP_TAKEN),
     ];
     pool
       .query(
@@ -418,11 +432,11 @@ export function logScan(rec = {}) {
             priorities, category, verdict,
             primary_concern, swap_available, image, resolved,
             scan_event_id, verdict_base, swap_gap_reason,
-            swap_shown, swap_clicked, dwell_ms)
+            swap_shown, swap_clicked, dwell_ms, swap_taken)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,
                  $11,$12,
                  $13::jsonb,$14,$15,$16,$17,$18,$19,
-                 $20,$21,$22,$23,$24,$25)`,
+                 $20,$21,$22,$23,$24,$25,$26)`,
         values,
       )
       .catch((e) => console.error('scanStore: insert failed —', e.message));

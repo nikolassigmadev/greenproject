@@ -2004,7 +2004,7 @@ app.get('/api/health', (req, res) => {
 
 // Moments a CLIENT is allowed to name. Server-side callers (e.g. the
 // analyze-product route) set their own source and bypass this.
-const CLIENT_SCAN_SOURCES = new Set(['scan', 'decision', 'swap_click']);
+const CLIENT_SCAN_SOURCES = new Set(['scan', 'decision', 'swap_click', 'swap_outcome']);
 
 const scanLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -2028,7 +2028,7 @@ app.post('/api/scans', scanLimiter, scanBody, (req, res) => {
     const {
       barcode, name, brand, ecoGrade, country, city, anonId, openaiResponse, fullOpenaiResponse, bought,
       priorities, category, verdict, primaryConcern, swapAvailable, image, resolved,
-      scanEventId, verdictBase, swapGapReason, swapShown, swapClicked, dwellMs, source,
+      scanEventId, verdictBase, swapGapReason, swapShown, swapClicked, dwellMs, swapTaken, source,
     } = req.body || {};
     if (!name || typeof name !== 'string') {
       return res.status(400).json({ success: false, error: 'name is required' });
@@ -2040,9 +2040,10 @@ app.post('/api/scans', scanLimiter, scanBody, (req, res) => {
     // SQLite "most-scanned" counter (internally no-ops if unavailable). Skip it for
     // failed scans so unresolved junk ("Unknown product", a stray query) never
     // pollutes the most-scanned leaderboard — failures live only in Postgres.
-    // Also skip swap_click rows: they describe an interaction with a product the
-    // user already scanned, and counting them again would double the tally.
-    if (didResolve && rowSource !== 'swap_click') {
+    // Also skip swap_click and swap_outcome rows: they describe follow-up
+    // interactions with a product the user already scanned, and counting them
+    // again would inflate the tally.
+    if (didResolve && rowSource !== 'swap_click' && rowSource !== 'swap_outcome') {
       recordScan({ barcode, name, brand, ecoGrade, country, anonId });
     }
     // Rich Postgres log of every scan (no-ops if DATABASE_URL unset/unreachable).
@@ -2059,7 +2060,7 @@ app.post('/api/scans', scanLimiter, scanBody, (req, res) => {
       // when the product page opens and stamped on BOTH rows, so the two can be
       // joined exactly. The rest (dwell, swap engagement) are only knowable at
       // decision time and arrive null on the exposure row.
-      scanEventId, verdictBase, swapGapReason, swapShown, swapClicked, dwellMs,
+      scanEventId, verdictBase, swapGapReason, swapShown, swapClicked, dwellMs, swapTaken,
     });
     // Only fail if BOTH stores are unavailable.
     if (!scanDb && !scanStoreReady()) {

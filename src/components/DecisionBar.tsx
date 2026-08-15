@@ -7,8 +7,9 @@ import { getLaborAllegationCount } from "@/utils/laborCheck";
 import {
   recordDecision, getDecision, clearDecision, DECISIONS_EVENT, type DecisionOutcome,
 } from "@/utils/decisions";
-import { logScan } from "@/utils/scanLogger";
+import { logScan, type SwapTaken } from "@/utils/scanLogger";
 import { getScanEventId, getDwellMs, getSwapEngagement } from "@/utils/scanSession";
+import { SkipOutcomePrompt, shouldAskSkipOutcome } from "@/components/SkipOutcomePrompt";
 import { assessUnmetDemand } from "@/services/swaps";
 import { loadPriorities } from "@/utils/userPreferences";
 import { loadRegion } from "@/utils/userRegion";
@@ -69,6 +70,9 @@ interface DecisionBarProps {
 
 export function DecisionBar({ product, verdictKey, baseVerdictKey, onSeeBetter, hasSwaps = false, openaiResponse, fullOpenaiResponse, capturedImage }: DecisionBarProps) {
   const [decision, setDecision] = useState(() => getDecision(product.barcode));
+  // Sampled follow-up after a skip. The roll happens once, in decide() — rolling
+  // during render would re-decide on every paint.
+  const [askOutcome, setAskOutcome] = useState(false);
   const { lean, color, headline } = meaning(verdictKey);
 
   useEffect(() => {
@@ -97,6 +101,7 @@ export function DecisionBar({ product, verdictKey, baseVerdictKey, onSeeBetter, 
     // engagement only exist at this end of the pair.
     const engagement = getSwapEngagement(product.barcode);
     logScan({
+      source: "decision",
       barcode: product.barcode,
       name: product.productName || "Unknown Product",
       brand: product.brand,
@@ -137,13 +142,51 @@ export function DecisionBar({ product, verdictKey, baseVerdictKey, onSeeBetter, 
       if (hasSwaps) {
         onSeeBetter();
       }
+      // Ask what they actually did, on a sample of skips. Deliberately asked
+      // whether or not we had a swap to offer: when we had nothing, "did you
+      // find one yourself?" is the ground truth the unmet-demand map is missing.
+      if (shouldAskSkipOutcome()) setAskOutcome(true);
     }
+  };
+
+  /** Records the sampled answer as its own row, joined back by scanEventId. */
+  const answerOutcome = (swapTaken: SwapTaken) => {
+    const demand = assessUnmetDemand(product, loadPriorities(), loadRegion()?.countryCode);
+    logScan({
+      source: "swap_outcome",
+      barcode: product.barcode,
+      name: product.productName || "Unknown Product",
+      brand: product.brand,
+      ecoGrade: product.ecoscoreGrade,
+      verdict: verdictKey,
+      category: demand.category,
+      primaryConcern: demand.primaryConcern,
+      swapAvailable: demand.swapAvailable,
+      swapGapReason: demand.swapGapReason,
+      scanEventId: getScanEventId(product.barcode),
+      swapTaken,
+    });
+    setAskOutcome(false);
   };
 
   const undo = () => {
     if (decision?.outcome === "bought") removeFromBasket(product.barcode);
     clearDecision(product.barcode);
   };
+
+  // ── Sampled follow-up after a skip ──
+  // Takes over the bar rather than stacking on top of it: two things asking for
+  // a tap at the bottom of the screen is how you get a mis-tap recorded as an
+  // answer.
+  if (decision && askOutcome && decision.outcome === "rejected") {
+    return (
+      <div style={SHELL}>
+        <div style={INNER}>
+          <SkipOutcomePrompt onAnswer={answerOutcome} onDismiss={() => setAskOutcome(false)} />
+        </div>
+      </div>
+    );
+  }
 
   // ── Decided state — confirmation + the productive next step ──
   if (decision) {

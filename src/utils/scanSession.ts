@@ -94,6 +94,12 @@ export function getScanEventId(barcode: string): string | null {
  * Milliseconds between the page opening and now, or null when there's no live
  * event for this product. Clamped: anything over MAX_DWELL_MS is an abandoned
  * tab, not a decision, and recording it would poison the average.
+ *
+ * Known bias: the clock starts when the product data resolves, which is before
+ * the one-time legal-consent gate is dismissed. A user's very first scan
+ * therefore includes however long they spent reading that screen. It's one
+ * inflated row per device, so it's left alone rather than papered over — but
+ * exclude first-per-user rows if you ever quote a median.
  */
 export function getDwellMs(barcode: string): number | null {
   const e = current(barcode);

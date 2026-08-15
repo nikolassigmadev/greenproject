@@ -69,8 +69,17 @@ export type PrimaryConcern = "labor" | "boycott" | "animal_welfare" | "eco";
  *  - `decision`   conversion: the user pressed Buy or Skip
  *  - `swap_click` the user tapped a suggested alternative (and navigated away,
  *                 which is why this can't wait for a decision row)
+ *  - `swap_outcome` the sampled follow-up after a skip: what they actually did
  */
-export type ScanLogSource = "scan" | "decision" | "swap_click";
+export type ScanLogSource = "scan" | "decision" | "swap_click" | "swap_outcome";
+
+/**
+ * What the shopper says happened after they skipped. Skipping in the app is a
+ * stated intention; this is the closest we get to the outcome, and the only
+ * signal that separates "we changed a purchase" from "we annoyed someone who
+ * bought it anyway".
+ */
+export type SwapTaken = "alternative" | "nothing" | "bought_anyway";
 
 export interface ScanLogInput {
   barcode?: string | null;
@@ -115,6 +124,8 @@ export interface ScanLogInput {
   swapClicked?: boolean | null;
   /** Ms from page open to the buy/skip press. Only meaningful on the conversion row. */
   dwellMs?: number | null;
+  /** Self-reported outcome after a skip. Only set on a `swap_outcome` row. */
+  swapTaken?: SwapTaken | null;
 }
 
 export function logScan(input: ScanLogInput): void {
@@ -150,6 +161,7 @@ export function logScan(input: ScanLogInput): void {
       swapShown: input.swapShown ?? null,
       swapClicked: input.swapClicked ?? null,
       dwellMs: input.dwellMs ?? null,
+      swapTaken: input.swapTaken ?? null,
     });
     void fetch(`${getBackendUrl()}/api/scans`, {
       method: "POST",
