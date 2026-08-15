@@ -1,12 +1,24 @@
-// Shared labor allegations database — single source of truth used by both the
-// product detail page and the basket, so they always show the same data.
+// Labour allegations — used by the product detail page, the basket and the
+// verdict, so they always show the same data.
 //
-// NOTE: this is one of TWO labor datasets in the app. This one (9 parent-company
-// regexes) drives SCORING and the allegation list; `src/data/brandFlags.v2.ts`
-// (via `src/services/brandFlags`) drives the verified flag BANNERS with
-// tier-sourced citations. They cover overlapping brands — when adding or
-// removing a company here, check brandFlags.v2 stays consistent (and vice
-// versa) so a banner never contradicts the score.
+// There are TWO labour datasets in the app, and they used to be able to
+// contradict each other. This file's parent-company regexes drove SCORING;
+// `src/data/brandFlags.v2.ts` (via `src/services/brandFlags`) drove the flag
+// BANNERS. 22 of 33 verified labour flags matched no regex here, so products
+// from Tyson, Cargill, Chiquita and others showed a critical labour banner
+// while the verdict applied no labour penalty at all.
+//
+// They are now reconciled, in one direction: brandFlags.v2 is the source of
+// truth, and findLaborAllegations() falls through to it for any brand this
+// file doesn't cover. src/test/labourDatasetReconciliation.test.ts fails if a
+// verified labour flag ever stops reaching the score again.
+//
+// LABOR_DATABASE below is kept, and kept FIRST, only because its ten companies
+// carry richer hand-written per-allegation prose. It is no longer the boundary
+// of what counts.
+
+import type { BrandFlagV2 } from "@/types/brandFlag";
+import { getVerifiedFlagsForBrand } from "@/services/brandFlags";
 
 export interface LaborAllegation {
   issue: string;
@@ -131,9 +143,43 @@ export interface LaborRecord {
   allegations: LaborAllegation[];
 }
 
+/** Flag categories that are labour findings, and so belong in the score. */
+const LABOUR_FLAG_CATEGORIES = new Set([
+  "forced_labour", "child_labour", "wage_theft", "unsafe_conditions", "union_busting",
+]);
+
 /**
- * Check brand + product name against the labor database using the same regex
- * matching used on the product detail page.
+ * Read a verified v2 flag as a labour allegation.
+ *
+ * The two datasets had drifted badly: 22 of 33 verified labour flags matched no
+ * regex here, so a Tyson or Cargill product rendered a critical child-labour
+ * banner while getVerdict() applied no labour penalty at all. The page said
+ * "critical" and the verdict said BUY, on the same screen, from the same app.
+ *
+ * brandFlags.v2 is the source of truth — it is tier-sourced, verified, and
+ * claim-typed. This function derives the scoring shape from it so a flag can
+ * never banner without also counting.
+ */
+function flagAsAllegation(flag: BrandFlagV2): LaborAllegation {
+  const primary = flag.sources[0];
+  return {
+    issue: flag.summary,
+    details: flag.details,
+    source: primary?.publisher ?? "See methodology",
+    sourceUrl: primary?.url ?? "/methodology",
+    year: (primary?.publishedDate ?? flag.lastVerified).slice(0, 4),
+  };
+}
+
+/**
+ * Check brand + product name against the labour data.
+ *
+ * Two passes, in this order:
+ *  1. LABOR_DATABASE — the hand-written parent-company regexes. Kept first so
+ *     the ten companies it covers keep their existing richer per-allegation
+ *     prose and their existing verdicts, unchanged.
+ *  2. brandFlags.v2 — every other verified labour flag, derived. This is what
+ *     closes the banner/score gap.
  */
 export function findLaborAllegations(
   brand: string | null | undefined,
@@ -145,7 +191,17 @@ export function findLaborAllegations(
       return { parentCompany: record.parentCompany, allegations: record.allegations };
     }
   }
-  return null;
+
+  // Fall through to the verified flag set. getVerifiedFlagsForBrand() already
+  // does the alias matching the banners use, so the score now keys off exactly
+  // the same match that put the banner on screen.
+  const flags = getVerifiedFlagsForBrand(brand || "")
+    .filter((f) => LABOUR_FLAG_CATEGORIES.has(f.category));
+  if (flags.length === 0) return null;
+  return {
+    parentCompany: flags[0].brandName,
+    allegations: flags.map(flagAsAllegation),
+  };
 }
 
 /** Convenience: returns allegation count (0 if none). */

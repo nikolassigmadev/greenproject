@@ -23,6 +23,22 @@ function isLive(flag: BrandFlagV2): boolean {
 // Pizza" for Domino Sugar.
 const matchesBrand = flagMatchesBrand;
 
+// The live set never changes at runtime — the dataset is a static import — so
+// filtering it on every lookup is pure waste.
+const liveFlags = brandFlagsV2.filter(isLive);
+
+/**
+ * Memoised brand -> flags.
+ *
+ * This is a hot path now: since laborCheck falls through to the flag set, every
+ * verdict computation lands here, and each miss costs a scan of the whole
+ * dataset running an alias regex per flag. The verdict-audit battery (3,600+
+ * verdicts) went from passing to timing out the moment that fallback was added.
+ *
+ * Safe to cache for the process lifetime: both inputs are static.
+ */
+const brandFlagCache = new Map<string, BrandFlagV2[]>();
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -30,7 +46,12 @@ const matchesBrand = flagMatchesBrand;
 /** All verified flags for a brand string (for display on product cards). */
 export function getVerifiedFlagsForBrand(brandName: string): BrandFlagV2[] {
   if (!brandName) return [];
-  return brandFlagsV2.filter((f) => isLive(f) && matchesBrand(f, brandName));
+  const key = brandName.toLowerCase();
+  const hit = brandFlagCache.get(key);
+  if (hit) return hit;
+  const found = liveFlags.filter((f) => matchesBrand(f, brandName));
+  brandFlagCache.set(key, found);
+  return found;
 }
 
 /** Single verified flag for a brand — convenience wrapper for UI components. */
@@ -41,7 +62,7 @@ export function getVerifiedFlagForBrand(brandName: string | null | undefined): B
 
 /** All verified flags across the entire dataset. */
 export function getAllVerifiedFlags(): BrandFlagV2[] {
-  return brandFlagsV2.filter(isLive);
+  return liveFlags;
 }
 
 /** All pending_review flags — for admin use only, never shown to end users. */
