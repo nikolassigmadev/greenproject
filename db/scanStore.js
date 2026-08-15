@@ -41,6 +41,12 @@ CREATE TABLE IF NOT EXISTS ai_scans (
   swap_available  BOOLEAN,       -- was a region-available ethical alternative on offer? null = N/A
   image           TEXT,          -- the photo the user scanned, as compressed JPEG base64 (no data: prefix)
   resolved        BOOLEAN NOT NULL DEFAULT true,  -- false = scan failed to resolve to a product (debug these)
+  scan_event_id   TEXT,          -- UUID joining the exposure row to its conversion row
+  verdict_base    TEXT,          -- the verdict at DEFAULT (neutral) priorities, to compare against verdict
+  swap_gap_reason TEXT,          -- when swap_available is false, WHY nothing qualified
+  swap_shown      BOOLEAN,       -- did the swap section actually render picks? (conversion rows only)
+  swap_clicked    BOOLEAN,       -- did the user tap one? (conversion rows only)
+  dwell_ms        INTEGER,       -- ms between page open and the buy/skip press (conversion rows only)
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 -- Idempotent upgrades for tables created before these columns existed.
@@ -66,6 +72,28 @@ ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS swap_available  BOOLEAN;
 ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS image           TEXT;
 -- Did the scan resolve to a product? false rows are the misses worth debugging.
 ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS resolved        BOOLEAN NOT NULL DEFAULT true;
+-- ── Exposure → conversion instrumentation ──
+-- One product-page view mints a UUID (client-side, sessionStorage) and stamps it
+-- on BOTH the row written when the page opens and the row written when the user
+-- presses Buy/Skip. Turns exposure→conversion from a fuzzy time-window match on
+-- (user_id, barcode) into an exact join.
+ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS scan_event_id   TEXT;
+-- The verdict the SAME product would have received at DEFAULT (all-Medium)
+-- priorities. Comparing it to verdict makes "personalisation changes what we
+-- tell people" a measurable claim instead of an assertion.
+-- NOTE: this whole block is a JS template literal — no backticks in comments.
+ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS verdict_base    TEXT;
+-- When swap_available is false, WHY: no_candidate_in_catalog | wrong_concern |
+-- failed_clean | not_sold_here. Separates a genuine market gap from a thin catalog.
+ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS swap_gap_reason TEXT;
+-- Availability != rendering != tapping. Set on conversion and swap_click rows.
+-- On exposure rows the swap section hasn't resolved yet, so these stay NULL
+-- rather than claiming a false.
+ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS swap_shown      BOOLEAN;
+ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS swap_clicked    BOOLEAN;
+-- Milliseconds from page open to the buy/skip press, clamped at 10 min so an
+-- abandoned tab can't poison the average. Conversion rows only.
+ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS dwell_ms        INTEGER;
 -- Drop columns we no longer store.
 ALTER TABLE ai_scans DROP COLUMN IF EXISTS carbon_footprint_100g;
 ALTER TABLE ai_scans DROP COLUMN IF EXISTS image_hash;
@@ -77,6 +105,11 @@ CREATE INDEX IF NOT EXISTS idx_ai_scans_created_at ON ai_scans (created_at DESC)
 CREATE INDEX IF NOT EXISTS idx_ai_scans_user_id    ON ai_scans (user_id);
 CREATE INDEX IF NOT EXISTS idx_ai_scans_product    ON ai_scans (lower(product_name));
 CREATE INDEX IF NOT EXISTS idx_ai_scans_barcode    ON ai_scans (barcode);
+-- The exposure→conversion join. Partial: only a minority of rows carry an id,
+-- and NULLs are never joined on.
+CREATE INDEX IF NOT EXISTS idx_ai_scans_event
+  ON ai_scans (scan_event_id)
+  WHERE scan_event_id IS NOT NULL;
 -- Speeds up the unmet-demand heatmap (filters/groups on these).
 CREATE INDEX IF NOT EXISTS idx_ai_scans_demand
   ON ai_scans (country, category, primary_concern)
@@ -190,6 +223,10 @@ function oneOf(s, allowed) {
 
 const VERDICTS = new Set(['BUY', 'CONSIDER', 'CAUTION', 'AVOID', 'UNKNOWN']);
 const CONCERNS = new Set(['labor', 'boycott', 'animal_welfare', 'eco']);
+// Why no alternative qualified — mirrors SwapGapReason in src/services/swaps.
+const SWAP_GAP_REASONS = new Set([
+  'no_candidate_in_catalog', 'wrong_concern', 'failed_clean', 'not_sold_here',
+]);
 const PRIORITY_KEYS = ['environment', 'laborRights', 'animalWelfare', 'nutrition'];
 
 // Accept a scanned photo as base64. Strips any `data:image/...;base64,` prefix
@@ -207,6 +244,12 @@ function imageData(s) {
 function num(v, max) {
   const n = typeof v === 'number' ? v : Number(v);
   return Number.isFinite(n) && n >= 0 && n <= max ? n : null;
+}
+
+// A real boolean or null — never a truthy string. Keeps "false" out of a
+// BOOLEAN column as `true`.
+function bool(v) {
+  return typeof v === 'boolean' ? v : null;
 }
 
 // Accept only a plain {key: 0-100} priorities object; return a JSON string for
@@ -244,6 +287,12 @@ function priorityJson(p) {
  * @param {boolean} [rec.swapAvailable] was a region-available ethical alternative on offer?
  * @param {string} [rec.image]        the scanned photo as compressed JPEG base64 (no data: prefix)
  * @param {boolean} [rec.resolved]    false if the scan never resolved to a product (default true)
+ * @param {string} [rec.scanEventId]  UUID joining this row to the other row from the same page view
+ * @param {string} [rec.verdictBase]  the verdict at DEFAULT priorities (personalisation baseline)
+ * @param {string} [rec.swapGapReason] why nothing qualified: no_candidate_in_catalog|wrong_concern|failed_clean|not_sold_here
+ * @param {boolean} [rec.swapShown]   did the swap section render picks? (conversion rows only)
+ * @param {boolean} [rec.swapClicked] did the user tap one? (conversion rows only)
+ * @param {number} [rec.dwellMs]      ms from page open to the buy/skip press (conversion rows only)
  */
 export function logScan(rec = {}) {
   if (!ready || !pool) return;
@@ -251,7 +300,7 @@ export function logScan(rec = {}) {
     const barcode = clip(rec.barcode, 64);
     const offUrl = barcode ? `https://world.openfoodfacts.org/product/${barcode}` : null;
     const bought = rec.bought === 'YES' || rec.bought === 'NO' ? rec.bought : null;
-    const swapAvailable = typeof rec.swapAvailable === 'boolean' ? rec.swapAvailable : null;
+    const swapAvailable = bool(rec.swapAvailable);
     const values = [
       clip(rec.userId, 64),
       clip(rec.source, 64),
@@ -272,6 +321,12 @@ export function logScan(rec = {}) {
       swapAvailable,
       imageData(rec.image),
       rec.resolved === false ? false : true,
+      clip(rec.scanEventId, 64),
+      oneOf(rec.verdictBase, VERDICTS),
+      oneOf(rec.swapGapReason, SWAP_GAP_REASONS),
+      bool(rec.swapShown),
+      bool(rec.swapClicked),
+      num(rec.dwellMs, 600000),
     ];
     pool
       .query(
@@ -280,10 +335,13 @@ export function logScan(rec = {}) {
             eco_grade, country, city, off_url, openai_response,
             full_openai_response, bought,
             priorities, category, verdict,
-            primary_concern, swap_available, image, resolved)
+            primary_concern, swap_available, image, resolved,
+            scan_event_id, verdict_base, swap_gap_reason,
+            swap_shown, swap_clicked, dwell_ms)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,
                  $11,$12,
-                 $13::jsonb,$14,$15,$16,$17,$18,$19)`,
+                 $13::jsonb,$14,$15,$16,$17,$18,$19,
+                 $20,$21,$22,$23,$24,$25)`,
         values,
       )
       .catch((e) => console.error('scanStore: insert failed —', e.message));

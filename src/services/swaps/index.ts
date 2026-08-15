@@ -226,7 +226,26 @@ export function diagnoseProduct(
   return { concerns, primary, categoryKey, selfEthical };
 }
 
-/** The three signals that power the unmet-ethical-demand heatmap. */
+/**
+ * Why no alternative qualified. Without this, `swapAvailable: false` conflates a
+ * genuine market gap ("nobody sells an ethical version here") with a hole in our
+ * own catalog ("we just don't have one yet") — and those two findings mean
+ * completely different things when the unmet-demand data is read as evidence.
+ *
+ * Reported as the NARROWEST true cause: the funnel is walked in order and the
+ * first stage that empties out is the one named.
+ */
+export type SwapGapReason =
+  /** We have no catalog entries for this category at all (or couldn't classify it). */
+  | "no_candidate_in_catalog"
+  /** We have entries, but none of them address this product's primary concern. */
+  | "wrong_concern"
+  /** Entries address the concern, but our own flag data disqualifies them. */
+  | "failed_clean"
+  /** Clean, relevant entries exist — none are confirmed sold in this market. */
+  | "not_sold_here";
+
+/** The signals that power the unmet-ethical-demand heatmap. */
 export interface DemandSignal {
   /** Swap-catalog category, e.g. "chocolate" (null if we couldn't classify it). */
   category: SwapCategoryKey | null;
@@ -239,6 +258,8 @@ export interface DemandSignal {
    * counted, so we never hide a genuine gap behind an unverifiable "available".
    */
   swapAvailable: boolean | null;
+  /** Why nothing qualified. null when a swap WAS available, or when there's no concern. */
+  swapGapReason: SwapGapReason | null;
 }
 
 /**
@@ -254,25 +275,46 @@ export function assessUnmetDemand(
 ): DemandSignal {
   const { primary, categoryKey } = diagnoseProduct(product, priorities);
   if (!primary) {
-    return { category: categoryKey, primaryConcern: null, swapAvailable: null };
+    return { category: categoryKey, primaryConcern: null, swapAvailable: null, swapGapReason: null };
   }
-  let swapAvailable = false;
-  if (categoryKey) {
-    const candidates = [
-      ...getCandidates(categoryKey),
-      ...getCustomCandidates(categoryKey),
-      ...getVerifiedEthicsCandidates(categoryKey),
-      ...getChocolateDirectoryCandidates(categoryKey),
-    ];
-    swapAvailable = candidates.some(
-      (c) =>
-        isCandidateClean(c) &&
-        candidateAddresses(c, primary.type) &&
-        c.assumeAvailable !== false && // unverifiable-availability entries don't count
-        isInMarket(c, countryCode),
-    );
-  }
-  return { category: categoryKey, primaryConcern: primary.type, swapAvailable };
+
+  const pool = categoryKey
+    ? [
+        ...getCandidates(categoryKey),
+        ...getCustomCandidates(categoryKey),
+        ...getVerifiedEthicsCandidates(categoryKey),
+        ...getChocolateDirectoryCandidates(categoryKey),
+      ]
+    : [];
+
+  // Walk the funnel stage by stage rather than one combined .some(), so that
+  // when nothing qualifies we can say WHICH stage emptied out. Same predicates,
+  // same order, same result for swapAvailable — just instrumented.
+  const gap = (swapGapReason: SwapGapReason): DemandSignal => ({
+    category: categoryKey,
+    primaryConcern: primary.type,
+    swapAvailable: false,
+    swapGapReason,
+  });
+
+  if (pool.length === 0) return gap("no_candidate_in_catalog");
+
+  const relevant = pool.filter((c) => candidateAddresses(c, primary.type));
+  if (relevant.length === 0) return gap("wrong_concern");
+
+  const clean = relevant.filter(isCandidateClean);
+  if (clean.length === 0) return gap("failed_clean");
+
+  // Unverifiable-availability entries don't count as available.
+  const soldHere = clean.filter((c) => c.assumeAvailable !== false && isInMarket(c, countryCode));
+  if (soldHere.length === 0) return gap("not_sold_here");
+
+  return {
+    category: categoryKey,
+    primaryConcern: primary.type,
+    swapAvailable: true,
+    swapGapReason: null,
+  };
 }
 
 /**

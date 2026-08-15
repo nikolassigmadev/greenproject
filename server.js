@@ -1997,6 +1997,10 @@ app.get('/api/health', (req, res) => {
 // SCAN ANALYTICS
 // =====================================================
 
+// Moments a CLIENT is allowed to name. Server-side callers (e.g. the
+// analyze-product route) set their own source and bypass this.
+const CLIENT_SCAN_SOURCES = new Set(['scan', 'decision', 'swap_click']);
+
 const scanLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 60,
@@ -2019,25 +2023,38 @@ app.post('/api/scans', scanLimiter, scanBody, (req, res) => {
     const {
       barcode, name, brand, ecoGrade, country, city, anonId, openaiResponse, fullOpenaiResponse, bought,
       priorities, category, verdict, primaryConcern, swapAvailable, image, resolved,
+      scanEventId, verdictBase, swapGapReason, swapShown, swapClicked, dwellMs, source,
     } = req.body || {};
     if (!name || typeof name !== 'string') {
       return res.status(400).json({ success: false, error: 'name is required' });
     }
     const didResolve = resolved !== false;
+    // The client may name the moment explicitly; anything unrecognised falls back
+    // to the old bought-derived default, so older clients keep working unchanged.
+    const rowSource = CLIENT_SCAN_SOURCES.has(source) ? source : bought ? 'decision' : 'scan';
     // SQLite "most-scanned" counter (internally no-ops if unavailable). Skip it for
     // failed scans so unresolved junk ("Unknown product", a stray query) never
     // pollutes the most-scanned leaderboard — failures live only in Postgres.
-    if (didResolve) recordScan({ barcode, name, brand, ecoGrade, country, anonId });
+    // Also skip swap_click rows: they describe an interaction with a product the
+    // user already scanned, and counting them again would double the tally.
+    if (didResolve && rowSource !== 'swap_click') {
+      recordScan({ barcode, name, brand, ecoGrade, country, anonId });
+    }
     // Rich Postgres log of every scan (no-ops if DATABASE_URL unset/unreachable).
     // logScan() sanitises/clamps every field (incl. the photo), so the raw body
     // passes through. image is the user's scanned photo as compressed base64;
     // resolved=false marks a scan that never matched a product (debug these).
     logScan({
-      source: bought ? 'decision' : 'scan',
+      source: rowSource,
       userId: anonId, productName: name, brand, barcode, ecoGrade, country, city,
       openaiResponse, fullOpenaiResponse, bought,
       priorities, category, verdict, primaryConcern, swapAvailable, image,
       resolved: didResolve,
+      // Exposure→conversion instrumentation. scanEventId is minted client-side
+      // when the product page opens and stamped on BOTH rows, so the two can be
+      // joined exactly. The rest (dwell, swap engagement) are only knowable at
+      // decision time and arrive null on the exposure row.
+      scanEventId, verdictBase, swapGapReason, swapShown, swapClicked, dwellMs,
     });
     // Only fail if BOTH stores are unavailable.
     if (!scanDb && !scanStoreReady()) {

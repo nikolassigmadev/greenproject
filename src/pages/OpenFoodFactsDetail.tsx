@@ -13,8 +13,9 @@ import { isWatched, toggleWatchlist, getBrandSentiment, WATCHLIST_EVENT } from "
 import { Logo, Wordmark } from "@/components/Logo";
 import { lookupBarcode, searchProducts, scoreDataCompleteness, imageQualityTier } from "@/services/openfoodfacts";
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
-import { loadPriorities, priorityMultiplier, saveScanToHistory, loadScanHistory, type UserPriorities } from "@/utils/userPreferences";
+import { DEFAULT_PRIORITIES, loadPriorities, priorityMultiplier, saveScanToHistory, loadScanHistory, type UserPriorities } from "@/utils/userPreferences";
 import { logScan } from "@/utils/scanLogger";
+import { beginScanEvent } from "@/utils/scanSession";
 import { assessUnmetDemand } from "@/services/swaps";
 import { loadRegion } from "@/utils/userRegion";
 import { checkBoycott } from "@/data/boycottBrands";
@@ -442,8 +443,12 @@ export default function OpenFoodFactsDetail() {
     // The photo the user scanned (compressed base64), stored inline on the row.
     const scanImage = fromScan ? sessionStorage.getItem("scan_image") : null;
     // Capture the unmet-demand signals at scan time too (not just on decision):
-    // category, worst concern, and whether an in-market alternative exists.
+    // category, worst concern, whether an in-market alternative exists, and — when
+    // it doesn't — which stage of the funnel emptied out.
     const demand = assessUnmetDemand(product, priorities, loadRegion()?.countryCode);
+    // Mint the id for this page view BEFORE logging, so the exposure row and the
+    // conversion row the DecisionBar writes later carry the same one.
+    const scanEventId = beginScanEvent(product.barcode);
     logScan({
       barcode: product.barcode,
       name: product.productName || "Unknown Product",
@@ -453,10 +458,17 @@ export default function OpenFoodFactsDetail() {
       fullOpenaiResponse,
       image: scanImage,
       verdict: verdictKey,
+      // The same verdict computed at neutral priorities. Where this differs from
+      // `verdict`, personalisation changed what this user was told.
+      verdictBase: getVerdict(product, DEFAULT_PRIORITIES).key,
       priorities,
       category: demand.category,
       primaryConcern: demand.primaryConcern,
       swapAvailable: demand.swapAvailable,
+      swapGapReason: demand.swapGapReason,
+      scanEventId,
+      // dwell / swapShown / swapClicked are unknowable this early — they stay
+      // null here and are filled in on the conversion row.
     });
   }, [product?.barcode]);
 
@@ -752,6 +764,11 @@ export default function OpenFoodFactsDetail() {
   // ── Derived data ──
 
   const verdict    = getVerdict(product, priorities);
+  // The same verdict at neutral priorities. Never rendered — it exists so the
+  // decision row can record what this shopper WOULD have been told without
+  // their personalisation, which is what makes "personalisation changes
+  // behaviour" a claim you can actually test against the data.
+  const baseVerdict = getVerdict(product, DEFAULT_PRIORITIES);
   const vc         = VERDICT_CONFIG[verdict.key as keyof typeof VERDICT_CONFIG] ?? VERDICT_CONFIG.UNKNOWN;
   const agri       = product.ecoscoreData?.agribalyse;
   const laborRecord     = findLaborAllegations(product);
@@ -1589,6 +1606,7 @@ export default function OpenFoodFactsDetail() {
       <DecisionBar
         product={product}
         verdictKey={verdict.key}
+        baseVerdictKey={baseVerdict.key}
         onSeeBetter={scrollToSwaps}
         hasSwaps={swapsAvailable === true}
         openaiResponse={fromScan ? sessionStorage.getItem("scan_openai_response") : null}

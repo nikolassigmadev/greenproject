@@ -5,6 +5,7 @@
 import { getBackendUrl } from "@/config/backend";
 import { loadRegion } from "@/utils/userRegion";
 import { loadPriorities, type UserPriorities } from "@/utils/userPreferences";
+import type { SwapGapReason } from "@/services/swaps";
 
 const ANON_KEY = "goodscan-anon-id";
 const OPTOUT_KEY = "goodscan-scan-logging-optout";
@@ -34,9 +35,21 @@ export function isScanLoggingOptedOut(): boolean {
 
 export type PrimaryConcern = "labor" | "boycott" | "animal_welfare" | "eco";
 
+/**
+ * Which moment produced this row. The server whitelists these; anything else
+ * falls back to the old bought-derived default.
+ *  - `scan`       exposure: the product page opened
+ *  - `decision`   conversion: the user pressed Buy or Skip
+ *  - `swap_click` the user tapped a suggested alternative (and navigated away,
+ *                 which is why this can't wait for a decision row)
+ */
+export type ScanLogSource = "scan" | "decision" | "swap_click";
+
 export interface ScanLogInput {
   barcode?: string | null;
   name: string;
+  /** Defaults server-side to decision/scan based on `bought`. */
+  source?: ScanLogSource;
   brand?: string | null;
   ecoGrade?: string | null;
   /** Trimmed string OpenAI identified the product as (brand + product), when scanned via the camera. */
@@ -59,6 +72,22 @@ export interface ScanLogInput {
   image?: string | null;
   /** false when the scan never resolved to a product (logs the miss for debugging). Defaults to true. */
   resolved?: boolean;
+  /**
+   * UUID identifying this product-page view. Stamped on both the exposure row
+   * (page open) and the conversion row (buy/skip) so they join exactly instead
+   * of by a time window. From @/utils/scanSession.
+   */
+  scanEventId?: string | null;
+  /** The verdict at DEFAULT priorities — the baseline `verdict` is measured against. */
+  verdictBase?: string | null;
+  /** Why no alternative qualified, when swapAvailable is false. */
+  swapGapReason?: SwapGapReason | null;
+  /** Did the swap section actually render picks? Only meaningful on the conversion row. */
+  swapShown?: boolean | null;
+  /** Did the user tap one of those picks? Only meaningful on the conversion row. */
+  swapClicked?: boolean | null;
+  /** Ms from page open to the buy/skip press. Only meaningful on the conversion row. */
+  dwellMs?: number | null;
 }
 
 export function logScan(input: ScanLogInput): void {
@@ -72,6 +101,7 @@ export function logScan(input: ScanLogInput): void {
     const body = JSON.stringify({
       barcode: input.barcode ?? null,
       name: input.name,
+      source: input.source ?? null,
       brand: input.brand ?? null,
       ecoGrade: input.ecoGrade ?? null,
       openaiResponse: input.openaiResponse ?? null,
@@ -87,6 +117,12 @@ export function logScan(input: ScanLogInput): void {
       swapAvailable: input.swapAvailable ?? null,
       image: input.image ?? null,
       resolved: input.resolved ?? true,
+      scanEventId: input.scanEventId ?? null,
+      verdictBase: input.verdictBase ?? null,
+      swapGapReason: input.swapGapReason ?? null,
+      swapShown: input.swapShown ?? null,
+      swapClicked: input.swapClicked ?? null,
+      dwellMs: input.dwellMs ?? null,
     });
     void fetch(`${getBackendUrl()}/api/scans`, {
       method: "POST",

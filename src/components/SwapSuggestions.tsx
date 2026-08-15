@@ -8,6 +8,8 @@ import {
 } from "@/services/swaps";
 import { CATEGORY_LABELS, type SwapCategoryKey } from "@/data/ethicalAlternatives";
 import { recordSwap } from "@/utils/swapTracking";
+import { markSwapShown, markSwapClicked, getScanEventId, getDwellMs } from "@/utils/scanSession";
+import { logScan } from "@/utils/scanLogger";
 import { shareSwapCard } from "@/utils/shareCard";
 import { CERTIFICATION_BADGES } from "@/utils/verifiedEthics";
 import {
@@ -174,7 +176,11 @@ export function SwapSuggestions({ product, sectionNumber = "03", onAvailabilityC
     if (loading) { onAvailabilityChange?.(null); return; }
     const hasSwaps = !!(result && result.diagnosis.primary && result.suggestions.length > 0);
     onAvailabilityChange?.(hasSwaps);
-  }, [loading, result, onAvailabilityChange]);
+    // Record that picks were actually PUT IN FRONT of this user. "We had an
+    // alternative in the catalog" and "the user saw one" are different claims,
+    // and only this one is evidence the recommendation had a chance to work.
+    if (hasSwaps) markSwapShown(product.barcode);
+  }, [loading, result, onAvailabilityChange, product.barcode]);
 
   const origC = useMemo(() => origCo2(product), [product]);
   const co2SavedFor = (s: SwapSuggestion): number | null => {
@@ -219,7 +225,35 @@ export function SwapSuggestions({ product, sectionNumber = "03", onAvailabilityC
   const kicker = `${product.brand || "This product"} has ${primary.label.toLowerCase()}. `
     + `A cleaner ${categoryLabel}${region ? `, sold in ${region.country}` : ""}.`;
 
+  /**
+   * Third funnel stage: shown → tapped.
+   *
+   * This has to write its own row rather than ride along on the decision row,
+   * because tapping a pick navigates to the alternative's page — the user never
+   * comes back to press Buy/Skip on THIS product, so a decision row for it never
+   * arrives. Left to the decision row alone, swap_clicked would read ~0 exactly
+   * when the recommendation worked.
+   */
+  const logSwapClick = () => {
+    markSwapClicked(product.barcode);
+    logScan({
+      source: "swap_click",
+      barcode: product.barcode,
+      name: product.productName || "Unknown Product",
+      brand: product.brand,
+      ecoGrade: product.ecoscoreGrade,
+      category: diagnosis.categoryKey,
+      primaryConcern: primary.type,
+      swapAvailable: true,
+      swapShown: true,
+      swapClicked: true,
+      scanEventId: getScanEventId(product.barcode),
+      dwellMs: getDwellMs(product.barcode),
+    });
+  };
+
   const handleSwitch = (s: SwapSuggestion) => {
+    logSwapClick();
     recordSwap({
       timestamp: Date.now(),
       fromBarcode: product.barcode,
@@ -338,7 +372,16 @@ export function SwapSuggestions({ product, sectionNumber = "03", onAvailabilityC
               <button
                 key={`${s.barcode || s.brand}-${i}`}
                 type="button"
-                onClick={() => (s.barcode ? navigate(`/product-off/${s.barcode}`) : handleSwitch(s))}
+                onClick={() => {
+                  // Tapping any rendered pick counts as engagement, even though
+                  // only the explicit "Switch" CTA counts as an accepted swap.
+                  if (s.barcode) {
+                    logSwapClick();
+                    navigate(`/product-off/${s.barcode}`);
+                  } else {
+                    handleSwitch(s);
+                  }
+                }}
                 style={{
                   width: "100%", display: "flex", alignItems: "center", gap: 12,
                   padding: "12px 16px", background: "none", cursor: "pointer", textAlign: "left",

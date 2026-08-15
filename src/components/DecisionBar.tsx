@@ -8,6 +8,7 @@ import {
   recordDecision, getDecision, clearDecision, DECISIONS_EVENT, type DecisionOutcome,
 } from "@/utils/decisions";
 import { logScan } from "@/utils/scanLogger";
+import { getScanEventId, getDwellMs, getSwapEngagement } from "@/utils/scanSession";
 import { assessUnmetDemand } from "@/services/swaps";
 import { loadPriorities } from "@/utils/userPreferences";
 import { loadRegion } from "@/utils/userRegion";
@@ -49,6 +50,11 @@ interface DecisionBarProps {
   product: OpenFoodFactsResult;
   /** Verdict key: BUY | CONSIDER | CAUTION | AVOID | UNKNOWN. */
   verdictKey: string;
+  /**
+   * The same verdict computed at DEFAULT (neutral) priorities. Logged, never
+   * shown — it's the baseline that makes personalisation's effect measurable.
+   */
+  baseVerdictKey?: string;
   /** Scroll the page to the "better swaps" section. */
   onSeeBetter: () => void;
   /** Whether the "Better swaps" section actually has picks to scroll to. */
@@ -61,7 +67,7 @@ interface DecisionBarProps {
   capturedImage?: string | null;
 }
 
-export function DecisionBar({ product, verdictKey, onSeeBetter, hasSwaps = false, openaiResponse, fullOpenaiResponse, capturedImage }: DecisionBarProps) {
+export function DecisionBar({ product, verdictKey, baseVerdictKey, onSeeBetter, hasSwaps = false, openaiResponse, fullOpenaiResponse, capturedImage }: DecisionBarProps) {
   const [decision, setDecision] = useState(() => getDecision(product.barcode));
   const { lean, color, headline } = meaning(verdictKey);
 
@@ -86,6 +92,10 @@ export function DecisionBar({ product, verdictKey, onSeeBetter, hasSwaps = false
     // category, its worst concern, and whether we had an in-market alternative.
     const priorities = loadPriorities();
     const demand = assessUnmetDemand(product, priorities, loadRegion()?.countryCode);
+    // This row's counterpart — the exposure row written when the page opened —
+    // carries the same scanEventId, so the pair joins exactly. Dwell and swap
+    // engagement only exist at this end of the pair.
+    const engagement = getSwapEngagement(product.barcode);
     logScan({
       barcode: product.barcode,
       name: product.productName || "Unknown Product",
@@ -96,10 +106,16 @@ export function DecisionBar({ product, verdictKey, onSeeBetter, hasSwaps = false
       image: capturedImage,
       bought: outcome === "bought" ? "YES" : "NO",
       verdict: verdictKey,
+      verdictBase: baseVerdictKey ?? null,
       priorities,
       category: demand.category,
       primaryConcern: demand.primaryConcern,
       swapAvailable: demand.swapAvailable,
+      swapGapReason: demand.swapGapReason,
+      scanEventId: getScanEventId(product.barcode),
+      dwellMs: getDwellMs(product.barcode),
+      swapShown: engagement.swapShown,
+      swapClicked: engagement.swapClicked,
     });
     if (outcome === "bought") {
       addToBasket({

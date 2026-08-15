@@ -29,6 +29,12 @@ CREATE TABLE IF NOT EXISTS ai_scans (
   swap_available  BOOLEAN,       -- was a region-available ethical alternative on offer? null = N/A
   image           TEXT,          -- the scanned photo, as compressed JPEG base64 (no data: prefix)
   resolved        BOOLEAN NOT NULL DEFAULT true,  -- false = scan failed to resolve to a product
+  scan_event_id   TEXT,          -- UUID shared by the exposure row and the conversion row of one page view
+  verdict_base    TEXT,          -- the verdict at DEFAULT (all-Medium) priorities; compare against `verdict`
+  swap_gap_reason TEXT,          -- no_candidate_in_catalog | wrong_concern | failed_clean | not_sold_here
+  swap_shown      BOOLEAN,       -- did the swap section actually render picks? (conversion rows only)
+  swap_clicked    BOOLEAN,       -- did the user tap one? (conversion rows only)
+  dwell_ms        INTEGER,       -- ms from page open to the buy/skip press, clamped at 600000
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -44,10 +50,19 @@ ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS primary_concern TEXT;
 ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS swap_available  BOOLEAN;
 ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS image           TEXT;
 ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS resolved        BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS scan_event_id   TEXT;
+ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS verdict_base    TEXT;
+ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS swap_gap_reason TEXT;
+ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS swap_shown      BOOLEAN;
+ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS swap_clicked    BOOLEAN;
+ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS dwell_ms        INTEGER;
 
 CREATE INDEX IF NOT EXISTS idx_ai_scans_created_at ON ai_scans (created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_ai_scans_user_id    ON ai_scans (user_id);
 CREATE INDEX IF NOT EXISTS idx_ai_scans_product    ON ai_scans (lower(product_name));
+CREATE INDEX IF NOT EXISTS idx_ai_scans_event
+  ON ai_scans (scan_event_id)
+  WHERE scan_event_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_ai_scans_demand
   ON ai_scans (country, category, primary_concern)
   WHERE primary_concern IS NOT NULL AND swap_available IS NOT TRUE;
