@@ -1,4 +1,4 @@
-import { AlertTriangle, ShieldAlert, Info } from "lucide-react";
+import { AlertTriangle, ShieldAlert, Info, GitBranch } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import type { BrandFlagV2 } from "@/types/brandFlag";
@@ -39,6 +39,20 @@ const severityStyles = {
   },
 };
 
+/**
+ * Headline wording follows the claim, not just the severity.
+ *
+ * "Forced / Child Labor Allegations" over a flag whose only evidence is the DOL
+ * commodity list reads as an allegation against the company. It isn't one. The
+ * heading is the part people read, so it's the part that has to be accurate.
+ */
+function headline(flag: BrandFlagV2, severityLabel: string): string {
+  if (flag.claimType === "supply_chain_inference") {
+    return "Supply-chain risk — inferred, not alleged against this company";
+  }
+  return severityLabel;
+}
+
 interface LaborFlagBannerProps {
   flag: BrandFlagV2;
   brandName?: string | null;
@@ -49,27 +63,45 @@ export function LaborFlagBanner({ flag, brandName, compact = false }: LaborFlagB
   const [expanded, setExpanded] = useState(false);
 
   const style = severityStyles[flag.severity] ?? severityStyles.medium;
+  const inferred = flag.claimType === "supply_chain_inference";
 
   if (compact) {
     return (
       <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${style.bg} border ${style.border}`}>
-        <ShieldAlert className={`w-4 h-4 flex-shrink-0 ${style.icon}`} />
+        {inferred
+          ? <GitBranch className={`w-4 h-4 flex-shrink-0 ${style.icon}`} />
+          : <ShieldAlert className={`w-4 h-4 flex-shrink-0 ${style.icon}`} />}
         <span className={`text-xs font-medium ${style.title}`}>
-          {style.label}
+          {inferred ? "Supply-chain risk" : style.label}
         </span>
       </div>
     );
   }
 
   return (
-    <div className={`rounded-lg border ${style.border} ${style.bg} overflow-hidden`}>
+    // Inference flags get a dashed border. Same severity colour — the concern is
+    // real and we're not hiding it — but a visibly different kind of statement.
+    <div
+      className={`rounded-lg ${inferred ? "border-2 border-dashed" : "border"} ${style.border} ${style.bg} overflow-hidden`}
+    >
       <div className="p-4">
         <div className="flex items-start gap-3">
-          <AlertTriangle className={`w-5 h-5 flex-shrink-0 mt-0.5 ${style.icon}`} />
+          {inferred
+            ? <GitBranch className={`w-5 h-5 flex-shrink-0 mt-0.5 ${style.icon}`} />
+            : <AlertTriangle className={`w-5 h-5 flex-shrink-0 mt-0.5 ${style.icon}`} />}
           <div className="flex-1 min-w-0">
             <h4 className={`font-semibold text-sm ${style.title}`}>
-              {style.label}
+              {headline(flag, style.label)}
             </h4>
+            {inferred && (
+              // Stated before the summary, not tucked under "view sources".
+              // A caveat placed after the claim is a caveat most people miss.
+              <p className={`text-xs mt-1 ${style.text} opacity-90`}>
+                Our sources document this problem in the commodity or region
+                {brandName ? ` ${brandName}` : " this brand"} buys from — they do not
+                accuse this company of it directly.
+              </p>
+            )}
             <p className={`text-sm mt-1 ${style.text}`}>
               {flag.summary}
             </p>
@@ -111,6 +143,12 @@ export function LaborFlagBanner({ flag, brandName, compact = false }: LaborFlagB
                       <span className="opacity-75">{source.publisher}</span>
                       {source.publishedDate && (
                         <span className="opacity-50"> ({source.publishedDate.slice(0, 4)})</span>
+                      )}
+                      {/* Mark the commodity-level sources individually too: a
+                          flag can mix one document that names the company with
+                          three that don't, and the list is where that shows. */}
+                      {source.commodityLevel && (
+                        <span className="opacity-60 italic"> — about the commodity, not this company</span>
                       )}
                     </li>
                   ))}

@@ -3,7 +3,7 @@ import { getMostRecentVerifiedDate } from "@/services/brandFlags";
 import { getVerifiedFlags } from "@/data/brandFlags.v2";
 import {
   Shield, FileText, AlertTriangle, Info,
-  Scale, Database, ExternalLink,
+  Scale, Database, ExternalLink, GitBranch,
 } from "lucide-react";
 import { BackButton } from "@/components/BackButton";
 import { DS } from "@/styles/design-tokens";
@@ -16,7 +16,21 @@ const ACCENT = DS.ink;
 
 export default function Methodology() {
   const lastUpdate = getMostRecentVerifiedDate();
-  const totalVerified = getVerifiedFlags().length;
+  const verified = getVerifiedFlags();
+  const totalVerified = verified.length;
+  // Counted from the data, not written down — a hardcoded split would be wrong
+  // the first time a flag is reclassified, on the page that exists to be exact.
+  const directCount = verified.filter((f) => f.claimType === "direct").length;
+  const inferenceCount = verified.filter((f) => f.claimType === "supply_chain_inference").length;
+  // How far the commodity-level sources (the DOL TVPRA listings) actually reach.
+  // Derived rather than written down: the first draft of this paragraph asserted
+  // "four flags", which was wrong by an order of magnitude, on the one page whose
+  // entire purpose is being checkable.
+  const withCommodity = verified.filter((f) => f.sources.some((s) => s.commodityLevel));
+  const commodityCited = withCommodity.length;
+  const commodityOnlyInference = withCommodity.filter(
+    (f) => f.claimType === "supply_chain_inference",
+  ).length;
 
   useEffect(() => {
     document.title = "Methodology — GoodScan";
@@ -208,8 +222,63 @@ export default function Methodology() {
           </div>
         </Section>
 
-        {/* 04 — What We Don't Do */}
-        <Section icon={Info} iconColor={DS.muted} number="04" title="What We Don't Do">
+        {/* 04 — What a Flag Actually Claims */}
+        <Section icon={GitBranch} iconColor={ACCENT} number="04" title="What a Flag Actually Claims">
+          <p style={{ fontSize: "0.82rem", color: DS.muted, lineHeight: 1.6, marginBottom: 14 }}>
+            Source tier tells you how good the evidence is. It doesn't tell you what the evidence is
+            evidence <span style={{ fontStyle: "italic" }}>of</span>. Those are different questions, and we
+            record both.
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div style={{
+              borderRadius: 12, background: DS.bg, padding: "14px 16px",
+              border: `1px solid ${DS.hair}`,
+            }}>
+              <p style={{ fontSize: "0.82rem", fontWeight: 700, color: DS.ink, marginBottom: 4 }}>
+                Direct — {directCount} of {totalVerified} flags
+              </p>
+              <p style={{ fontSize: "0.78rem", color: DS.muted, lineHeight: 1.6 }}>
+                A source names the company: a lawsuit against it, a regulator's finding, an
+                investigation into it, or its own disclosure. Shown with a solid border.
+              </p>
+            </div>
+            <div style={{
+              borderRadius: 12, background: DS.bg, padding: "14px 16px",
+              border: `2px dashed ${DS.hair}`,
+            }}>
+              <p style={{ fontSize: "0.82rem", fontWeight: 700, color: DS.ink, marginBottom: 4 }}>
+                Supply-chain inference — {inferenceCount} of {totalVerified} flags
+              </p>
+              <p style={{ fontSize: "0.78rem", color: DS.muted, lineHeight: 1.6 }}>
+                The source documents a commodity or region, and the company is linked because it buys
+                from there. Shown with a dashed border and stated on the flag itself before the claim.
+              </p>
+            </div>
+          </div>
+          <div style={{
+            marginTop: 12, borderRadius: 10, background: DS.warnBg, border: `1px solid ${DS.warn}`,
+            padding: "12px 14px",
+          }}>
+            <p style={{ fontSize: "0.78rem", color: ORANGE, lineHeight: 1.6, fontWeight: 500 }}>
+              The clearest example: the US Department of Labor's list of goods produced with child
+              labour establishes that cocoa from Côte d'Ivoire and Ghana involves child labour. It is a
+              tier-1 government source and we trust it completely — about cocoa. It says nothing about
+              which company bought that cocoa. {commodityCited} of our flags cite it or a sibling
+              commodity listing. For {commodityOnlyInference} of them that is the strongest link we
+              have, and those are inferences; for the other {commodityCited - commodityOnlyInference},
+              a separate source names the company directly.
+            </p>
+          </div>
+          <p style={{ fontSize: "0.78rem", color: DS.muted, lineHeight: 1.6, marginTop: 12 }}>
+            An inference is not a weak claim. A company that buys cocoa from a region where child
+            labour is documented, and cannot show otherwise, has a real problem. It is a
+            <span style={{ fontWeight: 700, color: DS.ink }}> different </span>
+            claim from "this company was found responsible", and we no longer print them in the same words.
+          </p>
+        </Section>
+
+        {/* 05 — What We Don't Do */}
+        <Section icon={Info} iconColor={DS.muted} number="05" title="What We Don't Do">
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             {[
               "Include brand flags without at least one source that meets the tier bar.",
@@ -229,8 +298,8 @@ export default function Methodology() {
           </div>
         </Section>
 
-        {/* 05 — Database Status */}
-        <Section icon={Database} iconColor={ACCENT} number="05" title="Database Status">
+        {/* 06 — Database Status */}
+        <Section icon={Database} iconColor={ACCENT} number="06" title="Database Status">
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             {[
               { label: "Last Verified", value: lastUpdate ? lastUpdate.slice(0, 10) : "—", color: GREEN },

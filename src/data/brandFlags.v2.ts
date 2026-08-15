@@ -25,6 +25,7 @@ const DOL_TVPRA_COCOA: FlagSource = {
   publishedDate: '2022-09-01',
   accessedDate: '2026-04-29',
   jurisdiction: 'US',
+  commodityLevel: true,
 };
 
 const DOL_TVPRA_SUGAR: FlagSource = {
@@ -36,6 +37,7 @@ const DOL_TVPRA_SUGAR: FlagSource = {
   publishedDate: '2022-09-01',
   accessedDate: '2026-04-29',
   jurisdiction: 'US',
+  commodityLevel: true,
 };
 
 const DOL_TVPRA_PALM_OIL: FlagSource = {
@@ -47,6 +49,7 @@ const DOL_TVPRA_PALM_OIL: FlagSource = {
   publishedDate: '2022-09-01',
   accessedDate: '2026-04-29',
   jurisdiction: 'US',
+  commodityLevel: true,
 };
 
 const DOL_TVPRA_COFFEE: FlagSource = {
@@ -58,6 +61,7 @@ const DOL_TVPRA_COFFEE: FlagSource = {
   publishedDate: '2022-09-01',
   accessedDate: '2026-04-29',
   jurisdiction: 'US',
+  commodityLevel: true,
 };
 
 const DOL_TVPRA_FISH_THAILAND: FlagSource = {
@@ -69,6 +73,7 @@ const DOL_TVPRA_FISH_THAILAND: FlagSource = {
   publishedDate: '2022-09-01',
   accessedDate: '2026-04-29',
   jurisdiction: 'US',
+  commodityLevel: true,
 };
 
 const IRA_COCOA_LAWSUIT: FlagSource = {
@@ -179,6 +184,7 @@ export const brandFlagsV2: BrandFlagV2[] = [
     ],
     category: 'child_labour',
     severity: 'critical',
+    claimType: 'direct',
     summary: 'Nestlé has faced multiple US lawsuits and a Supreme Court case alleging use of child and forced labor in its cocoa supply chain in West Africa.',
     details: "Nestlé USA, Inc. v. Doe reached the U.S. Supreme Court in 2021, with Malian plaintiffs alleging they were trafficked as children to harvest cocoa on Ivory Coast farms supplying Nestlé. The company also appears on the U.S. DOL list of goods produced with child labor for cocoa, and has been linked to child labor in Guatemalan coffee and forced labor in Malaysian palm oil supply chains. Amnesty International documented abusive conditions at palm oil supplier estates in 2016.",
     sources: [
@@ -205,6 +211,7 @@ export const brandFlagsV2: BrandFlagV2[] = [
     ],
     category: 'child_labour',
     severity: 'critical',
+    claimType: 'direct',
     summary: 'Mars was named defendant in child trafficking and forced labor lawsuits related to cocoa sourcing from Ivory Coast.',
     details: "Malian plaintiffs in the IRA Advocates lawsuit alleged they were trafficked as children to harvest cocoa on Ivory Coast farms supplying Mars. A 2019 Washington Post investigation found that Mars had broken its pledges to eliminate child labor in its chocolate supply chain by 2010. Mars cocoa and sugar sourcing is listed on the U.S. DOL TVPRA list of goods produced with child or forced labor.",
     sources: [
@@ -238,6 +245,7 @@ export const brandFlagsV2: BrandFlagV2[] = [
     ],
     category: 'child_labour',
     severity: 'critical',
+    claimType: 'direct',
     summary: 'Hershey was named defendant in child labor lawsuits regarding West African cocoa sourcing and has broken multiple public pledges to eliminate child labor in its supply chain.',
     details: "Hershey was a defendant in the IRA Advocates cocoa child labor lawsuit in which Malian plaintiffs alleged trafficking and forced labor on Ivory Coast cocoa farms. A 2019 Washington Post investigation documented that Hershey had broken its pledges to end child labor. Cocoa is listed by the U.S. DOL as produced with child labor in the primary sourcing countries.",
     sources: [
@@ -273,6 +281,7 @@ export const brandFlagsV2: BrandFlagV2[] = [
     ],
     category: 'child_labour',
     severity: 'critical',
+    claimType: 'direct',
     summary: 'Mondelēz International was named defendant in a 2021 child trafficking lawsuit alleging forced child labor on Ivory Coast cocoa farms in its supply chain.',
     details: "Malian plaintiffs in the 2021 IRA Advocates lawsuit alleged they were trafficked as children and forced to harvest cocoa on Ivory Coast farms supplying Mondelēz (formerly Kraft Foods). Cocoa is listed on the U.S. DOL TVPRA list as produced with child labor. Oxfam's Behind the Brands campaign scored Mondelēz poorly on labor rights transparency.",
     sources: [
@@ -293,6 +302,7 @@ export const brandFlagsV2: BrandFlagV2[] = [
     brandAliases: ['ferrero', 'nutella', 'kinder', 'tic tac', 'thorntons', 'butterfinger'],
     category: 'child_labour',
     severity: 'critical',
+    claimType: 'direct',
     summary: 'A BBC investigation documented children as young as 10 picking hazelnuts in Turkey for farms supplying Ferrero, the world\'s largest hazelnut buyer.',
     details: "A 2019 BBC investigation found children as young as 10 picking hazelnuts in Turkey for farms supplying Ferrero, findings documented in the Business & Human Rights Resource Centre's case file. Ferrero is the world's largest consumer of hazelnuts, purchasing approximately 25% of global supply. The company is also linked to child labor in West African cocoa through U.S. DOL TVPRA listings for both hazelnuts and cocoa.",
     sources: [
@@ -331,6 +341,7 @@ export const brandFlagsV2: BrandFlagV2[] = [
     brandAliases: ['lindt'],
     category: 'child_labour',
     severity: 'high',
+    claimType: 'direct',
     summary: 'Lindt\'s own 2023 audit found 87 child workers on supplier farms in Ghana, and a 2024 Swiss TV investigation documented ongoing child labor despite the company\'s prevention program.',
     details: "Lindt's own corporate forced labour report (2023) disclosed that surprise audits found 87 child workers on Ghanaian cocoa farms in its supply chain in 2021. A 2024 Swiss TV Rundschau investigation documented child labor persisting on farms supplying Lindt despite the company's child labor monitoring program. This constitutes a corporate admission of a documented finding.",
     sources: [
@@ -359,6 +370,7 @@ export const brandFlagsV2: BrandFlagV2[] = [
     brandAliases: ['lindor'],
     category: 'child_labour',
     severity: 'high',
+    claimType: 'direct',
     summary: 'Lindor is a Lindt sub-brand. Lindt\'s own 2023 audit found 87 child workers on supplier farms, and a 2024 Swiss TV investigation documented ongoing child labor.',
     details: "Lindor chocolates are produced by Lindt & Sprüngli. Lindt's own corporate sustainability report (2023) disclosed that surprise audits found 87 child workers on Ghanaian cocoa farms in its supply chain. A 2024 Swiss TV Rundschau investigation documented child labor on farms supplying Lindt.",
     sources: [
@@ -387,6 +399,7 @@ export const brandFlagsV2: BrandFlagV2[] = [
     brandAliases: ['ghirardelli'],
     category: 'child_labour',
     severity: 'high',
+    claimType: 'direct',
     summary: 'Ghirardelli is owned by Lindt. Lindt\'s own 2023 audit found 87 child workers on cocoa farms, and a 2024 Swiss TV investigation documented ongoing child labor.',
     details: "Ghirardelli was acquired by Lindt & Sprüngli in 1998. Lindt's own corporate sustainability report (2023) disclosed that surprise audits found 87 child workers on Ghanaian cocoa farms. A 2024 Swiss TV Rundschau investigation documented child labor on farms supplying Lindt.",
     sources: [
@@ -415,6 +428,7 @@ export const brandFlagsV2: BrandFlagV2[] = [
     brandAliases: ['russell stover'],
     category: 'child_labour',
     severity: 'high',
+    claimType: 'direct',
     summary: 'Russell Stover is owned by Lindt. Lindt\'s own 2023 audit found 87 child workers on cocoa farms, and a 2024 Swiss TV investigation documented ongoing child labor.',
     details: "Russell Stover was acquired by Lindt & Sprüngli in 2014. Lindt's own corporate sustainability report (2023) disclosed that surprise audits found 87 child workers on Ghanaian cocoa farms. A 2024 Swiss TV Rundschau investigation documented child labor on farms supplying Lindt.",
     sources: [
@@ -448,6 +462,7 @@ export const brandFlagsV2: BrandFlagV2[] = [
     ],
     category: 'child_labour',
     severity: 'high',
+    claimType: 'supply_chain_inference',
     summary: 'Human Rights Watch documented child labor on sugar plantations in El Salvador supplying Coca-Cola, and an NYT investigation found child labor and debt bondage on Indian sugar cane farms in its supply chain.',
     details: "A 2004 Human Rights Watch report documented children working on sugar plantations in El Salvador supplying Coca-Cola. An NYT/Fuller Project investigation found child labor and debt bondage on sugar cane farms in India supplying Coca-Cola's supply chain. Sugar is listed by the U.S. DOL as produced with child or forced labor in multiple sourcing countries.",
     sources: [
@@ -491,6 +506,7 @@ export const brandFlagsV2: BrandFlagV2[] = [
     ],
     category: 'child_labour',
     severity: 'high',
+    claimType: 'supply_chain_inference',
     summary: 'An NYT investigation linked PepsiCo\'s Indian sugar supply chain to child labor and debt bondage, and the company has sourced palm oil from suppliers linked to forced labor in Malaysia.',
     details: "An NYT/Fuller Project investigation found child labor and debt bondage on sugar cane farms in India supplying PepsiCo's supply chain. PepsiCo has also been flagged for sourcing palm oil from FGV Holdings, a Malaysian supplier linked to forced labor allegations. Sugar and palm oil are listed by the U.S. DOL as produced with child or forced labor. The Rainforest Action Network has published findings on PepsiCo's palm oil supply chain.",
     sources: [
@@ -530,6 +546,7 @@ export const brandFlagsV2: BrandFlagV2[] = [
     brandAliases: ['starbucks'],
     category: 'child_labour',
     severity: 'high',
+    claimType: 'direct',
     summary: 'A Channel 4 investigation found child labor on all five Starbucks-linked coffee farms visited in Guatemala, with children as young as 8.',
     details: "A Channel 4 Dispatches investigation found child labor on all five Starbucks-linked coffee farms visited in Guatemala, with children as young as 8 working on farms supplying its certified supply chain. The Business & Human Rights Resource Centre documented a 2024 Brazilian lawsuit in which workers alleged forced labor conditions at a Starbucks-certified supplier farm. Coffee is listed by the U.S. DOL as produced with child or forced labor.",
     sources: [
@@ -563,6 +580,7 @@ export const brandFlagsV2: BrandFlagV2[] = [
     ],
     category: 'forced_labour',
     severity: 'high',
+    claimType: 'supply_chain_inference',
     summary: 'Amnesty International traced palm oil from forced-labor-linked Wilmar International to Unilever products, and a BBC investigation found degrading conditions on Assam tea estates supplying Unilever brands.',
     details: "Amnesty International's 2016 report 'The Great Palm Oil Scandal' traced palm oil from Wilmar International — linked to child and forced labor in Indonesia — to Unilever products including Dove, Magnum, and Knorr. A 2019 AP investigation corroborated palm oil supply chain abuses. A BBC investigation found degrading conditions, inadequate housing, and lack of sanitation on tea estates in Assam, India, supplying Unilever's Lipton and PG Tips brands.",
     sources: [
@@ -604,6 +622,7 @@ export const brandFlagsV2: BrandFlagV2[] = [
     ],
     category: 'child_labour',
     severity: 'medium',
+    claimType: 'supply_chain_inference',
     summary: 'ABF tied for last place in Oxfam\'s Behind the Brands scorecard; its Silver Spoon sugar is sourced from supply chains with child labor, and Twinings tea estates were linked to a BBC Assam investigation.',
     details: "Associated British Foods tied for last place in Oxfam's Behind the Brands campaign, scoring the lowest on labor rights transparency among the ten largest food companies. Its Silver Spoon brand sources sugar from supply chains listed by the U.S. DOL as producing with child labor. A BBC investigation into Assam tea estates in India found degrading conditions on estates supplying tea brands including Twinings.",
     sources: [
@@ -633,6 +652,7 @@ export const brandFlagsV2: BrandFlagV2[] = [
     brandAliases: ['tetley'],
     category: 'unsafe_conditions',
     severity: 'high',
+    claimType: 'direct',
     summary: 'A BBC investigation found degrading working conditions on Indian tea estates in Assam supplying Tetley, including inadequate equipment, housing, and sanitation.',
     details: "A BBC investigation found degrading working conditions on Indian tea estates in Assam supplying Tetley. Workers lacked proper protective equipment, adequate housing, and sanitation. The Business & Human Rights Resource Centre has tracked subsequent NGO responses and company statements. A Columbia Law School human rights clinic documented systemic issues on Assam tea estates.",
     sources: [
@@ -671,6 +691,7 @@ export const brandFlagsV2: BrandFlagV2[] = [
     brandAliases: ['folgers'],
     category: 'forced_labour',
     severity: 'medium',
+    claimType: 'supply_chain_inference',
     summary: 'Folgers sources coffee through supply chains linked to Brazilian plantations where workers were found in slavery-like conditions, and the U.S. DOL lists coffee as produced with child or forced labor.',
     details: "A Danwatch investigation documented slavery-like conditions on Brazilian coffee plantations in supply chains used by major coffee brands including Folgers. The U.S. DOL TVPRA list identifies coffee from multiple sourcing countries as produced with child labor or forced labor. Folgers is owned by J.M. Smucker Company.",
     sources: [
@@ -703,6 +724,7 @@ export const brandFlagsV2: BrandFlagV2[] = [
     ],
     category: 'forced_labour',
     severity: 'medium',
+    claimType: 'supply_chain_inference',
     summary: 'Kraft Heinz coffee brands source through supply chains with documented forced labor, and its palm oil suppliers have been linked to child labor allegations.',
     details: "Kraft Heinz's Maxwell House coffee sources through supply chains listed by the U.S. DOL as producing coffee with child or forced labor. Amnesty International's 2016 palm oil report identified palm oil sourced by Kraft Heinz from Wilmar International, whose supplier estates were linked to child and forced labor in Indonesia.",
     sources: [
@@ -722,6 +744,7 @@ export const brandFlagsV2: BrandFlagV2[] = [
     brandAliases: ['lavazza'],
     category: 'forced_labour',
     severity: 'medium',
+    claimType: 'direct',
     summary: 'Lavazza has been cited in investigative reports regarding suppliers linked to farms with slavery-like working conditions in Brazil\'s coffee sector.',
     details: "A 2022 Reporter Brasil investigation cited Lavazza as sourcing from suppliers linked to Brazilian coffee farms where workers were found in slavery-like conditions. A Danwatch investigation corroborated findings of forced labor in Brazilian coffee supply chains. Coffee is listed by the U.S. DOL as produced with child or forced labor.",
     sources: [
@@ -760,6 +783,7 @@ export const brandFlagsV2: BrandFlagV2[] = [
     brandAliases: ['illy'],
     category: 'forced_labour',
     severity: 'medium',
+    claimType: 'direct',
     summary: 'A 2018 OECD complaint documented slavery-like conditions on coffee farms supplying Illy, and the company confirmed purchasing from cooperatives linked to plantations where authorities liberated workers.',
     details: "A 2018 OECD NCP complaint documented slavery-like conditions on Brazilian coffee farms in Illy's supply chain. Illy confirmed it had purchased from cooperatives linked to plantations where Brazilian authorities liberated workers found in conditions analogous to slavery. The OECD NCP is an official government-affiliated dispute mechanism, classifying this finding at tier 1. A Danwatch investigation corroborated the supply chain link.",
     sources: [
@@ -800,6 +824,7 @@ export const brandFlagsV2: BrandFlagV2[] = [
     brandAliases: ['domino sugar', 'domino foods', 'c&h', 'florida crystals', 'redpath', 'tate & lyle'],
     category: 'forced_labour',
     severity: 'critical',
+    claimType: 'direct',
     summary: 'U.S. Customs and Border Protection banned sugar imports from Central Romana (ASR Group\'s primary supplier) in 2022 after finding evidence of forced labor.',
     details: "In 2022 the U.S. CBP issued a Withhold Release Order against Central Romana Corporation — the Dominican Republic sugar mill that supplies ASR Group's Domino, C&H, and Florida Crystals brands — after finding multiple indicators of forced labor including debt bondage, restriction of movement, confiscated documents, and abusive working and living conditions. Workers were reported to earn as little as $4/day, live without electricity or running water, and have their passports confiscated. NPR and Corporate Accountability Lab provided corroborating reporting.",
     sources: [
@@ -847,6 +872,7 @@ export const brandFlagsV2: BrandFlagV2[] = [
     brandAliases: ['chicken of the sea'],
     category: 'forced_labour',
     severity: 'critical',
+    claimType: 'supply_chain_inference',
     summary: 'Parent company Thai Union was linked by AP and Greenpeace to forced labor and slavery on Thai fishing vessels, with workers held at sea for years and not paid.',
     details: "A 2015 Associated Press investigation found that workers on Thai fishing vessels supplying Thai Union (parent of Chicken of the Sea) were forced to work 18–20 hour days, held at sea for years, subjected to physical abuse, and not paid. Greenpeace has published multiple reports on forced labor in Thai Union's supply chain. Fish from Thailand is listed on the U.S. DOL TVPRA list as produced with forced labor.",
     sources: [
@@ -885,6 +911,7 @@ export const brandFlagsV2: BrandFlagV2[] = [
     brandAliases: ['bumble bee'],
     category: 'forced_labour',
     severity: 'critical',
+    claimType: 'direct',
     summary: 'A 2025 federal lawsuit alleges Bumble Bee knew fishing vessels in its supply fleet used forced labor, with Indonesian workers subjected to physical abuse, debt bondage, and deprivation.',
     details: "A 2025 federal lawsuit filed in San Diego alleges that Bumble Bee Foods knew that fishing vessels in its supply fleet subjected Indonesian workers to forced labor including physical abuse, debt bondage, and severe deprivation. Greenpeace and Global Labor Justice-ILRF have published supporting documentation on forced labor in tuna fishing supply chains.",
     sources: [
@@ -932,6 +959,7 @@ export const brandFlagsV2: BrandFlagV2[] = [
     brandAliases: ['tyson', 'jimmy dean', 'hillshire farm', 'ball park', 'aidells', 'wright brand'],
     category: 'child_labour',
     severity: 'critical',
+    claimType: 'direct',
     summary: 'U.S. DOL investigations found children as young as 13 cleaning Tyson and other meatpacking plants via a sanitation subcontractor across 8 states.',
     details: "A U.S. DOL investigation found that Packers Sanitation Services Inc. (PSSI), a sanitation subcontractor, employed children as young as 13 to clean Tyson and other meatpacking plants in at least 8 states. The 2022 investigation resulted in a $1.5 million civil money penalty — the largest child labor fine in DOL history at the time. In 2023 the DOL opened a direct federal investigation into child labor at Tyson and Perdue plants.",
     sources: [
@@ -970,6 +998,7 @@ export const brandFlagsV2: BrandFlagV2[] = [
     brandAliases: ['jbs'],
     category: 'child_labour',
     severity: 'high',
+    claimType: 'supply_chain_inference',
     summary: 'Children as young as 13 were found cleaning JBS meatpacking plants via a sanitation subcontractor, and JBS paid $55M in a $127M joint settlement of a workers\' wage-fixing class action.',
     details: "The U.S. DOL 2022 investigation into Packers Sanitation Services Inc. found children as young as 13 working overnight shifts cleaning JBS meatpacking plants. In 2024, JBS ($55M) and Tyson ($72.25M) agreed to pay a combined $127.2 million to settle a class action in Colorado federal court alleging a conspiracy to suppress meatpacking workers' wages.",
     sources: [
@@ -998,6 +1027,7 @@ export const brandFlagsV2: BrandFlagV2[] = [
     brandAliases: ["pilgrim's pride"],
     category: 'child_labour',
     severity: 'high',
+    claimType: 'supply_chain_inference',
     summary: 'Children were found cleaning Pilgrim\'s Pride meatpacking plants via a sanitation subcontractor in the 2022 U.S. DOL investigation.',
     details: "Pilgrim's Pride is the second-largest poultry producer in the U.S. and a subsidiary of JBS. The 2022 U.S. DOL investigation into Packers Sanitation Services Inc. found children cleaning meatpacking facilities operated by Pilgrim's Pride.",
     sources: [DOL_SANITATION_2022],
@@ -1014,6 +1044,7 @@ export const brandFlagsV2: BrandFlagV2[] = [
     brandAliases: ['just bare'],
     category: 'child_labour',
     severity: 'high',
+    claimType: 'supply_chain_inference',
     summary: 'Just Bare is a Pilgrim\'s Pride brand. Its parent company was linked to child labor in meatpacking sanitation in the 2022 U.S. DOL investigation.',
     details: "Just Bare chicken products are produced by Pilgrim's Pride, a JBS subsidiary. The 2022 U.S. DOL investigation found that Packers Sanitation Services Inc. employed children to clean processing facilities operated by Pilgrim's Pride.",
     sources: [DOL_SANITATION_2022],
@@ -1030,6 +1061,7 @@ export const brandFlagsV2: BrandFlagV2[] = [
     brandAliases: ['chiquita'],
     category: 'child_labour',
     severity: 'critical',
+    claimType: 'direct',
     summary: 'Human Rights Watch documented children as young as 8 working on Chiquita banana plantations in Ecuador, and a U.S. federal court found Chiquita guilty in 2024 of financing Colombian paramilitary groups.',
     details: "A 2002 Human Rights Watch report found children as young as 8 working 12-hour days on banana plantations in Ecuador supplying Chiquita. In 2024, a U.S. federal court found Chiquita Brands International guilty of knowingly financing Colombian paramilitary groups (AUC) designated as a foreign terrorist organization, resulting in a civil verdict for families of victims. The Business & Human Rights Resource Centre has tracked ongoing litigation.",
     sources: [
@@ -1059,6 +1091,7 @@ export const brandFlagsV2: BrandFlagV2[] = [
     brandAliases: ['dole'],
     category: 'child_labour',
     severity: 'high',
+    claimType: 'supply_chain_inference',
     summary: 'Human Rights Watch documented child labor and pesticide exposure on Dole supplier banana plantations in Ecuador, and workers reported harassment and intimidation on Philippine supply plantations.',
     details: "A 2002 Human Rights Watch report documented child labor and toxic pesticide exposure on banana plantations in Ecuador supplying Dole. Workers on Dole supply plantations in the Philippines have reported harassment and intimidation against organizers. The Business & Human Rights Resource Centre has tracked subsequent litigation and company responses.",
     sources: [
@@ -1078,6 +1111,7 @@ export const brandFlagsV2: BrandFlagV2[] = [
     brandAliases: ['del monte'],
     category: 'child_labour',
     severity: 'high',
+    claimType: 'supply_chain_inference',
     summary: 'Human Rights Watch found children working on banana plantations supplying Del Monte in Ecuador, with workers exposed to toxic pesticides and denied the right to organize.',
     details: "A 2002 Human Rights Watch report found children working on banana plantations in Ecuador supplying Del Monte. Workers on those plantations were exposed to toxic pesticides without adequate protection and faced restrictions on unionization. The Business & Human Rights Resource Centre has tracked subsequent company responses.",
     sources: [
@@ -1101,6 +1135,7 @@ export const brandFlagsV2: BrandFlagV2[] = [
     ],
     category: 'child_labour',
     severity: 'high',
+    claimType: 'supply_chain_inference',
     summary: 'Amnesty International named Kellogg\'s as one of nine companies profiting from child and forced labor in palm oil through Wilmar International in Indonesia.',
     details: "Amnesty International's 2016 report 'The Great Palm Oil Scandal' named Kellogg's as one of nine companies sourcing palm oil from Wilmar International, whose supplier estates in Indonesia were found to use child labor and forced labor. Oxfam's Behind the Brands scorecard also scored Kellogg's poorly on labor rights.",
     sources: [
@@ -1125,6 +1160,7 @@ export const brandFlagsV2: BrandFlagV2[] = [
     ],
     category: 'child_labour',
     severity: 'medium',
+    claimType: 'supply_chain_inference',
     summary: 'General Mills sources palm oil and cocoa from supply chains with documented child and forced labor, and scored poorly on labor rights in Oxfam\'s Behind the Brands campaign.',
     details: "General Mills uses palm oil and cocoa sourced from supply chains listed by the U.S. DOL as producing goods with child and forced labor. Oxfam's Behind the Brands campaign scored General Mills poorly on labor rights transparency. The company has made public commitments to sustainable sourcing but has faced criticism for gaps in implementation.",
     sources: [
@@ -1145,6 +1181,7 @@ export const brandFlagsV2: BrandFlagV2[] = [
     brandAliases: ['danone', 'dannon', 'activia', 'oikos', 'evian', 'volvic', 'aptamil'],
     category: 'supply_chain_opacity',
     severity: 'medium',
+    claimType: 'supply_chain_inference',
     summary: 'Danone scored among the lowest on Oxfam\'s Behind the Brands campaign for labor rights and sources palm oil from supply chains with forced labor concerns.',
     details: "Oxfam's Behind the Brands campaign scored Danone among the lowest of the ten largest food companies on labor rights transparency. Amnesty International's 2016 report identified Danone as sourcing palm oil from Wilmar International, whose supplier estates in Indonesia were linked to child and forced labor.",
     sources: [
@@ -1164,6 +1201,7 @@ export const brandFlagsV2: BrandFlagV2[] = [
     brandAliases: ['cargill'],
     category: 'child_labour',
     severity: 'critical',
+    claimType: 'direct',
     summary: 'Cargill was named defendant in child trafficking lawsuits alongside Nestlé, and a Brazilian court found Cargill liable for child and forced labor in its cocoa supply chain.',
     details: "Cargill was a named defendant in the 2021 IRA Advocates child trafficking and forced labor lawsuit filed on behalf of Malian plaintiffs who alleged they were trafficked as children to harvest cocoa on Ivory Coast farms. The Nestlé USA, Inc. v. Doe Supreme Court case, which addressed corporate liability under the Alien Tort Statute, also involved Cargill. A Brazilian court has separately found Cargill liable for child and forced labor in its cocoa supply chain.",
     sources: [
@@ -1183,6 +1221,7 @@ export const brandFlagsV2: BrandFlagV2[] = [
     brandAliases: ['barry callebaut'],
     category: 'child_labour',
     severity: 'critical',
+    claimType: 'direct',
     summary: 'Barry Callebaut was named defendant in child trafficking and forced labor lawsuits and is directly implicated in West African cocoa child labor as the world\'s largest cocoa processor.',
     details: "Barry Callebaut, the world's largest cocoa processing and chocolate manufacturing company, was a named defendant in the IRA Advocates child trafficking and forced labor lawsuit filed on behalf of Malian plaintiffs. Cocoa — the primary commodity processed by Barry Callebaut — is listed by the U.S. DOL TVPRA list as produced with child labor in Ivory Coast and Ghana, the company's primary sourcing regions.",
     sources: [
@@ -1202,6 +1241,7 @@ export const brandFlagsV2: BrandFlagV2[] = [
     brandAliases: ['godiva'],
     category: 'supply_chain_opacity',
     severity: 'medium',
+    claimType: 'direct',
     summary: 'Godiva ranked last in Green America\'s Chocolate Scorecard for failing to address labor rights and sustainability in its cocoa supply chain.',
     details: "Green America's 2020 Chocolate Scorecard ranked Godiva last among major chocolate brands for its failure to address labor rights, child labor, and sustainability in its cocoa supply chain. The Business & Human Rights Resource Centre has tracked advocacy responses and company statements on cocoa sourcing practices.",
     sources: [

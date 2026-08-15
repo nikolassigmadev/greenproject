@@ -28,7 +28,38 @@ export interface FlagSource {
   accessedDate: string;     // ISO 8601, when we verified it
   jurisdiction?: string;    // e.g., "US", "EU", "Global"
   excerpt?: string;         // optional short quote (under 25 words)
+  /**
+   * True when this source documents a COMMODITY or REGION rather than any
+   * particular company — the US DOL TVPRA list being the clearest example. It
+   * establishes that cocoa from Côte d'Ivoire involves child labour; it says
+   * nothing about who bought that cocoa.
+   *
+   * Marked on the source because it's a property of the document, true no
+   * matter which company we attach it to. Whether a company is named is
+   * per-flag (one lawsuit names six defendants and not a seventh), which is
+   * why that lives in BrandFlagV2.claimType instead.
+   */
+  commodityLevel?: boolean;
 }
+
+/**
+ * How strongly the sources connect this company to this finding.
+ *
+ * The distinction the tier system alone can't make: a tier-1 government report
+ * proving child labour exists in Ivorian cocoa is excellent evidence about
+ * Ivorian cocoa. Used to flag a chocolate brand, it is an inference — accurate,
+ * defensible, and materially weaker than "a court found this company liable".
+ * Presenting both in the same words is the single easiest thing to attack about
+ * this dataset, so the schema records which one we have.
+ */
+export type ClaimType =
+  /** A source names this company: a lawsuit, a regulatory action, its own disclosure. */
+  | 'direct'
+  /**
+   * Sources document the commodity, region or sector; the company is linked
+   * because it sources from there. Still evidence — just of a different claim.
+   */
+  | 'supply_chain_inference';
 
 export type FlagCategory =
   | 'forced_labour'
@@ -55,6 +86,12 @@ export interface BrandFlagV2 {
   brandAliases?: string[];       // alternative names / parent companies
   category: FlagCategory;
   severity: FlagSeverity;
+  /**
+   * Whether the sources name this company, or document the commodity it buys.
+   * Set to the STRONGEST claim the sources support: 'direct' if any one source
+   * names the company, 'supply_chain_inference' otherwise.
+   */
+  claimType: ClaimType;
   summary: string;               // one-sentence claim, factual tone
   details: string;               // 2–4 sentences, factual, no editorialising
   sources: FlagSource[];
