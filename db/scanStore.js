@@ -432,6 +432,50 @@ export function logScan(rec = {}) {
 }
 
 /**
+ * How many rows Postgres holds for one anonymous id, so an erasure request can
+ * be answered ("we held N rows, they're gone") rather than merely actioned.
+ *
+ * @returns {Promise<{rows: number, withImage: number, firstSeen: Date|null, lastSeen: Date|null}>}
+ */
+export async function countScansForAnonId(anonId) {
+  if (!ready || !pool) throw new Error('scanStore is not connected');
+  const id = clip(anonId, 64);
+  if (!id) return { rows: 0, withImage: 0, firstSeen: null, lastSeen: null };
+  const res = await pool.query(
+    `SELECT count(*)::int                                    AS rows,
+            count(*) FILTER (WHERE image IS NOT NULL)::int   AS with_image,
+            min(created_at)                                  AS first_seen,
+            max(created_at)                                  AS last_seen
+       FROM ai_scans
+      WHERE user_id = $1`,
+    [id],
+  );
+  const r = res.rows[0];
+  return { rows: r.rows, withImage: r.with_image, firstSeen: r.first_seen, lastSeen: r.last_seen };
+}
+
+/**
+ * Delete every ai_scans row belonging to one anonymous id.
+ *
+ * This is the erasure path. Without it, answering "please delete my data"
+ * requires opening the Supabase console and hand-writing a DELETE — which
+ * means it either doesn't happen or happens unaudited.
+ *
+ * Deliberately keyed on user_id only. No date range, no partial delete: a
+ * request to be forgotten is not a request to be partially forgotten, and a
+ * filter here is a way to leave rows behind by accident.
+ *
+ * @returns {Promise<number>} rows deleted
+ */
+export async function deleteScansForAnonId(anonId) {
+  if (!ready || !pool) throw new Error('scanStore is not connected');
+  const id = clip(anonId, 64);
+  if (!id) throw new Error('anonId is required');
+  const res = await pool.query(`DELETE FROM ai_scans WHERE user_id = $1`, [id]);
+  return res.rowCount;
+}
+
+/**
  * Insert one user-submitted community flag into Postgres, awaitable.
  *
  * The request path doesn't want to wait for this (see logCommunityFlag below),

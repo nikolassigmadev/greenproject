@@ -55,7 +55,23 @@ export default function Privacy({ embedded = false }: { embedded?: boolean } = {
               <li style={{ marginBottom: 6 }}>A random device identifier — generated on your device, not linked to your identity</li>
             </ul>
             <p style={{ margin: 0 }}>
-              These records are not tied to your name, email, or account (we have none of these). If you'd rather not create scan records, deny or revoke the app's camera access in your device settings and type a product name or barcode number instead — no photo is captured or stored when you enter products manually.
+              These records are not tied to your name, email, or account (we have none of these). You can turn scan records off entirely under Settings → Anonymous scan data, which also lists exactly what each record contains. Manually typing a product name or barcode never captures or stores a photo.
+            </p>
+          </Section>
+
+          <Section title="Turning It Off, and Deleting What We Hold">
+            <p style={{ margin: 0, marginBottom: 8 }}>
+              Settings → Anonymous scan data has a switch that stops any further records being created. It takes effect immediately.
+            </p>
+            <p style={{ margin: 0, marginBottom: 8 }}>
+              Turning it off does not remove records already made. To have those deleted, copy your device ID from that same screen and email it to us at{" "}
+              <a href="mailto:contact@goodscan.shop" style={{ color: DS.ink, textDecoration: "none", fontWeight: 600 }}>
+                contact@goodscan.shop
+              </a>
+              . We will erase every record attached to that ID.
+            </p>
+            <p style={{ margin: 0 }}>
+              The device ID is the only handle that exists on your data — we have no other way to identify which records are yours, which is also why we cannot return them to anyone who does not have it.
             </p>
           </Section>
 

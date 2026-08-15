@@ -22,7 +22,10 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { existsSync, readFileSync, writeFileSync, mkdirSync, appendFileSync, chmodSync } from 'fs';
 import { createRequire } from 'module';
-import { initScanStore, logScan, scanStoreReady, logCommunityFlag, updateCommunityFlagStatus } from './db/scanStore.js';
+import {
+  initScanStore, logScan, scanStoreReady, logCommunityFlag, updateCommunityFlagStatus,
+  countScansForAnonId, deleteScansForAnonId,
+} from './db/scanStore.js';
 
 console.log('server.js: imports loaded');
 
@@ -96,6 +99,8 @@ try {
     );
     CREATE INDEX IF NOT EXISTS idx_scans_barcode ON scans(barcode);
     CREATE INDEX IF NOT EXISTS idx_scans_ts ON scans(ts);
+    -- Erasure is keyed on anon_id, so it needs an index of its own.
+    CREATE INDEX IF NOT EXISTS idx_scans_anon_id ON scans(anon_id);
   `);
   scanInsertStmt = scanDb.prepare(
     `INSERT INTO scans (barcode, name, brand, eco_grade, country, anon_id, ts)
@@ -2171,6 +2176,82 @@ app.get('/api/admin/scans', requireAdmin, (req, res) => {
   } catch (e) {
     console.error('scan query error:', e.message);
     res.status(500).json({ success: false, error: 'Failed to query scans' });
+  }
+});
+
+// ── Erasure ──
+// Until now there was no admin HTTP route onto Postgres at all, which made a
+// "delete my data" request unanswerable without opening the Supabase console
+// and hand-writing a DELETE. That means it either doesn't happen, or happens
+// unaudited and off the record.
+//
+// The handle is the anonymous device id, which the user can read and copy from
+// Preferences → Anonymous scan data. It is the only identifier they have.
+//
+// Behind authLimiter as well as requireAdmin: this is the one admin route that
+// destroys data, so it gets the login endpoint's stricter budget rather than
+// the read endpoints'.
+
+/**
+ * GET /api/admin/scans/:anonId — how much we hold for one anonymous id.
+ * Read-only. Exists so an erasure can be confirmed before and after, instead of
+ * being fired blind at an id that might be a typo.
+ */
+app.get('/api/admin/scans/:anonId', requireAdmin, authLimiter, async (req, res) => {
+  const anonId = String(req.params.anonId || '').trim();
+  if (!anonId || anonId.length > 64) {
+    return res.status(400).json({ success: false, error: 'anonId must be 1-64 characters' });
+  }
+  if (!scanStoreReady()) {
+    return res.status(503).json({ success: false, error: 'Postgres scan log unavailable' });
+  }
+  try {
+    const pg = await countScansForAnonId(anonId);
+    const sqlite = scanDb
+      ? scanDb.prepare('SELECT COUNT(*) AS n FROM scans WHERE anon_id = ?').get(anonId).n
+      : null;
+    res.json({ success: true, anonId, postgres: pg, sqliteCounterRows: sqlite });
+  } catch (e) {
+    console.error('scan erasure preview error:', e.message);
+    res.status(500).json({ success: false, error: 'Failed to count scans' });
+  }
+});
+
+/**
+ * DELETE /api/admin/scans/:anonId — erase every row for one anonymous id.
+ *
+ * Deletes from BOTH stores: the rich Postgres log (ai_scans) and the SQLite
+ * popularity counter, which also carries anon_id. Deleting from one and not the
+ * other would leave the user's data present while reporting it erased.
+ *
+ * Irreversible and not soft-deleted — a request to be forgotten that leaves a
+ * tombstone row hasn't been honoured.
+ */
+app.delete('/api/admin/scans/:anonId', requireAdmin, authLimiter, async (req, res) => {
+  const anonId = String(req.params.anonId || '').trim();
+  if (!anonId || anonId.length > 64) {
+    return res.status(400).json({ success: false, error: 'anonId must be 1-64 characters' });
+  }
+  if (!scanStoreReady()) {
+    // Refuse rather than half-delete: erasing the SQLite counter while Postgres
+    // is unreachable would report success over a database still holding the rows.
+    return res.status(503).json({ success: false, error: 'Postgres scan log unavailable — nothing deleted' });
+  }
+  try {
+    const before = await countScansForAnonId(anonId);
+    const deletedPostgres = await deleteScansForAnonId(anonId);
+    const deletedSqlite = scanDb
+      ? scanDb.prepare('DELETE FROM scans WHERE anon_id = ?').run(anonId).changes
+      : 0;
+    // Log it: an erasure that leaves no record of having happened is not auditable.
+    console.log(
+      `admin erasure: anon_id=${anonId} — ${deletedPostgres} ai_scans row(s), ` +
+        `${deletedSqlite} counter row(s), ${before.withImage} of them held a photo`,
+    );
+    res.json({ success: true, anonId, deletedPostgres, deletedSqlite, imagesRemoved: before.withImage });
+  } catch (e) {
+    console.error('scan erasure error:', e.message);
+    res.status(500).json({ success: false, error: 'Failed to delete scans' });
   }
 });
 
