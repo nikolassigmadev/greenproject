@@ -18,7 +18,8 @@ import {
   beginScanEvent, getScanEventId, getDwellMs, getSwapEngagement,
   markSwapShown, markSwapClicked, MAX_DWELL_MS,
 } from "@/utils/scanSession";
-// @ts-expect-error — server-side JS module, no type declarations
+// Server-side JS module — imported directly so the sanitiser under test is the
+// exact one the insert path uses, not a copy.
 import { imageData } from "../../db/scanStore.js";
 
 function makeProduct(over: Partial<OpenFoodFactsResult>): OpenFoodFactsResult {
