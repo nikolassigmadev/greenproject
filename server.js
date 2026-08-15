@@ -133,14 +133,16 @@ const app = express();
 app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3001;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-// Env var wins when set (both .env files define it); the hardcoded hash is the
-// fallback so login doesn't depend on Hostinger env vars. Ignore the
-// placeholder value that shipped in old .env files.
+// The admin password hash comes from the environment or nowhere. There is
+// deliberately NO fallback: a hash committed to this (public) repo is an
+// offline-crackable password for every deployment that forgets to set the var.
+// When ADMIN_PASSWORD_HASH is unset the admin surface fails CLOSED — login and
+// every requireAdmin route return 503 — rather than silently accepting a
+// password anyone can read off GitHub. Generate one with scripts/make-admin-hash.sh.
+// The placeholder that shipped in old .env files is treated as unset.
 const envAdminHash = process.env.ADMIN_PASSWORD_HASH;
 const ADMIN_PASSWORD_HASH =
-  envAdminHash && !envAdminHash.includes('REPLACE_THIS')
-    ? envAdminHash
-    : '$2b$10$OwDevUsgK7kV0kkUWM./n.a7vX4zMYKxF.TdsA0b3624GCWPYHKj2';
+  envAdminHash && !envAdminHash.includes('REPLACE_THIS') ? envAdminHash : null;
 
 // In-memory session store (replace with Redis/DB in production)
 const adminSessions = new Map();
@@ -164,6 +166,13 @@ function isValidAdminSession(token) {
 }
 
 function requireAdmin(req, res, next) {
+  // Fail closed. No hash configured means no admin exists — and since a session
+  // can only be minted by a successful login, this is belt-and-braces: it keeps
+  // the admin surface shut even if some future code path creates a session
+  // without going through /api/admin/login.
+  if (!ADMIN_PASSWORD_HASH) {
+    return res.status(503).json({ success: false, error: 'Admin not configured' });
+  }
   const token = req.headers['x-admin-token'];
   if (!isValidAdminSession(token)) {
     return res.status(401).json({ success: false, error: 'Unauthorized' });
@@ -367,7 +376,9 @@ const CHAT_TASK_PROMPTS = {
 app.post('/api/admin/login', authLimiter, async (req, res) => {
   try {
     if (!ADMIN_PASSWORD_HASH) {
-      return res.status(500).json({ success: false, error: 'Admin not configured' });
+      // 503, not 500: the server is fine, the admin surface is deliberately
+      // unavailable until an operator sets ADMIN_PASSWORD_HASH.
+      return res.status(503).json({ success: false, error: 'Admin not configured' });
     }
 
     const { password } = req.body || {};
@@ -2180,7 +2191,14 @@ app.use((err, req, res, next) => {
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server listening on port ${PORT}`);
   console.log(`OpenAI Configured: ${OPENAI_API_KEY ? 'Yes' : 'No'}`);
-  console.log(`Admin Configured: ${ADMIN_PASSWORD_HASH ? 'Yes' : 'No'}`);
+  if (ADMIN_PASSWORD_HASH) {
+    console.log('Admin Configured: Yes');
+  } else {
+    console.warn(
+      'Admin Configured: NO — ADMIN_PASSWORD_HASH is unset, so every /api/admin/* route returns 503. ' +
+        'Generate a hash with scripts/make-admin-hash.sh and set it in the environment.',
+    );
+  }
 });
 
 process.on('uncaughtException', (err) => {
