@@ -275,7 +275,13 @@ describe("verdict-page battery across the full brand universe", () => {
     }
 
     expect(products).toBeGreaterThanOrEqual(400); // "hundreds of products"
-  });
+    // 30s, not the 5s default. This battery computes ~3,600 verdicts plus the
+    // same number of personalized scores, and each one now also consults the
+    // brand-flag set (since laborCheck falls through to it). That is real work
+    // and it lands around 6s — it was silently sitting just under the default
+    // and started failing as a timeout, which reads like a broken invariant
+    // rather than a slow test. Raised deliberately, with the cost stated.
+  }, 30_000);
 
   it("suppresses the green verified-ethics card whenever a live red signal fires", () => {
     // Mirrors the page's cleanEthicsRecord gate: if this invariant is met the
