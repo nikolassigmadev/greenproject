@@ -22,7 +22,7 @@ import { assessAvailability, CONFIDENCE_RANK } from '@/services/retailers';
 import { orderReasonsByPriority, activePriorityLabels, type PlainReason } from '@/services/supermarket';
 import { COUNTRIES } from '@/utils/userRegion';
 import type { UserPriorities } from '@/utils/userPreferences';
-import { localQuery } from '@/services/supermarket';
+import { localQuery, isBareCategoryQuery } from '@/services/supermarket';
 import { isInMarket, isFullCoverageMarket, type AltCandidate } from '@/data/ethicalAlternatives';
 import { getIndonesiaCandidates } from '@/data/indonesiaProducts';
 
@@ -265,5 +265,31 @@ describe('market accuracy', () => {
     expect(isFullCoverageMarket('US')).toBe(true);
     expect(isFullCoverageMarket('GB')).toBe(false);
     expect(isFullCoverageMarket(null)).toBe(false);
+  });
+});
+
+describe('the shop header cannot overclaim', () => {
+  it('knows which chains are mostly own-brand', () => {
+    // Trader Joe's is ~80% private label. Listing Alter Eco and Divine under a
+    // Trader Joe's heading was the single worst thing this feature did: brands
+    // it does not stock, presented as picks for that shop.
+    expect(getRetailerById('trader-joes')!.privateLabelShare).toBe('high');
+    expect(getRetailerById('aldi-uk')!.privateLabelShare).toBe('high');
+    expect(getRetailerById('lidl-de')!.privateLabelShare).toBe('high');
+    // Chains that genuinely carry national brands are not flagged.
+    expect(getRetailerById('walmart')!.privateLabelShare).not.toBe('high');
+    expect(getRetailerById('indomaret')!.privateLabelShare).not.toBe('high');
+  });
+
+  it('treats a bare category word as a browse, not a product', () => {
+    // Asking OpenAI for the barcode of "chocolate" returns *a* chocolate, and
+    // it jumped to the top of a US search as Bjorg — a French brand.
+    expect(isBareCategoryQuery('chocolate', 'chocolate')).toBe(true);
+    expect(isBareCategoryQuery('coffee', 'coffee')).toBe(true);
+    expect(isBareCategoryQuery('dark chocolate', 'chocolate')).toBe(true);
+    // Naming a product is not a browse.
+    expect(isBareCategoryQuery('oreo', 'cookies')).toBe(false);
+    expect(isBareCategoryQuery('tony\'s chocolonely', 'chocolate')).toBe(false);
+    expect(isBareCategoryQuery('snickers', 'chocolate')).toBe(false);
   });
 });

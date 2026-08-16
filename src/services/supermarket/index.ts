@@ -127,6 +127,21 @@ export interface ShelfResult {
   picks: ShelfPick[];
   /** We understood the request but found nothing to show. */
   empty: boolean;
+  /**
+   * Did ANY pick have a signal tying it to this chain?
+   *
+   * When false, every result is just "sold somewhere in your country" and the
+   * chain name is decoration. The header has to say so: "6 picks for Trader
+   * Joe's" over six brands Trader Joe's doesn't stock is a lie told by a
+   * heading, and no per-row caveat undoes it, because the heading is the part
+   * people read.
+   */
+  hasChainEvidence: boolean;
+  /**
+   * This chain sells mostly its own brand, so national-brand results are
+   * especially unlikely to be on its shelves.
+   */
+  mostlyOwnBrand: boolean;
 }
 
 export interface ShelfSearchOptions {
@@ -305,16 +320,28 @@ export async function searchShelf(
 
   // EXACT-PRODUCT PATH.
   //
-  // Typing "oreo" or "snickers" is naming one product, not browsing a category,
-  // and fuzzy text search answered it with whatever shared a word. smartProductSearch
-  // asks OpenAI for the retail barcode and then looks THAT up in Open Food Facts —
-  // the lookup is the safety gate, so a hallucinated number simply fails to
-  // resolve and we fall through. Only the barcode-resolved result is taken
-  // (confidence 0.95); a merely plausible text match is left to the paths below,
-  // which know about markets and availability.
-  const exact = await smartProductSearch(query, { aiBarcode: true })
-    .then((r) => (r.product && !r.noMatch && r.confidence >= 0.9 ? r.product : null))
-    .catch(() => null);
+  // Typing "oreo" or "snickers" names one product; "chocolate" browses a
+  // category. Only the first deserves a barcode lookup — asking OpenAI for the
+  // barcode of "chocolate" returns *a* chocolate, and it jumped the queue to
+  // the top of a US search as Bjorg, a French brand nobody at Trader Joe's has
+  // ever seen. A bare category word is a category, not a product.
+  const namesAProduct = !isBareCategoryQuery(query, categoryKey);
+  const exactRaw = namesAProduct
+    ? await smartProductSearch(query, { aiBarcode: true })
+        .then((r) => (r.product && !r.noMatch && r.confidence >= 0.9 ? r.product : null))
+        .catch(() => null)
+    : null;
+
+  // No market filter on the exact match, deliberately.
+  //
+  // I added one after a French brand reached the top of a US search — but the
+  // real cause of that was the barcode lookup running on the bare word
+  // "chocolate", which isBareCategoryQuery now prevents. Requiring a country tag
+  // on top of that meant typing "oreo" returned no Oreo, because OFF's entry for
+  // it simply isn't tagged United States. Contributor-supplied country tags are
+  // far too patchy to overrule someone naming a product outright; its row still
+  // reports availability honestly.
+  const exact = exactRaw;
 
   // Baseline FIRST, then products — deliberately sequential.
   //
@@ -363,14 +390,20 @@ export async function searchShelf(
     source = 'search';
   }
 
+  const shown = picks.slice(0, limit);
   return {
     categoryKey,
     source,
     query,
     retailer,
     baseline,
-    picks: picks.slice(0, limit),
-    empty: picks.length === 0,
+    picks: shown,
+    empty: shown.length === 0,
+    hasChainEvidence: shown.some(
+      (p) => p.availability.confidence === 'confirmed_here'
+        || p.availability.confidence === 'seen_at_chain',
+    ),
+    mostlyOwnBrand: retailer.privateLabelShare === 'high',
   };
 }
 
@@ -579,6 +612,26 @@ function toPick(
     comparison,
     vetted,
   };
+}
+
+/**
+ * Is this query just naming a category rather than a product?
+ *
+ * "chocolate", "coffee", "instant noodles" browse; "oreo", "tony's chocolonely"
+ * name a thing. The test is deliberately simple: if the whole query maps to a
+ * catalogue category and adds no words beyond that category's own name, it's a
+ * browse.
+ */
+export function isBareCategoryQuery(query: string, categoryKey: SwapCategoryKey | null): boolean {
+  if (!categoryKey) return false;
+  const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  if (words.length > 3) return false;
+  const categoryWords = new Set(categoryKey.split('_'));
+  // Common category synonyms a shopper would type.
+  for (const w of ['instant', 'ground', 'dark', 'milk', 'white', 'bar', 'bars', 'drink']) {
+    categoryWords.add(w);
+  }
+  return words.every((w) => categoryWords.has(w) || categoryKey.includes(w) || w.length <= 2);
 }
 
 /** Very short words carry no signal and match everything. */

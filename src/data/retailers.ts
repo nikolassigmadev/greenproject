@@ -52,19 +52,34 @@ export interface Retailer {
    * score, and never shown as a rating of the retailer.
    */
   hasEthicalOwnLabel?: boolean;
+  /**
+   * Roughly what share of the shelf is the chain's OWN brand.
+   *
+   * This matters more than anything else in the file. Trader Joe's is ~80%
+   * private label: it does not stock Alter Eco or Divine, it stocks Trader
+   * Joe's chocolate. Listing national brands under a Trader Joe's header is
+   * simply wrong, and no per-row availability caveat rescues it — the shopper
+   * reads the header.
+   *
+   * Open Food Facts has almost nothing on own-brand products (they're
+   * regional, they change constantly, and contributors don't scan them), so for
+   * a high-private-label chain the honest answer is usually "we can't help you
+   * much here" — and the UI now says that instead of filling the space.
+   */
+  privateLabelShare?: 'high' | 'medium' | 'low';
 }
 
 export const RETAILERS: Retailer[] = [
   // ── United Kingdom & Ireland ──────────────────────────────────────────────
-  { id: 'tesco', name: 'Tesco', countries: ['GB', 'IE'], kind: 'supermarket', offAliases: ['tesco', 'tescos', 'tesco-uk', 'tesco express', 'tesco extra'], hasEthicalOwnLabel: true },
-  { id: 'sainsburys', name: "Sainsbury's", countries: ['GB'], kind: 'supermarket', offAliases: ["sainsbury's", 'sainsburys', 'sainsbury', 'sainsburys-uk'], hasEthicalOwnLabel: true },
-  { id: 'waitrose', name: 'Waitrose', countries: ['GB'], kind: 'supermarket', offAliases: ['waitrose', 'waitrose & partners', 'waitrose-uk'], hasEthicalOwnLabel: true },
-  { id: 'coop-uk', name: 'Co-op', countries: ['GB'], kind: 'convenience', offAliases: ['co-op', 'coop', 'the co-operative', 'co-operative'], hasEthicalOwnLabel: true },
-  { id: 'marks-spencer', name: 'Marks & Spencer', countries: ['GB', 'IE'], kind: 'supermarket', offAliases: ['marks & spencer', 'marks and spencer', 'm&s', 'ms'], hasEthicalOwnLabel: true },
-  { id: 'asda', name: 'Asda', countries: ['GB'], kind: 'supermarket', offAliases: ['asda', 'asda-uk'] },
-  { id: 'morrisons', name: 'Morrisons', countries: ['GB'], kind: 'supermarket', offAliases: ['morrisons', 'morrison', 'wm morrison'] },
-  { id: 'aldi-uk', name: 'Aldi', countries: ['GB', 'IE'], kind: 'discounter', offAliases: ['aldi', 'aldi-uk'] },
-  { id: 'lidl-uk', name: 'Lidl', countries: ['GB', 'IE'], kind: 'discounter', offAliases: ['lidl', 'lidl-uk'] },
+  { id: 'tesco', name: 'Tesco', countries: ['GB', 'IE'], kind: 'supermarket', offAliases: ['tesco', 'tescos', 'tesco-uk', 'tesco express', 'tesco extra'], hasEthicalOwnLabel: true, privateLabelShare: 'medium' },
+  { id: 'sainsburys', name: "Sainsbury's", countries: ['GB'], kind: 'supermarket', offAliases: ["sainsbury's", 'sainsburys', 'sainsbury', 'sainsburys-uk'], hasEthicalOwnLabel: true, privateLabelShare: 'medium' },
+  { id: 'waitrose', name: 'Waitrose', countries: ['GB'], kind: 'supermarket', offAliases: ['waitrose', 'waitrose & partners', 'waitrose-uk'], hasEthicalOwnLabel: true, privateLabelShare: 'medium' },
+  { id: 'coop-uk', name: 'Co-op', countries: ['GB'], kind: 'convenience', offAliases: ['co-op', 'coop', 'the co-operative', 'co-operative'], hasEthicalOwnLabel: true, privateLabelShare: 'medium' },
+  { id: 'marks-spencer', name: 'Marks & Spencer', countries: ['GB', 'IE'], kind: 'supermarket', offAliases: ['marks & spencer', 'marks and spencer', 'm&s', 'ms'], hasEthicalOwnLabel: true, privateLabelShare: 'high' },
+  { id: 'asda', name: 'Asda', countries: ['GB'], kind: 'supermarket', offAliases: ['asda', 'asda-uk'], privateLabelShare: 'medium' },
+  { id: 'morrisons', name: 'Morrisons', countries: ['GB'], kind: 'supermarket', offAliases: ['morrisons', 'morrison', 'wm morrison'], privateLabelShare: 'medium' },
+  { id: 'aldi-uk', name: 'Aldi', countries: ['GB', 'IE'], kind: 'discounter', offAliases: ['aldi', 'aldi-uk'], privateLabelShare: 'high' },
+  { id: 'lidl-uk', name: 'Lidl', countries: ['GB', 'IE'], kind: 'discounter', offAliases: ['lidl', 'lidl-uk'], privateLabelShare: 'high' },
   { id: 'dunnes', name: 'Dunnes Stores', countries: ['IE'], kind: 'supermarket', offAliases: ['dunnes', 'dunnes stores'] },
   { id: 'supervalu', name: 'SuperValu', countries: ['IE'], kind: 'supermarket', offAliases: ['supervalu', 'super valu'] },
 
@@ -86,12 +101,12 @@ export const RETAILERS: Retailer[] = [
   { id: 'walmart', name: 'Walmart', countries: ['US', 'CA'], kind: 'hypermarket', offAliases: ['walmart', 'wal-mart', 'walmart-us'] },
   { id: 'target', name: 'Target', countries: ['US'], kind: 'hypermarket', offAliases: ['target'] },
   { id: 'kroger', name: 'Kroger', countries: ['US'], kind: 'supermarket', offAliases: ['kroger'] },
-  { id: 'whole-foods', name: 'Whole Foods Market', countries: ['US', 'CA', 'GB'], kind: 'organic', offAliases: ['whole foods', 'whole foods market', 'wholefoods'], hasEthicalOwnLabel: true },
-  { id: 'trader-joes', name: "Trader Joe's", countries: ['US'], kind: 'supermarket', offAliases: ["trader joe's", 'trader joes', 'traderjoes'] },
+  { id: 'whole-foods', name: 'Whole Foods Market', countries: ['US', 'CA', 'GB'], kind: 'organic', offAliases: ['whole foods', 'whole foods market', 'wholefoods'], hasEthicalOwnLabel: true, privateLabelShare: 'medium' },
+  { id: 'trader-joes', name: "Trader Joe's", countries: ['US'], kind: 'supermarket', offAliases: ["trader joe's", 'trader joes', 'traderjoes'], privateLabelShare: 'high' },
   { id: 'safeway', name: 'Safeway', countries: ['US', 'CA'], kind: 'supermarket', offAliases: ['safeway'] },
   { id: 'publix', name: 'Publix', countries: ['US'], kind: 'supermarket', offAliases: ['publix'] },
-  { id: 'costco', name: 'Costco', countries: ['US', 'CA', 'GB', 'AU'], kind: 'hypermarket', offAliases: ['costco'] },
-  { id: 'loblaws', name: 'Loblaws', countries: ['CA'], kind: 'supermarket', offAliases: ['loblaws', 'loblaw'] },
+  { id: 'costco', name: 'Costco', countries: ['US', 'CA', 'GB', 'AU'], kind: 'hypermarket', offAliases: ['costco'], privateLabelShare: 'high' },
+  { id: 'loblaws', name: 'Loblaws', countries: ['CA'], kind: 'supermarket', offAliases: ['loblaws', 'loblaw'], privateLabelShare: 'medium' },
   { id: 'sobeys', name: 'Sobeys', countries: ['CA'], kind: 'supermarket', offAliases: ['sobeys'] },
 
   // ── France, Belgium ───────────────────────────────────────────────────────
@@ -99,54 +114,54 @@ export const RETAILERS: Retailer[] = [
   { id: 'leclerc', name: 'E.Leclerc', countries: ['FR'], kind: 'hypermarket', offAliases: ['leclerc', 'e.leclerc', 'e-leclerc'] },
   { id: 'intermarche', name: 'Intermarché', countries: ['FR', 'BE'], kind: 'supermarket', offAliases: ['intermarche', 'intermarché'] },
   { id: 'auchan', name: 'Auchan', countries: ['FR', 'ES', 'PL'], kind: 'hypermarket', offAliases: ['auchan'] },
-  { id: 'monoprix', name: 'Monoprix', countries: ['FR'], kind: 'supermarket', offAliases: ['monoprix'], hasEthicalOwnLabel: true },
+  { id: 'monoprix', name: 'Monoprix', countries: ['FR'], kind: 'supermarket', offAliases: ['monoprix'], hasEthicalOwnLabel: true, privateLabelShare: 'medium' },
   { id: 'franprix', name: 'Franprix', countries: ['FR'], kind: 'convenience', offAliases: ['franprix'] },
   { id: 'magasins-u', name: 'Super U', countries: ['FR'], kind: 'supermarket', offAliases: ['magasins-u', 'super u', 'hyper u', 'u express'] },
-  { id: 'delhaize', name: 'Delhaize', countries: ['BE'], kind: 'supermarket', offAliases: ['delhaize'], hasEthicalOwnLabel: true },
-  { id: 'colruyt', name: 'Colruyt', countries: ['BE'], kind: 'discounter', offAliases: ['colruyt'] },
+  { id: 'delhaize', name: 'Delhaize', countries: ['BE'], kind: 'supermarket', offAliases: ['delhaize'], hasEthicalOwnLabel: true, privateLabelShare: 'medium' },
+  { id: 'colruyt', name: 'Colruyt', countries: ['BE'], kind: 'discounter', offAliases: ['colruyt'], privateLabelShare: 'high' },
 
   // ── Germany, Austria, Switzerland ─────────────────────────────────────────
-  { id: 'rewe', name: 'REWE', countries: ['DE'], kind: 'supermarket', offAliases: ['rewe'], hasEthicalOwnLabel: true },
+  { id: 'rewe', name: 'REWE', countries: ['DE'], kind: 'supermarket', offAliases: ['rewe'], hasEthicalOwnLabel: true, privateLabelShare: 'medium' },
   { id: 'edeka', name: 'EDEKA', countries: ['DE'], kind: 'supermarket', offAliases: ['edeka'] },
-  { id: 'aldi-de', name: 'ALDI', countries: ['DE', 'AT', 'NL', 'BE'], kind: 'discounter', offAliases: ['aldi', 'aldi sud', 'aldi süd', 'aldi nord'] },
-  { id: 'lidl-de', name: 'Lidl', countries: ['DE', 'AT', 'NL', 'BE', 'FR', 'ES', 'IT', 'PL', 'PT', 'SE', 'FI', 'DK'], kind: 'discounter', offAliases: ['lidl'] },
-  { id: 'dm', name: 'dm-drogerie markt', countries: ['DE', 'AT'], kind: 'organic', offAliases: ['dm', 'dm-drogerie markt', 'dm drogerie'], hasEthicalOwnLabel: true },
+  { id: 'aldi-de', name: 'ALDI', countries: ['DE', 'AT', 'NL', 'BE'], kind: 'discounter', offAliases: ['aldi', 'aldi sud', 'aldi süd', 'aldi nord'], privateLabelShare: 'high' },
+  { id: 'lidl-de', name: 'Lidl', countries: ['DE', 'AT', 'NL', 'BE', 'FR', 'ES', 'IT', 'PL', 'PT', 'SE', 'FI', 'DK'], kind: 'discounter', offAliases: ['lidl'], privateLabelShare: 'high' },
+  { id: 'dm', name: 'dm-drogerie markt', countries: ['DE', 'AT'], kind: 'organic', offAliases: ['dm', 'dm-drogerie markt', 'dm drogerie'], hasEthicalOwnLabel: true, privateLabelShare: 'high' },
   { id: 'spar-at', name: 'SPAR', countries: ['AT', 'IT', 'NL', 'ES'], kind: 'supermarket', offAliases: ['spar', 'interspar', 'eurospar'] },
   { id: 'billa', name: 'BILLA', countries: ['AT'], kind: 'supermarket', offAliases: ['billa'] },
-  { id: 'migros', name: 'Migros', countries: ['CH'], kind: 'supermarket', offAliases: ['migros'], hasEthicalOwnLabel: true },
-  { id: 'coop-ch', name: 'Coop', countries: ['CH'], kind: 'supermarket', offAliases: ['coop', 'coop-ch'], hasEthicalOwnLabel: true },
+  { id: 'migros', name: 'Migros', countries: ['CH'], kind: 'supermarket', offAliases: ['migros'], hasEthicalOwnLabel: true, privateLabelShare: 'medium' },
+  { id: 'coop-ch', name: 'Coop', countries: ['CH'], kind: 'supermarket', offAliases: ['coop', 'coop-ch'], hasEthicalOwnLabel: true, privateLabelShare: 'medium' },
 
   // ── Netherlands ───────────────────────────────────────────────────────────
-  { id: 'albert-heijn', name: 'Albert Heijn', countries: ['NL', 'BE'], kind: 'supermarket', offAliases: ['albert heijn', 'ah', 'albert-heijn'], hasEthicalOwnLabel: true },
+  { id: 'albert-heijn', name: 'Albert Heijn', countries: ['NL', 'BE'], kind: 'supermarket', offAliases: ['albert heijn', 'ah', 'albert-heijn'], hasEthicalOwnLabel: true, privateLabelShare: 'medium' },
   { id: 'jumbo', name: 'Jumbo', countries: ['NL', 'BE'], kind: 'supermarket', offAliases: ['jumbo'] },
-  { id: 'ekoplaza', name: 'Ekoplaza', countries: ['NL'], kind: 'organic', offAliases: ['ekoplaza'], hasEthicalOwnLabel: true },
+  { id: 'ekoplaza', name: 'Ekoplaza', countries: ['NL'], kind: 'organic', offAliases: ['ekoplaza'], hasEthicalOwnLabel: true, privateLabelShare: 'high' },
 
   // ── Iberia & Italy ────────────────────────────────────────────────────────
-  { id: 'mercadona', name: 'Mercadona', countries: ['ES'], kind: 'supermarket', offAliases: ['mercadona'] },
+  { id: 'mercadona', name: 'Mercadona', countries: ['ES'], kind: 'supermarket', offAliases: ['mercadona'], privateLabelShare: 'medium' },
   { id: 'el-corte-ingles', name: 'El Corte Inglés', countries: ['ES'], kind: 'supermarket', offAliases: ['el corte ingles', 'el corte inglés', 'hipercor'] },
-  { id: 'continente', name: 'Continente', countries: ['PT'], kind: 'hypermarket', offAliases: ['continente'] },
-  { id: 'pingo-doce', name: 'Pingo Doce', countries: ['PT'], kind: 'supermarket', offAliases: ['pingo doce'] },
+  { id: 'continente', name: 'Continente', countries: ['PT'], kind: 'hypermarket', offAliases: ['continente'], privateLabelShare: 'medium' },
+  { id: 'pingo-doce', name: 'Pingo Doce', countries: ['PT'], kind: 'supermarket', offAliases: ['pingo doce'], privateLabelShare: 'medium' },
   { id: 'esselunga', name: 'Esselunga', countries: ['IT'], kind: 'supermarket', offAliases: ['esselunga'] },
   { id: 'conad', name: 'Conad', countries: ['IT'], kind: 'supermarket', offAliases: ['conad'] },
-  { id: 'coop-it', name: 'Coop Italia', countries: ['IT'], kind: 'supermarket', offAliases: ['coop', 'coop italia', 'coop-it'], hasEthicalOwnLabel: true },
+  { id: 'coop-it', name: 'Coop Italia', countries: ['IT'], kind: 'supermarket', offAliases: ['coop', 'coop italia', 'coop-it'], hasEthicalOwnLabel: true, privateLabelShare: 'medium' },
 
   // ── Nordics & Poland ──────────────────────────────────────────────────────
-  { id: 'ica', name: 'ICA', countries: ['SE'], kind: 'supermarket', offAliases: ['ica'] },
-  { id: 'coop-se', name: 'Coop', countries: ['SE', 'NO', 'DK'], kind: 'supermarket', offAliases: ['coop', 'coop-se'], hasEthicalOwnLabel: true },
-  { id: 'rema-1000', name: 'REMA 1000', countries: ['NO', 'DK'], kind: 'discounter', offAliases: ['rema 1000', 'rema1000'] },
-  { id: 'netto', name: 'Netto', countries: ['DK', 'DE', 'PL'], kind: 'discounter', offAliases: ['netto'] },
+  { id: 'ica', name: 'ICA', countries: ['SE'], kind: 'supermarket', offAliases: ['ica'], privateLabelShare: 'medium' },
+  { id: 'coop-se', name: 'Coop', countries: ['SE', 'NO', 'DK'], kind: 'supermarket', offAliases: ['coop', 'coop-se'], hasEthicalOwnLabel: true, privateLabelShare: 'medium' },
+  { id: 'rema-1000', name: 'REMA 1000', countries: ['NO', 'DK'], kind: 'discounter', offAliases: ['rema 1000', 'rema1000'], privateLabelShare: 'high' },
+  { id: 'netto', name: 'Netto', countries: ['DK', 'DE', 'PL'], kind: 'discounter', offAliases: ['netto'], privateLabelShare: 'high' },
   { id: 's-market', name: 'S-market', countries: ['FI'], kind: 'supermarket', offAliases: ['s-market', 'smarket', 'prisma'] },
   { id: 'k-market', name: 'K-Market', countries: ['FI'], kind: 'supermarket', offAliases: ['k-market', 'kmarket', 'k-citymarket'] },
-  { id: 'biedronka', name: 'Biedronka', countries: ['PL'], kind: 'discounter', offAliases: ['biedronka'] },
+  { id: 'biedronka', name: 'Biedronka', countries: ['PL'], kind: 'discounter', offAliases: ['biedronka'], privateLabelShare: 'high' },
   { id: 'zabka', name: 'Żabka', countries: ['PL'], kind: 'convenience', offAliases: ['zabka', 'żabka'] },
 
   // ── Australia & New Zealand ───────────────────────────────────────────────
-  { id: 'woolworths-au', name: 'Woolworths', countries: ['AU'], kind: 'supermarket', offAliases: ['woolworths', 'woolies'] },
-  { id: 'coles', name: 'Coles', countries: ['AU'], kind: 'supermarket', offAliases: ['coles'] },
+  { id: 'woolworths-au', name: 'Woolworths', countries: ['AU'], kind: 'supermarket', offAliases: ['woolworths', 'woolies'], privateLabelShare: 'medium' },
+  { id: 'coles', name: 'Coles', countries: ['AU'], kind: 'supermarket', offAliases: ['coles'], privateLabelShare: 'medium' },
   { id: 'iga-au', name: 'IGA', countries: ['AU'], kind: 'supermarket', offAliases: ['iga'] },
-  { id: 'countdown', name: 'Woolworths NZ', countries: ['NZ'], kind: 'supermarket', offAliases: ['countdown', 'woolworths nz'] },
+  { id: 'countdown', name: 'Woolworths NZ', countries: ['NZ'], kind: 'supermarket', offAliases: ['countdown', 'woolworths nz'], privateLabelShare: 'medium' },
   { id: 'new-world', name: 'New World', countries: ['NZ'], kind: 'supermarket', offAliases: ['new world'] },
-  { id: 'paknsave', name: "Pak'nSave", countries: ['NZ'], kind: 'discounter', offAliases: ["pak'nsave", 'paknsave', 'pak n save'] },
+  { id: 'paknsave', name: "Pak'nSave", countries: ['NZ'], kind: 'discounter', offAliases: ["pak'nsave", 'paknsave', 'pak n save'], privateLabelShare: 'high' },
 ];
 
 /** Chains trading in a market, largest formats first so the list reads sensibly. */

@@ -402,14 +402,47 @@ export default function Supermarket() {
               </div>
             ) : (
               <>
-                <p style={{ fontSize: 12.5, color: DS.muted, margin: '0 0 10px', lineHeight: 1.5 }}>
-                  {result.picks.length} {result.picks.length === 1 ? 'pick' : 'picks'} for{' '}
-                  <strong style={{ color: DS.ink }}>{result.retailer.name}</strong>
-                  {region?.city ? ` in ${region.city}` : ''}, best-evidenced availability first.
-                  {result.source === 'search' && (
-                    <> These come from a product search, not our hand-checked list.</>
-                  )}
-                </p>
+                {/* The heading only names the shop when something actually
+                    ties a result to it. Otherwise it says what these really
+                    are — options sold in the country — because "6 picks for
+                    Trader Joe's" over brands Trader Joe's doesn't stock is a
+                    lie told by a heading, and the heading is what gets read. */}
+                {result.hasChainEvidence ? (
+                  <p style={{ fontSize: 12.5, color: DS.muted, margin: '0 0 10px', lineHeight: 1.5 }}>
+                    {result.picks.length} {result.picks.length === 1 ? 'pick' : 'picks'} for{' '}
+                    <strong style={{ color: DS.ink }}>{result.retailer.name}</strong>
+                    {region?.city ? ` in ${region.city}` : ''}, best-evidenced availability first.
+                    {result.source === 'search' && (
+                      <> These come from a product search, not our hand-checked list.</>
+                    )}
+                  </p>
+                ) : (
+                  <div style={{
+                    border: `1px dashed ${DS.hair}`, borderRadius: 12,
+                    padding: '11px 13px', marginBottom: 10,
+                  }}>
+                    <p style={{ fontSize: 12.5, fontWeight: 700, color: DS.ink, margin: '0 0 4px' }}>
+                      We have no {result.retailer.name}-specific data
+                    </p>
+                    <p style={{ fontSize: 11.5, color: DS.muted, lineHeight: 1.55, margin: 0 }}>
+                      {result.mostlyOwnBrand ? (
+                        <>
+                          {result.retailer.name} sells mostly its own brand, and own-brand products
+                          are barely covered by the open databases we use. The {result.picks.length}{' '}
+                          {result.picks.length === 1 ? 'option' : 'options'} below are cleaner picks
+                          sold in {region?.country ?? 'your country'} — treat them as what to look
+                          for, not as what's on that shelf.
+                        </>
+                      ) : (
+                        <>
+                          Nothing links these to {result.retailer.name} specifically. They're cleaner
+                          options sold in {region?.country ?? 'your country'}. If you spot one there,
+                          adding it to your cart tells the next shopper.
+                        </>
+                      )}
+                    </p>
+                  </div>
+                )}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {result.picks.map((p) => (
                     <ShelfPickCard
