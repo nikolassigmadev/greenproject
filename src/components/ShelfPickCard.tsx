@@ -13,12 +13,14 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, MapPin, ChevronDown, Minus } from 'lucide-react';
+import { Check, MapPin, ChevronDown, Minus, Plus } from 'lucide-react';
 import { DS } from '@/styles/design-tokens';
 import type { ShelfPick } from '@/services/supermarket';
 import type { Retailer } from '@/data/retailers';
 import type { AvailabilityConfidence } from '@/services/retailers';
 import { recordSighting, hasConfirmed } from '@/utils/storeSightings';
+import { addToBasket, loadBasket } from '@/utils/basketStorage';
+import { getLaborAllegationCount } from '@/utils/laborCheck';
 import { toast } from 'sonner';
 
 const CONFIDENCE_STYLE: Record<AvailabilityConfidence, { fg: string; bg: string; dashed: boolean }> = {
@@ -46,16 +48,39 @@ interface Props {
 
 export function ShelfPickCard({ pick, retailer, countryCode, city }: Props) {
   const navigate = useNavigate();
-  const [confirmed, setConfirmed] = useState(
-    () => (pick.barcode ? hasConfirmed(pick.barcode, retailer.id) : false),
-  );
+  // Already on the list, or already confirmed as seen here — either way the
+  // button has nothing left to ask for.
+  const [confirmed, setConfirmed] = useState(() => {
+    if (!pick.barcode) return false;
+    return loadBasket().some((b) => b.barcode === pick.barcode)
+      || hasConfirmed(pick.barcode, retailer.id);
+  });
   const [showDetail, setShowDetail] = useState(false);
 
   const availStyle = CONFIDENCE_STYLE[pick.availability.confidence];
   const verdict = VERDICT_TEXT[pick.verdict] ?? VERDICT_TEXT.UNKNOWN;
 
-  const confirm = () => {
+  /**
+   * Adds to the shopping list AND records the sighting.
+   *
+   * These were two separate asks of the user — "add this" and "confirm you saw
+   * it here" — and only one of them is a thing anybody wants to do in an aisle.
+   * Putting it on the list IS evidence they saw it, so the sighting comes along
+   * for free and the button asks for the thing they actually came to do.
+   */
+  const addToCart = () => {
     if (!pick.barcode) return;
+    addToBasket({
+      barcode: pick.barcode,
+      productName: pick.productName || 'Unknown product',
+      brand: pick.brand,
+      imageUrl: pick.imageUrl,
+      ecoscoreGrade: pick.product?.ecoscoreGrade ?? null,
+      ecoscoreScore: pick.product?.ecoscoreScore ?? null,
+      nutriscoreGrade: pick.product?.nutriscoreGrade ?? null,
+      laborAllegations: getLaborAllegationCount(pick.brand, pick.productName),
+      co2Per100g: pick.product?.carbonFootprint100g ?? null,
+    });
     recordSighting({
       barcode: pick.barcode,
       retailerId: retailer.id,
@@ -63,8 +88,9 @@ export function ShelfPickCard({ pick, retailer, countryCode, city }: Props) {
       city: city ?? null,
     });
     setConfirmed(true);
-    toast.success(`Thanks — noted for ${retailer.name}`, {
-      description: 'Other shoppers here will see this.',
+    toast.success('Added to your list', {
+      description: `Also noted as seen at ${retailer.name}.`,
+      action: { label: 'View list', onClick: () => navigate('/dashboard') },
     });
   };
 
@@ -191,22 +217,23 @@ export function ShelfPickCard({ pick, retailer, countryCode, city }: Props) {
         )}
         <button
           type="button"
-          onClick={confirm}
+          onClick={addToCart}
           disabled={confirmed || !pick.barcode}
           style={{
             flexShrink: 0, height: 40, padding: '0 14px', borderRadius: 11,
             cursor: confirmed || !pick.barcode ? 'default' : 'pointer',
             border: `1px solid ${confirmed ? DS.good : DS.hair}`,
-            background: 'transparent',
+            background: confirmed ? DS.goodBg : 'transparent',
             color: confirmed ? DS.good : DS.ink,
             fontFamily: DS.font, fontSize: 12.5, fontWeight: 700,
             display: 'inline-flex', alignItems: 'center', gap: 5,
             opacity: !pick.barcode ? 0.4 : 1,
+            transition: 'background .2s ease, color .2s ease',
           }}
         >
           {confirmed
-            ? <><Check style={{ width: 13, height: 13 }} strokeWidth={3} /> Noted</>
-            : <>I saw it here</>}
+            ? <><Check style={{ width: 13, height: 13 }} strokeWidth={3} /> On your list</>
+            : <><Plus style={{ width: 13, height: 13 }} strokeWidth={2.6} /> Add to cart</>}
         </button>
       </div>
     </div>

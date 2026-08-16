@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import {
   ShoppingCart, Search, X, Trash2, AlertTriangle, Loader2, Plus,
-  ShoppingBag, Users, ChevronRight, CheckCircle2, TrendingDown, Sparkles,
+  ShoppingBag, Users, ChevronRight, CheckCircle2, TrendingDown, Sparkles, Check,
 } from "lucide-react";
 import { searchProducts as searchOffProducts } from "@/services/openfoodfacts";
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
@@ -22,6 +22,9 @@ import { CERTIFICATION_BADGES } from "@/utils/verifiedEthics";
 import { loadRegion } from "@/utils/userRegion";
 import { loadPriorities } from "@/utils/userPreferences";
 import { DS } from "@/styles/design-tokens";
+import { recordDecision } from "@/utils/decisions";
+import { logScan } from "@/utils/scanLogger";
+import { toast } from "sonner";
 
 // ── helpers ────────────────────────────────────────────────────────────────
 
@@ -374,6 +377,39 @@ export default function ShoppingList() {
     removeFromBasket(barcode);
     setBasket(loadBasket());
   };
+
+  /**
+   * The user actually bought this.
+   *
+   * Recorded as a real decision — the same store the Buy/Skip bar writes to —
+   * and logged, then taken off the list. Removing without recording would lose
+   * the one signal that separates "we changed a purchase" from "they ignored
+   * us", which is the number this whole app exists to be able to state.
+   */
+  const handleJustBought = (item: BasketItem) => {
+    recordDecision({
+      barcode: item.barcode,
+      name: item.productName,
+      brand: item.brand,
+      outcome: "bought",
+      verdict: "UNKNOWN",
+      ecoGrade: item.ecoscoreGrade,
+    });
+    logScan({
+      source: "decision",
+      barcode: item.barcode,
+      name: item.productName,
+      brand: item.brand,
+      ecoGrade: item.ecoscoreGrade,
+      bought: "YES",
+    });
+    removeFromBasket(item.barcode);
+    setBasket(loadBasket());
+    toast.success(`Marked ${item.productName} as bought`, {
+      description: "Off your list, and counted in your impact.",
+    });
+  };
+
   const handleClear = () => {
     clearBasket();
     setBasket([]);
@@ -639,6 +675,22 @@ export default function ShoppingList() {
                           </div>
                         </div>
                       </Link>
+                      {/* "Just bought" closes the loop the list opens. Without
+                          it the only way off the list is Remove, which is
+                          indistinguishable from "changed my mind" — and the
+                          difference between those two IS the impact claim. */}
+                      <button
+                        onClick={() => handleJustBought(item)}
+                        style={{
+                          flexShrink: 0, height: 32, padding: "0 11px", borderRadius: 9,
+                          border: `1px solid ${DS.good}`, background: "transparent",
+                          color: DS.good, cursor: "pointer", fontFamily: DS.font,
+                          fontSize: 11.5, fontWeight: 700, whiteSpace: "nowrap",
+                          display: "inline-flex", alignItems: "center", gap: 4,
+                        }}
+                      >
+                        <Check size={12} strokeWidth={3} /> Just bought
+                      </button>
                       <button
                         onClick={() => handleRemove(item.barcode)}
                         aria-label="Remove from basket"

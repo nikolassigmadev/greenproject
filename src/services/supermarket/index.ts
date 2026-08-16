@@ -42,6 +42,7 @@ import {
   type CategoryBaseline, type BaselineComparison,
 } from '@/services/baseline';
 import { primeRemoteCounts } from '@/utils/storeSightings';
+import { smartProductSearch } from '@/utils/smartProductSearch';
 import { isFullCoverageMarket } from '@/data/ethicalAlternatives';
 
 /** Which of the user's priorities a reason speaks to, so it can be ranked. */
@@ -302,6 +303,19 @@ export async function searchShelf(
   const countryCode = region?.countryCode ?? null;
   const categoryKey = detectCategoryFromText(query);
 
+  // EXACT-PRODUCT PATH.
+  //
+  // Typing "oreo" or "snickers" is naming one product, not browsing a category,
+  // and fuzzy text search answered it with whatever shared a word. smartProductSearch
+  // asks OpenAI for the retail barcode and then looks THAT up in Open Food Facts —
+  // the lookup is the safety gate, so a hallucinated number simply fails to
+  // resolve and we fall through. Only the barcode-resolved result is taken
+  // (confidence 0.95); a merely plausible text match is left to the paths below,
+  // which know about markets and availability.
+  const exact = await smartProductSearch(query, { aiBarcode: true })
+    .then((r) => (r.product && !r.noMatch && r.confidence >= 0.9 ? r.product : null))
+    .catch(() => null);
+
   // Baseline FIRST, then products — deliberately sequential.
   //
   // These look independent and were originally run with Promise.all. In
@@ -337,6 +351,17 @@ export async function searchShelf(
   ).catch(() => undefined);
 
   picks.sort(byAvailabilityThenEthics);
+
+  // The named product leads, whatever its verdict. Someone who typed "snickers"
+  // wants to know about Snickers — burying it under cleaner alternatives because
+  // it scores badly answers a question they didn't ask. The alternatives still
+  // follow underneath, which is the actual job.
+  if (exact) {
+    const already = picks.findIndex((p) => p.barcode === exact.barcode);
+    if (already !== -1) picks.splice(already, 1);
+    picks.unshift(toPick(exact, retailer, region, priorities, null, false));
+    source = 'search';
+  }
 
   return {
     categoryKey,
@@ -476,28 +501,7 @@ async function searchPicks(
     if (brandKey && seen.has(brandKey)) continue;
     if (brandKey) seen.add(brandKey);
 
-    const scored = scoreOf(p, brand, name, priorities);
-    const certs = (findVerifiedEthics(brand, name)?.certifications ?? []) as CertificationType[];
-    picks.push({
-      key: p.barcode,
-      brand: brand || 'Unknown brand',
-      productName: name,
-      barcode: p.barcode,
-      imageUrl: p.imageUrl,
-      certifications: certs,
-      product: p,
-      score: scored.score,
-      verdict: scored.verdict,
-      reasons: orderReasonsByPriority(buildReasons(p, brand, name, certs, null), priorities),
-      availability: assessAvailability(p, retailer, {
-        barcode: p.barcode,
-        // A live OFF hit tells us nothing about the chain; only the country tag
-        // is evidence, and assessAvailability reads store tags itself.
-        soldInMarket: isSoldInCountry(p, region),
-      }),
-      comparison: null,
-      vetted: false,
-    });
+    picks.push(toPick(p, retailer, region, priorities, null, false));
   }
 
   // Best-scoring first; availability re-sorts afterwards.
@@ -537,6 +541,44 @@ export function localQuery(query: string, countryCode: string | null | undefined
   const swapped = words.map((w) => map[w] ?? w);
   const changed = swapped.some((w, i) => w !== words[i]);
   return changed ? swapped.join(' ') : null;
+}
+
+/**
+ * Build a ShelfPick from a live Open Food Facts product.
+ *
+ * Shared by the search path and the exact-barcode path so a product scores,
+ * reads and reports its availability identically however it was found.
+ */
+function toPick(
+  p: OpenFoodFactsResult,
+  retailer: Retailer,
+  region: UserRegion | null,
+  priorities: UserPriorities,
+  comparison: BaselineComparison | null,
+  vetted: boolean,
+): ShelfPick {
+  const brand = p.brand ?? '';
+  const name = p.productName ?? '';
+  const scored = scoreOf(p, brand, name, priorities);
+  const certs = (findVerifiedEthics(brand, name)?.certifications ?? []) as CertificationType[];
+  return {
+    key: p.barcode,
+    brand: brand || 'Unknown brand',
+    productName: name,
+    barcode: p.barcode,
+    imageUrl: p.imageUrl,
+    certifications: certs,
+    product: p,
+    score: scored.score,
+    verdict: scored.verdict,
+    reasons: orderReasonsByPriority(buildReasons(p, brand, name, certs, comparison), priorities),
+    availability: assessAvailability(p, retailer, {
+      barcode: p.barcode,
+      soldInMarket: isSoldInCountry(p, region),
+    }),
+    comparison,
+    vetted,
+  };
 }
 
 /** Very short words carry no signal and match everything. */

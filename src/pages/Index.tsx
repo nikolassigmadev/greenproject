@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { ChevronRight, Camera, Leaf, Shield, BarChart3, Users, Award, Zap, CheckCircle2, AlertTriangle as AlertTriangleIcon, Search, GitCompareArrows, ScanLine, Eye, Flag, FileText, Store } from "lucide-react";
+import { ChevronRight, Camera, Leaf, Shield, BarChart3, Users, Award, Zap, CheckCircle2, AlertTriangle as AlertTriangleIcon, Search, GitCompareArrows, ScanLine, Eye, Flag, FileText, Store, ShoppingCart } from "lucide-react";
 import { Logo, Wordmark } from "@/components/Logo";
 import { DS, scoreTone, toneColor, toneBg } from "@/styles/design-tokens";
 import { loadScanHistory, type ScanHistoryEntry } from "@/utils/userPreferences";
 import { YourImpactCard } from "@/components/YourImpactCard";
+import { loadBasket } from "@/utils/basketStorage";
 import {
   scanEntryToShowcase,
   hasCompleteEcoData,
@@ -324,12 +325,22 @@ function RecentScans({ recent }: { recent: ScanHistoryEntry[] }) {
 
 export default function Index() {
   const [history, setHistory] = useState<ScanHistoryEntry[]>([]);
+  const [cartCount, setCartCount] = useState(0);
 
   // Keep the hero in sync if a scan lands while this page stays mounted.
   useEffect(() => {
     const refresh = () => setHistory(loadScanHistory());
     window.addEventListener("scanHistoryUpdated", refresh);
     return () => window.removeEventListener("scanHistoryUpdated", refresh);
+  }, []);
+
+  // Read on mount and on focus — the list is usually filled on a different
+  // screen (or a different trip), so a stale count here is the normal case.
+  useEffect(() => {
+    const refresh = () => setCartCount(loadBasket().length);
+    refresh();
+    window.addEventListener("focus", refresh);
+    return () => window.removeEventListener("focus", refresh);
   }, []);
 
   useEffect(() => {
@@ -416,6 +427,31 @@ export default function Index() {
             <ChevronRight style={{ width: 18, height: 18, color: DS.muted, flexShrink: 0 }} />
           </div>
         </Link>
+
+        {/* The list you built in the shop is only useful if you can find it
+            again on the way there. Only shown once there's something in it —
+            an empty cart link is a dead end, not a feature. */}
+        {cartCount > 0 && (
+          <Link to="/basket" style={{ textDecoration: "none", display: "block", marginBottom: 28 }}>
+            <div style={{
+              display: "inline-flex", alignItems: "center", gap: 8,
+              background: DS.card, borderRadius: 999, padding: "9px 15px",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04)",
+            }}>
+              <ShoppingCart style={{ width: 15, height: 15, color: DS.good, flexShrink: 0 }} />
+              <span style={{ fontSize: 13, fontWeight: 700, color: DS.ink }}>
+                Your list for next time
+              </span>
+              <span style={{
+                fontSize: 11, fontWeight: 800, color: DS.good, background: DS.goodBg,
+                borderRadius: 999, padding: "2px 7px",
+              }}>
+                {cartCount}
+              </span>
+              <ChevronRight style={{ width: 14, height: 14, color: DS.muted, flexShrink: 0 }} />
+            </div>
+          </Link>
+        )}
 
         {/* Returning users lead with their own history; new users see the demo. */}
         {isReturning ? (
