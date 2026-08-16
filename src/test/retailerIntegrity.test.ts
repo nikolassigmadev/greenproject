@@ -22,6 +22,9 @@ import { assessAvailability, CONFIDENCE_RANK } from '@/services/retailers';
 import { orderReasonsByPriority, activePriorityLabels, type PlainReason } from '@/services/supermarket';
 import { COUNTRIES } from '@/utils/userRegion';
 import type { UserPriorities } from '@/utils/userPreferences';
+import { localQuery } from '@/services/supermarket';
+import { isInMarket, isFullCoverageMarket, type AltCandidate } from '@/data/ethicalAlternatives';
+import { getIndonesiaCandidates } from '@/data/indonesiaProducts';
 
 describe('retailer data', () => {
   it('has unique ids', () => {
@@ -204,5 +207,63 @@ describe('legal wording is present in the shipped source', () => {
     // Naming a shop is nominative fair use; reproducing its logo is not.
     const page = readFileSync(resolve(process.cwd(), 'src/pages/Supermarket.tsx'), 'utf8');
     expect(page).not.toMatch(/logo/i);
+  });
+});
+
+describe('market accuracy', () => {
+  it('never offers a Western catalogue brand in Indonesia', () => {
+    // The bug that started this: "coffee" at Indomaret returned Cafédirect,
+    // BLK & Bold and a Colorado roaster called Conscious Coffees. Those entries
+    // omit `markets` because nobody considered Indonesia — not because anyone
+    // checked — so under the strict gate silence means "not sold here".
+    const western: AltCandidate = {
+      brand: 'Conscious Coffees', productName: 'Organic Coffee',
+      searchQuery: 'Conscious Coffees', certifications: [], strengths: [],
+      addresses: ['labor'],
+    };
+    expect(isInMarket(western, 'ID')).toBe(false);
+    // Unresearched markets keep the old permissive behaviour.
+    expect(isInMarket(western, 'GB')).toBe(true);
+    expect(isInMarket(western, null)).toBe(true);
+  });
+
+  it('offers the researched Indonesian entries in Indonesia only', () => {
+    const chocolate = getIndonesiaCandidates('chocolate');
+    expect(chocolate.length).toBeGreaterThan(0);
+    for (const c of chocolate) {
+      expect(c.markets, `${c.brand} must name its market`).toEqual(['ID']);
+      expect(isInMarket(c, 'ID')).toBe(true);
+      expect(isInMarket(c, 'US')).toBe(false);
+      // Grounded in real OFF entries, so a barcode is not optional here.
+      expect(c.barcodes?.length, `${c.brand} has no verified barcode`).toBeGreaterThan(0);
+    }
+  });
+
+  it('claims no certification it cannot evidence', () => {
+    // These are small Indonesian makers with real direct-trade stories and no
+    // certification scheme. Their strengths say what they do; inventing a
+    // Fairtrade badge would be the exact overclaim this app exists to avoid.
+    for (const c of getIndonesiaCandidates('chocolate')) {
+      expect(c.certifications).toEqual([]);
+      expect(c.strengths.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('translates shopping words for the local market', () => {
+    // Open Food Facts indexes Indonesian shelves in Indonesian, so an English
+    // query cannot see them — "coffee" returned Swiss yoghurt until this existed.
+    expect(localQuery('coffee', 'ID')).toBe('kopi');
+    expect(localQuery('instant noodles', 'ID')).toBe('mie instan');
+    expect(localQuery('tea', 'ID')).toBe('teh');
+    // Unmapped words and unmapped markets pass through untouched.
+    expect(localQuery('quinoa', 'ID')).toBeNull();
+    expect(localQuery('coffee', 'GB')).toBeNull();
+  });
+
+  it('marks exactly the researched markets as full coverage', () => {
+    expect(isFullCoverageMarket('ID')).toBe(true);
+    expect(isFullCoverageMarket('US')).toBe(true);
+    expect(isFullCoverageMarket('GB')).toBe(false);
+    expect(isFullCoverageMarket(null)).toBe(false);
   });
 });

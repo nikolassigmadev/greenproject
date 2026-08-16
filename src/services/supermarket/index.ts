@@ -42,6 +42,7 @@ import {
   type CategoryBaseline, type BaselineComparison,
 } from '@/services/baseline';
 import { primeRemoteCounts } from '@/utils/storeSightings';
+import { isFullCoverageMarket } from '@/data/ethicalAlternatives';
 
 /** Which of the user's priorities a reason speaks to, so it can be ranked. */
 export type ReasonPillar = 'labour' | 'environment' | 'animal' | 'nutrition' | 'other';
@@ -148,8 +149,19 @@ export function buildReasons(
   productName: string,
   certifications: CertificationType[],
   comparison: BaselineComparison | null,
+  /**
+   * Hand-written reasons from the catalogue entry. These are the actual point
+   * of a curated pick — Krakakoa is here because it buys direct from Sumatran
+   * and Balinese farmers, and a card that omits that while showing its
+   * Eco-Score is answering a question nobody asked.
+   */
+  strengths: string[] = [],
 ): PlainReason[] {
   const out: PlainReason[] = [];
+
+  for (const s of strengths.slice(0, 2)) {
+    out.push({ tone: 'good', text: s, pillar: 'labour' });
+  }
 
   // Labour / boycott / welfare — the concerns the app exists for, first.
   const labour = findLaborAllegations(brand, productName);
@@ -170,7 +182,19 @@ export function buildReasons(
     out.push({ tone: 'bad', text: 'Animal-welfare concerns reported for this company', pillar: 'animal' });
   }
   if (!labour && !boycott) {
-    out.push({ tone: 'good', text: 'No labour or boycott flags on this brand', pillar: 'labour' });
+    // Phrasing matters. "No flags on this brand" reads as a clean bill of
+    // health; for a brand we hold no record of at all, the truthful statement is
+    // that we have not looked into it, not that it passed.
+    const researched =
+      strengths.length > 0 ||
+      findVerifiedEthics(brand, productName) !== null ||
+      checkAnimalWelfareFlag(brand).isFlagged ||
+      certifications.length > 0;
+    out.push(
+      researched
+        ? { tone: 'good', text: 'No labour or boycott flags on this brand', pillar: 'labour' }
+        : { tone: 'neutral', text: 'This brand isn’t in our flag database — we have no record either way', pillar: 'labour' },
+    );
   }
 
   // Certifications, spelled out rather than shown as badges only.
@@ -216,13 +240,39 @@ export function buildReasons(
   return out;
 }
 
+/**
+ * Do we actually know enough about this product to call it good?
+ *
+ * personalizedScore treats "no labour allegations" as a strong positive, which
+ * is right for a brand we've researched and wrong for one we've simply never
+ * heard of. Every Indonesian coffee came back at 90/100 "Good pick" on an empty
+ * record: no eco grade, no Nutri-Score, no entry in any of our flag datasets.
+ * That is absence of evidence being rendered as evidence of good — the same
+ * mistake this codebase spent a whole audit branch removing elsewhere.
+ *
+ * Needs at least one real signal: an environmental grade, a nutrition grade, or
+ * the brand appearing in a dataset we maintain.
+ */
+function hasEnoughData(product: OpenFoodFactsResult | null, brand: string, productName: string): boolean {
+  if (product?.ecoscoreGrade && product.ecoscoreGrade !== 'unknown') return true;
+  if (product?.nutriscoreGrade && product.nutriscoreGrade !== 'unknown') return true;
+  if (typeof product?.ecoscoreScore === 'number') return true;
+  // Anything we hold a view on — a flag, a boycott listing, a certification —
+  // counts as a signal, good or bad.
+  if (findLaborAllegations(brand, productName)) return true;
+  if (checkBoycott(brand)) return true;
+  if (checkAnimalWelfareFlag(brand).isFlagged) return true;
+  if (findVerifiedEthics(brand, productName)) return true;
+  return false;
+}
+
 function scoreOf(
   product: OpenFoodFactsResult | null,
   brand: string,
   productName: string,
   priorities: UserPriorities,
 ) {
-  return personalizedScore(
+  const scored = personalizedScore(
     {
       brand,
       productName,
@@ -233,6 +283,10 @@ function scoreOf(
     },
     priorities,
   );
+  if (hasEnoughData(product, brand, productName)) return scored;
+  // Keep the number for ranking — a clean record still beats a flagged one —
+  // but never present it as a recommendation.
+  return { ...scored, verdict: 'UNKNOWN' as typeof scored.verdict };
 }
 
 // ── Search ───────────────────────────────────────────────────────────────────
@@ -259,9 +313,22 @@ export async function searchShelf(
     ? await getCategoryBaseline(categoryKey, countryCode).catch(() => null)
     : null;
 
-  const picks = categoryKey
+  let picks = categoryKey
     ? await cataloguePicks(categoryKey, retailer, region, priorities, limit, baseline)
     : await searchPicks(query, retailer, region, priorities, limit);
+
+  // The vetted catalogue can legitimately have nothing for a market — Indonesia
+  // has no certified instant coffee we could verify, so the strict market gate
+  // correctly returns nothing rather than offering a Colorado roaster at
+  // Indomaret. But an empty screen is a dead end for someone standing in the
+  // aisle. Fall through to a live product search: those aren't recommendations,
+  // they're real things on real Indonesian shelves scored on what we know, and
+  // the UI labels them as a search rather than a vetted pick.
+  let source: ShelfSource = categoryKey ? 'catalogue' : 'search';
+  if (picks.length === 0 && categoryKey) {
+    picks = await searchPicks(query, retailer, region, priorities, limit);
+    source = 'search';
+  }
 
   // One request for community sighting counts across the whole result set.
   await primeRemoteCounts(
@@ -273,7 +340,7 @@ export async function searchShelf(
 
   return {
     categoryKey,
-    source: categoryKey ? 'catalogue' : 'search',
+    source,
     query,
     retailer,
     baseline,
@@ -324,7 +391,7 @@ async function cataloguePicks(
       score: scored.score,
       verdict: scored.verdict,
       reasons: orderReasonsByPriority(
-        buildReasons(s.product, s.brand, s.productName, s.certifications, comparison),
+        buildReasons(s.product, s.brand, s.productName, s.certifications, comparison, s.strengths),
         priorities,
       ),
       availability: assessAvailability(s.product, retailer, {
@@ -351,10 +418,40 @@ async function searchPicks(
   priorities: UserPriorities,
   limit: number,
 ): Promise<ShelfPick[]> {
-  let results: OpenFoodFactsResult[] = [];
-  try {
-    results = await searchProducts(query, Math.max(limit * 4, 20));
-  } catch {
+  const wide = Math.max(limit * 8, 40);
+  // In a market with its own shopping vocabulary, search the local word too.
+  // "coffee" in Denpasar returned Migros coffee yoghurt and a German own-brand,
+  // because Indonesian products are called kopi — an English query simply cannot
+  // see them. Both queries run and the results are merged.
+  const altQuery = localQuery(query, region?.countryCode);
+  // Both searches fail independently. Open Food Facts 503s intermittently under
+  // load, and it does so per-query: "kopi" returned 200 while "coffee" returned
+  // 503 in the same second. With only the local search guarded, one upstream
+  // blip on the English term threw away the Indonesian results we had already
+  // successfully fetched, and the shopper saw an empty screen.
+  const [primary, secondary] = await Promise.all([
+    searchProducts(query, wide).catch(() => [] as OpenFoodFactsResult[]),
+    altQuery
+      ? searchProducts(altQuery, wide).catch(() => [] as OpenFoodFactsResult[])
+      : Promise.resolve([] as OpenFoodFactsResult[]),
+  ]);
+  const byCode = new Map<string, OpenFoodFactsResult>();
+  // Local-language hits lead: in a market with its own vocabulary they're the
+  // things actually on the shelf.
+  for (const p of [...secondary, ...primary]) if (p.barcode) byCode.set(p.barcode, p);
+  let results: OpenFoodFactsResult[] = [...byCode.values()];
+  if (results.length === 0) return [];
+
+  // Prefer products actually tagged as sold in this country.
+  const local = results.filter((p) => isSoldInCountry(p, region));
+  if (local.length > 0) {
+    results = local;
+  } else if (isFullCoverageMarket(region?.countryCode)) {
+    // In a researched market, showing foreign products is worse than showing
+    // none. Without this, "coffee" at Indomaret in Denpasar offered Ricoré and
+    // a French chicory drink — technically coffee-adjacent, entirely absent from
+    // any Indonesian shelf. The empty state says we found nothing and suggests a
+    // simpler word, which is at least true.
     return [];
   }
 
@@ -367,7 +464,13 @@ async function searchPicks(
     // Banania and a chocolate drink above actual noodles. Recommending those as
     // "what to buy here" is worse than returning fewer results, so anything
     // that doesn't actually match what was typed is dropped.
-    if (!isRelevant(query, p, brand, name)) continue;
+    // Relevant against the typed query OR its local-language equivalent —
+    // otherwise the filter would throw away the very Indonesian products the
+    // local search just went and found, because "Kopi Susu" contains no
+    // "coffee".
+    if (!isRelevant(query, p, brand, name) && !(altQuery && isRelevant(altQuery, p, brand, name))) {
+      continue;
+    }
     // One product per brand, so a single manufacturer can't fill the list.
     const brandKey = brand.toLowerCase().replace(/[^a-z0-9]/g, '');
     if (brandKey && seen.has(brandKey)) continue;
@@ -399,6 +502,41 @@ async function searchPicks(
 
   // Best-scoring first; availability re-sorts afterwards.
   return picks.sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
+}
+
+/**
+ * The same request in the local shopping vocabulary.
+ *
+ * Open Food Facts stores products under the names printed on the pack, so an
+ * Indonesian shelf is indexed in Indonesian. Searching "coffee" for a shopper in
+ * Denpasar misses every Kapal Api and Luwak on the shelf and surfaces European
+ * products instead. Only the words a shopper would actually type are mapped —
+ * this is a shopping phrasebook, not a translation layer.
+ */
+const LOCAL_TERMS: Record<string, Record<string, string>> = {
+  ID: {
+    coffee: 'kopi', tea: 'teh', chocolate: 'cokelat', milk: 'susu',
+    rice: 'beras', sugar: 'gula', water: 'air mineral', juice: 'jus',
+    bread: 'roti', eggs: 'telur', chicken: 'ayam', fish: 'ikan',
+    noodles: 'mie', 'instant noodles': 'mie instan', biscuits: 'biskuit',
+    crisps: 'keripik', chips: 'keripik', snacks: 'camilan', oil: 'minyak goreng',
+    soap: 'sabun', shampoo: 'sampo', 'soy sauce': 'kecap', salt: 'garam',
+    flour: 'tepung', butter: 'mentega', cheese: 'keju', yoghurt: 'yogurt',
+  },
+};
+
+/** The local-language equivalent of a query, when we have one. */
+export function localQuery(query: string, countryCode: string | null | undefined): string | null {
+  if (!countryCode) return null;
+  const map = LOCAL_TERMS[countryCode.toUpperCase()];
+  if (!map) return null;
+  const q = query.trim().toLowerCase();
+  if (map[q]) return map[q];
+  // Fall back to translating any single mapped word inside a longer phrase.
+  const words = q.split(/\s+/);
+  const swapped = words.map((w) => map[w] ?? w);
+  const changed = swapped.some((w, i) => w !== words[i]);
+  return changed ? swapped.join(' ') : null;
 }
 
 /** Very short words carry no signal and match everything. */

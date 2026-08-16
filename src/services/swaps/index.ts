@@ -19,6 +19,7 @@ import {
   detectSwapCategory,
   getCandidates,
   isInMarket,
+  isFullCoverageMarket,
   type AltCandidate,
   type ConcernType,
   type SwapCategoryKey,
@@ -26,6 +27,7 @@ import {
 import { getCustomCandidates } from "@/data/customSwaps";
 import { getVerifiedEthicsCandidates } from "@/data/verifiedEthicsSwaps";
 import { getChocolateDirectoryCandidates } from "@/data/chocolateDirectorySwaps";
+import { getIndonesiaCandidates } from "@/data/indonesiaProducts";
 import {
   isSoldInRegion,
   findCountry,
@@ -280,6 +282,7 @@ export function assessUnmetDemand(
 
   const pool = categoryKey
     ? [
+        ...getIndonesiaCandidates(categoryKey),
         ...getCandidates(categoryKey),
         ...getCustomCandidates(categoryKey),
         ...getVerifiedEthicsCandidates(categoryKey),
@@ -357,9 +360,62 @@ function dedupeByBrand(candidates: AltCandidate[]): AltCandidate[] {
  * Resolve a single catalog candidate to a live OFF product, preferring one that
  * is actually sold in the user's country (matched via OFF `countries_tags`).
  */
+/**
+ * Is this resolved product actually the KIND of thing we were looking for?
+ *
+ * Searching Open Food Facts for a brand name returns whatever that brand makes.
+ * Looking for coffee from "Conscious Coffees" returned "Conscious Coffee Ice
+ * Cream" — recommended, in a coffee list, to someone standing in a shop. The
+ * brand matched; the product was a dessert.
+ *
+ * Reuses detectSwapCategory rather than a second keyword table, so the check
+ * can't drift from the classifier that chose the category in the first place.
+ * A product we can't classify at all is allowed through: absence of evidence
+ * isn't evidence of a mismatch, and rejecting everything unclassifiable would
+ * empty the thinner categories.
+ */
+function matchesCategory(p: OpenFoodFactsResult, category: SwapCategoryKey): boolean {
+  const detected = detectSwapCategory({
+    categories: p.categories ?? [],
+    productName: p.productName,
+    // Brand is deliberately omitted: "Conscious Coffees" as a brand string
+    // makes any product it sells look like coffee, which is the bug.
+    brand: null,
+  });
+  return detected === null || detected === category;
+}
+
+/**
+ * Is this resolved product plausibly made by the brand we searched for?
+ *
+ * Open Food Facts' text search matches loosely. Looking for "Cafe Mam" returned
+ * "Auchan sauce nuoc mam" — the word "mam" matched, and a fish sauce was about
+ * to be recommended as fair-trade coffee. The category guard misses this one
+ * because the product is unclassifiable, so brand identity is checked directly.
+ *
+ * Requires the resolved product's brand OR name to contain a distinctive word
+ * from the candidate's brand. Short words are ignored: "Cafe", "Bean", "Good"
+ * and the like appear in half the database.
+ */
+function matchesBrand(p: OpenFoodFactsResult, candidateBrand: string): boolean {
+  const GENERIC = new Set([
+    'cafe', 'coffee', 'chocolate', 'tea', 'organic', 'fair', 'trade', 'bean',
+    'beans', 'good', 'the', 'and', 'company', 'group', 'foods', 'food', 'co',
+  ]);
+  const words = candidateBrand
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((w) => w.length > 2 && !GENERIC.has(w));
+  // Nothing distinctive to check against (e.g. "Cafe Bean") — don't block.
+  if (words.length === 0) return true;
+  const haystack = `${p.brand ?? ''} ${p.productName ?? ''}`.toLowerCase();
+  return words.some((w) => haystack.includes(w));
+}
+
 async function resolveCandidate(
   c: AltCandidate,
   countryTag: string | null,
+  category: SwapCategoryKey | null = null,
 ): Promise<OpenFoodFactsResult | null> {
   // Try canonical barcodes first.
   for (const code of c.barcodes ?? []) {
@@ -374,8 +430,15 @@ async function resolveCandidate(
   try {
     const results = await searchProducts(c.searchQuery, 8);
     if (results.length === 0) return null;
-    const usable = results.filter((r) => r.found && (r.imageUrl || r.ecoscoreGrade));
-    const pool = usable.length > 0 ? usable : results;
+    const onTopic = results
+      .filter((r) => matchesBrand(r, c.brand))
+      .filter((r) => (category ? matchesCategory(r, category) : true));
+    // Nothing on-topic means this brand has no product of this kind in OFF.
+    // Returning the closest wrong thing is what produced ice cream in a coffee
+    // list, so return nothing and let the caller fall back to catalogue data.
+    if (onTopic.length === 0) return null;
+    const usable = onTopic.filter((r) => r.found && (r.imageUrl || r.ecoscoreGrade));
+    const pool = usable.length > 0 ? usable : onTopic;
     if (countryTag) {
       const inCountry = pool.find((r) =>
         r.rawProduct?.countries_tags?.some((t) => t.toLowerCase() === countryTag),
@@ -477,6 +540,7 @@ export async function getSwaps(
   //   3. the verified-ethics database (mapped to fine categories)
   const merged = dedupeByBrand(
     [
+      ...getIndonesiaCandidates(diagnosis.categoryKey),
       ...getCustomCandidates(diagnosis.categoryKey),
       ...getCandidates(diagnosis.categoryKey),
       ...getVerifiedEthicsCandidates(diagnosis.categoryKey),
@@ -512,7 +576,11 @@ export async function getSwaps(
     })
     .slice(0, Math.max(limit + 2, 5)); // resolve a few extra, trim after
 
-  const resolved = await Promise.all(candidates.map((c) => resolveCandidate(c, countryTag)));
+  // Pass the category so a brand-name search can't return the wrong kind of
+  // product (a coffee brand's ice cream, in a list of coffee).
+  const resolved = await Promise.all(
+    candidates.map((c) => resolveCandidate(c, countryTag, diagnosis.categoryKey)),
+  );
 
   const suggestions = candidates
     .map((c, i) => buildSuggestion(c, resolved[i], primaryType, region))
@@ -563,6 +631,7 @@ export function rankCategoryCandidates(
 ): AltCandidate[] {
   const merged = dedupeByBrand(
     [
+      ...getIndonesiaCandidates(categoryKey),
       ...getCustomCandidates(categoryKey),
       ...getCandidates(categoryKey),
       ...getVerifiedEthicsCandidates(categoryKey),
@@ -571,10 +640,18 @@ export function rankCategoryCandidates(
   );
 
   // Only recommend things the user can actually buy, when we know enough.
+  //
+  // The `>= 2` hedge below exists so a thin category still shows something
+  // rather than nothing. That is fine where an unspecified market means "assume
+  // sold", and wrong in a strict-gated market: there, an empty in-market list is
+  // the true answer, and falling back served Indomaret shoppers a Colorado
+  // roaster because the alternative was an empty screen. An empty screen that
+  // says "we have nothing verified here" is the more useful of the two.
   let pool = merged;
   if (country) {
     const inMarket = pool.filter((c) => isInMarket(c, country));
-    if (inMarket.length >= 2) pool = inMarket;
+    if (isFullCoverageMarket(country)) pool = inMarket;
+    else if (inMarket.length >= 2) pool = inMarket;
   }
 
   return pool.sort((a, b) => {
@@ -620,7 +697,9 @@ export async function getCategoryRecommendations(
   const candidates = rankCategoryCandidates(categoryKey, country, priorities)
     .slice(0, Math.max(limit + 2, 4)); // resolve a few extra, trim after
 
-  const resolved = await Promise.all(candidates.map((c) => resolveCandidate(c, countryTag)));
+  const resolved = await Promise.all(
+    candidates.map((c) => resolveCandidate(c, countryTag, categoryKey)),
+  );
 
   return candidates
     .map((c, i) => buildSuggestion(c, resolved[i], null, region))

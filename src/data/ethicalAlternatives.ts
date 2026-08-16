@@ -387,9 +387,50 @@ export function getCandidates(category: SwapCategoryKey): AltCandidate[] {
   return ETHICAL_ALTERNATIVES[category] ?? [];
 }
 
-/** Is this candidate sold in the given country? Unknown markets = assume yes. */
+/**
+ * Markets where we've done the research and only claim what we've confirmed.
+ *
+ * Everywhere else keeps the old permissive rule (no `markets` = assume sold),
+ * which is a fair default for a Western brand on a Western shelf. It was not
+ * fair in Indonesia, where it offered Indomaret shoppers a Colorado
+ * micro-roaster: those entries omit `markets` because nobody ever considered
+ * Indonesia, not because anyone checked.
+ */
+export const FULL_COVERAGE_MARKETS = ['ID', 'US'] as const;
+
+export function isFullCoverageMarket(countryCode: string | null | undefined): boolean {
+  if (!countryCode) return false;
+  return (FULL_COVERAGE_MARKETS as readonly string[]).includes(countryCode.toUpperCase());
+}
+
+/**
+ * Markets where an unspecified `markets` list means NOT sold, rather than
+ * "assume sold".
+ *
+ * Deliberately narrower than FULL_COVERAGE_MARKETS. The existing catalogue is
+ * overwhelmingly US and UK brands that genuinely are on US shelves — Alter Eco,
+ * Equal Exchange, Divine, Cafe Mam — they simply predate anyone writing the
+ * field down. Applying the strict rule to the US would empty its catalogue on a
+ * technicality and call that accuracy.
+ *
+ * Indonesia is different: there the silence really did mean nobody checked, and
+ * we now have researched local entries to put in their place.
+ *
+ * To promote a market into this list, first give its genuine candidates an
+ * explicit `markets` entry — see src/data/indonesiaProducts.ts for the shape.
+ */
+const STRICT_MARKET_GATE = ['ID'] as const;
+
+/**
+ * Is this candidate sold in the given country?
+ *
+ * An unspecified market means "assume yes", except under the strict gate above.
+ */
 export function isInMarket(candidate: AltCandidate, countryCode: string | null | undefined): boolean {
   if (!countryCode) return true;
-  if (!candidate.markets || candidate.markets.length === 0) return true;
-  return candidate.markets.includes(countryCode.toUpperCase());
+  const cc = countryCode.toUpperCase();
+  if (!candidate.markets || candidate.markets.length === 0) {
+    return !(STRICT_MARKET_GATE as readonly string[]).includes(cc);
+  }
+  return candidate.markets.includes(cc);
 }

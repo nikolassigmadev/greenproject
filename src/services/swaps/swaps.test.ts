@@ -100,9 +100,22 @@ describe("category grouping — canonical OFF category tags (plural)", () => {
 });
 
 describe("market availability", () => {
-  it("treats brands with no markets as available everywhere", () => {
+  it("treats brands with no markets as available in unresearched markets", () => {
     const oatly = getCandidates("milk").find((c) => c.brand === "Oatly")!;
-    expect(isInMarket(oatly, "ID")).toBe(true); // Oatly has no markets list
+    expect(oatly.markets).toBeUndefined();
+    expect(isInMarket(oatly, "GB")).toBe(true);
+    expect(isInMarket(oatly, "FR")).toBe(true);
+  });
+
+  it("does NOT assume availability in a strict-gated market", () => {
+    // This assertion used to read the other way, with Indonesia as its example,
+    // and was encoding the bug rather than the behaviour: a shopper at
+    // Indomaret got offered Cafédirect, BLK & Bold and a Colorado roaster,
+    // because an absent `markets` list was read as "sold worldwide" when it
+    // really meant nobody had considered Indonesia. In a researched market,
+    // silence now means no.
+    const oatly = getCandidates("milk").find((c) => c.brand === "Oatly")!;
+    expect(isInMarket(oatly, "ID")).toBe(false);
   });
 
   it("filters US-only brands out of a UK market", () => {

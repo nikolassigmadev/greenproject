@@ -20,6 +20,7 @@ import { Collapse } from '@/components/Collapse';
 import { ShelfPickCard } from '@/components/ShelfPickCard';
 import { RetailerDisclaimer } from '@/components/RetailerDisclaimer';
 import { getRetailersForCountry, type Retailer } from '@/data/retailers';
+import { isFullCoverageMarket } from '@/data/ethicalAlternatives';
 import { loadRetailer, saveRetailer, RETAILER_EVENT } from '@/utils/selectedRetailer';
 import { COUNTRIES, loadRegion, saveRegion, REGION_EVENT, type UserRegion } from '@/utils/userRegion';
 import { loadPriorities, PRIORITIES_EVENT } from '@/utils/userPreferences';
@@ -190,15 +191,38 @@ export default function Supermarket() {
               />
               <Collapse open={openStep === 'country'}>
                 <Panel>
-                  {COUNTRIES.map((c, i) => (
-                    <PanelButton
-                      key={c.code}
-                      first={i === 0}
-                      selected={region?.countryCode === c.code}
-                      onClick={() => pickCountry(c.code, c.name)}
-                      left={<span>{c.flag} {c.name}</span>}
-                    />
-                  ))}
+                  {/* Researched markets first, and every row says which it is.
+                      Offering 21 countries while only two have real local data
+                      is a promise we can't keep silently. */}
+                  {[...COUNTRIES]
+                    .sort((a, b) =>
+                      Number(isFullCoverageMarket(b.code)) - Number(isFullCoverageMarket(a.code)),
+                    )
+                    .map((c, i) => {
+                      const full = isFullCoverageMarket(c.code);
+                      return (
+                        <PanelButton
+                          key={c.code}
+                          first={i === 0}
+                          selected={region?.countryCode === c.code}
+                          onClick={() => pickCountry(c.code, c.name)}
+                          left={<span>{c.flag} {c.name}</span>}
+                          right={
+                            <span
+                              style={{
+                                fontSize: 10, fontWeight: 700, whiteSpace: 'nowrap',
+                                color: full ? DS.good : DS.muted,
+                                background: full ? DS.goodBg : 'transparent',
+                                border: full ? 'none' : `1px dashed ${DS.hair}`,
+                                borderRadius: 999, padding: '3px 8px',
+                              }}
+                            >
+                              {full ? 'Full coverage' : 'Limited data'}
+                            </span>
+                          }
+                        />
+                      );
+                    })}
                 </Panel>
               </Collapse>
             </Step>
