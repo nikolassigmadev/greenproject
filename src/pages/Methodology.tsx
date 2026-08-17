@@ -45,10 +45,33 @@ export default function Methodology() {
     return () => { document.title = "GoodScan"; };
   }, []);
 
-  const Section = ({ icon: Icon, iconColor, number, title, children }: {
-    icon: React.ElementType; iconColor: string; number: string; title: string; children: React.ReactNode;
+  // Scroll to #sourcing-bar (etc.) when arriving from the footer.
+  //
+  // The browser only honours a hash on a full page load. This page is
+  // lazy-loaded and reached by client-side navigation, so without this the
+  // link lands at the top and the deep link silently does nothing — the kind
+  // of failure that looks like it works until someone actually taps it.
+  //
+  // rAF waits for the lazy chunk's first paint; the element does not exist yet
+  // on the tick this effect runs.
+  useEffect(() => {
+    const id = window.location.hash.slice(1);
+    if (!id) return;
+    const raf = requestAnimationFrame(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  // `id` is optional so sections can be deep-linked from elsewhere in the app —
+  // the footer points straight at #sourcing-bar. scrollMarginTop keeps the
+  // heading clear of the fixed header when the browser jumps to it; without it
+  // the anchor lands with the title hidden underneath.
+  const Section = ({ icon: Icon, iconColor, number, title, id, children }: {
+    icon: React.ElementType; iconColor: string; number: string; title: string;
+    id?: string; children: React.ReactNode;
   }) => (
-    <div style={{ background: DS.card, borderRadius: 18, padding: "20px", marginBottom: 14 }}>
+    <div id={id} style={{ background: DS.card, borderRadius: 18, padding: "20px", marginBottom: 14, scrollMarginTop: 80 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
         <div style={{
           width: 32, height: 32, borderRadius: 10,
@@ -140,7 +163,7 @@ export default function Methodology() {
         </Section>
 
         {/* 02 — Source Tiers */}
-        <Section icon={FileText} iconColor={ACCENT} number="02" title="Source Tiers">
+        <Section id="source-tiers" icon={FileText} iconColor={ACCENT} number="02" title="Source Tiers">
           <p style={{ fontSize: "0.82rem", color: DS.muted, lineHeight: 1.6, marginBottom: 14 }}>
             Every source is classified into one of three tiers based on its institutional authority and verifiability. All source URLs are now linked directly in our database.
           </p>
@@ -182,7 +205,7 @@ export default function Methodology() {
         </Section>
 
         {/* 03 — The Sourcing Bar */}
-        <Section icon={AlertTriangle} iconColor={AMBER} number="03" title="The Sourcing Bar">
+        <Section id="sourcing-bar" icon={AlertTriangle} iconColor={AMBER} number="03" title="The Sourcing Bar">
           <p style={{ fontSize: "0.82rem", color: DS.muted, lineHeight: 1.6, marginBottom: 14 }}>
             A flag is only shown in the app if it meets <span style={{ fontWeight: 700, color: GREEN }}>at least one</span> of these criteria:
           </p>
@@ -409,7 +432,7 @@ export default function Methodology() {
         </Section>
 
         {/* 07 — Database Status */}
-        <Section icon={Database} iconColor={ACCENT} number="08" title="Database Status">
+        <Section id="database-status" icon={Database} iconColor={ACCENT} number="08" title="Database Status">
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             {[
               { label: "Last Verified", value: lastUpdate ? lastUpdate.slice(0, 10) : "—", color: GREEN },
