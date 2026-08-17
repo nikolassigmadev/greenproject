@@ -227,9 +227,20 @@ const ALLOWED_ORIGINS = [
   /^capacitor:\/\/localhost$/,
   // goodscan.shop apex + any direct subdomain (e.g. www.goodscan.shop)
   /^https:\/\/([a-z0-9-]+\.)?goodscan\.shop$/,
-  // Hostinger staging slot. Tighten to your actual subdomain when known —
-  // ANY .hostingersite.com is a shared host where other people can register.
-  /^https:\/\/([a-z0-9-]+\.)?hostingersite\.com$/,
+  // Hostinger staging slot, opt-in only.
+  //
+  // This used to be a blanket /^https:\/\/([a-z0-9-]+\.)?hostingersite\.com$/,
+  // which the comment above it already admitted was wrong. hostingersite.com is
+  // shared hosting: anyone can register a subdomain there, so that regex handed
+  // every one of them a credentialed cross-origin channel to this API —
+  // including the admin routes, which read back scan photos.
+  //
+  // Now a single exact host, supplied via STAGING_ORIGIN, and absent by default.
+  // A staging slot nobody configured is not a staging slot that anyone can
+  // impersonate.
+  ...(process.env.STAGING_ORIGIN
+    ? [new RegExp(`^${process.env.STAGING_ORIGIN.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`)]
+    : []),
 ];
 
 function isAllowedOrigin(origin) {
