@@ -23,6 +23,10 @@ import { findChocolateEntry } from '@/data/chocolateDirectory';
 import {
   ORIGIN_POINTS, COUNTRY_CENTROIDS, lookupCity, type OriginPoint,
 } from '@/data/supplyChain/originPoints';
+import {
+  OFF_PRODUCT, DOL_TVPRA, CHOCOLATE_SCORECARD, FAOSTAT_PRODUCTION,
+  ICCO_STATISTICS, companyCocoaSource,
+} from '@/data/supplyChain/sources';
 import type {
   SupplyChainGraph, SupplyChainNode, SupplyChainEdge, ProvenanceTier, SourceRef,
 } from './types';
@@ -50,14 +54,10 @@ const TVPRA: Record<string, string[]> = {
   soy: ['BR', 'BO', 'PY'],
 };
 
-const OFF_SOURCE: SourceRef = {
-  label: 'Open Food Facts — product record',
-  url: 'https://world.openfoodfacts.org',
-};
-const TVPRA_SOURCE: SourceRef = {
-  label: 'US DOL — List of Goods Produced by Child Labor or Forced Labor',
-  url: 'https://www.dol.gov/agencies/ilab/reports/child-labor/list-of-goods',
-};
+// Citations live in one registry (src/data/supplyChain/sources.ts) so a URL
+// can't drift between the places that reference it, and every one was verified
+// to return 200 on SOURCES_VERIFIED_ON.
+const OFF_SOURCE = OFF_PRODUCT;
 
 /** Free-text region name → a bundled production point. Never guesses. */
 function matchOriginPoint(text: string): { key: string; point: OriginPoint } | null {
@@ -93,9 +93,12 @@ function splitRegions(text: string): string[] {
     .filter((s) => s.length > 2);
 }
 
-function isTvpra(commodity: string, iso2?: string): boolean {
-  if (!iso2) return false;
-  return (TVPRA[commodity] ?? []).includes(iso2);
+function isTvpra(commodity: string, point: OriginPoint): boolean {
+  // Multi-country regions carry their own listing, because TVPRA is keyed on
+  // countries and a region like "West Africa" has no ISO code.
+  if (point.tvpraCommodities?.includes(commodity)) return true;
+  if (!point.iso2) return false;
+  return (TVPRA[commodity] ?? []).includes(point.iso2);
 }
 
 // ── Origin nodes ─────────────────────────────────────────────────────────────
@@ -111,6 +114,7 @@ function resolveOrigins(
   ) => {
     if (seen.has(key) || nodes.filter((n) => n.kind === 'origin').length >= MAX_ORIGINS) return;
     seen.add(key);
+    const flagged = commodity ? isTvpra(commodity, point) : false;
     nodes.push({
       id: `origin:${key}`,
       kind: 'origin',
@@ -120,9 +124,15 @@ function resolveOrigins(
       tier,
       confidence,
       basis,
-      sources,
+      // A TVPRA warning with nothing to check it against is an accusation
+      // without a citation. Where the flag fires, the list comes with it.
+      // FAOSTAT/ICCO back the claim that this region produces this commodity,
+      // which is what puts the point on the map in the first place.
+      sources: flagged
+        ? [...sources, DOL_TVPRA, commodity === 'cocoa' ? ICCO_STATISTICS : FAOSTAT_PRODUCTION]
+        : sources,
       commodity,
-      tvpraFlagged: commodity ? isTvpra(commodity, point.iso2) : false,
+      tvpraFlagged: flagged,
     });
   };
 
@@ -153,7 +163,8 @@ function resolveOrigins(
         push(m.key, m.point, 'declared', 0.8,
           `${choc.name} publishes ${m.point.name} among its cocoa origins ` +
           `("${choc.sourcing}").`,
-          [{ label: 'Chocolate Scorecard — brand sourcing disclosure' }], 'cocoa');
+          [CHOCOLATE_SCORECARD, ...(companyCocoaSource(product.brand) ? [companyCocoaSource(product.brand)!] : [])],
+          'cocoa');
       }
     }
   }
@@ -321,4 +332,3 @@ export function resolveSupplyChain(
   };
 }
 
-export { TVPRA_SOURCE };

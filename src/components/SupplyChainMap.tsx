@@ -20,6 +20,7 @@ import type { UserRegion } from '@/utils/userRegion';
 import { resolveSupplyChain } from '@/services/supplyChain/resolve';
 import type { SupplyChainNode } from '@/services/supplyChain/types';
 import landPolygons from '@/data/supplyChain/landPolygons.json';
+import { BASE_SOURCES, SOURCES_VERIFIED_ON } from '@/data/supplyChain/sources';
 
 const LAND = landPolygons as [number, number][][][];
 const RAD = Math.PI / 180;
@@ -329,6 +330,33 @@ export function SupplyChainMap({ product, region }: Props) {
           Points mark producing <em>regions</em>, never a specific farm or factory.
         </span>
       </p>
+
+      {/* What backs the whole picture, as opposed to any single pin. Every URL
+          here was fetched and returned 200 on the date shown; a citation that
+          404s is worse than none, because it implies there was something to
+          check. Open Food Facts attribution is an ODbL licence condition. */}
+      <details style={{ marginTop: 8 }}>
+        <summary style={{
+          cursor: 'pointer', fontSize: 10.5, fontWeight: 700, color: DS.muted,
+          listStyle: 'none',
+        }}>
+          Sources for this map
+        </summary>
+        <ul style={{ listStyle: 'none', padding: 0, margin: '7px 0 0' }}>
+          {BASE_SOURCES.map((s) => (
+            <li key={s.label} style={{ fontSize: 10.5, color: DS.muted, lineHeight: 1.55, marginBottom: 3 }}>
+              {s.url
+                ? <a href={s.url} target="_blank" rel="noopener noreferrer"
+                     style={{ color: DS.ink, textDecoration: 'underline' }}>{s.label}</a>
+                : s.label}
+            </li>
+          ))}
+          <li style={{ fontSize: 10, color: DS.muted, lineHeight: 1.5, marginTop: 5 }}>
+            Links checked {SOURCES_VERIFIED_ON}. Per-point citations appear when you
+            tap a point.
+          </li>
+        </ul>
+      </details>
     </div>
   );
 }

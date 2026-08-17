@@ -18,11 +18,22 @@ export interface OriginPoint {
   lat: number;
   /** ISO 3166-1 alpha-2 where one applies. Absent for multi-country regions. */
   iso2?: string;
+  /**
+   * Commodities for which this MULTI-COUNTRY region is TVPRA-listed.
+   *
+   * Needed because TVPRA is keyed on countries, and "West Africa" has no ISO
+   * code — so the single most common cocoa origin in the whole dataset was
+   * silently never flagged. Only set where every major producing country in the
+   * region is itself listed for that commodity, so the flag is never broader
+   * than the underlying source.
+   */
+  tvpraCommodities?: string[];
 }
 
 export const ORIGIN_POINTS: Record<string, OriginPoint> = {
   // ── West Africa — cocoa ──
-  wafrica: { name: 'West Africa', lon: -3.0, lat: 7.0 },
+  // Côte d'Ivoire, Ghana, Nigeria and Cameroon are each TVPRA-listed for cocoa.
+  wafrica: { name: 'West Africa', lon: -3.0, lat: 7.0, tvpraCommodities: ['cocoa'] },
   civ: { name: "Côte d'Ivoire", lon: -6.5, lat: 6.8, iso2: 'CI' },
   ghana: { name: 'Ghana', lon: -1.6, lat: 6.5, iso2: 'GH' },
   nigeria: { name: 'Nigeria', lon: 5.2, lat: 7.0, iso2: 'NG' },
