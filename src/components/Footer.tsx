@@ -1,3 +1,4 @@
+// (test edit — comment only, safe to delete)
 import { Link } from "react-router-dom";
 import { Scale, ChevronRight } from "lucide-react";
 import { Logo, Wordmark } from "@/components/Logo";
