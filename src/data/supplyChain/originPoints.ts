@@ -79,6 +79,12 @@ export const ORIGIN_POINTS: Record<string, OriginPoint> = {
   papua: { name: 'Papua New Guinea', lon: 145.0, lat: -6.3, iso2: 'PG' },
   china: { name: 'China', lon: 110.0, lat: 27.0, iso2: 'CN' },
 
+  // ── Temperate row crops (soy) ──
+  // Production centroids again, not capitals: US soy is the Corn Belt and
+  // Argentine soy is the Pampas — neither is near its capital city.
+  usa: { name: 'United States (Midwest)', lon: -91.5, lat: 41.0, iso2: 'US' },
+  argentina: { name: 'Argentina (Pampas)', lon: -61.5, lat: -33.5, iso2: 'AR' },
+
   // ── Sugar, hazelnut, cotton ──
   turkey: { name: 'Turkey (Black Sea)', lon: 38.0, lat: 41.0, iso2: 'TR' },
   cuba: { name: 'Cuba', lon: -79.0, lat: 21.9, iso2: 'CU' },
