@@ -162,7 +162,7 @@ CHEETOS (Frito-Lay):
 
 ## 📁 Files Created
 
-All files are in: `/Users/nikolasdzhovanis/Downloads/ethical-shopper-main copy 2/`
+All files are in: `the repository root`
 
 ### New Components
 - ✅ `src/components/OCRDebugPanel.tsx` (485 lines)

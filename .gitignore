@@ -43,3 +43,7 @@ dist-ssr
 # Research artifacts — big downloads and generated fixtures, not app code.
 scripts/research/**/*.parquet
 scripts/research/**/cache/
+
+# Local scratch notes — never commit personal paths or shell history
+pullpush.txt
+git-commands.txt
