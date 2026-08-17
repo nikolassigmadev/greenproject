@@ -1313,12 +1313,26 @@ export default function OpenFoodFactsDetail() {
             </div>
           )}
 
+          {/* Where it comes from — section 01, directly under the verdict.
+              "Where did this come from" is the question the verdict makes
+              people ask, and it frames every number below it. It used to sit
+              near the bottom, above the swaps, which is where you put something
+              you don't expect anyone to reach. */}
+          <section style={{
+            marginBottom: 14,
+            opacity: mounted ? 1 : 0, transform: mounted ? "translateY(0)" : "translateY(10px)",
+            transition: "all 0.5s ease 0.25s",
+          }}>
+            <SectionHead num="01" title="Where it comes from" kicker="Origin, processing, and what nobody will say." />
+            <SupplyChainMap product={product} region={loadRegion()} />
+          </section>
+
           {agri?.co2_total !== undefined && (
             <section style={{
               opacity: mounted ? 1 : 0, transform: mounted ? "translateY(0)" : "translateY(10px)",
               transition: "all 0.5s ease 0.3s",
             }}>
-              <SectionHead num="01" title="Carbon footprint" kicker="Cradle-to-shelf, per kilogram." />
+              <SectionHead num="02" title="Carbon footprint" kicker="Cradle-to-shelf, per kilogram." />
               <div style={{ background: EDITORIAL.card, border: `1px solid ${EDITORIAL.line}`, borderRadius: 22, padding: "22px 20px" }}>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
                   <div style={{ fontSize: 64, lineHeight: 0.9, color: EDITORIAL.ink, letterSpacing: -2, fontWeight: 700 }}>
@@ -1367,7 +1381,7 @@ export default function OpenFoodFactsDetail() {
           )}
 
           <section style={{ opacity: mounted ? 1 : 0, transform: mounted ? "translateY(0)" : "translateY(10px)", transition: "all 0.5s ease 0.4s" }}>
-            <SectionHead num="02" title="Ethics & labour" kicker={laborRecord ? `Parent company: ${laborRecord.parentCompany}.` : undefined} />
+            <SectionHead num="03" title="Ethics & labour" kicker={laborRecord ? `Parent company: ${laborRecord.parentCompany}.` : undefined} />
             <div style={{ background: EDITORIAL.card, border: `1px solid ${EDITORIAL.line}`, borderRadius: 22, padding: "8px 20px 22px" }}>
               {laborRecord ? laborRecord.allegations.map((al, i) => (
                 <div key={i} style={{ display: "grid", gridTemplateColumns: "46px 1fr", gap: 14, padding: "18px 0", borderTop: `1px solid ${EDITORIAL.line}` }}>
@@ -1488,16 +1502,9 @@ export default function OpenFoodFactsDetail() {
             </div>
           </section>
 
-          {/* Where it comes from — provenance with graded confidence. Above the
-              swaps, because "this is where it's from" reads before "buy this
-              instead". */}
-          <section style={{ marginBottom: 14 }}>
-            <SupplyChainMap product={product} region={loadRegion()} />
-          </section>
-
           {/* Better swaps — reason-aware ethical alternatives */}
           <section ref={swapsRef} style={{ scrollMarginTop: 80, opacity: mounted ? 1 : 0, transform: mounted ? "translateY(0)" : "translateY(10px)", transition: "all 0.5s ease 0.45s" }}>
-            <SwapSuggestions product={product} onAvailabilityChange={setSwapsAvailable} />
+            <SwapSuggestions product={product} sectionNumber="04" onAvailabilityChange={setSwapsAvailable} />
           </section>
 
           {(() => {
@@ -1517,7 +1524,7 @@ export default function OpenFoodFactsDetail() {
             if (visibleFlags.length === 0) return null;
             return (
               <section style={{ opacity: mounted ? 1 : 0, transform: mounted ? "translateY(0)" : "translateY(10px)", transition: "all 0.5s ease 0.5s" }}>
-                <SectionHead num="04" title="Ingredient concerns" kicker="Detected from the ingredient list." />
+                <SectionHead num="05" title="Ingredient concerns" kicker="Detected from the ingredient list." />
                 <IngredientConcernsCard flags={visibleFlags} />
               </section>
             );
@@ -1536,7 +1543,7 @@ export default function OpenFoodFactsDetail() {
                 opacity: mounted ? 1 : 0, transform: mounted ? "translateY(0)" : "translateY(10px)",
                 transition: "all 0.5s ease 0.55s",
               }}>
-                <SectionHead num="05" title="Threatened species" />
+                <SectionHead num="06" title="Threatened species" />
                 <div style={{ background: EDITORIAL.card, border: `1px solid ${EDITORIAL.line}`, borderRadius: 22, padding: "8px 20px 22px" }}>
                   <div style={{ display: "grid", gridTemplateColumns: "46px 1fr", gap: 14, padding: "18px 0", borderTop: `1px solid ${EDITORIAL.line}` }}>
                     <div>
@@ -1563,7 +1570,7 @@ export default function OpenFoodFactsDetail() {
           })()}
 
           <section style={{ opacity: mounted ? 1 : 0, transform: mounted ? "translateY(0)" : "translateY(10px)", transition: "all 0.5s ease 0.6s" }}>
-            <SectionHead num="06" title="Materials & logistics" />
+            <SectionHead num="07" title="Materials & logistics" />
             <div style={{ display: "grid", gap: 10 }}>
               {[
                 { icon: <Package style={{ width: 17, height: 17 }} />, label: "Packaging", value: packagingSummary(product), impact: product.ecoscoreData?.adjustments?.packaging?.value != null ? `${product.ecoscoreData.adjustments.packaging.value} pts` : "Unknown", bad: (product.ecoscoreData?.adjustments?.packaging?.value ?? 0) < 0 },
