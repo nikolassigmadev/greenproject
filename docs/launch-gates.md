@@ -107,23 +107,30 @@ revocation is the only fix.
 `[ ]` **Confirm whether the Hostinger filesystem survives restarts and
 redeploys.**
 
-Postgres (`DATABASE_URL`) is authoritative for the rich scan log. Still
-file-backed under `data/`:
+Everything with real user consequences is now mirrored to Postgres
+(`DATABASE_URL`), so this gate is much less sharp than it was — but it still
+needs answering.
+
+**Durable (Postgres-backed, survives a wiped filesystem):**
+
+- `ai_scans` — rich scan log
+- `community_flags` — submissions **and moderation state**
+- `push_subscriptions` — Web Push subscribers
+- `store_sightings` — per-chain availability
+
+**Still file-only under `data/` — losing these costs analytics, not users:**
 
 - `scans.db` — SQLite scan counter
-- `community-flags.jsonl` — public flag submissions **and their moderation
-  state**
-- `push-subscriptions.jsonl` — Web Push subscriptions
 - `openai-logs.jsonl`, `client-errors.jsonl`
 
-If that directory is ephemeral, a redeploy silently loses every community flag
-and every push subscriber, and the moderation queue resets. Nothing errors —
-the files are simply recreated empty, which is the failure mode you don't
-notice until someone asks where their report went.
+Test it anyway: submit a community flag, redeploy, check it's still in the
+moderation queue. That one test tells you whether the filesystem persists and
+whether the Postgres mirror is doing its job. If flags survive but the JSONL is
+empty, the mirror saved you and the remaining file-only items should move too.
 
-Test it: submit a flag, redeploy, check it's still there. That single test
-answers the question for all five files. If it fails, move community flags and
-push subscriptions to Postgres before launch — `db/scanStore.js` is the pattern.
+The reason this mattered: a lost push subscriber is *silent*. No error, no
+failed request — the user just stops getting the alerts they opted into, and
+nobody reports a bug for a notification that never arrives.
 
 ## 8. Metadata consistency
 
