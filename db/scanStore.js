@@ -163,6 +163,25 @@ CREATE TABLE IF NOT EXISTS community_flags (
 CREATE INDEX IF NOT EXISTS idx_community_flags_status ON community_flags (status);
 CREATE INDEX IF NOT EXISTS idx_community_flags_brand  ON community_flags (lower(brand_name));
 
+-- ── Push subscriptions ──
+-- Web Push endpoints for watchlist alerts. These lived only in
+-- data/push-subscriptions.jsonl, which is the worst file to lose on a
+-- container restart: losing a subscriber throws no error and breaks no
+-- request. The user simply stops receiving alerts they opted into, and the
+-- first sign of it is nobody complaining.
+--
+-- The endpoint URL is the natural key. Browsers re-POST the same endpoint on
+-- every app start, so re-subscribing must refresh rather than duplicate —
+-- hence ON CONFLICT DO UPDATE against this primary key.
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+  endpoint       TEXT PRIMARY KEY,
+  keys           JSONB,
+  watched_brands JSONB,
+  registered_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  last_seen_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_push_subs_seen ON push_subscriptions (last_seen_at DESC);
+
 -- ── Store sightings ──
 -- "I saw this product at this chain." The only per-chain availability data we
 -- can honestly build, because shoppers are the only people who actually look.
@@ -556,6 +575,62 @@ export function logCommunityFlag(record = {}) {
   insertCommunityFlag(record).catch((e) =>
     console.error('scanStore: community flag insert failed —', e.message),
   );
+}
+
+/**
+ * Upsert one Web Push subscription. Awaitable so a future reconcile script can
+ * know whether the row landed, mirroring insertCommunityFlag.
+ *
+ * Upserts rather than inserts because the client re-POSTs the same endpoint on
+ * every app start. ON CONFLICT DO NOTHING would leave watched_brands frozen at
+ * whatever the user first chose, so the row would exist and be wrong — worse
+ * than absent, because nothing would ever flag it.
+ *
+ * @param {object} record the same record written to push-subscriptions.jsonl
+ * @returns {Promise<boolean>} true if a row was written
+ */
+export async function insertPushSubscription(record = {}) {
+  if (!ready || !pool) throw new Error('scanStore is not connected');
+  const sub = record.subscription || {};
+  if (!sub.endpoint) return false;
+  const res = await pool.query(
+    `INSERT INTO push_subscriptions
+       (endpoint, keys, watched_brands, registered_at, last_seen_at)
+     VALUES ($1, $2::jsonb, $3::jsonb, $4, now())
+     ON CONFLICT (endpoint) DO UPDATE
+       SET keys           = EXCLUDED.keys,
+           watched_brands = EXCLUDED.watched_brands,
+           last_seen_at   = now()
+     RETURNING endpoint`,
+    [
+      clipRaw(sub.endpoint, 512),
+      sub.keys != null ? JSON.stringify(sub.keys) : null,
+      record.watchedBrands != null ? JSON.stringify(record.watchedBrands) : null,
+      record.registeredAt || new Date().toISOString(),
+    ],
+  );
+  return res.rowCount > 0;
+}
+
+/** Fire-and-forget wrapper for the request path. */
+export function logPushSubscription(record = {}) {
+  if (!ready || !pool) return;
+  insertPushSubscription(record).catch((e) =>
+    console.error('scanStore: push subscription upsert failed —', e.message),
+  );
+}
+
+/**
+ * Remove one subscription. Fire-and-forget: an unsubscribe that fails to reach
+ * Postgres leaves a stale row, which costs one dead push send and is cleaned up
+ * by the 410 handling on delivery — a far cheaper failure than blocking the
+ * user's unsubscribe on the database being reachable.
+ */
+export function deletePushSubscription(endpoint) {
+  if (!ready || !pool || !endpoint) return;
+  pool
+    .query(`DELETE FROM push_subscriptions WHERE endpoint = $1`, [clipRaw(endpoint, 512)])
+    .catch((e) => console.error('scanStore: push subscription delete failed —', e.message));
 }
 
 /**

@@ -24,7 +24,7 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync, appendFileSync, chm
 import { createRequire } from 'module';
 import {
   initScanStore, logScan, scanStoreReady, logCommunityFlag, updateCommunityFlagStatus,
-  countScansForAnonId, deleteScansForAnonId,
+  countScansForAnonId, deleteScansForAnonId, logPushSubscription, deletePushSubscription,
   recordStoreSighting, getStoreSightingCounts,
 } from './db/scanStore.js';
 
@@ -864,6 +864,12 @@ app.post('/api/push/subscribe', pushBody, (req, res) => {
       writeJsonlRecords(PUSH_SUBSCRIPTIONS_FILE, existing);
     }
 
+    // Durable copy. The JSONL above is on a filesystem that may not survive a
+    // redeploy; a lost subscriber is silent (no error, the alert just never
+    // arrives), so this is the copy that matters. Fire-and-forget: Postgres
+    // being down must not fail the user's subscribe.
+    logPushSubscription(record);
+
     res.json({ success: true });
   } catch (error) {
     console.error('Push subscribe error:', error);
@@ -885,8 +891,14 @@ app.post('/api/push/unsubscribe', smallBody, (req, res) => {
     const existing = readJsonlRecords(PUSH_SUBSCRIPTIONS_FILE);
     const filtered = existing.filter(r => r.subscription?.endpoint !== endpoint);
 
+    // Always mirror the delete to Postgres, even when the JSONL had no match.
+    // The two stores can legitimately disagree — a row can exist in Postgres
+    // from before a redeploy wiped the file — and an unsubscribe that only
+    // cleared the copy that already forgot you is not an unsubscribe.
+    deletePushSubscription(endpoint);
+
     if (filtered.length === existing.length) {
-      // Nothing to remove. Idempotent success.
+      // Nothing to remove locally. Idempotent success.
       return res.json({ success: true, removed: 0 });
     }
 
