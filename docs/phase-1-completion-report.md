@@ -1,6 +1,27 @@
 # Phase 1 Completion Report
 Generated: 2026-04-29
 
+> **SUPERSEDED IN PART — read this first (added 2026-08-17).**
+>
+> This report is a dated snapshot of 2026-04-29 and is kept unedited below as a
+> record of what was true then. One of its findings is no longer true, and it
+> has since been repeated back to us as the project's single biggest launch
+> risk, so it is corrected here rather than quietly rewritten in place.
+>
+> **"Source URLs are currently `\"\"`" (see the Outstanding sections) is FALSE as
+> of Phase 2.** Every `FlagSource.url` in `src/data/brandFlags.v2.ts` is
+> populated with a real citation. Measured 2026-08-17: 0 empty URLs, 49
+> populated. Zero flags remain in `pending_review`.
+>
+> Link-check evidence, including which URLs cannot be verified automatically and
+> why, is in [`source-link-check.md`](source-link-check.md).
+>
+> The related claim that `lastVerified` reflects only the migration date is also
+> out of date — see the link-check report for real, dated HTTP results.
+>
+> Anyone auditing this repo should treat `brandFlags.v2.ts` and the link-check
+> report as the source of truth, and this file as history.
+
 ---
 
 ## Status: COMPLETE
