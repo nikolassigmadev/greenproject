@@ -35,6 +35,7 @@ import { findChocolateEntry, VERDICT_META, type ChocolateVerdict } from "@/data/
 import { EnvironmentalImpactCard } from "@/components/EnvironmentalImpactCard";
 import { IngredientConcernsCard } from "@/components/IngredientConcernsCard";
 import { SwapSuggestions } from "@/components/SwapSuggestions";
+import { SupplyChainMap } from "@/components/SupplyChainMap";
 import { DecisionBar } from "@/components/DecisionBar";
 import { useBottomNav } from "@/components/BottomNav";
 import { findIngredientFlagsInText } from "@/services/ingredientFlags";
@@ -1485,6 +1486,13 @@ export default function OpenFoodFactsDetail() {
               <SugarIndustryCard brand={product.brand} />
               <CommoditySupplyChainCard brand={product.brand} />
             </div>
+          </section>
+
+          {/* Where it comes from — provenance with graded confidence. Above the
+              swaps, because "this is where it's from" reads before "buy this
+              instead". */}
+          <section style={{ marginBottom: 14 }}>
+            <SupplyChainMap product={product} region={loadRegion()} />
           </section>
 
           {/* Better swaps — reason-aware ethical alternatives */}
