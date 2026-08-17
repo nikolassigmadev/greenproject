@@ -289,6 +289,26 @@ export function SupplyChainMap({ product, region }: Props) {
         </p>
       )}
 
+      {/*
+        No origins at all. Previously this left a bare globe, which reads as
+        "the feature is broken" rather than "there is nothing to show" — and
+        those are very different messages.
+
+        This is the honest end state for bottled water, cheese, a plain wheat
+        loaf, most colas: they contain no crop whose supply is concentrated
+        enough in one region to say anything useful about. The temptation is to
+        put SOMETHING on the map. Wheat and dairy are grown nearly everywhere,
+        so a pin would be decoration, and a pin next to a labour warning would
+        be worse than decoration.
+      */}
+      {placed.filter((n) => n.kind === 'origin').length === 0 && (
+        <p style={{ fontSize: 11.5, color: DS.muted, lineHeight: 1.55, margin: '9px 0 0' }}>
+          We can't trace an origin for this one. Nothing in it is a crop whose
+          world supply sits in a few places — so there's no region we could name
+          without guessing.
+        </p>
+      )}
+
       {/* The basis for whatever was tapped. */}
       {selected && (
         <div style={{ marginTop: 10, background: DS.bg, borderRadius: 12, padding: '11px 13px' }}>
