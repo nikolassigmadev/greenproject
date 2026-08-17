@@ -96,6 +96,23 @@ after deploy. Generate with `./scripts/make-admin-hash.sh`.
 `[ ]` **`DATABASE_URL` set in production.** Postgres is where scan records
 survive. See gate 7.
 
+After deploying, confirm it in one request — no shell access needed:
+
+```sh
+curl -s https://goodscan.shop/api/health
+```
+
+```json
+{ "openaiConfigured": true, "databaseUrlConfigured": true,
+  "scanLoggingPostgres": true, "scanLoggingSqlite": true,
+  "adminConfigured": true }
+```
+
+`scanLoggingPostgres: false` means scans are returning 200 and writing nothing
+to Supabase. If `databaseUrlConfigured` is also false the variable never
+reached the process; if it's true, the connection itself is failing and the
+boot log has the reason.
+
 `[?]` **Confirm the old OpenAI key is revoked.** A key was committed to git
 history on a public remote; rotation was recommended 2026-07-02 and has not
 been confirmed. Rotating the Supabase password was recommended at the same

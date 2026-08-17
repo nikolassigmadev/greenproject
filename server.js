@@ -36,16 +36,47 @@ const __dirname = dirname(__filename);
 // Fix Node.js IPv6 timeout issue
 try { dns.setDefaultResultOrder('ipv4first'); } catch(e) { console.warn('dns.setDefaultResultOrder not supported:', e.message); }
 
-// Load environment variables (check .env.local first, then .env)
-dotenv.config({ path: '.env.local' });
-dotenv.config();
+// ── Environment ──
+//
+// .env.production used to be read by NOTHING. It carries OPENAI_API_KEY,
+// ADMIN_PASSWORD_HASH and DATABASE_URL, and the loader only looked at
+// .env.local (gitignored, developer machines) and .env (which doesn't exist).
+// A deploy that shipped .env.production therefore came up with no database —
+// and because Postgres logging is deliberately fire-and-forget, that failed
+// silently: scans returned 200, the SQLite counter ticked, and nothing was
+// written to Supabase.
+//
+// dotenv never overwrites a variable that is already set, so ordering is
+// priority order: a real environment variable from the host panel always wins,
+// then .env.local, then .env, then .env.production as the fallback.
+//
+// .env.production is loaded only when NODE_ENV says we are in production. A dev
+// machine with no .env.local should fail loudly rather than quietly connect to
+// the production database.
+const ENV_FILES = ['.env.local', '.env'];
+if (process.env.NODE_ENV === 'production') ENV_FILES.push('.env.production');
+
+const loadedEnvFiles = [];
+for (const file of ENV_FILES) {
+  const result = dotenv.config({ path: file });
+  if (!result.error) loadedEnvFiles.push(`${file} (${Object.keys(result.parsed || {}).length} vars)`);
+}
 
 // Connect the Postgres scan store (Supabase/Neon/Railway via DATABASE_URL).
 // Fire-and-forget: if DATABASE_URL is unset or unreachable it stays disabled
 // and the server runs normally. Inserts are gated on its ready flag.
 initScanStore();
 
-console.log('server.js: dotenv loaded, PORT=', process.env.PORT);
+// Which files were read, and whether the three variables that silently disable
+// major subsystems actually resolved. Printing "not set" here is the difference
+// between a five-minute fix and a week of wondering why Supabase is empty.
+console.log('server.js: env files loaded:', loadedEnvFiles.join(', ') || '(none)');
+console.log(
+  'server.js: OPENAI_API_KEY', process.env.OPENAI_API_KEY ? 'set' : 'NOT SET',
+  '| DATABASE_URL', process.env.DATABASE_URL ? 'set' : 'NOT SET',
+  '| ADMIN_PASSWORD_HASH', process.env.ADMIN_PASSWORD_HASH ? 'set' : 'NOT SET',
+  '| PORT', process.env.PORT,
+);
 
 // ── OpenAI call logger ──
 // Persists { productName, timestamp } per API call to a private JSONL file.
@@ -2079,10 +2110,22 @@ app.post('/api/openfoodfacts/browse', async (req, res) => {
  * Health check endpoint
  */
 app.get('/api/health', (req, res) => {
+  // Reports which subsystems are actually live, not just that the process is
+  // up. Postgres scan logging is fire-and-forget by design, so when it is off
+  // every scan still returns 200 and writes nothing — invisible from the
+  // outside, which is exactly how it stayed broken. `scanLoggingPostgres:
+  // false` here is the one-request answer.
+  //
+  // Deliberately booleans only: no connection strings, no hostnames, nothing
+  // that turns a public health check into reconnaissance.
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
     openaiConfigured: !!OPENAI_API_KEY,
+    databaseUrlConfigured: !!process.env.DATABASE_URL,
+    scanLoggingPostgres: scanStoreReady(),
+    scanLoggingSqlite: !!scanDb,
+    adminConfigured: !!ADMIN_PASSWORD_HASH,
   });
 });
 

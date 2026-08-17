@@ -287,10 +287,35 @@ export async function initScanStore() {
     ready = true;
     console.log('scanStore: Postgres scan logging ready');
   } catch (e) {
-    console.warn('scanStore: init failed — Postgres scan logging disabled:', e.message);
+    // Retry rather than staying dead. This used to be terminal: one unreachable
+    // database at boot — Supabase briefly down, a paused free-tier project, a
+    // container starting before the network is up — and scan logging was off
+    // until somebody happened to restart the process. Nothing surfaced it,
+    // because inserts are fire-and-forget by design.
+    console.warn(
+      `scanStore: init failed — Postgres scan logging disabled: ${e.message}` +
+      ` (retrying in ${RECONNECT_DELAY_MS / 1000}s)`,
+    );
     ready = false;
     pool = null;
+    scheduleReconnect();
   }
+}
+
+/** How long to wait before retrying a failed Postgres connection. */
+const RECONNECT_DELAY_MS = 60_000;
+let reconnectTimer = null;
+
+function scheduleReconnect() {
+  if (reconnectTimer) return; // already queued
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = null;
+    console.log('scanStore: retrying Postgres connection…');
+    initScanStore();
+  }, RECONNECT_DELAY_MS);
+  // Don't hold the event loop open — a retry timer should never be the reason
+  // the process refuses to exit.
+  reconnectTimer.unref?.();
 }
 
 export function scanStoreReady() {
