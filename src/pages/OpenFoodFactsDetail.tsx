@@ -36,6 +36,7 @@ import { EnvironmentalImpactCard } from "@/components/EnvironmentalImpactCard";
 import { IngredientConcernsCard } from "@/components/IngredientConcernsCard";
 import { SwapSuggestions } from "@/components/SwapSuggestions";
 import { SupplyChainMap } from "@/components/SupplyChainMap";
+import { CHOCOLATE_SCORECARD } from "@/data/supplyChain/sources";
 import { DecisionBar } from "@/components/DecisionBar";
 import { useBottomNav } from "@/components/BottomNav";
 import { findIngredientFlagsInText } from "@/services/ingredientFlags";
@@ -1470,9 +1471,20 @@ export default function OpenFoodFactsDetail() {
                     <div style={{ fontSize: 12, color: EDITORIAL.ink3, marginTop: 8, lineHeight: 1.45 }}>
                       <span style={{ fontWeight: 700, color: EDITORIAL.ink2 }}>Cocoa sourcing: </span>{chocolateEntry.sourcing}
                     </div>
-                    <button onClick={() => navigate("/chocolate")} style={{ background: "transparent", border: "none", padding: 0, cursor: "pointer", fontSize: 11, color: t.color, marginTop: 10, display: "flex", alignItems: "center", gap: 4, fontWeight: 700, fontFamily: DS.font }}>
-                      View the full Chocolate Directory →
-                    </button>
+                    {/* Was "View the full Chocolate Directory →", pointing at
+                        /chocolate — a Coming Soon placeholder. Now archived.
+                        This links to the Chocolate Scorecard instead, which is
+                        where this verdict actually comes from: a reader who
+                        doubts the grade can check it, rather than landing on a
+                        page that promises a directory we never built. */}
+                    <a
+                      href={CHOCOLATE_SCORECARD.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ background: "transparent", border: "none", padding: 0, textDecoration: "none", fontSize: 11, color: t.color, marginTop: 10, display: "flex", alignItems: "center", gap: 4, fontWeight: 700, fontFamily: DS.font }}
+                    >
+                      Source: Chocolate Scorecard 2025 ↗
+                    </a>
                   </div>
                 </div>
               );

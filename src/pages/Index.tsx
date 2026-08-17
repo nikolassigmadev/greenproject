@@ -5,6 +5,7 @@ import { Logo, Wordmark } from "@/components/Logo";
 import { DS, scoreTone, toneColor, toneBg } from "@/styles/design-tokens";
 import { loadScanHistory, type ScanHistoryEntry } from "@/utils/userPreferences";
 import { YourImpactCard } from "@/components/YourImpactCard";
+import { Footer } from "@/components/Footer";
 import { loadBasket } from "@/utils/basketStorage";
 import {
   scanEntryToShowcase,
@@ -681,7 +682,11 @@ export default function Index() {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             {[
               { title: "Search products",     to: "/database",    icon: Search    },
-              { title: "Chocolate directory", to: "/chocolate",   icon: Award     },
+              // "Chocolate directory" (/chocolate) was archived: the tile
+              // promised a directory that was a Coming Soon placeholder.
+              // Methodology replaces it because it actually exists, and it is
+              // the page that explains how any of these verdicts are reached.
+              { title: "How we decide",       to: "/methodology", icon: Award     },
               { title: "Scan history",        to: "/dashboard",   icon: BarChart3 },
               { title: "Set your values",     to: "/preferences", icon: Shield    },
               { title: "About us",            to: "/about",       icon: Users, full: true },
@@ -711,36 +716,11 @@ export default function Index() {
           </div>
         </section>
 
-        {/* Policies — always visible so the legal terms are one tap away */}
-        <section style={{ marginTop: 28 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 14px" }}>Policies</h2>
-          <div style={{
-            background: DS.card, borderRadius: DS.radius.md, overflow: "hidden",
-            boxShadow: "0 2px 6px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)",
-          }}>
-            {[
-              { title: "Terms of Service",   to: "/terms-of-service" },
-              { title: "Terms & Conditions", to: "/terms-and-conditions" },
-              { title: "Privacy Policy",     to: "/privacy" },
-            ].map((doc, i) => (
-              <Link key={doc.to} to={doc.to} style={{ textDecoration: "none" }}>
-                <div style={{
-                  display: "flex", alignItems: "center", gap: 12, padding: "14px 16px",
-                  borderTop: i > 0 ? `1px solid ${DS.hair}` : "none",
-                }}>
-                  <div style={{
-                    width: 34, height: 34, borderRadius: 10, background: DS.bg,
-                    display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-                  }}>
-                    <FileText style={{ width: 16, height: 16, color: DS.ink }} />
-                  </div>
-                  <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: DS.ink }}>{doc.title}</span>
-                  <ChevronRight style={{ width: 16, height: 16, color: DS.muted, flexShrink: 0 }} />
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
+        {/* The Policies list that used to sit here is now part of <Footer />,
+            which carries the same legal links plus the ones that let a reader
+            check our reasoning — the sourcing bar, source tiers, database
+            status. Keeping both would have shown Privacy and Terms twice. */}
+        <Footer />
 
       </main>
 

@@ -21,9 +21,11 @@ const Supermarket = lazy(() => import("./pages/Supermarket"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const ShoppingList = lazy(() => import("./pages/ShoppingList"));
 const AboutUs = lazy(() => import("./pages/AboutUs"));
-const SupplyChain = lazy(() => import("./pages/SupplyChain"));
 const Methodology = lazy(() => import("./pages/Methodology"));
-const ChocolateDirectory = lazy(() => import("./pages/ChocolateDirectory"));
+// Archived — see the routes below. Left commented rather than deleted so
+// restoring is a one-line change, and so the lazy chunks stop being built.
+// const SupplyChain = lazy(() => import("./pages/SupplyChain"));
+// const ChocolateDirectory = lazy(() => import("./pages/ChocolateDirectory"));
 const Privacy = lazy(() => import("./pages/Privacy"));
 const TermsOfService = lazy(() => import("./pages/TermsOfService"));
 const TermsAndConditions = lazy(() => import("./pages/TermsAndConditions"));
@@ -188,17 +190,33 @@ export const router = createBrowserRouter([
         path: "/about",
         element: <AboutUs />,
       },
-      {
-        path: "/supply-chain",
-        element: <SupplyChain />,
-      },
+      // ── Archived ──
+      // Both pages still exist on disk and both still work; they are simply
+      // unreachable. Restoring either is uncommenting its route and its entry
+      // point. Deleting them is a separate decision, deliberately not taken
+      // here.
+      //
+      // /supply-chain — the standalone D3 globe (public/sourcing-map.html).
+      //   Superseded by SupplyChainMap on every verdict page: sourcing shown
+      //   against the product you are actually holding beats a globe you have
+      //   to interpret yourself. Freed its BottomNav slot for Basket.
+      //
+      // /chocolate — the Chocolate Directory, which was a "Coming Soon"
+      //   placeholder reachable from two entry points. An app whose whole
+      //   argument is "we only tell you what we can source" should not ship a
+      //   page promising a directory that does not exist.
+      //
+      // {
+      //   path: "/supply-chain",
+      //   element: <SupplyChain />,
+      // },
+      // {
+      //   path: "/chocolate",
+      //   element: <ChocolateDirectory />,
+      // },
       {
         path: "/methodology",
         element: <Methodology />,
-      },
-      {
-        path: "/chocolate",
-        element: <ChocolateDirectory />,
       },
       {
         path: "/privacy",

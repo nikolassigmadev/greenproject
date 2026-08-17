@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Home, Clock, Globe, SlidersHorizontal } from "lucide-react";
+import { Home, Clock, ShoppingCart, SlidersHorizontal } from "lucide-react";
 import {
   createContext,
   useContext,
@@ -47,9 +47,16 @@ const NAV_LEFT = [
   { path: "/dashboard", label: "History", icon: Clock },
 ];
 
+// "Global" (/supply-chain) used to sit here. It was archived once the origin
+// map moved onto every verdict page: a shopper looking at a Kit Kat now sees
+// that product's sourcing in context, which is strictly more useful than a
+// standalone globe they had to go and interpret themselves.
+//
+// Basket takes the slot rather than leaving a gap — the nav is 2 + scan + 2,
+// and a single item on the right reads as a layout bug.
 const NAV_RIGHT = [
   { path: "/preferences", label: "Values", icon: SlidersHorizontal },
-  { path: "/supply-chain", label: "Global", icon: Globe             },
+  { path: "/basket",      label: "Basket", icon: ShoppingCart      },
 ];
 
 function ScanIcon({ color, size = 23 }: { color: string; size?: number }) {
