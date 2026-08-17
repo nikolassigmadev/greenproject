@@ -361,7 +361,20 @@ export function resolveSupplyChain(
     ?.ingredients_n ?? 0;
   const undisclosedCount = Math.max(0, ingredientCount - origins.length);
 
-  const tiers = nodes.map((n) => n.tier);
+  // Judge disclosure on ORIGIN and PROCESSING nodes only — never the
+  // destination.
+  //
+  // This used to read every node, and the destination node is the user's own
+  // region, which is always 'declared' because they typed it. So a Coca-Cola
+  // with no traceable origin at all still reported bestTier 'declared', and the
+  // header read "Partly disclosed" directly above the sentence "we can't trace
+  // an origin for this one". Knowing where the SHOPPER is standing is not a
+  // disclosure about the PRODUCT, and letting it set the headline was the same
+  // mistake as the retailer header that named a shop we had no evidence for:
+  // an honest caveat under a headline that contradicts it.
+  const tiers = nodes
+    .filter((n) => n.kind === 'origin' || n.kind === 'processing')
+    .map((n) => n.tier);
   const bestTier: ProvenanceTier = tiers.includes('declared')
     ? 'declared'
     : tiers.includes('inferred') ? 'inferred' : 'unknown';
