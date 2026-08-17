@@ -143,6 +143,12 @@ WHERE category IS NOT NULL
   AND primary_concern IS NOT NULL    -- the product carried an ethical concern
   AND swap_available IS NOT TRUE     -- ...and we couldn't offer a real alternative
 GROUP BY country, city, category, primary_concern
+-- k-ANONYMITY FLOOR. This view is the thing most likely to be exported, shown
+-- in a deck, or handed to a buyer, and a city×category×concern cell built from
+-- one person is that person's shopping habits with a label on it. Five distinct
+-- users minimum before a row exists at all. Enforced HERE rather than in each
+-- query, because the whole point is that someone downstream cannot forget it.
+HAVING count(DISTINCT user_id) >= 5
 ORDER BY rejected DESC, demand_signals DESC;
 
 CREATE TABLE IF NOT EXISTS community_flags (
@@ -200,6 +206,125 @@ CREATE INDEX IF NOT EXISTS idx_sightings_lookup ON store_sightings (retailer_id,
 CREATE INDEX IF NOT EXISTS idx_sightings_seen   ON store_sightings (seen_at DESC);
 ALTER TABLE store_sightings ADD COLUMN IF NOT EXISTS city TEXT;
 
+-- ── Research fields ──
+--
+-- These exist to answer a question the table currently cannot: not "did they
+-- reject it" (we have that) but "what would it have taken for them to buy it".
+-- Rejection is easy to measure and nobody pays for it. Willingness-to-pay is
+-- hard, and it cannot be reconstructed after the fact — if the price wasn't
+-- captured at the moment of the decision, that scan is gone as evidence.
+--
+-- NOT ADDED, because they already exist and a synonym column would silently
+-- split the same measurement in two:
+--   swap_clicked          — already here
+--   decision_latency_ms   — this is dwell_ms ("page open → buy/skip press")
+--   detail_dwell_ms       — likewise dwell_ms
+
+-- Groups one shopping trip. scan_event_id already joins the exposure row to its
+-- conversion row for a SINGLE product; this joins all the products in one trip.
+-- Without it, forty scans in one supermarket and forty scans across a month are
+-- indistinguishable, which breaks every per-basket number.
+ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS session_id       TEXT;
+
+-- Price at the shelf, and how the offered alternative compared. Together these
+-- are the price elasticity of ethics: the premium at which people stop
+-- switching. Currency is stored beside the number because a bare 2.50 is
+-- meaningless across the markets this app runs in.
+ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS price_observed   NUMERIC(10,2);
+ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS price_currency   TEXT;
+ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS swap_price_delta NUMERIC(6,2);
+
+-- Where the scan happened. country+city is too coarse to act on: a brand can do
+-- something about "you are losing shoppers in Tesco", not about "in Britain".
+ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS retailer         TEXT;
+ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS retail_channel   TEXT;
+
+-- The denominator. "40% skipped" says nothing without knowing how many were
+-- ever going to buy; a browser who doesn't buy is not a conversion. Captured
+-- BEFORE the verdict is shown, or it just measures the verdict.
+ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS intent_before    TEXT;
+
+-- Which specific alternative was offered. swap_shown is a boolean and cannot
+-- attribute a switch to a product, which is the part a brand would pay for.
+ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS swap_shown_id    TEXT;
+
+-- ── Data quality ──
+-- Nobody serious buys a dataset they cannot filter down to rows that were
+-- matched correctly. match_confidence is what makes the rest of the table
+-- defensible; without it every row is equally trustworthy, which means none is.
+ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS scan_method      TEXT;
+ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS match_method     TEXT;
+ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS match_confidence REAL;
+ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS app_version      TEXT;
+
+-- Which exact flags fired, and which evidence the user actually opened.
+-- primary_concern is one bucket per scan; flag_ids attributes behaviour to a
+-- specific allegation, and sections_opened answers the question the Methodology
+-- page raises but cannot currently settle — whether labour, carbon or animal
+-- welfare is what actually changes a decision.
+ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS flag_ids         JSONB;
+ALTER TABLE ai_scans ADD COLUMN IF NOT EXISTS sections_opened  JSONB;
+
+CREATE INDEX IF NOT EXISTS idx_scans_session  ON ai_scans (session_id);
+CREATE INDEX IF NOT EXISTS idx_scans_retailer ON ai_scans (retailer);
+
+-- ── Panel ──
+--
+-- Deliberately a separate table rather than more columns on ai_scans: these are
+-- facts about a PERSON, not about a scan, and copying them onto every row would
+-- both bloat the table and re-state the same demographic thousands of times.
+--
+-- research_consent is the important column in this whole file. A persistent
+-- device id plus city plus timestamps plus photographs is personal data under
+-- GDPR whatever we label it, and commercial use needs opt-in, versioned,
+-- server-side consent — not a localStorage key the server cannot see. It
+-- defaults to FALSE and it cannot be applied retroactively: rows collected
+-- before someone consents were not consented to, and the only honest fix is to
+-- ask and to filter every commercial query on the answer.
+--
+-- Age is a BAND, never a date of birth. Income is self-reported and banded.
+-- Neither is precise enough to identify anyone, and both are precise enough to
+-- segment a panel.
+CREATE TABLE IF NOT EXISTS users (
+  user_id            TEXT PRIMARY KEY,
+  first_seen         TIMESTAMPTZ NOT NULL DEFAULT now(),
+  acquisition_source TEXT,
+  country            TEXT,
+  city               TEXT,
+  age_band           TEXT,
+  household_size     SMALLINT,
+  income_band        TEXT,
+  diet               TEXT,
+  shop_frequency     TEXT,
+  primary_retailer   TEXT,
+  plan               TEXT DEFAULT 'free',
+  research_consent   BOOLEAN NOT NULL DEFAULT false,
+  consent_version    TEXT,
+  consent_at         TIMESTAMPTZ,
+  updated_at         TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_users_consent ON users (research_consent) WHERE research_consent;
+
+-- Survey answers, optionally pinned to the scan that prompted them.
+--
+-- scan_id is the point of the table. "Would you pay more for cage-free?" asked
+-- cold produces the usual stated-preference answer, where everyone says yes.
+-- The same question two seconds after someone physically put a caged-egg
+-- product back is a different thing entirely, because the revealed behaviour is
+-- sitting in the adjacent row and can contradict them.
+CREATE TABLE IF NOT EXISTS survey_responses (
+  id           BIGSERIAL PRIMARY KEY,
+  user_id      TEXT NOT NULL,
+  survey_id    TEXT NOT NULL,
+  question_id  TEXT NOT NULL,
+  answer       JSONB NOT NULL,
+  scan_id      BIGINT,
+  context      TEXT,
+  answered_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_survey_user ON survey_responses (user_id, survey_id);
+CREATE INDEX IF NOT EXISTS idx_survey_scan ON survey_responses (scan_id);
+
 -- ── Enum constraints ──
 -- The app already filters these through oneOf() before insert. That guards the
 -- one path we control; it does not guard a hand-written UPDATE in the Supabase
@@ -242,7 +367,33 @@ BEGIN
       ('community_flags', 'community_flags_status_chk',
        'status IN (''pending_review'',''approved'',''rejected'')'),
       ('community_flags', 'community_flags_severity_chk',
-       'severity IN (''critical'',''high'',''medium'',''low'')')
+       'severity IN (''critical'',''high'',''medium'',''low'')'),
+      -- Research fields. Same reasoning as the rest of this block: the app
+      -- sanitises these before insert, but the database is the only place a
+      -- rule holds for a hand-written UPDATE in the Supabase console too.
+      ('ai_scans', 'ai_scans_intent_before_chk',
+       'intent_before IN (''ABOUT_TO_BUY'',''BROWSING'',''RESEARCHING'')'),
+      ('ai_scans', 'ai_scans_retail_channel_chk',
+       'retail_channel IN (''supermarket'',''convenience'',''online'',''market'')'),
+      ('ai_scans', 'ai_scans_scan_method_chk',
+       'scan_method IN (''barcode'',''camera_ocr'',''typed_search'')'),
+      ('ai_scans', 'ai_scans_match_method_chk',
+       'match_method IN (''barcode_exact'',''off_search'',''ai_inferred'')'),
+      -- A confidence outside 0..1 is a bug, and one that would quietly poison
+      -- every "high-confidence rows only" filter a buyer runs.
+      ('ai_scans', 'ai_scans_match_confidence_chk',
+       'match_confidence >= 0 AND match_confidence <= 1'),
+      -- Never negative. A price of 0 is legitimate (free sample, loyalty offer).
+      ('ai_scans', 'ai_scans_price_observed_chk',
+       'price_observed >= 0'),
+      ('users', 'users_plan_chk',
+       'plan IN (''free'',''plus'',''pro'')'),
+      -- Consent must record WHICH version was agreed to. A bare true is
+      -- unfalsifiable a year later when the wording has changed.
+      ('users', 'users_consent_versioned_chk',
+       'research_consent IS NOT TRUE OR (consent_version IS NOT NULL AND consent_at IS NOT NULL)'),
+      ('survey_responses', 'survey_responses_context_chk',
+       'context IN (''post_scan'',''onboarding'',''standalone'')')
     ) AS t(tbl, name, expr)
   LOOP
     IF NOT EXISTS (
@@ -407,6 +558,52 @@ function bool(v) {
   return typeof v === 'boolean' ? v : null;
 }
 
+// ── Research-field sanitisers ──
+
+const RETAIL_CHANNELS = new Set(['supermarket', 'convenience', 'online', 'market']);
+const INTENTS = new Set(['ABOUT_TO_BUY', 'BROWSING', 'RESEARCHING']);
+const SCAN_METHODS = new Set(['barcode', 'camera_ocr', 'typed_search']);
+const MATCH_METHODS = new Set(['barcode_exact', 'off_search', 'ai_inferred']);
+
+// A shelf price. Zero is legitimate (free sample, loyalty offer); negative is
+// not. Capped well above any real grocery price so a fat-fingered or malicious
+// value can't skew an average — this column's whole job is to support a price
+// curve, and one absurd row bends it.
+function money(v) {
+  const n = typeof v === 'number' ? v : Number(v);
+  if (!Number.isFinite(n) || n < 0 || n > 100000) return null;
+  return Math.round(n * 100) / 100;
+}
+
+// Percentage difference against the scanned item, so negative is meaningful —
+// a cheaper alternative is the most interesting result there is, and clamping
+// at zero would delete exactly that finding.
+function pct(v) {
+  const n = typeof v === 'number' ? v : Number(v);
+  if (!Number.isFinite(n) || n < -100 || n > 10000) return null;
+  return Math.round(n * 100) / 100;
+}
+
+// 0..1. Anything else is a bug, and it would silently poison every
+// "high-confidence rows only" filter run against this table.
+function confidence(v) {
+  const n = typeof v === 'number' ? v : Number(v);
+  return Number.isFinite(n) && n >= 0 && n <= 1 ? n : null;
+}
+
+// A short array of short identifiers, as a JSON string for the ::jsonb cast.
+// Deliberately strict: ids only, capped in count and length, so this can never
+// become a place free text (and therefore PII) quietly ends up.
+function jsonArray(v, maxItems) {
+  if (!Array.isArray(v)) return null;
+  const out = v
+    .filter((s) => typeof s === 'string')
+    .map((s) => s.trim().slice(0, 64))
+    .filter(Boolean)
+    .slice(0, maxItems);
+  return out.length ? JSON.stringify(out) : null;
+}
+
 // Accept only a plain {key: 0-100} priorities object; return a JSON string for
 // the ::jsonb cast, or null. Never stores free-text — no PII can leak in here.
 function priorityJson(p) {
@@ -484,6 +681,27 @@ export function logScan(rec = {}) {
       bool(rec.swapClicked),
       num(rec.dwellMs, 600000),
       oneOf(rec.swapTaken, SWAP_TAKEN),
+      // ── Research fields ──
+      // Every one goes through the same clamps as the rest. oneOf() returns
+      // null for anything unrecognised, so a client sending a typo writes NULL
+      // rather than a value that quietly widens an enum nobody is watching.
+      clip(rec.sessionId, 64),
+      money(rec.priceObserved),
+      clip(rec.priceCurrency, 8),
+      // Percentage difference vs the scanned item. Clamped to ±10000% because
+      // a swap that costs a hundred times more is a bug in the swap engine, and
+      // it should not enter the price-elasticity numbers as if it were real.
+      pct(rec.swapPriceDelta),
+      clip(rec.retailer, 120),
+      oneOf(rec.retailChannel, RETAIL_CHANNELS),
+      oneOf(rec.intentBefore, INTENTS),
+      clip(rec.swapShownId, 64),
+      oneOf(rec.scanMethod, SCAN_METHODS),
+      oneOf(rec.matchMethod, MATCH_METHODS),
+      confidence(rec.matchConfidence),
+      clip(rec.appVersion, 32),
+      jsonArray(rec.flagIds, 40),
+      jsonArray(rec.sectionsOpened, 20),
     ];
     pool
       .query(
@@ -494,11 +712,19 @@ export function logScan(rec = {}) {
             priorities, category, verdict,
             primary_concern, swap_available, image, resolved,
             scan_event_id, verdict_base, swap_gap_reason,
-            swap_shown, swap_clicked, dwell_ms, swap_taken)
+            swap_shown, swap_clicked, dwell_ms, swap_taken,
+            session_id, price_observed, price_currency, swap_price_delta,
+            retailer, retail_channel, intent_before, swap_shown_id,
+            scan_method, match_method, match_confidence, app_version,
+            flag_ids, sections_opened)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,
                  $11,$12,
                  $13::jsonb,$14,$15,$16,$17,$18,$19,
-                 $20,$21,$22,$23,$24,$25,$26)`,
+                 $20,$21,$22,$23,$24,$25,$26,
+                 $27,$28,$29,$30,
+                 $31,$32,$33,$34,
+                 $35,$36,$37,$38,
+                 $39::jsonb,$40::jsonb)`,
         values,
       )
       .catch((e) => console.error('scanStore: insert failed —', e.message));

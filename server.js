@@ -2211,6 +2211,13 @@ app.post('/api/scans', scanLimiter, scanBody, scanImageLimiter, (req, res) => {
       barcode, name, brand, ecoGrade, country, city, anonId, openaiResponse, fullOpenaiResponse, bought,
       priorities, category, verdict, primaryConcern, swapAvailable, image, resolved,
       scanEventId, verdictBase, swapGapReason, swapShown, swapClicked, dwellMs, swapTaken, source,
+      // Research fields. scanStore clamps every one of these — oneOf() returns
+      // null for anything unrecognised — so they pass through unvalidated here
+      // for the same reason the rest of the body does.
+      sessionId, priceObserved, priceCurrency, swapPriceDelta,
+      retailer, retailChannel, intentBefore, swapShownId,
+      scanMethod, matchMethod, matchConfidence, appVersion,
+      flagIds, sectionsOpened,
     } = req.body || {};
     if (!name || typeof name !== 'string') {
       return res.status(400).json({ success: false, error: 'name is required' });
@@ -2243,6 +2250,12 @@ app.post('/api/scans', scanLimiter, scanBody, scanImageLimiter, (req, res) => {
       // joined exactly. The rest (dwell, swap engagement) are only knowable at
       // decision time and arrive null on the exposure row.
       scanEventId, verdictBase, swapGapReason, swapShown, swapClicked, dwellMs, swapTaken,
+      // Research fields — see docs/research-schema.md for what each is for and
+      // which of them still need capture UI before they carry any data.
+      sessionId, priceObserved, priceCurrency, swapPriceDelta,
+      retailer, retailChannel, intentBefore, swapShownId,
+      scanMethod, matchMethod, matchConfidence, appVersion,
+      flagIds, sectionsOpened,
     });
     // Only fail if BOTH stores are unavailable.
     if (!scanDb && !scanStoreReady()) {
