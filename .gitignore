@@ -39,3 +39,7 @@ dist-ssr
 .claude/worktrees/
 .claude/settings.local.json
 
+
+# Research artifacts — big downloads and generated fixtures, not app code.
+scripts/research/**/*.parquet
+scripts/research/**/cache/
