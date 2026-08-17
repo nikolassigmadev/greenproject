@@ -351,6 +351,24 @@ const smallBody = express.json({ limit: '4kb' });
 // See docs/launch-gates.md.
 const OPENAI_DAILY_CALL_BUDGET = Number(process.env.OPENAI_DAILY_CALL_BUDGET || 5000);
 const OPENAI_DAILY_CALLS_PER_USER = Number(process.env.OPENAI_DAILY_CALLS_PER_USER || 120);
+
+/**
+ * Whether OpenAI retains our requests as stored completions (visible in their
+ * dashboard, retained for a period on their side).
+ *
+ * Every call had `store: true` hardcoded — an inherited default nobody chose.
+ * It matters here more than it usually would, because these requests carry the
+ * user's scan PHOTO, which can incidentally include faces, hands and someone's
+ * kitchen. Our privacy policy says photos are not used to train AI models; that
+ * stays true either way (API data isn't trained on by default). But "we send
+ * your photo to a third party and ask them to keep a copy" is exactly the
+ * sentence a regulator reads twice, and it should be a decision rather than a
+ * leftover.
+ *
+ * Default OFF. Set OPENAI_STORE_COMPLETIONS=true temporarily when debugging a
+ * bad scan against OpenAI's dashboard, then turn it back off.
+ */
+const OPENAI_STORE_COMPLETIONS = process.env.OPENAI_STORE_COMPLETIONS === 'true';
 // Bounds memory: a scraper sending a fresh random anonId per request would
 // otherwise grow this map without limit. Past the cap we stop tracking new
 // identities; the global budget is still in force, which is the ceiling that
@@ -1094,7 +1112,7 @@ app.post('/api/chat/aboutus', async (req, res) => {
 
     const completion = await openaiClient.chat.completions.create({
       model: 'gpt-4o-mini',
-      store: true,
+      store: OPENAI_STORE_COMPLETIONS,
       temperature: 0.2,
       max_tokens: 400,
       messages: [
@@ -1213,7 +1231,7 @@ Return ONLY valid JSON matching this schema:
 
     const completion = await openaiClient.chat.completions.create({
       model: 'gpt-4o-mini',
-      store: true,
+      store: OPENAI_STORE_COMPLETIONS,
       temperature: 0.3,
       max_tokens: 1200,
       messages: [
@@ -1314,7 +1332,7 @@ app.post('/api/openai/analyze-image', openaiLimiter, largeBody, openaiBudget, as
       },
       body: JSON.stringify({
         model: visionModel,
-        store: true,
+        store: OPENAI_STORE_COMPLETIONS,
         messages: [
           {
             role: 'user',
@@ -1442,7 +1460,7 @@ CONFIDENCE: a number from 0.0 to 1.0`;
         // inside the scan's time-boxed visual-match step, so lower latency means
         // fewer ambiguous matches get cut off by the timeout.
         model: 'gpt-4.1-mini',
-        store: true,
+        store: OPENAI_STORE_COMPLETIONS,
         messages: [{
           role: 'user',
           content: [
@@ -1514,7 +1532,7 @@ app.post('/api/openai/chat', openaiLimiter, openaiBudget, async (req, res) => {
       },
       body: JSON.stringify({
         model: 'gpt-4o-mini',
-        store: true,
+        store: OPENAI_STORE_COMPLETIONS,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userMessage },
@@ -2157,6 +2175,28 @@ const scanLimiter = rateLimit({
 });
 
 /**
+ * Stricter cap for scan logs that carry a PHOTO.
+ *
+ * The 60/min above is fine for the metadata rows this endpoint mostly receives
+ * — a buy/skip decision is a few hundred bytes. But scanBody accepts 4MB, so
+ * the same allowance let one IP push ~240MB/minute of base64 images into
+ * Postgres. That is not a scraping problem, it is a fill-the-database problem,
+ * and the storage bill lands before anyone notices.
+ *
+ * Mounted AFTER the body parser so `skip` can see whether an image is actually
+ * attached: a shopper scanning normally sends a handful of photos a minute and
+ * never touches this, while the metadata rows keep the looser limit.
+ */
+const scanImageLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => !req.body?.image,
+  message: { success: false, error: 'Too many scan photos - try again in a minute' },
+});
+
+/**
  * POST /api/scans — public, fire-and-forget from the client. Logs one scanned
  * product. Body: { barcode?, name, brand?, ecoGrade?, country?, anonId?,
  * openaiResponse?, fullOpenaiResponse?, bought? }. openaiResponse is the trimmed
@@ -2165,7 +2205,7 @@ const scanLimiter = rateLimit({
  * it) or 'NO' (skipped). Stored in ai_scans.openai_response /
  * ai_scans.full_openai_response / ai_scans.bought.
  */
-app.post('/api/scans', scanLimiter, scanBody, (req, res) => {
+app.post('/api/scans', scanLimiter, scanBody, scanImageLimiter, (req, res) => {
   try {
     const {
       barcode, name, brand, ecoGrade, country, city, anonId, openaiResponse, fullOpenaiResponse, bought,
