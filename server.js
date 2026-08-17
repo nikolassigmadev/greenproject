@@ -287,6 +287,80 @@ const communityFlagLimiter = rateLimit({
 // Small JSON body cap for community-flag submissions (4KB).
 const smallBody = express.json({ limit: '4kb' });
 
+// ── OpenAI spend guard ──
+//
+// The per-IP rate limiter above does NOT bound the bill. 10 requests/minute is
+// a cap per IP, and IPs are free: a scraper rotating addresses, or a front-page
+// link bringing thousands of real users at once, both bill us without limit.
+// Vision calls are the single most expensive thing this server does.
+//
+// Two ceilings, because they fail differently:
+//   - a GLOBAL daily call budget, which is what actually bounds the invoice and
+//     holds regardless of how many IPs or anon IDs the traffic arrives under;
+//   - a PER-ANON-ID daily quota, so one heavy user can't eat the global budget
+//     and take the app down for everyone else.
+//
+// LIMITATIONS, stated plainly because they matter operationally:
+//   1. Counters are in memory. A restart resets them, and two instances behind
+//      a load balancer each get their own budget.
+//   2. This counts CALLS, not dollars. Cost per call varies with image size.
+// Neither is a substitute for a hard monthly spend cap set in the OpenAI
+// dashboard, which is the only limit that cannot be defeated by a restart.
+// See docs/launch-gates.md.
+const OPENAI_DAILY_CALL_BUDGET = Number(process.env.OPENAI_DAILY_CALL_BUDGET || 5000);
+const OPENAI_DAILY_CALLS_PER_USER = Number(process.env.OPENAI_DAILY_CALLS_PER_USER || 120);
+// Bounds memory: a scraper sending a fresh random anonId per request would
+// otherwise grow this map without limit. Past the cap we stop tracking new
+// identities; the global budget is still in force, which is the ceiling that
+// actually protects the account.
+const OPENAI_QUOTA_MAX_TRACKED_IDS = 50000;
+
+let openaiBudgetDay = null;
+let openaiCallsToday = 0;
+const openaiCallsByCaller = new Map();
+
+function rollOpenaiBudgetWindow() {
+  const today = new Date().toISOString().slice(0, 10); // UTC day
+  if (today !== openaiBudgetDay) {
+    openaiBudgetDay = today;
+    openaiCallsToday = 0;
+    openaiCallsByCaller.clear();
+  }
+}
+
+/**
+ * Must be mounted AFTER the body parser on each route, because the anon ID
+ * arrives in the JSON body. Falls back to IP when no anonId is supplied, so
+ * the per-caller quota still applies to clients that don't send one.
+ */
+function openaiBudget(req, res, next) {
+  rollOpenaiBudgetWindow();
+
+  if (openaiCallsToday >= OPENAI_DAILY_CALL_BUDGET) {
+    console.warn(
+      `[openai-budget] global daily budget of ${OPENAI_DAILY_CALL_BUDGET} calls exhausted; shedding load`
+    );
+    return res.status(503).json({
+      success: false,
+      error: 'Scanning is temporarily unavailable — the daily analysis budget has been reached. Try again tomorrow.',
+    });
+  }
+
+  const caller = String(req.body?.anonId || req.ip || 'unknown').slice(0, 64);
+  const used = openaiCallsByCaller.get(caller) || 0;
+  if (used >= OPENAI_DAILY_CALLS_PER_USER) {
+    return res.status(429).json({
+      success: false,
+      error: 'Daily scan limit reached for this device. It resets at midnight UTC.',
+    });
+  }
+  if (used > 0 || openaiCallsByCaller.size < OPENAI_QUOTA_MAX_TRACKED_IDS) {
+    openaiCallsByCaller.set(caller, used + 1);
+  }
+  openaiCallsToday += 1;
+  next();
+}
+
 app.use('/api/openai', openaiLimiter);
 app.use('/api/chat', openaiLimiter);
 app.use('/api/openfoodfacts', searchLimiter);
@@ -999,7 +1073,7 @@ ${ABOUT_US_KNOWLEDGE}`,
  * Pure ChatGPT product analysis.
  * Accepts { query } (text) or { imageBase64 } (photo) or both.
  */
-app.post('/api/chatgpt/analyze-product', openaiLimiter, largeBody, async (req, res) => {
+app.post('/api/chatgpt/analyze-product', openaiLimiter, largeBody, openaiBudget, async (req, res) => {
   try {
     if (!openaiClient) {
       return res.status(500).json({ success: false, error: 'OpenAI API key not configured' });
@@ -1143,7 +1217,7 @@ Return ONLY valid JSON matching this schema:
  * Task-based image analysis - client sends a task name, NOT a prompt.
  * Accepts { imageBase64, task } where task is a key in IMAGE_TASK_PROMPTS.
  */
-app.post('/api/openai/analyze-image', openaiLimiter, largeBody, async (req, res) => {
+app.post('/api/openai/analyze-image', openaiLimiter, largeBody, openaiBudget, async (req, res) => {
   try {
     if (!OPENAI_API_KEY) {
       return res.status(500).json({
@@ -1283,7 +1357,7 @@ app.get('/api/image-proxy', searchLimiter, async (req, res) => {
  * calls this only to confirm a low-confidence / ambiguous visual colour match
  * before showing it. Returns { success, match: boolean, confidence: 0..1 }.
  */
-app.post('/api/openai/verify-product-match', openaiLimiter, largeBody, async (req, res) => {
+app.post('/api/openai/verify-product-match', openaiLimiter, largeBody, openaiBudget, async (req, res) => {
   try {
     if (!OPENAI_API_KEY) return res.status(500).json({ success: false, error: 'OpenAI API key not configured on server' });
     const { imageBase64, candidateImageUrl, mode } = req.body || {};
@@ -1354,7 +1428,7 @@ CONFIDENCE: a number from 0.0 to 1.0`;
  * Task-based chat - client sends { task, userMessage }.
  * No arbitrary prompts, model choice, or temperature allowed.
  */
-app.post('/api/openai/chat', openaiLimiter, async (req, res) => {
+app.post('/api/openai/chat', openaiLimiter, openaiBudget, async (req, res) => {
   try {
     if (!OPENAI_API_KEY) {
       return res.status(500).json({ success: false, error: 'OpenAI API key not configured' });
