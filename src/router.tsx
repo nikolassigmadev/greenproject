@@ -22,6 +22,7 @@ const Dashboard = lazy(() => import("./pages/Dashboard"));
 const ShoppingList = lazy(() => import("./pages/ShoppingList"));
 const AboutUs = lazy(() => import("./pages/AboutUs"));
 const Methodology = lazy(() => import("./pages/Methodology"));
+const Contact = lazy(() => import("./pages/Contact"));
 // Archived — see the routes below. Left commented rather than deleted so
 // restoring is a one-line change, and so the lazy chunks stop being built.
 // const SupplyChain = lazy(() => import("./pages/SupplyChain"));
@@ -217,6 +218,10 @@ export const router = createBrowserRouter([
       {
         path: "/methodology",
         element: <Methodology />,
+      },
+      {
+        path: "/contact",
+        element: <Contact />,
       },
       {
         path: "/privacy",

@@ -28,7 +28,10 @@ const TRUST_LINKS = [
   { to: "/methodology#sourcing-bar", label: "The sourcing bar" },
   { to: "/methodology#source-tiers", label: "Source tiers" },
   { to: "/methodology#database-status", label: "Database status" },
-  { to: "/submit-flag", label: "Report a problem" },
+  // → /contact, not /submit-flag. The structured flag form is for people who
+  // already have a published source in hand; "report a problem" is the door
+  // everyone else needs, including a brand's lawyer disputing a flag.
+  { to: "/contact", label: "Report a problem" },
 ];
 
 const LEGAL_LINKS = [
