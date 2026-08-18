@@ -1,4 +1,4 @@
-package com.scan2source.app;
+package com.goodscan.app;
 
 import com.getcapacitor.BridgeActivity;
 

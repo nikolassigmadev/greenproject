@@ -2,6 +2,6 @@
 <resources>
     <string name="app_name">GoodScan</string>
     <string name="title_activity_main">GoodScan</string>
-    <string name="package_name">com.scan2source.app</string>
-    <string name="custom_url_scheme">com.scan2source.app</string>
+    <string name="package_name">com.goodscan.app</string>
+    <string name="custom_url_scheme">com.goodscan.app</string>
 </resources>

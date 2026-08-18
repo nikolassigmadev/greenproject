@@ -38,6 +38,7 @@ import { findIngredientFlagsInText } from '@/services/ingredientFlags';
 import { findChocolateEntry } from '@/data/chocolateDirectory';
 import { detectCommodities } from '@/data/supplyChain/commodityOrigins';
 import { findParentCompany } from '@/data/parentCompanies';
+import { findLabelCertifications } from '@/data/labelCertifications';
 
 const ENABLED = process.env.SIGNAL_COVERAGE === '1';
 
@@ -51,11 +52,11 @@ const PER_CATEGORY = 15;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-interface Prod { barcode: string; name: string; brand: string; ingredients: string; cats: string[]; cat: string }
+interface Prod { barcode: string; name: string; brand: string; ingredients: string; cats: string[]; labels: string[]; cat: string }
 
 async function fetchCategory(cat: string, attempt = 0): Promise<Prod[]> {
   const url = `https://world.openfoodfacts.org/api/v2/search?categories_tags_en=${encodeURIComponent(cat)}` +
-    `&fields=code,product_name,brands,ingredients_text,categories_tags&page_size=${PER_CATEGORY}&json=1`;
+    `&fields=code,product_name,brands,ingredients_text,categories_tags,labels_tags&page_size=${PER_CATEGORY}&json=1`;
   try {
     const r = await fetch(url, { headers: { 'User-Agent': 'GoodScan-signal-coverage/1.0' } });
     if (r.status === 503 && attempt < 3) { await sleep(8000 * (attempt + 1)); return fetchCategory(cat, attempt + 1); }
@@ -67,6 +68,7 @@ async function fetchCategory(cat: string, attempt = 0): Promise<Prod[]> {
       brand: (p.brands as string) || '',
       ingredients: (p.ingredients_text as string) || '',
       cats: (p.categories_tags as string[]) ?? [],
+      labels: (p.labels_tags as string[]) ?? [],
       cat,
     })).filter((p) => p.barcode);
   } catch { return []; }
@@ -82,6 +84,10 @@ function signalsFor(p: Prod): string[] {
   if (findIngredientFlagsInText(p.ingredients).length) hits.push('ingredient');
   if (findChocolateEntry(p.brand, p.name)) hits.push('chocolate');
   if (detectCommodities(p.ingredients, p.name, p.cats).length) hits.push('commodity');
+
+  // Certifications claimed on the packaging. The one POSITIVE signal here,
+  // and the cheapest: these labels ride along in a payload we already fetch.
+  if (findLabelCertifications(p.labels).length) hits.push('certification');
 
   // Parent-company inheritance. Widens the KEY, never the claim: we re-run the
   // same brand lookups against the parent name, so this can only fire where we
@@ -117,6 +123,8 @@ describe('sourced signal coverage', () => {
     // Products the parent map rescues single-handedly — the honest measure of
     // what Phase 2 bought, as opposed to what it duplicated.
     let parentOnly = 0;
+    // Products only the certification layer rescues — its honest solo lift.
+    let certOnly = 0;
     const uncovered: string[] = [];
 
     for (const p of products) {
@@ -128,6 +136,7 @@ describe('sourced signal coverage', () => {
       }
       if (hits.some((h) => h !== 'commodity' && h !== 'ingredient' && h !== 'parent')) brandOnly++;
       if (hits.length === 1 && hits[0] === 'parent') parentOnly++;
+      if (hits.length === 1 && hits[0] === 'certification') certOnly++;
       hits.forEach((h) => bySignal.set(h, (bySignal.get(h) ?? 0) + 1));
       byCategory.set(p.cat, rec);
     }
@@ -154,6 +163,7 @@ not count here.
 | Covered by brand research alone | ${brandOnly} — ${pct(brandOnly)}% |
 | Lift from the commodity/ingredient layer | +${pct(covered - brandOnly)} points |
 | Products rescued ONLY by the parent map | ${parentOnly} — ${pct(parentOnly)}% |
+| Products rescued ONLY by the certification layer | ${certOnly} — ${pct(certOnly)}% |
 
 The second and third rows are the important ones. Brand-by-brand research alone
 covers ${pct(brandOnly)}% of what people actually scan. The commodity and

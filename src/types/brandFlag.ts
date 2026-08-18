@@ -29,6 +29,18 @@ export interface FlagSource {
   jurisdiction?: string;    // e.g., "US", "EU", "Global"
   excerpt?: string;         // optional short quote (under 25 words)
   /**
+   * ISO date the underlying matter STOPPED being live — a lawsuit settled or
+   * dismissed, a CBP Withhold Release Order lifted, an entity removed from the
+   * UFLPA list.
+   *
+   * This is the field that stops a true flag becoming a false one. A 2019
+   * allegation that settled in 2023 was accurate when it was written and is
+   * defamatory now, and nothing catches it: the URL still resolves, the page
+   * still describes the allegation, and every liveness check passes. Setting
+   * this takes the source out of the "live finding" count.
+   */
+  resolvedDate?: string;
+  /**
    * True when this source documents a COMMODITY or REGION rather than any
    * particular company — the US DOL TVPRA list being the clearest example. It
    * establishes that cocoa from Côte d'Ivoire involves child labour; it says
@@ -95,6 +107,35 @@ export interface BrandFlagV2 {
   summary: string;               // one-sentence claim, factual tone
   details: string;               // 2–4 sentences, factual, no editorialising
   sources: FlagSource[];
+  /**
+   * The company's own answer to this allegation, where one exists.
+   *
+   * This is the single strongest legal position available to us, and it costs
+   * nothing but the link. A flag on its own is us making an accusation. A flag
+   * shown next to "Nestlé's response: [link]" is us reporting a documented
+   * dispute — which is a materially better place to stand if anyone complains,
+   * and it is the structure the Business & Human Rights Resource Centre uses
+   * for exactly that reason.
+   *
+   * It also gives the dispute process a middle state. Today a company that
+   * contests a flag can only have it removed or not; publishing their reply
+   * beside the claim is the outcome that is fair to both a shopper who wants
+   * the facts and a company that disagrees with them.
+   *
+   * Deliberately left EMPTY rather than pre-filled. A response attributed to a
+   * company that they did not give is a worse problem than the flag itself, so
+   * every entry has to be a real, linkable statement.
+   */
+  companyResponse?: {
+    /** Short, neutral summary of what they said. Never paraphrased into a concession. */
+    summary: string;
+    /** Link to the statement — their site, or the BHRRC page carrying it. */
+    url: string;
+    /** ISO date the response was published. */
+    date: string;
+    /** Where we found it, e.g. "Company statement" or "BHRRC". */
+    publisher: string;
+  };
   status: VerificationStatus;
   lastVerified: string;          // ISO 8601
   createdAt: string;

@@ -1,6 +1,6 @@
 # Sourced signal coverage (Phase 0)
 
-**Measured 2026-08-18 — 300 live Open Food Facts
+**Measured 2026-08-18 — 270 live Open Food Facts
 products across 20 categories.**
 
 A product counts as covered if **at least one** signal fires that is backed by a
@@ -11,29 +11,31 @@ not count here.
 
 | Metric | Value |
 | --- | --- |
-| **Products with ≥1 sourced signal** | **198 / 300 — 66.0%** |
-| Covered by brand research alone | 99 — 33.0% |
-| Lift from the commodity/ingredient layer | +33.0 points |
+| **Products with ≥1 sourced signal** | **177 / 270 — 65.6%** |
+| Covered by brand research alone | 116 — 43.0% |
+| Lift from the commodity/ingredient layer | +22.6 points |
 | Products rescued ONLY by the parent map | 0 — 0.0% |
+| Products rescued ONLY by the certification layer | 5 — 1.9% |
 
 The second and third rows are the important ones. Brand-by-brand research alone
-covers 33.0% of what people actually scan. The commodity and
+covers 43.0% of what people actually scan. The commodity and
 ingredient layer — which needs no per-brand research at all — more than
-2.0×s that, and it does so with
+1.5×s that, and it does so with
 statements about goods rather than accusations about companies.
 
 ## Which signal is doing the work
 
 | Signal | Products hit | Share |
 | --- | --- | --- |
-| commodity | 162 | 54.0% |
-| labour | 92 | 30.7% |
-| brandFlag | 90 | 30.0% |
-| parent | 71 | 23.7% |
-| ingredient | 59 | 19.7% |
-| boycott | 50 | 16.7% |
-| chocolate | 40 | 13.3% |
-| animalWelfare | 9 | 3.0% |
+| commodity | 138 | 51.1% |
+| labour | 82 | 30.4% |
+| brandFlag | 80 | 29.6% |
+| parent | 65 | 24.1% |
+| ingredient | 46 | 17.0% |
+| boycott | 45 | 16.7% |
+| certification | 39 | 14.4% |
+| chocolate | 35 | 13.0% |
+| animalWelfare | 8 | 3.0% |
 
 ## By category — where to spend the next four days
 
@@ -45,20 +47,18 @@ statements about goods rather than accusations about companies.
 | rices | 15 | 15 | 100% |
 | sodas | 15 | 14 | 93% |
 | ice-creams | 15 | 14 | 93% |
-| breakfast-cereals | 15 | 13 | 87% |
-| snacks | 15 | 13 | 87% |
 | breads | 15 | 13 | 87% |
 | biscuits | 15 | 12 | 80% |
 | crisps | 15 | 12 | 80% |
-| spreads | 15 | 8 | 53% |
+| spreads | 15 | 10 | 67% |
 | sauces | 15 | 7 | 47% |
 | pastas | 15 | 6 | 40% |
 | waters | 15 | 6 | 40% |
 | candies | 15 | 6 | 40% |
+| juices | 15 | 5 | 33% |
+| canned-fish | 15 | 5 | 33% |
 | yogurts | 15 | 4 | 27% |
-| juices | 15 | 4 | 27% |
 | cheeses | 15 | 3 | 20% |
-| canned-fish | 15 | 3 | 20% |
 
 Work strictly down this table. The categories at the bottom are where research
 buys coverage; the ones at the top are already done and further work there buys
@@ -66,13 +66,9 @@ nothing.
 
 ## Uncovered products (first 40)
 
-- breakfast-cereals | BJORG | Flocons d'avoine
-- breakfast-cereals | Weetabix | Original
 - biscuits | Gerblé | Figue & son
 - biscuits | Gerblé | Biscuit raisins
 - biscuits | Henry's | Henry’s
-- snacks | Ekibio, Le pain des Fleurs | Tartines craquantes au sarrasin imp
-- snacks | Gerblé | Figue & son
 - sodas | Oasis | 33CL CAN SLIM TROPICAL
 - yogurts | Jaouda | 
 - yogurts | Jaouda | Le nature
@@ -106,6 +102,10 @@ nothing.
 - sauces | Star | Mayonnaise
 - cheeses | Milky Food Professional | Fromage Blanc Nature
 - cheeses | Jaouda | Jben
+- cheeses | Original | Cream cheese
+- cheeses | ? | Goldium crémeux
+- cheeses | Elle & Vire | Carré Frais 0% - Nature
+- cheeses | Le Fromage Fouetté Madame Loïk, Paysan breton | Fromage à tartiner Nature fouetté MADAME LOIK - 180g
 
 ## Honest limits of this measurement
 
