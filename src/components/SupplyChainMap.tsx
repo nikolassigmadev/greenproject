@@ -303,9 +303,10 @@ export function SupplyChainMap({ product, region }: Props) {
       */}
       {placed.filter((n) => n.kind === 'origin').length === 0 && (
         <p style={{ fontSize: 11.5, color: DS.muted, lineHeight: 1.55, margin: '9px 0 0' }}>
-          We can't trace an origin for this one. Nothing in it is a crop whose
-          world supply sits in a few places — so there's no region we could name
-          without guessing.
+          This company hasn't disclosed where these ingredients come from, and we
+          have no documented findings about its supply chain. We won't guess —
+          a map built from where crops usually grow would tell you nothing about
+          this product.
         </p>
       )}
 

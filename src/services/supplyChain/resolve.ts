@@ -188,47 +188,32 @@ function resolveOrigins(
     }
   }
 
-  // 4. INFERRED — from the ingredients list, via world production.
+  // ── REMOVED: world-production inference ──────────────────────────────────
   //
-  // Deliberately LAST, so it can only fill space the stronger paths left empty:
-  // a declared origin or documented company sourcing always wins, and push()
-  // stops at MAX_ORIGINS. Before this step the map was blank for 76% of real
-  // products while 99% of them carried an ingredients list we never read.
+  // There used to be a fourth path here that read the ingredients list, looked
+  // up where that commodity is grown worldwide, and put pins on the map:
+  // "contains palm oil → Indonesia grows 59% of the world's palm oil".
   //
-  // The claim is about the commodity, never the jar. "This contains palm oil,
-  // and Indonesia grows 59% of the world's palm oil" is true and checkable;
-  // "this jar's palm oil came from Indonesia" would be invented, and the basis
-  // text below is written so a reader cannot mistake the first for the second.
-  const matches = detectCommodities(
-    product.ingredientsText, product.productName, product.categories,
-  );
-  for (const { profile, matchedIn } of matches) {
-    // Say where we found it. Matching the ingredients list is a fact about the
-    // recipe; matching the name or the category tag is weaker, and the copy
-    // should not dress the second up as the first.
-    const found =
-      matchedIn === 'ingredients' ? `lists ${profile.label} in its ingredients`
-      : matchedIn === 'name' ? `is described as ${profile.label}`
-      : `is categorised as ${profile.label}`;
-    // A category-tag match is the weakest thing on the map, and its confidence
-    // should say so rather than sit level with a read of the actual recipe.
-    const confidence = matchedIn === 'ingredients' ? 0.3 : matchedIn === 'name' ? 0.25 : 0.2;
-
-    // Top two producers only. Listing every country that grows a crop turns a
-    // finding into a world tour and buries the concentration that made it
-    // worth showing.
-    for (const { originKey, sharePct } of profile.origins.slice(0, 2)) {
-      const point = ORIGIN_POINTS[originKey];
-      if (!point) continue;
-      push(originKey, point, 'inferred', confidence,
-        `This product ${found}. ${point.name} produces roughly ${sharePct}% of ` +
-        `the world's supply. Nobody has disclosed where this product's ` +
-        `${profile.label} actually came from — this shows where it most likely ` +
-        `grew, not where it did.`,
-        [profile.source],
-        profile.commodity);
-    }
-  }
+  // It roughly doubled map coverage and it should never have shipped. The map
+  // exists to answer "where does THIS COMPANY get THIS product's ingredients",
+  // and a world-production statistic answers a different question — one the
+  // shopper did not ask and cannot act on. Every pin it drew was really a
+  // statement about global agriculture wearing a supply-chain costume, and no
+  // amount of hedging in the caption fixed that. A caveat explaining that the
+  // map is not showing what it appears to show is a sign the map is wrong, not
+  // a sign the caveat is good.
+  //
+  // The three paths above all say something about the company: its own declared
+  // origins, its published sourcing, or documented findings about its supply
+  // chain. Those are the only claims worth drawing a line for.
+  //
+  // Coverage drops as a result, and that is the correct trade. An empty map
+  // that says "nobody has disclosed this" is honest; a full map of guesses is
+  // the thing the app exists to argue against.
+  //
+  // detectCommodities() is still used elsewhere — the coverage harness and the
+  // TVPRA commodity-risk work — so the data is not lost, only removed from the
+  // map, where it was masquerading as provenance.
 }
 
 // ── Processing node ──────────────────────────────────────────────────────────

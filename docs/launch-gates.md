@@ -155,5 +155,7 @@ nobody reports a bug for a notification that never arrives.
 `[x]` `TARGETED_DEVICE_FAMILY = "1"` — iPhone only, no iPad screenshots needed.
 `[x]` `PrivacyInfo.xcprivacy` present **and registered in `project.pbxproj`**.
 
-Bundle ID stays `com.scan2source.app`. Users never see it, and changing it
-orphans the App Store Connect record.
+Bundle ID is `com.goodscan.app`, changed from `com.scan2source.app` on
+2026-08-18 — before first submission, which is the only moment it is safe to
+change. It is PERMANENT from the first upload onward: after that, a new bundle
+ID means a new store listing with no reviews, ratings or install base.

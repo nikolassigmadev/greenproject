@@ -219,7 +219,7 @@ def cover_chrome(canvas, doc):
     for i, ln in enumerate([
         "repo     github.com/nikolassigmadev/greenproject",
         "branch   fix/verdict-coherence   (clean, 438 commits)",
-        "runtime  https://goodscan.shop   |   com.scan2source.app",
+        "runtime  https://goodscan.shop   |   com.goodscan.app",
         "scope    47,700 LOC TypeScript   +   2,195-line Express server",
     ]):
         canvas.drawString(MARGIN, ty - (30 + i * 4.6) * mm, ln)
