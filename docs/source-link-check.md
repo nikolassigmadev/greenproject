@@ -21,9 +21,11 @@ because it implies there was something to find.
 | Dead / wrong | 0 |
 | Empty (`""`) | 0 |
 
-`docs/phase-1-completion-report.md` (2026-04-29) said every URL was `""`. That
-was true when written and is no longer true; Phase 2 populated them. It is
-corrected in place with a superseded banner.
+An April 2026 completion report used to claim every URL was `""`. That was true
+when written and stopped being true when Phase 2 populated them — but the doc
+was never updated, and it got read back to us twice as the project's single
+biggest launch risk. It has since been deleted (it survives in git history), and
+this file is the replacement: the measurement rather than the assertion.
 
 ## Blocked to automated checking — NOT verified, and not claimed to be
 

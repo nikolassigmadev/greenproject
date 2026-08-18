@@ -377,9 +377,24 @@ export default function Dashboard() {
               background: DS.card, borderRadius: 16, padding: "14px 16px", marginBottom: 14,
               boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04)",
             }}>
-              <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 3 }}>Clear all history?</div>
+              <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 3 }}>Clear history on this device?</div>
+              {/*
+                This used to read "This permanently removes your N scanned
+                products", which was false. handleClear calls clearScanHistory(),
+                which only empties localStorage — the anonymous scan records and
+                the photos on our server are untouched.
+
+                Saying "permanently" about data we still hold is the kind of
+                statement a regulator tests first, and it's the same failure the
+                app criticises elsewhere: a confident headline over a narrower
+                truth. The wording now matches what the button does, and points
+                at the route that actually deletes server-side data.
+              */}
               <div style={{ fontSize: 12.5, color: DS.muted, marginBottom: 12 }}>
-                This permanently removes your {history.length} scanned product{history.length !== 1 ? "s" : ""}.
+                This removes {history.length} scanned product{history.length !== 1 ? "s" : ""} from this
+                device. It does not delete the anonymous records we hold on our server —
+                to erase those, use{" "}
+                <Link to="/contact" style={{ color: DS.ink, fontWeight: 600 }}>Report a problem</Link>.
               </div>
               <div style={{ display: "flex", gap: 8 }}>
                 <button onClick={handleClear} style={{

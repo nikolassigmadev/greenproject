@@ -1028,7 +1028,7 @@ app.post('/api/admin/push/trigger-demo', requireAdmin, smallBody, (req, res) => 
 const openaiClient = OPENAI_API_KEY ? new OpenAI({ apiKey: OPENAI_API_KEY }) : null;
 
 const ABOUT_US_KNOWLEDGE = `
-APP NAME: GoodScan (also referred to as Scan2Source).
+APP NAME: GoodScan.
 
 MISSION:
 Make ethical shopping simple. Scan a product and instantly understand its impact across labour rights, environmental impact, animal welfare, and nutrition. We aggregate data so consumers can shop with confidence.
@@ -1594,7 +1594,7 @@ app.get('/api/openfoodfacts/product/:barcode', async (req, res) => {
       try {
         const response = await fetch(url, {
           signal: AbortSignal.timeout(18000),
-          headers: { 'User-Agent': 'Scan2Source/1.0 (ethical-shopper)' },
+          headers: { 'User-Agent': 'GoodScan/1.0 (https://goodscan.shop)' },
         });
         if (response.ok) {
           const data = await response.json();
@@ -1688,7 +1688,7 @@ app.post('/api/openfoodfacts/search', async (req, res) => {
     // scans. OFF / Search-a-licious normally answer in well under 2s; 7s leaves
     // ample headroom while bounding the worst case.
     const searchTimeout = 7000;
-    const headers = { 'User-Agent': 'Scan2Source/1.0 (ethical-shopper)' };
+    const headers = { 'User-Agent': 'GoodScan/1.0 (https://goodscan.shop)' };
 
     // Nickname → canonical brand tag. ONLY nicknames that are not themselves an
     // OFF brand belong here: Sprite and Fanta ARE their own brands_tags on OFF,
@@ -1999,7 +1999,7 @@ app.post('/api/openfoodfacts/search', async (req, res) => {
 app.post('/api/openfoodfacts/browse', async (req, res) => {
   try {
     const { query, category, country, page = 1, pageSize = 24 } = req.body || {};
-    const headers = { 'User-Agent': 'Scan2Source/1.0 (ethical-shopper)' };
+    const headers = { 'User-Agent': 'GoodScan/1.0 (https://goodscan.shop)' };
     const safePage = Math.max(1, parseInt(page, 10) || 1);
     const safePageSize = Math.min(Math.max(1, parseInt(pageSize, 10) || 24), 50);
 
