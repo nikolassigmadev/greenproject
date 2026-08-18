@@ -176,11 +176,28 @@ export const scoreDataCompleteness = (p: OpenFoodFactsResult): number => {
 };
 
 /**
+ * Above this score a barcode result is good enough to return immediately,
+ * without checking whether an alternative barcode format holds a richer record.
+ *
+ * Calibrated against the scale above, which tops out at 84:
+ *   ~10  name + brand + categories — a stub someone photographed and abandoned
+ *   ~16  the same, with an ingredients list
+ *   ~26  plus a Nutri-Score
+ *   ~46  plus an eco-score
+ *
+ * 40 therefore means "has an eco-score and the basics" — the eco-score being
+ * the thing the verdict page leads with, so its absence is exactly what makes a
+ * record feel broken to a shopper. Set it lower and we return stubs; set it
+ * higher and we pay a round trip on products that were already fine.
+ */
+const DATA_RICH_ENOUGH = 40;
+
+/**
  * Rank an already-fetched candidate list so the best product surfaces first,
  * WITHOUT any extra network calls. Ordering, in priority:
  *   1. Relevance to the query (coarse buckets — keeps the right product first)
- *   2. Image quality   — avoids ugly/partial photos
- *   3. Data completeness — avoids near-empty entries when a rich one matches
+ *   2. Data completeness — avoids near-empty entries when a rich one matches
+ *   3. Image quality   — avoids ugly/partial photos
  *   4. Original order (stable) — preserves the backend's popularity ranking
  *
  * Relevance is bucketed (not compared at full precision) so that two genuinely
@@ -220,9 +237,20 @@ export const rankByQuality = (
       img: imageQualityTier(p),
       data: scoreDataCompleteness(p),
     }))
+    // ORDER MATTERS, and it used to be wrong: image quality ranked ABOVE data
+    // completeness. The same physical product often has several Open Food Facts
+    // entries under different barcodes — regional packs, different contributors
+    // — and they are wildly uneven. A tidy studio photo with no eco-score, no
+    // ingredients and no nutrition beat a plainer photo of a fully populated
+    // record, so the app confidently showed the shopper the entry it could say
+    // least about.
+    //
+    // Data first. This app's entire value is what it knows about a product; the
+    // photo is decoration by comparison, and it stays as the tie-breaker for
+    // records that are equally informative.
     .sort(
       (a, b) =>
-        b.rel - a.rel || b.img - a.img || b.data - a.data || a.i - b.i,
+        b.rel - a.rel || b.data - a.data || b.img - a.img || a.i - b.i,
     )
     .map((d) => d.p);
 };
@@ -377,7 +405,12 @@ export const lookupBarcode = async (barcode: string): Promise<OpenFoodFactsResul
 
   // Try primary barcode first
   const result = await lookupBarcodeInternal(cleaned);
-  if (result.found) {
+
+  // FAST PATH — the primary entry is already well populated, so return it and
+  // spend no further time. This is the common case and it has to stay free:
+  // scan→result latency was cut from ~13s to ~4s and this function sits on
+  // that path.
+  if (result.found && scoreDataCompleteness(result) >= DATA_RICH_ENOUGH) {
     ocrSearchLogger.logBarcodeSearch(cleaned, true, result.productName || undefined);
     return result;
   }
@@ -390,27 +423,66 @@ export const lookupBarcode = async (barcode: string): Promise<OpenFoodFactsResul
     return emptyResult(cleaned, `Network timeout looking up barcode ${cleaned}`);
   }
 
-  // If primary lookup failed but network works, try alternative formats
-  console.warn(`🔄 Primary barcode lookup failed, trying alternatives...`);
+  // Either nothing was found, or what we found is a near-empty stub.
+  //
+  // THE BUG THIS FIXES. The same physical product can exist on Open Food Facts
+  // under more than one barcode entry — a UPC-12 and its EAN-13 equivalent are
+  // separate records, contributed by different people, and they are routinely
+  // uneven: one carries an eco-score, carbon data and a full ingredients list
+  // while the other is a name and a photo. This used to return the FIRST entry
+  // that existed, so a shopper could be told "no eco data" for a product whose
+  // data was sitting one leading zero away.
+  //
+  // Now every format is fetched and the most complete record wins. At most two
+  // alternatives exist, they run in parallel, and lookupBarcodeInternal is
+  // cached — so this costs one round trip in the sparse case and nothing on a
+  // repeat scan.
   const alternatives = getAlternativeFormats(barcode);
-
-  for (const alt of alternatives) {
-    console.log(`   Trying alternative format: ${alt}`);
-    const altResult = await lookupBarcodeInternal(alt);
-    if (altResult.found) {
-      console.log(`✅ Found product using alternative barcode: ${alt}`);
-      ocrSearchLogger.logBarcodeSearch(alt, true, altResult.productName || undefined);
-      return altResult;
+  if (alternatives.length === 0) {
+    if (result.found) {
+      ocrSearchLogger.logBarcodeSearch(cleaned, true, result.productName || undefined);
+      return result;
     }
+    ocrSearchLogger.logBarcodeSearch(cleaned, false);
+    return emptyResult(cleaned, `Product not found on OpenFoodFacts. Tried: ${cleaned}`);
   }
 
-  // All attempts failed
-  console.warn(`❌ All barcode lookup attempts failed for: ${barcode}`);
-  ocrSearchLogger.logBarcodeSearch(cleaned, false);
-  return emptyResult(
-    cleaned,
-    `Product not found on OpenFoodFacts. Tried: ${[cleaned, ...alternatives].join(', ')}`
+  console.log(
+    result.found
+      ? `🔎 Primary entry ${cleaned} is sparse (score ${scoreDataCompleteness(result)}); checking ${alternatives.length} alternative format(s) for a richer record`
+      : `🔄 Primary barcode lookup failed, trying ${alternatives.length} alternative format(s)`,
   );
+
+  const altResults = await Promise.all(
+    alternatives.map((alt) =>
+      lookupBarcodeInternal(alt).catch(() => emptyResult(alt, 'lookup failed')),
+    ),
+  );
+
+  const candidates = [result, ...altResults].filter((r) => r.found);
+  if (candidates.length === 0) {
+    console.warn(`❌ All barcode lookup attempts failed for: ${barcode}`);
+    ocrSearchLogger.logBarcodeSearch(cleaned, false);
+    return emptyResult(
+      cleaned,
+      `Product not found on OpenFoodFacts. Tried: ${[cleaned, ...alternatives].join(', ')}`
+    );
+  }
+
+  // Strictly-greater keeps the primary on a tie: it is the number physically on
+  // the packet in the shopper's hand, and a tie is not a reason to swap records.
+  const best = candidates.reduce((a, b) =>
+    scoreDataCompleteness(b) > scoreDataCompleteness(a) ? b : a,
+  );
+
+  if (best !== result) {
+    console.log(
+      `✅ Using richer entry ${best.barcode} (score ${scoreDataCompleteness(best)}) ` +
+      `over ${cleaned} (score ${result.found ? scoreDataCompleteness(result) : 0})`,
+    );
+  }
+  ocrSearchLogger.logBarcodeSearch(best.barcode, true, best.productName || undefined);
+  return best;
 };
 
 /**

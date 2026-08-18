@@ -47,3 +47,6 @@ scripts/research/**/cache/
 # Local scratch notes — never commit personal paths or shell history
 pullpush.txt
 git-commands.txt
+
+# Generated demo data for the impact card (regenerate with scripts/mock/make-demo-backup.mjs)
+goodscan-demo-backup.json
