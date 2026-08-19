@@ -19,14 +19,16 @@ import {
 import { loadPriorities } from "@/utils/userPreferences";
 import { RegionPicker } from "@/components/RegionPicker";
 import { toast } from "sonner";
-
-const GRADE_CO2: Record<string, number> = { "a-plus": 0.3, a: 0.5, b: 1.2, c: 2.5, d: 4.0, e: 6.0 };
+import { gradeLabel } from "@/utils/personalizedScore";
+import { gradeCo2PerKg } from "@/utils/carbonEstimates";
 
 function origCo2(p: OpenFoodFactsResult): number | null {
   return (
     p.ecoscoreData?.agribalyse?.co2_total ??
-    (p.carbonFootprint100g != null ? p.carbonFootprint100g * 10 : null) ??
-    (p.ecoscoreGrade ? GRADE_CO2[p.ecoscoreGrade.toLowerCase()] ?? null : null)
+    // grams per 100 g → kg per kg (see carbonEstimates); the old ×10 made the
+    // "saves N kg CO₂" line on every swap card 1000× too large.
+    (p.carbonFootprint100g != null ? p.carbonFootprint100g / 100 : null) ??
+    gradeCo2PerKg(p.ecoscoreGrade)
   );
 }
 
@@ -71,7 +73,7 @@ function GradeSquare({ grade }: { grade: string | null }) {
         display: "flex", alignItems: "center", justifyContent: "center",
         fontSize: 17, fontWeight: 800,
       }}>
-        {grade ? grade.toUpperCase() : "✓"}
+        {grade ? gradeLabel(grade) : "✓"}
       </div>
       <div style={{ fontSize: 8.5, color: DS.good, marginTop: 3, letterSpacing: 0.4, textTransform: "uppercase" }}>
         Better
@@ -395,7 +397,7 @@ export function SwapSuggestions({ product, sectionNumber = "03", onAvailabilityC
                     {s.custom && <span style={{ width: 6, height: 6, borderRadius: 99, background: DS.ink, flexShrink: 0 }} />}
                   </div>
                   <div style={{ fontSize: 11.5, color: DS.muted, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {s.ecoGrade ? `Eco ${s.ecoGrade.toUpperCase()} · ` : ""}{meta}
+                    {s.ecoGrade ? `Eco ${gradeLabel(s.ecoGrade)} · ` : ""}{meta}
                   </div>
                 </div>
                 {sv != null && sv > 0 && (

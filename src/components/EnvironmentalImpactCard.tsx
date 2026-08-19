@@ -1,5 +1,6 @@
 import { Package, Truck } from "lucide-react";
 import type { OpenFoodFactsResult } from "@/services/openfoodfacts/types";
+import { humanizeTag } from "@/services/openfoodfacts";
 
 interface EnvironmentalImpactCardProps {
   result: OpenFoodFactsResult;
@@ -45,11 +46,11 @@ export function EnvironmentalImpactCard({ result }: EnvironmentalImpactCardProps
               {packaging.packagings.map((pkg, i) => (
                 <div key={i} className="flex items-center justify-between text-xs">
                   <span className="text-muted-foreground">
-                    1 × {(pkg.shape || "Package").replace(/^en:/, "").replace(/-/g, " ")}
+                    1 × {humanizeTag(pkg.shape || "Package")}
                     {pkg.weight_measured && ` (${pkg.weight_measured}g)`}
                   </span>
                   <span className="font-semibold text-foreground capitalize">
-                    {pkg.material?.replace(/^en:/, "").replace(/-/g, " ") || "Unknown"}
+                    {pkg.material ? humanizeTag(pkg.material) : "Unknown"}
                   </span>
                 </div>
               ))}
@@ -71,7 +72,7 @@ export function EnvironmentalImpactCard({ result }: EnvironmentalImpactCardProps
               {origins.aggregated_origins.map((origin, i) => (
                 <div key={i} className="flex items-center justify-between text-xs">
                   <span className="text-muted-foreground capitalize">
-                    {(origin.origin || "Unknown").replace(/^en:/, "").replace(/-/g, " ")}
+                    {humanizeTag(origin.origin || "Unknown")}
                   </span>
                   <span className="font-semibold text-foreground">{origin.percent}%</span>
                 </div>

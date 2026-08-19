@@ -33,6 +33,8 @@ import {
   findCountry,
   type UserRegion,
 } from "@/utils/userRegion";
+import { gradeLabel } from "@/utils/personalizedScore";
+import { gradeCo2PerKg } from "@/utils/carbonEstimates";
 
 export type { ConcernType, SwapCategoryKey } from "@/data/ethicalAlternatives";
 
@@ -88,8 +90,6 @@ export interface SwapResult {
   suggestions: SwapSuggestion[];
 }
 
-// kg CO2e per kg of product, estimated from eco-grade when OFF lacks figures.
-const GRADE_CO2: Record<string, number> = { "a-plus": 0.3, a: 0.5, b: 1.2, c: 2.5, d: 4.0, e: 6.0 };
 
 const SEVERITY_WEIGHT: Record<ConcernSeverity, number> = {
   critical: 4, high: 3, medium: 2, low: 1,
@@ -200,7 +200,7 @@ export function diagnoseProduct(
     concerns.push({
       type: "eco",
       severity: grade === "e" ? "high" : "medium",
-      label: `High carbon footprint (Eco-Score ${grade.toUpperCase()})`,
+      label: `High carbon footprint (Eco-Score ${gradeLabel(grade)})`,
       detail: "This product sits in the highest-impact band for its category.",
     });
   }
@@ -459,8 +459,9 @@ function buildSuggestion(
 ): SwapSuggestion {
   const ecoGrade = resolved?.ecoscoreGrade?.toLowerCase() ?? c.fallbackEcoGrade ?? null;
   const liveCo2 = resolved?.ecoscoreData?.agribalyse?.co2_total
-    ?? (resolved?.carbonFootprint100g != null ? resolved.carbonFootprint100g * 10 : null);
-  const co2Kg = liveCo2 ?? (ecoGrade ? GRADE_CO2[ecoGrade] ?? null : null);
+    // grams per 100 g → kg per kg (see carbonEstimates), not ×10.
+    ?? (resolved?.carbonFootprint100g != null ? resolved.carbonFootprint100g / 100 : null);
+  const co2Kg = liveCo2 ?? gradeCo2PerKg(ecoGrade);
 
   const availableInRegion = isSoldInRegion(resolved?.rawProduct?.countries_tags, region);
   const inMarket = isInMarket(c, region?.countryCode);

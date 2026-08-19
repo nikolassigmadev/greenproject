@@ -1,5 +1,5 @@
 import { toneColor, toneBg, scoreTone } from "@/styles/design-tokens";
-import { gradeToScore } from "@/utils/personalizedScore";
+import { gradeToScore, gradeLabel } from "@/utils/personalizedScore";
 import type { ScanHistoryEntry } from "@/utils/userPreferences";
 
 /**
@@ -97,10 +97,10 @@ export const scanEntryToShowcase = (entry: ScanHistoryEntry): ShowcaseProduct =>
 
   // Description — a concise factual line from whatever grades we have.
   const bits: string[] = [];
-  if (entry.scores.ecoGrade) bits.push(`Eco-Score ${entry.scores.ecoGrade.toUpperCase()}`);
+  if (entry.scores.ecoGrade) bits.push(`Eco-Score ${gradeLabel(entry.scores.ecoGrade)}`);
   else if (entry.scores.ecoScore != null) bits.push(`Eco-Score ${clampScore(entry.scores.ecoScore)}/100`);
   if (entry.scores.nutriScore && gradeToScore(entry.scores.nutriScore) != null) {
-    bits.push(`Nutri-Score ${entry.scores.nutriScore.toUpperCase()}`);
+    bits.push(`Nutri-Score ${gradeLabel(entry.scores.nutriScore)}`);
   }
   if (entry.scores.novaGroup != null) bits.push(`NOVA ${entry.scores.novaGroup}`);
   if (allegations > 0) {

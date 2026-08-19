@@ -1,6 +1,7 @@
 import { personalizedScore, gradeFromScore } from "@/utils/personalizedScore";
 import { loadPriorities, type UserPriorities } from "@/utils/userPreferences";
 import { getBrandSentiment } from "@/utils/watchlist";
+import { gradeCo2PerKg, BASELINE_CO2_KG } from './carbonEstimates';
 
 export interface BasketItem {
   id: string;
@@ -12,7 +13,7 @@ export interface BasketItem {
   ecoscoreScore: number | null;
   nutriscoreGrade: string | null;
   laborAllegations: number;
-  co2Per100g: number | null;   // kg CO2e per 100g (from Agribalyse / OFF)
+  co2Per100g: number | null;   // g CO₂e per 100g (from Agribalyse / OFF)
   addedAt: number;
 }
 
@@ -51,17 +52,16 @@ export const clearBasket = (): void => {
   saveBasket([]);
 };
 
-// ── CO2 estimates by eco grade (kg CO2e per kg of product) ──────────────────
-// Source: approximate Agribalyse averages per grade band
-const GRADE_CO2_KG: Record<string, number> = { "a-plus": 0.3, a: 0.5, b: 1.2, c: 2.5, d: 4.0, e: 6.0 };
-const BASELINE_CO2_KG = 2.5; // grade C = "average supermarket product"
-
 function itemCO2PerKg(item: BasketItem): number | null {
   if (item.co2Per100g !== null && item.co2Per100g !== undefined) {
-    return item.co2Per100g * 10; // per 100g → per kg
+    // co2Per100g is GRAMS of CO₂e per 100 g (the Open Food Facts nutriment
+    // unit, rendered as "g CO₂e / 100g" on the product card), so kg per kg is
+    // value / 100. This used to multiply by 10 — a 1000× overstatement that
+    // turned a 3.5 kg/kg product into 3,500 and blew up every basket total it
+    // touched.
+    return item.co2Per100g / 100;
   }
-  const g = item.ecoscoreGrade?.toLowerCase();
-  return g ? (GRADE_CO2_KG[g] ?? null) : null;
+  return gradeCo2PerKg(item.ecoscoreGrade);
 }
 
 

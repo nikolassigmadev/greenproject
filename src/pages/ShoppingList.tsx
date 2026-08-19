@@ -25,15 +25,16 @@ import { DS } from "@/styles/design-tokens";
 import { recordDecision } from "@/utils/decisions";
 import { logScan } from "@/utils/scanLogger";
 import { toast } from "sonner";
+import { gradeLabel } from "@/utils/personalizedScore";
 
 // ── helpers ────────────────────────────────────────────────────────────────
 
-/** Map an A–E grade to the site's themed tone tokens. */
+/** Map an A+–F grade to the site's themed tone tokens. */
 function gradeTone(grade: string | null | undefined): { color: string; bg: string } {
   const g = grade?.toLowerCase();
   if (g === "a-plus" || g === "a" || g === "b") return { color: DS.good, bg: DS.goodBg };
   if (g === "c") return { color: DS.warn, bg: DS.warnBg };
-  if (g === "d" || g === "e") return { color: DS.bad, bg: DS.badBg };
+  if (g === "d" || g === "e" || g === "f") return { color: DS.bad, bg: DS.badBg };
   return { color: DS.muted, bg: DS.bg };
 }
 
@@ -62,7 +63,7 @@ function GradePill({ grade, label }: { grade: string; label: string }) {
       fontSize: 10, fontWeight: 800, color: tone.color, background: tone.bg,
       borderRadius: 6, padding: "2px 7px", whiteSpace: "nowrap",
     }}>
-      {label}-{grade.toLowerCase() === "a-plus" ? "A+" : grade.toUpperCase()}
+      {label}-{gradeLabel(grade)}
     </span>
   );
 }
@@ -496,7 +497,7 @@ export default function ShoppingList() {
                   display: "flex", alignItems: "center", justifyContent: "center",
                   fontSize: 20, fontWeight: 800,
                 }}>
-                  {report.overallGrade !== "unknown" ? report.overallGrade.toUpperCase() : "—"}
+                  {report.overallGrade !== "unknown" ? gradeLabel(report.overallGrade) : "—"}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 14.5, fontWeight: 800, color: DS.ink, lineHeight: 1.2 }}>
@@ -545,7 +546,7 @@ export default function ShoppingList() {
                       Weakest: <strong style={{ fontWeight: 800 }}>{weakest.productName}</strong>
                     </span>
                     <span style={{ fontSize: 11.5, color: DS.muted, display: "block" }}>
-                      Eco-{weakest.ecoscoreGrade?.toUpperCase()} · tap to find a greener swap
+                      Eco-{weakest.ecoscoreGrade ? gradeLabel(weakest.ecoscoreGrade) : "?"} · tap to find a greener swap
                     </span>
                   </div>
                   <ChevronRight size={16} style={{ color: DS.warn, flexShrink: 0 }} />

@@ -44,6 +44,8 @@ import { sendChatMessage } from "@/services/api/backend-client";
 import { cn } from "@/lib/utils";
 import { DS } from "@/styles/design-tokens";
 import { toast } from "sonner";
+import { gradeLabel } from "@/utils/personalizedScore";
+import { humanizeTag } from "@/services/openfoodfacts";
 
 // ─── Helpers (logic) ──────────────────────────────────────────────────────────
 
@@ -108,12 +110,15 @@ const fullResOffImage = (url: string | null | undefined): string | null => {
   return url.replace(/\.(100|200|400)\.jpg(\?.*)?$/i, ".full.jpg$2");
 };
 
-const GRADE_COLOR: Record<string, string> = {
-  "a-plus": DS.good, a: DS.good, b: DS.good, c: DS.warn, d: "var(--ds-caution, #C26544)", e: DS.bad,
+// Exported (with GRADE_BG / GRADE_PERCENT) for the random-scan simulation,
+// which checks every grade Open Food Facts actually serves against the maps
+// that colour it — "f" used to be served and unmapped.
+export const GRADE_COLOR: Record<string, string> = {
+  "a-plus": DS.good, a: DS.good, b: DS.good, c: DS.warn, d: "var(--ds-caution, #C26544)", e: DS.bad, f: DS.bad,
 };
 
-const GRADE_BG: Record<string, string> = {
-  "a-plus": DS.goodBg, a: DS.goodBg, b: DS.goodBg, c: DS.warnBg, d: "var(--ds-caution-bg, #FBE9E2)", e: DS.badBg,
+export const GRADE_BG: Record<string, string> = {
+  "a-plus": DS.goodBg, a: DS.goodBg, b: DS.goodBg, c: DS.warnBg, d: "var(--ds-caution-bg, #FBE9E2)", e: DS.badBg, f: DS.badBg,
 };
 
 const NOVA_LABEL: Record<number, string> = {
@@ -141,12 +146,8 @@ const CO2_BARS = [
   { key: "co2_consumption",    label: "Consumption",  Icon: UtensilsCrossed, color: "#9B4E63" },
 ] as const;
 
-const GRADE_PERCENT: Record<string, number> = { "a-plus": 1, a: 0.9, b: 0.8, c: 0.6, d: 0.4, e: 0.2 };
+export const GRADE_PERCENT: Record<string, number> = { "a-plus": 1, a: 0.9, b: 0.8, c: 0.6, d: 0.4, e: 0.2, f: 0.1 };
 
-/** OFF grade → tight display label. "a-plus" prints as "A+", everything else uppercased. */
-function gradeLabel(grade: string): string {
-  return grade.toLowerCase() === "a-plus" ? "A+" : grade.toUpperCase();
-}
 const NOVA_PERCENT: Record<number, number> = { 1: 1, 2: 0.75, 3: 0.5, 4: 0.25 };
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -231,7 +232,7 @@ function Divider() {
 
 function shortCategory(product: OpenFoodFactsResult) {
   const category = product.categories.find(c => c.length > 3) || product.categories[0];
-  return category ? category.replace(/^en:/, "").replace(/-/g, " ") : "Product";
+  return category ? humanizeTag(category) : "Product";
 }
 
 function titleParts(name: string) {
@@ -277,15 +278,14 @@ function packagingSummary(product: OpenFoodFactsResult) {
     .slice(0, 2)
     .map(pkg => [pkg.material, pkg.shape]
       .filter(Boolean)
-      .join(" ")
-      .replace(/en:/g, "")
-      .replace(/-/g, " "))
+      .map(part => humanizeTag(part as string))
+      .join(" "))
     .join(", ");
 }
 
-function cleanLabel(label: string) {
-  return label.replace(/^en:/, "").replace(/-/g, " ");
-}
+// Kept as a named wrapper so the label chips read as "cleanLabel(...)" at the
+// call sites; the actual rule lives with the rest of the tag handling.
+const cleanLabel = humanizeTag;
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
@@ -1020,7 +1020,14 @@ export default function OpenFoodFactsDetail() {
           </div>
           <div style={{ display: "flex", gap: 6, marginTop: 14, flexWrap: "wrap" }}>
             <Tag bg={vc.bg} color={vc.color}>{verdict.key[0] + verdict.key.slice(1).toLowerCase()}</Tag>
-            {ecoGrade && <Tag bg={GRADE_BG[ecoGrade]} color={GRADE_COLOR[ecoGrade]}>Eco-Score {gradeLabel(ecoGrade)}</Tag>}
+            {ecoGrade && (
+              <Tag
+                bg={GRADE_BG[ecoGrade] ?? "var(--ds-neutral-bg, #EDE6D2)"}
+                color={GRADE_COLOR[ecoGrade] ?? EDITORIAL.ink2}
+              >
+                Eco-Score {gradeLabel(ecoGrade)}
+              </Tag>
+            )}
             {product.novaGroup !== null && <Tag bg="var(--ds-neutral-bg, #EDE6D2)" color={EDITORIAL.ink2}>{NOVA_LABEL[product.novaGroup] || `NOVA ${product.novaGroup}`}</Tag>}
             {verifiedEthics && verifiedEthics.certifications.map(cert => {
               const badge = CERTIFICATION_BADGES[cert];
@@ -1545,7 +1552,7 @@ export default function OpenFoodFactsDetail() {
           {(() => {
             const threatened = product.ecoscoreData?.adjustments?.threatened_species;
             if (!threatened?.ingredient) return null;
-            const ingredientRaw = threatened.ingredient.replace(/^en:/, "").replace(/-/g, " ");
+            const ingredientRaw = humanizeTag(threatened.ingredient);
             const isPalmOil = ingredientRaw.toLowerCase().includes("palm");
             const explanation = isPalmOil
               ? "Palm oil is the #1 driver of tropical deforestation. Its cultivation destroys critical habitat for orangutans, pygmy elephants, and Sumatran tigers."
@@ -1739,9 +1746,15 @@ export function getVerdict(product: OpenFoodFactsResult, priorities: UserPriorit
 
   const boycott = checkBoycott(product.brand);
   if (boycott && laborWeight > 0) {
-    if (laborWeight >= 2.0 && (key === "BUY" || key === "CONSIDER")) {
+    // UNKNOWN is included deliberately. Most own-brand products carry no
+    // eco-score at all, so the verdict starts (and used to stay) UNKNOWN — the
+    // page then showed a red boycott banner under a top line reading "No
+    // eco-score data available". A boycott is a fact about the brand and needs
+    // no product data to be true, so it moves the verdict on its own, exactly
+    // as a labour allegation does above.
+    if (laborWeight >= 2.0 && (key === "BUY" || key === "CONSIDER" || key === "UNKNOWN")) {
       key = "CAUTION"; reason = `${boycott.parent} is on the BDS boycott list`;
-    } else if (key === "BUY") {
+    } else if (key === "BUY" || key === "UNKNOWN") {
       key = "CONSIDER"; reason = `${boycott.parent} is on the BDS boycott list`;
     }
   }

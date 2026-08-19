@@ -30,7 +30,7 @@ import {
 } from '@/services/swaps';
 import type { CertificationType } from '@/utils/verifiedEthics';
 import { findVerifiedEthics } from '@/utils/verifiedEthics';
-import { personalizedScore } from '@/utils/personalizedScore';
+import { personalizedScore, gradeLabel } from '@/utils/personalizedScore';
 import { findLaborAllegations } from '@/utils/laborCheck';
 import { checkBoycott } from '@/data/boycottBrands';
 import { checkAnimalWelfareFlag } from '@/utils/animalWelfareFlags';
@@ -248,9 +248,9 @@ export function buildReasons(
   // Eco-score, only when it adds something the carbon line didn't.
   const grade = product?.ecoscoreGrade?.toLowerCase();
   if (grade === 'a' || grade === 'a-plus' || grade === 'b') {
-    out.push({ tone: 'good', text: `Strong environmental rating (Eco-Score ${grade.toUpperCase()})`, pillar: 'environment' });
-  } else if (grade === 'e' || grade === 'd') {
-    out.push({ tone: 'bad', text: `Weak environmental rating (Eco-Score ${grade.toUpperCase()})`, pillar: 'environment' });
+    out.push({ tone: 'good', text: `Strong environmental rating (Eco-Score ${gradeLabel(grade)})`, pillar: 'environment' });
+  } else if (grade === 'e' || grade === 'd' || grade === 'f') {
+    out.push({ tone: 'bad', text: `Weak environmental rating (Eco-Score ${gradeLabel(grade)})`, pillar: 'environment' });
   }
 
   return out;

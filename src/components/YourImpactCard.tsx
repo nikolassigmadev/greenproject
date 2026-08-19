@@ -13,13 +13,12 @@ import { DS, scoreTone, toneColor, toneBg } from "@/styles/design-tokens";
 import { loadBasket, getBasketEthicsReport } from "@/utils/basketStorage";
 import { loadPriorities, loadScanHistory, summarizePriorities } from "@/utils/userPreferences";
 import { loadDecisions, DECISIONS_EVENT } from "@/utils/decisions";
+import { gradeLabel } from "@/utils/personalizedScore";
+import { gradeCo2PerKg, BASELINE_CO2_KG, SERVING_KG } from "@/utils/carbonEstimates";
 
 const GOOD_VERDICTS = new Set(["BUY", "CONSIDER"]);
 const BAD_VERDICTS = new Set(["CAUTION", "AVOID"]);
 
-// Grade → kg CO₂e/kg estimates mirror getCarbonStats in userPreferences.
-const GRADE_CO2: Record<string, number> = { "a-plus": 0.3, a: 0.5, b: 1.2, c: 2.5, d: 4.0, e: 6.0 };
-const BASELINE = 2.5, SERVING = 0.25; // kg CO₂e/kg, ~kg per product
 
 /** Every in-app event that changes something this card displays. */
 const LIVE_EVENTS = [
@@ -139,7 +138,7 @@ function BasketNow() {
           display: "flex", alignItems: "center", justifyContent: "center",
           fontSize: 20, fontWeight: 800,
         }}>
-          {scored ? report.overallGrade.toUpperCase() : "—"}
+          {scored ? gradeLabel(report.overallGrade) : "—"}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 15, fontWeight: 800, color: DS.ink, letterSpacing: -0.2 }}>
@@ -209,9 +208,9 @@ function TrackRecord() {
   // CO₂ avoided by buying lower-impact products than an average choice.
   let co2Saved = 0;
   for (const d of bought) {
-    const co2 = GRADE_CO2[(d.ecoGrade || "").toLowerCase()];
+    const co2 = gradeCo2PerKg(d.ecoGrade);
     if (co2 == null) continue;
-    const saved = (BASELINE - co2) * SERVING;
+    const saved = (BASELINE_CO2_KG - co2) * SERVING_KG;
     if (saved > 0) co2Saved += saved;
   }
   co2Saved = Math.round(co2Saved * 10) / 10;

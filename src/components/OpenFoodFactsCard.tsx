@@ -10,6 +10,8 @@ import { LaborFlagBanner } from "@/components/LaborFlagBanner";
 import { AnimalWelfareFlagBadge } from "@/components/AnimalWelfareFlagBadge";
 import { checkBoycott } from "@/data/boycottBrands";
 import { cn } from "@/lib/utils";
+import { gradeLabel } from "@/utils/personalizedScore";
+import { humanizeTag } from "@/services/openfoodfacts";
 
 interface OpenFoodFactsCardProps {
   result: OpenFoodFactsResult;
@@ -67,7 +69,7 @@ function GradeHero({ grade, score }: { grade: string; score: number | null }) {
         style.solid, style.ring, style.glow
       )}>
         <span className={cn("text-2xl font-black leading-none", style.text)}>
-          {grade.toLowerCase() === "a-plus" ? "A+" : grade.toUpperCase()}
+          {gradeLabel(grade)}
         </span>
         {score !== null && (
           <span className={cn("text-[10px] font-bold opacity-80 leading-none mt-0.5", style.text)}>
@@ -208,7 +210,7 @@ export function OpenFoodFactsCard({ result }: OpenFoodFactsCardProps) {
                   "w-9 h-9 rounded-xl flex items-center justify-center text-sm font-black flex-shrink-0",
                   nutriStyle.solid, nutriStyle.text
                 )}>
-                  {result.nutriscoreGrade.toUpperCase()}
+                  {gradeLabel(result.nutriscoreGrade)}
                 </span>
                 <div className="min-w-0">
                   <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider leading-none">Nutri-Score</p>
@@ -330,8 +332,8 @@ export function OpenFoodFactsCard({ result }: OpenFoodFactsCardProps) {
                       <div className="mt-1.5 flex flex-wrap gap-1">
                         {adjustments.packaging.packagings.map((pkg, i) => (
                           <span key={i} className="text-[11px] text-neutral-500 bg-neutral-100 dark:bg-neutral-700/60 rounded-md px-1.5 py-0.5 capitalize">
-                            {(pkg.material || "unknown").replace(/^en:/, "").replace(/-/g, " ")}
-                            {pkg.shape && ` · ${pkg.shape.replace(/^en:/, "").replace(/-/g, " ")}`}
+                            {humanizeTag(pkg.material || "unknown")}
+                            {pkg.shape && ` · ${humanizeTag(pkg.shape)}`}
                           </span>
                         ))}
                       </div>
@@ -376,7 +378,7 @@ export function OpenFoodFactsCard({ result }: OpenFoodFactsCardProps) {
                     </div>
                     {adjustments.threatened_species.ingredient && (
                       <p className="text-[11px] text-neutral-400 mt-1 capitalize">
-                        Due to: {adjustments.threatened_species.ingredient.replace(/^en:/, "").replace(/-/g, " ")}
+                        Due to: {humanizeTag(adjustments.threatened_species.ingredient)}
                       </p>
                     )}
                   </div>

@@ -16,6 +16,7 @@ import { identifyLabelFromImage, fileToDataUrl } from "@/utils/identifyFromImage
 import { loadPriorities, priorityMultiplier, type UserPriorities } from "@/utils/userPreferences";
 import { getBrandSentiment } from "@/utils/watchlist";
 import { toast } from "sonner";
+import { gradeLabel } from "@/utils/personalizedScore";
 
 type Slot = "A" | "B";
 
@@ -43,10 +44,12 @@ const QUICK_PAIRS: Array<{ a: string; b: string; tag: string }> = [
   { a: "Lay's Classic", b: "Pringles", tag: "Crisp face-off" },
 ];
 
+// Lower is better. An unrecognised grade sorts below "f" (7) rather than tying
+// with it, so "F vs no data" is not reported as a draw.
 function gradeRank(grade: string | null | undefined): number {
-  if (!grade) return 6;
+  if (!grade) return 7;
   const g = grade.toLowerCase();
-  return ({ "a-plus": 0, a: 1, b: 2, c: 3, d: 4, e: 5 } as Record<string, number>)[g] ?? 6;
+  return ({ "a-plus": 0, a: 1, b: 2, c: 3, d: 4, e: 5, f: 6 } as Record<string, number>)[g] ?? 7;
 }
 
 // ────────────────────────────────────────────────────────────
@@ -109,7 +112,7 @@ function computeVerdict(
     raw.push({
       label: "Eco-score", icon: Leaf, dimension: "environment",
       winner: ar < br ? "A" : "B",
-      note: `${(a.ecoscoreGrade ?? "?").toUpperCase()} vs ${(b.ecoscoreGrade ?? "?").toUpperCase()}`,
+      note: `${gradeLabel(a.ecoscoreGrade ?? "?")} vs ${gradeLabel(b.ecoscoreGrade ?? "?")}`,
     });
   }
 
@@ -119,7 +122,7 @@ function computeVerdict(
     raw.push({
       label: "Nutri-score", icon: Heart, dimension: "nutrition",
       winner: an < bn ? "A" : "B",
-      note: `${(a.nutriscoreGrade ?? "?").toUpperCase()} vs ${(b.nutriscoreGrade ?? "?").toUpperCase()}`,
+      note: `${gradeLabel(a.nutriscoreGrade ?? "?")} vs ${gradeLabel(b.nutriscoreGrade ?? "?")}`,
     });
   }
 
@@ -654,7 +657,7 @@ function MetricChip({
       <Icon style={{ width: 11, height: 11, color: grade ? color : DS.muted }} />
       <span style={{ color: DS.muted, fontWeight: 700, fontSize: 10 }}>{label}</span>
       <span style={{ color: grade ? color : DS.muted, fontWeight: 800 }}>
-        {grade ? grade.toUpperCase() : "—"}
+        {grade ? gradeLabel(grade) : "—"}
       </span>
     </span>
   );

@@ -104,9 +104,11 @@ const ALLOWED_COUNTRY_TAGS = new Set([
 
 // Eco-score grades we accept. OFF returns "unknown" / "not-applicable"
 // for unscored products; normalizeProduct() already strips those to null.
-const VALID_ECOSCORE_GRADES = new Set(['a-plus', 'a', 'b', 'c', 'd', 'e']);
+// "f" is the Green-Score's worst band and is genuinely served — leaving it out
+// made the worst-rated products read as "no eco-score at all" to the ranker.
+const VALID_ECOSCORE_GRADES = new Set(['a-plus', 'a', 'b', 'c', 'd', 'e', 'f']);
 
-/** True when the product has a real eco-score (A–E), not unknown/missing. */
+/** True when the product has a real eco-score (A+–F), not unknown/missing. */
 const hasEcoscore = (product: OpenFoodFactsResult): boolean => {
   const g = product.ecoscoreGrade?.toLowerCase();
   return !!g && VALID_ECOSCORE_GRADES.has(g);
@@ -320,7 +322,11 @@ const pickEnglishName = (p: OpenFoodFactsProduct): string | null => {
   return p.product_name?.trim() || null;
 };
 
-const normalizeProduct = (p: OpenFoodFactsProduct): OpenFoodFactsResult => {
+// Exported for the random-scan simulation harness
+// (src/test/randomScanSimulation.test.ts), which replays raw Open Food Facts
+// payloads through the real pipeline. Everything downstream of a scan starts
+// here, so the harness has to use this exact function to be faithful.
+export const normalizeProduct = (p: OpenFoodFactsProduct): OpenFoodFactsResult => {
   const carbonFootprint100g =
     p.nutriments?.['carbon-footprint-from-known-ingredients_100g'] ?? null;
   const carbonFootprintProduct =
@@ -329,13 +335,13 @@ const normalizeProduct = (p: OpenFoodFactsProduct): OpenFoodFactsResult => {
     p.nutriments?.['carbon-footprint-from-known-ingredients_serving'] ?? null;
 
   const labels = p.labels_tags
-    ? p.labels_tags.map((l) => l.replace(/^en:/, '').replace(/-/g, ' '))
+    ? p.labels_tags.map(humanizeTag)
     : p.labels
       ? p.labels.split(',').map((l) => l.trim())
       : [];
 
   const categories = p.categories_tags
-    ? p.categories_tags.map((c) => c.replace(/^en:/, '').replace(/-/g, ' '))
+    ? p.categories_tags.map(humanizeTag)
     : p.categories
       ? p.categories.split(',').map((c) => c.trim())
       : [];
@@ -357,7 +363,15 @@ const normalizeProduct = (p: OpenFoodFactsProduct): OpenFoodFactsResult => {
       typeof p.ecoscore_score === 'number'
         ? Math.max(0, Math.min(100, Math.round(p.ecoscore_score)))
         : null,
-    nutriscoreGrade: p.nutriscore_grade || null,
+    // Same guard as the eco-score above. OFF returns "unknown" /
+    // "not-applicable" for ungraded products (44% of a random sample), and
+    // without this they reached the UI as a grade: the detail page rendered a
+    // Nutri-Score ring literally labelled "UNKNOWN", in neutral grey, filled
+    // half way — a made-up score for a product that has none.
+    nutriscoreGrade:
+      p.nutriscore_grade && p.nutriscore_grade !== 'unknown' && p.nutriscore_grade !== 'not-applicable'
+        ? p.nutriscore_grade
+        : null,
     nutriscoreScore: typeof p.nutriscore_score === 'number' ? p.nutriscore_score : null,
     novaGroup: typeof p.nova_group === 'number' ? p.nova_group : null,
     carbonFootprint100g: typeof carbonFootprint100g === 'number' ? carbonFootprint100g : null,
@@ -372,6 +386,18 @@ const normalizeProduct = (p: OpenFoodFactsProduct): OpenFoodFactsResult => {
     rawProduct: p,
   };
 };
+
+/**
+ * Open Food Facts tag → something a shopper can read.
+ *
+ * Tags carry a language prefix ("en:organic", "fr:salade-de-racines-rouges").
+ * Every call site used to strip `en:` only, so any category or label that has
+ * no English translation — common outside the US/UK catalogue — rendered with
+ * its prefix showing, e.g. a product meta line reading
+ * "fr:Salade de racines rouges".
+ */
+export const humanizeTag = (tag: string): string =>
+  tag.replace(/^[a-z]{2,3}:/i, '').replace(/-/g, ' ');
 
 export const isValidBarcode = (code: string): boolean => {
   const cleaned = code.replace(/\s+/g, '').trim();

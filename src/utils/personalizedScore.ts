@@ -74,6 +74,16 @@ export function gradeToScore(grade?: string | null): number | null {
   return GRADE_SCORE[grade.toLowerCase()] ?? null;
 }
 
+/**
+ * Grade → the label shown to a shopper. Only "a-plus" needs translating, and
+ * that is exactly what kept going wrong: the detail page printed "A+" while the
+ * home showcase, swap cards, basket and compare view printed the raw grade as
+ * "A-PLUS" for the same product. Every screen that prints a grade calls this.
+ */
+export function gradeLabel(grade: string): string {
+  return grade.toLowerCase() === "a-plus" ? "A+" : grade.toUpperCase();
+}
+
 /** Environment 0–100: prefer numeric eco-score, fall back to eco grade. */
 function envSubScore(input: ScoreInput): number | null {
   if (typeof input.ecoScore === "number") return Math.max(0, Math.min(100, input.ecoScore));

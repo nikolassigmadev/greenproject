@@ -1,3 +1,5 @@
+import { gradeCo2PerKg, BASELINE_CO2_KG, SERVING_KG } from './carbonEstimates';
+
 // User priority preferences for scoring
 export interface UserPriorities {
   environment: number;    // 0-100 weight
@@ -207,18 +209,8 @@ export const getHistoryStats = (history: ScanHistoryEntry[]) => {
   return { total, good, moderate, caution, avoid, unknown, withLaborConcerns, avgEcoScore, weeks };
 };
 
-// CO2 estimates by eco grade (kg CO2e per kg of product)
-const GRADE_CO2_ESTIMATE: Record<string, number> = {
-  "a-plus": 0.3, a: 0.5, b: 1.2, c: 2.5, d: 4.0, e: 6.0,
-};
-const BASELINE_CO2 = 2.5; // grade C = "average" product
-
 // All-time carbon stats vs. average consumer
 export const getCarbonStats = (history: ScanHistoryEntry[]) => {
-  const GRADE_CO2: Record<string, number> = { "a-plus": 0.3, a: 0.5, b: 1.2, c: 2.5, d: 4.0, e: 6.0 };
-  const BASELINE = 2.5; // kg CO₂e/kg — grade C "average" product
-  const SERVING_KG = 0.25; // assume 250g per scanned product
-
   let totalUserCO2 = 0;
   let totalBaselineCO2 = 0;
   let scoredCount = 0;
@@ -228,13 +220,14 @@ export const getCarbonStats = (history: ScanHistoryEntry[]) => {
     if (!grade && scan.carbonFootprint100g == null) continue;
     scoredCount++;
     // carbonFootprint100g is grams CO₂e per 100g (OFF nutriment unit), so
-    // kg CO₂e per kg of product = value / 100 — same conversion as
-    // getImpactStats below. (A previous ×10 treated grams as kg: 1000× off.)
+    // kg CO₂e per kg of product = value / 100. (A previous ×10 treated grams as
+    // kg: 1000× off — the same slip still lived in the basket and swap maths
+    // until the random-scan simulation caught it.)
     const co2PerKg = scan.carbonFootprint100g != null
       ? scan.carbonFootprint100g / 100
-      : (GRADE_CO2[grade!] ?? BASELINE);
+      : (gradeCo2PerKg(grade) ?? BASELINE_CO2_KG);
     totalUserCO2 += co2PerKg * SERVING_KG;
-    totalBaselineCO2 += BASELINE * SERVING_KG;
+    totalBaselineCO2 += BASELINE_CO2_KG * SERVING_KG;
   }
 
   const co2SavedKg = Math.max(0, totalBaselineCO2 - totalUserCO2);
@@ -258,33 +251,9 @@ export const getCarbonStats = (history: ScanHistoryEntry[]) => {
   };
 };
 
-export const getImpactStats = (history: ScanHistoryEntry[]) => {
-  const now = Date.now();
-  const monthMs = 30 * 24 * 60 * 60 * 1000;
-  const thisMonth = history.filter(h => h.timestamp > now - monthMs);
-
-  let co2AvoidedKg = 0;
-  for (const scan of thisMonth) {
-    const grade = scan.scores.ecoGrade?.toLowerCase();
-    if (!grade) continue;
-    // Use real CO2 data (per 100g → per kg) if available, else estimate from grade
-    const productCO2 = (scan.carbonFootprint100g != null)
-      ? scan.carbonFootprint100g / 100
-      : GRADE_CO2_ESTIMATE[grade] ?? BASELINE_CO2;
-    const avoided = BASELINE_CO2 - productCO2;
-    if (avoided > 0) co2AvoidedKg += avoided;
-  }
-
-  const fairTradeCount = thisMonth.filter(h =>
-    h.labels?.some(l => /fair.?trade/i.test(l))
-  ).length;
-
-  const laborFlaggedCount = thisMonth.filter(h => h.scores.laborAllegations > 0).length;
-
-  return {
-    co2AvoidedKg: Math.round(co2AvoidedKg * 10) / 10,
-    fairTradeCount,
-    laborFlaggedCount,
-    totalThisMonth: thisMonth.length,
-  };
-};
+// getImpactStats() lived here and was deleted 2026-08-19. It computed a second
+// "CO₂ avoided this month" figure that disagreed with every other one in the app
+// by 4× — it summed kg-per-kg differences without ever multiplying by a serving
+// mass — and nothing rendered it. `computeMonthlyImpact` (utils/impactStats)
+// answers the same question for the same window, and is what the Dashboard and
+// the share card actually use.

@@ -14,34 +14,63 @@ import {
   Eye, GitCompareArrows, Flag, ShoppingCart, Share2,
 } from "lucide-react";
 import { DS, scoreTone, toneColor } from "@/styles/design-tokens";
+import { gradeToScore, gradeLabel } from "@/utils/personalizedScore";
 import { StreakMilestones } from "@/components/StreakMilestones";
 import { WeeklyRecapModal } from "@/components/WeeklyRecapModal";
 import { shareImpactCard } from "@/utils/shareCard";
 
-type Filter = "all" | "good" | "mixed" | "avoid";
+type Filter = "all" | "good" | "mixed" | "avoid" | "unrated";
 
+// "Unrated" is not a nicety: most Open Food Facts products carry no eco-score
+// and no flagged brand, so they get an UNKNOWN verdict. Before this chip
+// existed those scans — around 60% of a random shopping trip — matched none of
+// the filters and were reachable only under "All".
 const FILTERS: { key: Filter; label: string }[] = [
   { key: "all", label: "All" },
   { key: "good", label: "Good" },
   { key: "mixed", label: "Mixed" },
   { key: "avoid", label: "Avoid" },
+  { key: "unrated", label: "Unrated" },
 ];
 
 function alpha(color: string, pct: number): string {
   return `color-mix(in srgb, ${color} ${pct}%, transparent)`;
 }
 
-function entryTone(entry: ScanHistoryEntry): "good" | "warn" | "bad" | null {
+// The verdict this row was saved with, as a tone. Mirrors VERDICT_TONE in
+// recentScanShowcase so a scan is coloured the same on the home card and here.
+const VERDICT_TONE: Record<string, "good" | "warn" | "bad"> = {
+  BUY: "good", CONSIDER: "warn", CAUTION: "warn", AVOID: "bad",
+};
+
+/**
+ * Tone for a history row — verdict first, eco-score only as a fallback.
+ *
+ * This used to read the numeric eco-score alone, which broke the Good/Mixed/
+ * Avoid filters twice over. Most Open Food Facts products have no numeric
+ * eco-score (60% of a random sample), so those rows matched NO filter and were
+ * only visible under "All". And when a score was present it ignored the verdict
+ * beside it, so a product the app told the shopper to AVOID over a labour
+ * allegation was filed under "Good" because its carbon number was fine.
+ *
+ * Exported (with matchesFilter) for the random-scan simulation harness.
+ */
+export function entryTone(entry: ScanHistoryEntry): "good" | "warn" | "bad" | null {
+  const verdict = VERDICT_TONE[(entry.verdict.label || "").toUpperCase()];
+  if (verdict) return verdict;
   if (entry.scores.ecoScore != null) return scoreTone(entry.scores.ecoScore);
+  const fromGrade = gradeToScore(entry.scores.ecoGrade);
+  if (fromGrade != null) return scoreTone(fromGrade);
   return null;
 }
 
-function matchesFilter(entry: ScanHistoryEntry, filter: Filter): boolean {
+export function matchesFilter(entry: ScanHistoryEntry, filter: Filter): boolean {
   if (filter === "all") return true;
   const tone = entryTone(entry);
   if (filter === "good") return tone === "good";
   if (filter === "mixed") return tone === "warn";
   if (filter === "avoid") return tone === "bad";
+  if (filter === "unrated") return tone === null;
   return true;
 }
 
@@ -69,6 +98,32 @@ function formatTime(ts: number): string {
 const GRADE_COLOR: Record<string, string> = {
   a: DS.good, b: DS.good, c: DS.warn, d: DS.bad, e: DS.bad,
 };
+
+/**
+ * The verdict this scan was given, as a coloured dot on the row.
+ *
+ * The row already carried the verdict in storage but never showed it — it led
+ * with an eco-score badge, which is a different judgement. With the filters now
+ * keyed on the verdict, "Avoid" would otherwise return a list of rows with
+ * nothing on them explaining why.
+ */
+function VerdictDot({ entry }: { entry: ScanHistoryEntry }) {
+  const tone = entryTone(entry);
+  if (!tone) return null;
+  const label = (entry.verdict.label || "").toUpperCase();
+  const word = label ? label[0] + label.slice(1).toLowerCase() : null;
+  if (!word) return null;
+  return (
+    <>
+      <span style={{
+        display: "inline-block", width: 6, height: 6, borderRadius: 999,
+        background: toneColor(tone), marginRight: 5, verticalAlign: "middle",
+      }} />
+      <span style={{ color: toneColor(tone), fontWeight: 700 }}>{word}</span>
+      {" · "}
+    </>
+  );
+}
 
 // ── Score badge (eco score 0–100) ──
 
@@ -216,7 +271,7 @@ function CartPill({ basket }: { basket: BasketItem[] }) {
           background: alpha(gColor, 14), color: gColor,
           fontSize: 12, fontWeight: 800, letterSpacing: 0.2,
         }}>
-          Grade {grade.toUpperCase()}
+          Grade {gradeLabel(grade)}
         </div>
       )}
       <ChevronRight style={{ width: 18, height: 18, color: DS.muted, flexShrink: 0 }} />
@@ -539,6 +594,7 @@ export default function Dashboard() {
                                   fontSize: 12.5, color: DS.muted, margin: "2px 0 0",
                                   overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                                 }}>
+                                  <VerdictDot entry={entry} />
                                   {entry.brand || "Unknown brand"} · {formatTime(entry.timestamp)}
                                 </p>
                               </div>
