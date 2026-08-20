@@ -11,8 +11,13 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
+<!-- Vendored, not CDN-loaded. INVARIANTS §5: this is a Capacitor app used on
+     shop floors with bad signal, and until now d3, topojson-client AND the
+     world-atlas TopoJSON all came from jsdelivr — so the globe rendered blank
+     offline. Vendoring the base map without the libraries would have fixed
+     nothing; all three had to come local. -->
+<script src="vendor/d3.v7.min.js"></script>
+<script src="vendor/topojson-client.v3.min.js"></script>
 <style>
   :root {
     --bg: #f4f1ea;
@@ -245,7 +250,7 @@
     font-family: 'Inter', sans-serif; font-size: 42px; line-height: .9; font-weight: 800;
     letter-spacing: -0.03em; text-align: right;
   }
-  .grade small { display: block; margin-top: 4px; font-family: 'Inter'; font-size: 11px; font-weight: 500; color: var(--ink-3); letter-spacing: .02em; }
+  .grade small { display: block; margin-top: 4px; font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 500; color: var(--ink-3); letter-spacing: .02em; }
   .peek h2 {
     font-family: 'Inter', sans-serif; font-weight: 700;
     font-size: 24px; line-height: 1.08; letter-spacing: -0.02em;
@@ -972,11 +977,25 @@ function layout() {
   projection.translate([cx, cy]);
 }
 
-d3.json('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json').then(world => {
+// Vendored base map (world-atlas 110m, derived from Natural Earth — public
+// domain). Loaded from the app's own origin so the globe draws offline.
+d3.json('vendor/countries-110m.json').then(world => {
   land = topojson.feature(world, world.objects.countries);
   borders = topojson.mesh(world, world.objects.countries, (a, b) => a !== b);
   ready = true;
   finishLoad();
+}).catch((err) => {
+  // A missing base map used to fail silently: the promise rejected, finishLoad()
+  // never ran, and the user sat looking at an empty circle forever. Say what
+  // happened instead — an honest failure beats an indefinite blank.
+  console.error('sourcing-map: base map failed to load', err);
+  const loader = document.getElementById('loader');
+  if (loader) {
+    const msg = document.createElement('div');
+    msg.style.cssText = 'margin-top:18px;font-size:13px;opacity:.75;text-align:center;max-width:260px';
+    msg.textContent = 'The base map could not be loaded, so the globe cannot be drawn.';
+    loader.appendChild(msg);
+  }
 });
 
 /* ---------- markers (screen-space clustering) ----------
