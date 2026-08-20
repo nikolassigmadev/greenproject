@@ -43,6 +43,46 @@ export const OFF_PRODUCT: SourceRef = {
   url: 'https://world.openfoodfacts.org',
 };
 
+// ── Regulated on-pack labels (rung A2) ───────────────────────────────────────
+//
+// These beat the `origins` field on coverage, which is counter-intuitive until
+// you notice WHY: `origins` is optional volunteer data entry, whereas these are
+// regulated marks a manufacturer is obliged to print and a contributor merely
+// has to tick. "Made in France" alone appears on more products than ANY single
+// value of the origins field.
+//
+// What each one actually PROVES differs sharply, and the confidence values in
+// LABEL_ORIGIN (src/services/supplyChain/resolve.ts) are spread accordingly: a
+// PDO is a legal tie to a defined production area, while a "Made in" mark is a
+// statement about where manufacturing happened and says nothing about where the
+// ingredients were grown. Collapsing that difference would be the map claiming
+// more than its evidence.
+
+export const OFF_LABEL: SourceRef = {
+  label: 'Open Food Facts — regulated on-pack label',
+  url: 'https://world.openfoodfacts.org/labels',
+};
+
+/**
+ * The EU organic regulation, which is what makes "EU Agriculture" /
+ * "non-EU Agriculture" appear on packs at all. Mandatory alongside the EU
+ * organic logo — which is why it is dense where the origins field is sparse.
+ *
+ * Note what it does NOT require: naming the member state. So the mark proves
+ * the ingredients were farmed inside (or outside) the EU and no more, and the
+ * node it produces carries null coordinates rather than a guessed country.
+ */
+export const EU_ORGANIC_REGULATION: SourceRef = {
+  label: 'Regulation (EU) 2018/848 — organic production and labelling',
+  url: 'https://eur-lex.europa.eu/eli/reg/2018/848/oj',
+};
+
+/** PDO / PGI: production tied by law to a named geographic area. */
+export const EU_QUALITY_SCHEMES: SourceRef = {
+  label: 'Regulation (EU) No 1151/2012 — quality schemes (PDO / PGI)',
+  url: 'https://eur-lex.europa.eu/eli/reg/2012/1151/oj',
+};
+
 // ── Independent assessment ───────────────────────────────────────────────────
 
 /**

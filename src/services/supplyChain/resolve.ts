@@ -26,8 +26,10 @@ import {
 } from '@/data/supplyChain/originPoints';
 import {
   OFF_PRODUCT, DOL_TVPRA, CHOCOLATE_SCORECARD, FAOSTAT_PRODUCTION,
-  ICCO_STATISTICS, companyCocoaSource,
+  ICCO_STATISTICS, companyCocoaSource, OFF_LABEL, EU_ORGANIC_REGULATION,
+  EU_QUALITY_SCHEMES,
 } from '@/data/supplyChain/sources';
+import { lookupCountryPoint } from '@/data/supplyChain/countryPoints';
 import type {
   SupplyChainGraph, SupplyChainNode, SupplyChainEdge, ProvenanceTier, SourceRef,
 } from './types';
@@ -102,6 +104,109 @@ function isTvpra(commodity: string, point: OriginPoint): boolean {
   return (TVPRA[commodity] ?? []).includes(point.iso2);
 }
 
+/**
+ * Rung A2 — origin-bearing labels, ordered by what they actually prove.
+ *
+ * These beat `origins_tags` on coverage, which sounds backwards until you see
+ * why: "Made in France" alone appears on more products than ANY single value of
+ * the origins field, because it is a REGULATED ON-PACK MARK rather than
+ * optional volunteer data entry. A manufacturer must print it; a contributor
+ * only has to tick it. The repo has been reading the sparse field and ignoring
+ * the dense one.
+ *
+ * The confidence values are deliberately spread rather than uniform, because
+ * these marks are not equivalent claims:
+ *
+ *   PDO 0.95   production is tied to a defined area by law
+ *   PGI 0.85   at least ONE production stage happens in the named area
+ *   Made-in 0.70  where MANUFACTURING happened. Says nothing about where the
+ *                 ingredients were grown — canned tuna with a French mark was
+ *                 CANNED in France; the tuna came from an ocean.
+ *   EU/non-EU Agriculture 0.50 / 0.30   farmed inside/outside the EU, country
+ *                 not specified, because Reg. (EU) 2018/848 does not require it
+ *
+ * `iso2: null` means the label proves a designation exists but names no country
+ * we can place. Per INVARIANTS §6 that yields a node with null coordinates,
+ * never a guessed centroid, and per §3/§5 such a node never receives an edge.
+ */
+const LABEL_ORIGIN: Record<string, {
+  iso2: string | null;
+  confidence: number;
+  basis: string;
+  kind: 'origin' | 'region';
+  /** What the node is CALLED when there is no country to name it after. */
+  label: string;
+}> = {
+  'en:pdo': { iso2: null, confidence: 0.95, kind: 'origin',
+    basis: 'Protected Designation of Origin — production is tied to a defined geographic area by EU law',
+    label: 'Protected Designation of Origin' },
+  'en:protected-designation-of-origin': { iso2: null, confidence: 0.95, kind: 'origin',
+    basis: 'Protected Designation of Origin — production is tied to a defined geographic area by EU law',
+    label: 'Protected Designation of Origin' },
+  'en:pgi': { iso2: null, confidence: 0.85, kind: 'origin',
+    basis: 'Protected Geographical Indication — at least one production stage happens in the named area',
+    label: 'Protected Geographical Indication' },
+  'en:protected-geographical-indication': { iso2: null, confidence: 0.85, kind: 'origin',
+    basis: 'Protected Geographical Indication — at least one production stage happens in the named area',
+    label: 'Protected Geographical Indication' },
+  'en:made-in-france':      { iso2: 'FR', confidence: 0.70, kind: 'origin',
+    basis: "Marked 'Made in France' — this is the country of manufacture, not necessarily where the ingredients were grown",
+    label: 'France' },
+  'en:made-in-italy':       { iso2: 'IT', confidence: 0.70, kind: 'origin',
+    basis: "Marked 'Made in Italy' — this is the country of manufacture, not necessarily where the ingredients were grown",
+    label: 'Italy' },
+  'en:made-in-germany':     { iso2: 'DE', confidence: 0.70, kind: 'origin',
+    basis: "Marked 'Made in Germany' — this is the country of manufacture, not necessarily where the ingredients were grown",
+    label: 'Germany' },
+  'en:made-in-spain':       { iso2: 'ES', confidence: 0.70, kind: 'origin',
+    basis: "Marked 'Made in Spain' — this is the country of manufacture, not necessarily where the ingredients were grown",
+    label: 'Spain' },
+  'en:made-in-belgium':     { iso2: 'BE', confidence: 0.70, kind: 'origin',
+    basis: "Marked 'Made in Belgium' — this is the country of manufacture, not necessarily where the ingredients were grown",
+    label: 'Belgium' },
+  'en:made-in-switzerland': { iso2: 'CH', confidence: 0.70, kind: 'origin',
+    basis: "Marked 'Made in Switzerland' — this is the country of manufacture, not necessarily where the ingredients were grown",
+    label: 'Switzerland' },
+  'en:eu-agriculture':        { iso2: null, confidence: 0.50, kind: 'region',
+    basis: "The organic mark states 'EU Agriculture' — grown inside the EU, but the country is not specified",
+    label: 'EU Agriculture' },
+  'en:non-eu-agriculture':    { iso2: null, confidence: 0.50, kind: 'region',
+    basis: "The organic mark states 'non-EU Agriculture' — grown outside the EU, but the country is not specified",
+    label: 'Non-EU Agriculture' },
+  'en:eu-non-eu-agriculture': { iso2: null, confidence: 0.30, kind: 'region',
+    basis: "The organic mark states 'EU/non-EU Agriculture' — mixed origin, not specified",
+    label: 'EU / non-EU Agriculture' },
+};
+
+/** Which citations back a given label. */
+function labelSources(tag: string): SourceRef[] {
+  if (tag.includes('agriculture')) return [OFF_LABEL, EU_ORGANIC_REGULATION];
+  if (tag.includes('pdo') || tag.includes('pgi') || tag.includes('protected-')) {
+    return [OFF_LABEL, EU_QUALITY_SCHEMES];
+  }
+  return [OFF_LABEL];
+}
+
+/**
+ * Every label tag on the product, in canonical `en:slug` form.
+ *
+ * Reads rawProduct.labels_tags first because those are the canonical tags the
+ * table is keyed on. Falls back to the humanized `labels` array — humanizeTag()
+ * turns 'en:made-in-france' into 'made in france', which reverses cleanly — so
+ * a product that reached us through a path that dropped rawProduct still
+ * resolves rather than silently losing its labels.
+ */
+function labelTags(product: OpenFoodFactsResult): string[] {
+  const raw = product.rawProduct as unknown as Record<string, unknown> | null;
+  const tags = raw?.labels_tags;
+  if (Array.isArray(tags)) {
+    return tags.filter((t): t is string => typeof t === 'string').map((t) => t.toLowerCase());
+  }
+  return (product.labels ?? [])
+    .filter((l): l is string => typeof l === 'string')
+    .map((l) => `en:${l.trim().toLowerCase().replace(/\s+/g, '-')}`);
+}
+
 // ── Origin nodes ─────────────────────────────────────────────────────────────
 
 function resolveOrigins(
@@ -109,6 +214,29 @@ function resolveOrigins(
   nodes: SupplyChainNode[],
 ): void {
   const seen = new Set<string>();
+  const originCount = () => nodes.filter((n) => n.kind === 'origin').length;
+
+  /**
+   * A claim we believe but cannot place.
+   *
+   * "This is PDO" and "the organic mark says EU Agriculture" are real, cited,
+   * `declared` facts about the product that name no country we hold a point
+   * for. INVARIANTS §6 forbids substituting a centroid to make them drawable,
+   * and §3 says the honest render is a node. So: node, null coordinates, no
+   * edge — the edge builder only ever connects placed nodes.
+   */
+  const pushUnplaced = (
+    key: string, label: string, tier: ProvenanceTier, confidence: number,
+    basis: string, sources: SourceRef[],
+  ) => {
+    if (seen.has(key) || originCount() >= MAX_ORIGINS) return;
+    seen.add(key);
+    nodes.push({
+      id: `origin:${key}`, kind: 'origin', label,
+      lon: null, lat: null, tier, confidence, basis, sources,
+    });
+  };
+
   const push = (
     key: string, point: OriginPoint, tier: ProvenanceTier, confidence: number,
     basis: string, sources: SourceRef[], commodity?: string,
@@ -148,6 +276,31 @@ function resolveOrigins(
           [OFF_SOURCE]);
       }
     }
+  }
+
+  // 1b. DECLARED — rung A2, regulated on-pack labels.
+  //
+  // Runs AFTER the origins field on purpose. `seen` makes the first claim for a
+  // given key win, and A1 is the stronger evidence: an origins entry is a
+  // statement about the INGREDIENTS, while a made-in mark is a statement about
+  // MANUFACTURE. Where a product carries both, the origins claim is the one
+  // that should set the headline, so it has to get there first.
+  for (const tag of labelTags(product)) {
+    const rule = LABEL_ORIGIN[tag];
+    if (!rule) continue;
+    if (rule.iso2) {
+      const point = lookupCountryPoint(rule.iso2);
+      if (point) {
+        // A country point, NOT a production centroid. "Made in France" is a
+        // claim about a country, so it is drawn at country granularity and no
+        // finer — placing it on a crop region would be a different, wrong claim.
+        push(`label:${rule.iso2}`, { name: point.name, lon: point.lon, lat: point.lat, iso2: rule.iso2 },
+          'declared', rule.confidence, `${rule.basis}.`, labelSources(tag));
+        continue;
+      }
+    }
+    pushUnplaced(`label:${tag}`, rule.label,
+      'declared', rule.confidence, `${rule.basis}.`, labelSources(tag));
   }
 
   // 2. DECLARED — per-brand cocoa sourcing from our own chocolate directory.
