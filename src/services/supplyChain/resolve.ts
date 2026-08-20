@@ -27,7 +27,7 @@ import {
 import {
   OFF_PRODUCT, DOL_TVPRA, CHOCOLATE_SCORECARD, FAOSTAT_PRODUCTION,
   ICCO_STATISTICS, companyCocoaSource, OFF_LABEL, EU_ORGANIC_REGULATION,
-  EU_QUALITY_SCHEMES, FSIS_DIRECTORY,
+  EU_QUALITY_SCHEMES, FSIS_DIRECTORY, EU_HONEY_DIRECTIVE,
 } from '@/data/supplyChain/sources';
 import { lookupCountryPoint, lookupCountryByName } from '@/data/supplyChain/countryPoints';
 import type {
@@ -220,6 +220,24 @@ function originsTags(product: OpenFoodFactsResult): string[] {
 /** 'en:cote-d-ivoire' -> "cote d ivoire". Strips the language prefix only. */
 function humanizeOriginTag(tag: string): string {
   return tag.replace(/^[a-z]{2,3}:/i, '').replace(/-/g, ' ').trim();
+}
+
+/**
+ * Is this honey?
+ *
+ * Worth its own function because honey is the one category with a mandatory,
+ * percentage-weighted origin disclosure (Dir. (EU) 2024/1438, in force
+ * 14 June 2026), and the map says something different — and much stronger —
+ * about it than about anything else.
+ */
+export function isHoney(product: OpenFoodFactsResult): boolean {
+  const raw = product.rawProduct as unknown as Record<string, unknown> | null;
+  const tags = Array.isArray(raw?.categories_tags) ? raw.categories_tags as string[] : [];
+  if (tags.some((t) => typeof t === 'string' && /^[a-z]{2,3}:honeys?$/i.test(t))) return true;
+  // The mapped `categories` array is humanized ('honeys'), so check it too.
+  return (product.categories ?? []).some(
+    (c) => typeof c === 'string' && /^honeys?$/i.test(c.trim()),
+  );
 }
 
 // ── Origin nodes ─────────────────────────────────────────────────────────────
@@ -658,12 +676,34 @@ export function resolveSupplyChain(
     ? 'declared'
     : tiers.includes('inferred') ? 'inferred' : 'unknown';
 
+  // Honey is the flagship: a complete, legally guaranteed, percentage-weighted
+  // breakdown, printed on the jar. Explaining WHY it works here — and by
+  // implication why chocolate cannot — is the intellectual content of this
+  // feature, so the copy travels with the graph rather than living in a
+  // component where it could drift from the data.
+  const honey = isHoney(product);
+  const declaredShares = nodes.filter(
+    (n) => n.kind === 'origin' && typeof n.declaredShare === 'number',
+  );
+
   return {
     nodes,
     edges,
     undisclosedCount,
     bestTier,
     isEmpty: origins.length === 0 && !placed(processing),
+    ...(honey ? {
+      mandatoryDisclosure: {
+        category: 'honey',
+        copy: declaredShares.length
+          ? 'EU law requires honey to list every origin country with its ' +
+            'percentage. Here is what this jar declares.'
+          : 'EU law requires honey to list every origin country with its ' +
+            'percentage. We have not been able to read that list for this jar — ' +
+            'scan the label to see it.',
+        source: EU_HONEY_DIRECTIVE,
+      },
+    } : {}),
   };
 }
 

@@ -37,6 +37,7 @@ import { IngredientConcernsCard } from "@/components/IngredientConcernsCard";
 import { SwapSuggestions } from "@/components/SwapSuggestions";
 import { SupplyChainMap } from "@/components/SupplyChainMap";
 import { usePackagingEvidence } from "@/hooks/usePackagingEvidence";
+import { isHoney } from "@/services/supplyChain/resolve";
 import { CHOCOLATE_SCORECARD } from "@/data/supplyChain/sources";
 import { DecisionBar } from "@/components/DecisionBar";
 import { useBottomNav } from "@/components/BottomNav";
@@ -313,9 +314,14 @@ export default function OpenFoodFactsDetail() {
     product?.origins?.trim()
     || (product?.rawProduct as unknown as { origins_tags?: string[] } | null)?.origins_tags?.length,
   );
+  // Honey is the exception to the "skip if we already have an origin" rule.
+  // A plain origins field says "Spain"; the jar is legally required to say
+  // "Spain 45%, Argentina 30%, Ukraine 25%". The second is strictly richer, so
+  // it is worth the call even when the record already has something.
+  const isHoneyProduct = Boolean(product) && isHoney(product!);
   const packagingEvidence = usePackagingEvidence(
     scanPhoto ? `data:image/jpeg;base64,${scanPhoto}` : null,
-    Boolean(product) && !recordDeclaresOrigin,
+    Boolean(product) && (!recordDeclaresOrigin || isHoneyProduct),
   );
   const [loading, setLoading]               = useState(true);
   const [error, setError]                   = useState<string | null>(null);

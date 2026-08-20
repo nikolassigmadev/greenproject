@@ -140,6 +140,20 @@ export const FSIS_DIRECTORY: SourceRef = {
   url: 'https://www.fsis.usda.gov/inspection/establishments/meat-poultry-and-egg-product-inspection-directory',
 };
 
+/**
+ * The honey origin directive — the reason honey is the one category where a
+ * complete, verified, percentage-weighted origin breakdown is possible today.
+ *
+ * In force since 14 June 2026: every jar must list each origin country in
+ * descending order WITH its percentage (5% tolerance; packs under 30 g may use
+ * ISO two-letter codes). That is farm-adjacent traceability, printed on the
+ * pack, legally guaranteed, and machine-readable by the rung-A4 prompt.
+ */
+export const EU_HONEY_DIRECTIVE: SourceRef = {
+  label: 'Directive (EU) 2024/1438 — honey origin labelling (in force 14 June 2026)',
+  url: 'https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=LEGISSUM:l21124a',
+};
+
 // ── Certification schemes ────────────────────────────────────────────────────
 
 export const FAIRTRADE_COCOA: SourceRef = {

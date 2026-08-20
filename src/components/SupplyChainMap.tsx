@@ -288,6 +288,34 @@ export function SupplyChainMap({ product, region, packaging }: Props) {
         <LegendItem dash label="Estimated from the company's known sourcing" />
       </div>
 
+      {/*
+        A category with a MANDATORY origin disclosure. Honey is the flagship and
+        currently the only one — and it is the demo precisely because of the
+        contrast: honey works because the law forces the disclosure onto the
+        jar, and cocoa cannot, for anyone, including the brands.
+      */}
+      {graph.mandatoryDisclosure && (
+        <p style={{
+          fontSize: 11.5, color: DS.ink, lineHeight: 1.55, margin: '0 0 9px',
+          padding: '8px 10px', border: `1px solid ${DS.hair}`, borderRadius: 8,
+        }}>
+          {graph.mandatoryDisclosure.copy}
+          {graph.mandatoryDisclosure.source.url && (
+            <>
+              {' '}
+              <a
+                href={graph.mandatoryDisclosure.source.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: DS.muted, textDecoration: 'underline' }}
+              >
+                {graph.mandatoryDisclosure.source.label}
+              </a>
+            </>
+          )}
+        </p>
+      )}
+
       {/* Every placed node, tappable. */}
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
         {placed.map((n) => (
@@ -306,6 +334,17 @@ export function SupplyChainMap({ product, region, packaging }: Props) {
           >
             {n.tvpraFlagged && <span aria-hidden="true" style={{ color: DS.bad }}>⚠</span>}
             {n.label}
+            {/*
+              A declared share, where the pack printed one. In practice this is
+              honey: Dir. (EU) 2024/1438 requires every jar to list each origin
+              country WITH its percentage. Never estimated and never normalised
+              to sum to 100 — this is what the label says, nothing more.
+            */}
+            {typeof n.declaredShare === 'number' && (
+              <span style={{ fontWeight: 700, color: DS.muted }}>
+                {n.declaredShare}%
+              </span>
+            )}
           </button>
         ))}
       </div>

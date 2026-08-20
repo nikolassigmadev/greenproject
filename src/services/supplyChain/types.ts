@@ -73,6 +73,25 @@ export interface SupplyChainGraph {
   bestTier: ProvenanceTier;
   /** True when we have nothing at all — the honest empty state. */
   isEmpty: boolean;
+  /**
+   * Set when this product's category carries a MANDATORY origin-disclosure rule
+   * worth explaining to the shopper.
+   *
+   * Honey is the flagship case and currently the only one: since 14 June 2026,
+   * Dir. (EU) 2024/1438 requires every jar sold in the EU to list each origin
+   * country in descending order WITH its percentage. That makes honey the one
+   * category where a complete, verified, percentage-weighted breakdown is
+   * possible today — and the contrast with cocoa, where it is not possible for
+   * anyone including the brands, is the whole argument this feature exists to
+   * make.
+   */
+  mandatoryDisclosure?: {
+    category: string;
+    /** Plain English, shown verbatim. */
+    copy: string;
+    /** The instrument that requires it. */
+    source: SourceRef;
+  };
 }
 
 // ── Evidence read off the physical pack ──────────────────────────────────────
