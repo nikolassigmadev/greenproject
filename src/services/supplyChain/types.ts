@@ -109,7 +109,64 @@ export interface PackagingEvidence {
   statements?: OriginStatement[];
   /**
    * Establishment number from the USDA inspection mark, e.g. "EST. 34D".
-   * Resolves to a real facility via the bundled FSIS directory.
+   * Kept for display and logging; the RESOLVED facility is the field below.
    */
   usdaEstablishment?: string | null;
+  /**
+   * The FSIS facility that number resolves to, already looked up.
+   *
+   * Resolved by the caller rather than in the resolver, and passed in as plain
+   * data, for a bundle-size reason worth stating: the FSIS directory is 13,290
+   * establishments, and importing it from the resolver put ~305 KB (gzipped)
+   * into the verdict-page chunk for every scan of every product worldwide — to
+   * serve a feature that only ever fires on US meat and poultry. The caller can
+   * `await import()` the directory only when a number was actually read, so the
+   * bundle cost is paid by the scans that use it and by no others.
+   *
+   * The resolver still gets everything it needs and stays pure and synchronous.
+   */
+  usdaFacility?: {
+    establishmentNumber: string;
+    name: string;
+    city: string;
+    state: string;
+    lon: number;
+    lat: number;
+  } | null;
+}
+
+// ── The precomputed index (rungs A1-A3, resolved offline) ────────────────────
+
+/** One claim from the precomputed index. Plain data, straight from Postgres. */
+export interface PrecomputedClaim {
+  /** Which rung produced it: 'A1' | 'A2' | 'A3'. */
+  rung: string;
+  tier: ProvenanceTier;
+  confidence: number;
+  /** The raw value — an origins tag, a label tag, or a manufacturing place. */
+  value: string;
+  /** ISO 3166-1 alpha-2 where the rung could determine one. */
+  iso2?: string | null;
+  /** 'processing' for rung A3; absent means an ingredient-origin claim. */
+  kind?: string;
+  /** Plain English, shown to the user verbatim (INVARIANTS §7). */
+  basis: string;
+}
+
+/**
+ * A row from GET /api/origin/:barcode.
+ *
+ * PLAIN DATA — no promises, no functions. The fetch happens in the component;
+ * the resolver receives the result as an ordinary argument and stays a pure
+ * function of its inputs, so the audit harnesses keep working unchanged.
+ */
+export interface PrecomputedOrigin {
+  code: string;
+  market?: string | null;
+  brand?: string | null;
+  bestTier: ProvenanceTier;
+  commodities?: string[];
+  claims: PrecomputedClaim[];
+  nClaims?: number;
+  builtAt?: string | null;
 }

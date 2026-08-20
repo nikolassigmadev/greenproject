@@ -19,6 +19,7 @@ import {
 } from '@/data/supplyChain/sugarMills';
 import { parseUsdaEstablishment } from '@/services/supplyChain/originStatement';
 import { resolveSupplyChain } from '@/services/supplyChain/resolve';
+import { resolveUsdaFacility } from '@/services/supplyChain/resolveFacility';
 import type { OpenFoodFactsResult } from '@/services/openfoodfacts/types';
 
 function stub(): OpenFoodFactsResult {
@@ -71,7 +72,9 @@ describe('FSIS establishment directory', () => {
   it('makes the FSIS hit a PROCESSING node, never an origin', () => {
     // The mark says where the product was processed or packed. It says nothing
     // about where the animal was raised, and the copy has to carry that.
-    const graph = resolveSupplyChain(stub(), null, { usdaEstablishment: 'G1016' });
+    const graph = resolveSupplyChain(stub(), null, {
+      usdaFacility: lookupFsisEstablishment('G1016'),
+    });
     const proc = graph.nodes.find((n) => n.kind === 'processing')!;
     expect(proc.tier).toBe('declared');
     expect(proc.lon).toBeTypeOf('number');
@@ -80,7 +83,9 @@ describe('FSIS establishment directory', () => {
   });
 
   it('falls back to "not disclosed" when the number does not resolve', () => {
-    const graph = resolveSupplyChain(stub(), null, { usdaEstablishment: 'ZZ99999' });
+    const graph = resolveSupplyChain(stub(), null, {
+      usdaFacility: lookupFsisEstablishment('ZZ99999'),
+    });
     expect(graph.nodes.find((n) => n.kind === 'processing')!.tier).toBe('unknown');
   });
 });
@@ -126,5 +131,22 @@ describe('Sugar Universal Mill List', () => {
     expect(sugarMillsByIso3('IDN').length).toBeGreaterThan(10);
     expect(sugarMillsByIso3('ZZZ')).toEqual([]);
     expect(sugarMillsByIso3(null)).toEqual([]);
+  });
+});
+
+describe('resolveUsdaFacility (lazy directory load)', () => {
+  it('resolves a real number without the resolver importing the directory', async () => {
+    // The directory is 13,290 establishments. Loading it from the resolver put
+    // ~305 KB gzipped into the verdict-page chunk for every scan worldwide, to
+    // serve a lookup that only fires on US meat. It is loaded on demand instead.
+    const f = await resolveUsdaFacility('EST. G1016');
+    expect(f?.name).toContain('Waldbaum');
+    expect(f?.lat).toBeGreaterThan(40);
+  });
+
+  it('returns null for an unknown or empty number', async () => {
+    expect(await resolveUsdaFacility('ZZ99999')).toBeNull();
+    expect(await resolveUsdaFacility(null)).toBeNull();
+    expect(await resolveUsdaFacility('')).toBeNull();
   });
 });

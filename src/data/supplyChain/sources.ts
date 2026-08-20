@@ -128,6 +128,18 @@ export function companyCocoaSource(brand: string | null | undefined): SourceRef 
   return null;
 }
 
+/**
+ * The USDA inspection mark's directory. Cited here rather than imported from
+ * the 13,290-row data module, so a page that only needs the CITATION does not
+ * pull the whole directory into its bundle.
+ *
+ * A work of the US Government — public domain.
+ */
+export const FSIS_DIRECTORY: SourceRef = {
+  label: 'USDA FSIS — Meat, Poultry and Egg Product Inspection Directory (public domain)',
+  url: 'https://www.fsis.usda.gov/inspection/establishments/meat-poultry-and-egg-product-inspection-directory',
+};
+
 // ── Certification schemes ────────────────────────────────────────────────────
 
 export const FAIRTRADE_COCOA: SourceRef = {

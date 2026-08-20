@@ -36,6 +36,7 @@ import { EnvironmentalImpactCard } from "@/components/EnvironmentalImpactCard";
 import { IngredientConcernsCard } from "@/components/IngredientConcernsCard";
 import { SwapSuggestions } from "@/components/SwapSuggestions";
 import { SupplyChainMap } from "@/components/SupplyChainMap";
+import { usePackagingEvidence } from "@/hooks/usePackagingEvidence";
 import { CHOCOLATE_SCORECARD } from "@/data/supplyChain/sources";
 import { DecisionBar } from "@/components/DecisionBar";
 import { useBottomNav } from "@/components/BottomNav";
@@ -299,6 +300,23 @@ export default function OpenFoodFactsDetail() {
   const [seenFullDisclaimer] = useState(() => localStorage.getItem("goodscan_disclaimer_seen_full") === "true");
   const [showFullDisclaimer, setShowFullDisclaimer] = useState(false);
   const [product, setProduct]               = useState<OpenFoodFactsResult | null>(null);
+
+  // Rung A4 — read the origin statement off the pack itself.
+  //
+  // Only for a scan (we need the photo), and only when the record does NOT
+  // already declare an origin. Where an origin is already known, a second
+  // opinion from OCR adds a row to a list that is already right; it does not
+  // add coverage, and it would spend a vision call per scan to do it. The whole
+  // value of this rung is the products that have nothing.
+  const scanPhoto = fromScan ? sessionStorage.getItem("scan_image") : null;
+  const recordDeclaresOrigin = Boolean(
+    product?.origins?.trim()
+    || (product?.rawProduct as unknown as { origins_tags?: string[] } | null)?.origins_tags?.length,
+  );
+  const packagingEvidence = usePackagingEvidence(
+    scanPhoto ? `data:image/jpeg;base64,${scanPhoto}` : null,
+    Boolean(product) && !recordDeclaresOrigin,
+  );
   const [loading, setLoading]               = useState(true);
   const [error, setError]                   = useState<string | null>(null);
   const [priorities, setPriorities]         = useState<UserPriorities>(loadPriorities());
@@ -1332,7 +1350,11 @@ export default function OpenFoodFactsDetail() {
             transition: "all 0.5s ease 0.25s",
           }}>
             <SectionHead num="01" title="Where it comes from" kicker="Origin, processing, and what nobody will say." />
-            <SupplyChainMap product={product} region={loadRegion()} />
+            <SupplyChainMap
+              product={product}
+              region={loadRegion()}
+              packaging={packagingEvidence}
+            />
           </section>
 
           {agri?.co2_total !== undefined && (

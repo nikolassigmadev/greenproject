@@ -27,13 +27,12 @@ import {
 import {
   OFF_PRODUCT, DOL_TVPRA, CHOCOLATE_SCORECARD, FAOSTAT_PRODUCTION,
   ICCO_STATISTICS, companyCocoaSource, OFF_LABEL, EU_ORGANIC_REGULATION,
-  EU_QUALITY_SCHEMES,
+  EU_QUALITY_SCHEMES, FSIS_DIRECTORY,
 } from '@/data/supplyChain/sources';
 import { lookupCountryPoint, lookupCountryByName } from '@/data/supplyChain/countryPoints';
-import { lookupFsisEstablishment, FSIS_SOURCE } from '@/data/supplyChain/fsisEstablishments';
 import type {
   SupplyChainGraph, SupplyChainNode, SupplyChainEdge, ProvenanceTier, SourceRef,
-  PackagingEvidence,
+  PackagingEvidence, PrecomputedOrigin,
 } from './types';
 import { originStatementNodes } from './originStatement';
 
@@ -229,6 +228,7 @@ function resolveOrigins(
   product: OpenFoodFactsResult,
   nodes: SupplyChainNode[],
   packaging?: PackagingEvidence | null,
+  precomputed?: PrecomputedOrigin | null,
 ): void {
   const seen = new Set<string>();
   const originCount = () => nodes.filter((n) => n.kind === 'origin').length;
@@ -398,6 +398,41 @@ function resolveOrigins(
     }
   }
 
+  // 1d. DECLARED — claims resolved offline by the precomputed index.
+  //
+  // Same evidence as rungs A1-A3, computed ahead of time over the whole Open
+  // Food Facts corpus rather than from this one product record. It runs after
+  // the live rungs deliberately: where both have something to say they agree,
+  // and where they disagree the record IN FRONT OF US is the one to trust — the
+  // index may have been built before the product was edited.
+  //
+  // So this fills gaps. It never overrides, because `seen` lets the first claim
+  // for a key win, and it cannot manufacture a claim: a product with no
+  // origin-bearing field is simply absent from the index.
+  for (const claim of precomputed?.claims ?? []) {
+    if (originCount() >= MAX_ORIGINS) break;
+    // Rung A3 is a PROCESSING claim, a different thing entirely, and must never
+    // become an origin pin. It is handled by resolveProcessing().
+    if (claim.kind === 'processing') continue;
+
+    const name = claim.value.replace(/^[a-z]{2,3}:/i, '').replace(/-/g, ' ').trim();
+    const m = matchOriginPoint(name);
+    if (m) {
+      push(m.key, m.point, claim.tier, claim.confidence, claim.basis, [OFF_SOURCE]);
+      continue;
+    }
+    const c = claim.iso2 ? lookupCountryPoint(claim.iso2) : lookupCountryByName(name)?.point;
+    const iso2 = claim.iso2 ?? lookupCountryByName(name)?.iso2;
+    if (c && iso2) {
+      push(`country:${iso2}`, { name: c.name, lon: c.lon, lat: c.lat, iso2 },
+        claim.tier, claim.confidence, claim.basis, [OFF_SOURCE]);
+      continue;
+    }
+    // A claim we believe and cannot place. Node, no coordinates, no edge.
+    pushUnplaced(`pre:${claim.value}`, name || claim.value,
+      claim.tier, claim.confidence, claim.basis, [OFF_SOURCE]);
+  }
+
   // 3. INFERRED — this company is documented as sourcing this commodity here.
   //    Not the product's own claim, so never 'declared', however good the source.
   for (const rec of getCommodityRecordsByBrand(product.brand)) {
@@ -448,7 +483,7 @@ function resolveOrigins(
 
 function resolveProcessing(
   product: OpenFoodFactsResult,
-  usdaEstablishment?: string | null,
+  usdaFacility?: PackagingEvidence['usdaFacility'],
 ): SupplyChainNode {
   const raw = product.rawProduct as unknown as Record<string, unknown> | null;
   const places = raw?.manufacturing_places as string | undefined;
@@ -464,7 +499,7 @@ function resolveProcessing(
   //
   // Still a PROCESSING claim and nothing more. It says where the product was
   // slaughtered, processed or packed, not where the animal was raised.
-  const fsis = lookupFsisEstablishment(usdaEstablishment);
+  const fsis = usdaFacility;
   if (fsis) {
     return {
       id: 'processing', kind: 'processing',
@@ -476,7 +511,7 @@ function resolveProcessing(
              `${fsis.name} in ${fsis.city}, ${fsis.state}. This is where the product ` +
              `was processed or packed — not where the animals were raised or the ` +
              `ingredients grown.`,
-      sources: [FSIS_SOURCE],
+      sources: [FSIS_DIRECTORY],
     };
   }
 
@@ -562,11 +597,12 @@ export function resolveSupplyChain(
   product: OpenFoodFactsResult,
   region: UserRegion | null,
   packaging?: PackagingEvidence | null,
+  precomputed?: PrecomputedOrigin | null,
 ): SupplyChainGraph {
   const nodes: SupplyChainNode[] = [];
 
-  resolveOrigins(product, nodes, packaging);
-  const processing = resolveProcessing(product, packaging?.usdaEstablishment);
+  resolveOrigins(product, nodes, packaging, precomputed);
+  const processing = resolveProcessing(product, packaging?.usdaFacility);
   const destination = resolveDestination(region);
   nodes.push(processing, destination);
 

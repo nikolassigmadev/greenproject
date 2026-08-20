@@ -18,7 +18,10 @@ import { DS } from '@/styles/design-tokens';
 import type { OpenFoodFactsResult } from '@/services/openfoodfacts/types';
 import type { UserRegion } from '@/utils/userRegion';
 import { resolveSupplyChain } from '@/services/supplyChain/resolve';
-import type { SupplyChainNode } from '@/services/supplyChain/types';
+import type {
+  SupplyChainNode, PackagingEvidence, PrecomputedOrigin,
+} from '@/services/supplyChain/types';
+import { getBackendUrl } from '@/config/backend';
 import landPolygons from '@/data/supplyChain/landPolygons.json';
 import { BASE_SOURCES, SOURCES_VERIFIED_ON } from '@/data/supplyChain/sources';
 
@@ -69,10 +72,56 @@ function greatCircle(
 interface Props {
   product: OpenFoodFactsResult;
   region: UserRegion | null;
+  /**
+   * What the packaging itself said, if a scan read it (rung A4).
+   *
+   * Passed IN rather than fetched here, because reading the pack is an
+   * asynchronous OCR call and the resolver must stay pure and synchronous
+   * (INVARIANTS §4).
+   */
+  packaging?: PackagingEvidence | null;
 }
 
-export function SupplyChainMap({ product, region }: Props) {
-  const graph = useMemo(() => resolveSupplyChain(product, region), [product, region]);
+export function SupplyChainMap({ product, region, packaging }: Props) {
+  // The precomputed index (rungs A1-A3, resolved offline over the whole corpus).
+  //
+  // Fetched HERE, in the component, and handed to the resolver as plain data.
+  // That is the whole trick that keeps resolveSupplyChain() pure and
+  // synchronous while still letting it use data that came off a network: the
+  // async part lives in the caller, and the resolver is a pure function of its
+  // arguments — so the audit harnesses keep running it thousands of times
+  // unchanged.
+  //
+  // Absence is the ORDINARY case: most products carry no origin-bearing field
+  // and are simply not in the index. A 404, a 503, an offline device and a
+  // disabled store all land in the same place — null — and the map is still
+  // correct, because the index only ever ADDS evidence to a graph the resolver
+  // can already build from the product record alone.
+  const [precomputed, setPrecomputed] = useState<PrecomputedOrigin | null>(null);
+
+  useEffect(() => {
+    const code = product.barcode;
+    if (!code) { setPrecomputed(null); return; }
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch(`${getBackendUrl()}/api/origin/${encodeURIComponent(code)}`);
+        if (!r.ok) { if (!cancelled) setPrecomputed(null); return; }
+        const j = await r.json();
+        if (!cancelled) setPrecomputed(j?.origin ?? null);
+      } catch {
+        // Offline, or the server is down. Not an error worth surfacing — the
+        // map renders from the product record either way.
+        if (!cancelled) setPrecomputed(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [product.barcode]);
+
+  const graph = useMemo(
+    () => resolveSupplyChain(product, region, packaging, precomputed),
+    [product, region, packaging, precomputed],
+  );
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [selected, setSelected] = useState<SupplyChainNode | null>(null);
 
