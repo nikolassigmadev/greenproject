@@ -50,3 +50,7 @@ git-commands.txt
 
 # Generated demo data for the impact card (regenerate with scripts/mock/make-demo-backup.mjs)
 goodscan-demo-backup.json
+
+# Raw reference datasets — refetched with scripts/supplychain/fetch_reference_data.sh.
+# The BUNDLED, converted forms in src/data/supplyChain/ are committed instead.
+data/reference/

@@ -74,3 +74,42 @@ export interface SupplyChainGraph {
   /** True when we have nothing at all — the honest empty state. */
   isEmpty: boolean;
 }
+
+// ── Evidence read off the physical pack ──────────────────────────────────────
+
+export type OriginStatementKind =
+  | 'origin'
+  | 'reared'
+  | 'slaughtered'
+  | 'caught'
+  | 'organic_region'
+  | 'protected_designation';
+
+/** One origin statement as printed on the packaging. */
+export interface OriginStatement {
+  /** Verbatim, exactly as printed. Shown to the user unaltered (INVARIANTS §7). */
+  text: string;
+  kind: OriginStatementKind;
+  /** ISO 3166-1 alpha-2, only where the country is NAMED on the pack. */
+  countries: string[];
+  /** Declared share per country. Only where printed — honey, mainly. */
+  percentages?: Record<string, number>;
+}
+
+/**
+ * What the packaging itself told us, passed INTO the resolver.
+ *
+ * Plain data only — no promises, no functions. The OCR call that produces this
+ * is asynchronous and lives in the component; the resolver stays a pure
+ * function of its inputs (INVARIANTS §4) and the audit harnesses keep working
+ * unchanged. This is the same shape of contract as PrecomputedOrigin.
+ */
+export interface PackagingEvidence {
+  /** Origin statements read off the pack (rung A4). */
+  statements?: OriginStatement[];
+  /**
+   * Establishment number from the USDA inspection mark, e.g. "EST. 34D".
+   * Resolves to a real facility via the bundled FSIS directory.
+   */
+  usdaEstablishment?: string | null;
+}

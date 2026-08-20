@@ -30,9 +30,12 @@ import {
   EU_QUALITY_SCHEMES,
 } from '@/data/supplyChain/sources';
 import { lookupCountryPoint, lookupCountryByName } from '@/data/supplyChain/countryPoints';
+import { lookupFsisEstablishment, FSIS_SOURCE } from '@/data/supplyChain/fsisEstablishments';
 import type {
   SupplyChainGraph, SupplyChainNode, SupplyChainEdge, ProvenanceTier, SourceRef,
+  PackagingEvidence,
 } from './types';
+import { originStatementNodes } from './originStatement';
 
 /** Never draw more than this many origin arcs, however much data exists. */
 const MAX_ORIGINS = 5;
@@ -225,6 +228,7 @@ function humanizeOriginTag(tag: string): string {
 function resolveOrigins(
   product: OpenFoodFactsResult,
   nodes: SupplyChainNode[],
+  packaging?: PackagingEvidence | null,
 ): void {
   const seen = new Set<string>();
   const originCount = () => nodes.filter((n) => n.kind === 'origin').length;
@@ -326,6 +330,29 @@ function resolveOrigins(
     }
   }
 
+  // 1c. DECLARED — rung A4, statements read off the packaging itself.
+  //
+  // Sits between A1 and A2 deliberately. A printed "Product of Mexico" is a
+  // statement about the INGREDIENTS and beats a made-in mark, which is only
+  // about manufacture — but it ranks below the curated origins field, because
+  // OCR can misread and a database field cannot.
+  //
+  // The nodes arrive fully formed from originStatementNodes(), which is shared
+  // with the parser's own tests, so what ships and what is tested cannot drift.
+  if (packaging?.statements?.length) {
+    const remaining = MAX_ORIGINS - originCount();
+    if (remaining > 0) {
+      for (const node of originStatementNodes(packaging.statements, remaining)) {
+        // `seen` is keyed on the id suffix so an OCR claim cannot duplicate a
+        // country the origins field already placed.
+        const key = node.id.replace(/^origin:/, '');
+        if (seen.has(key) || originCount() >= MAX_ORIGINS) continue;
+        seen.add(key);
+        nodes.push(node);
+      }
+    }
+  }
+
   // 1b. DECLARED — rung A2, regulated on-pack labels.
   //
   // Runs AFTER the origins field on purpose. `seen` makes the first claim for a
@@ -419,10 +446,39 @@ function resolveOrigins(
 
 // ── Processing node ──────────────────────────────────────────────────────────
 
-function resolveProcessing(product: OpenFoodFactsResult): SupplyChainNode {
+function resolveProcessing(
+  product: OpenFoodFactsResult,
+  usdaEstablishment?: string | null,
+): SupplyChainNode {
   const raw = product.rawProduct as unknown as Record<string, unknown> | null;
   const places = raw?.manufacturing_places as string | undefined;
   const embCodes = raw?.emb_codes as string | undefined;
+
+  // 0. DECLARED — a USDA establishment number read off the inspection mark.
+  //
+  // The strongest processing evidence available anywhere in this resolver, and
+  // the only one that reaches an individual FACILITY rather than a region: the
+  // number inside the USDA mark is an exact key into the FSIS directory, which
+  // carries the establishment's real coordinates. Not a fuzzy brand match — the
+  // pack literally prints the primary key.
+  //
+  // Still a PROCESSING claim and nothing more. It says where the product was
+  // slaughtered, processed or packed, not where the animal was raised.
+  const fsis = lookupFsisEstablishment(usdaEstablishment);
+  if (fsis) {
+    return {
+      id: 'processing', kind: 'processing',
+      label: `${fsis.name} — ${fsis.city}, ${fsis.state}`,
+      lon: fsis.lon, lat: fsis.lat,
+      tier: 'declared', confidence: 0.95,
+      basis: `The USDA inspection mark on this pack gives establishment ` +
+             `${fsis.establishmentNumber}, which the FSIS directory lists as ` +
+             `${fsis.name} in ${fsis.city}, ${fsis.state}. This is where the product ` +
+             `was processed or packed — not where the animals were raised or the ` +
+             `ingredients grown.`,
+      sources: [FSIS_SOURCE],
+    };
+  }
 
   if (places && String(places).trim()) {
     const m = matchOriginPoint(String(places));
@@ -505,11 +561,12 @@ function resolveDestination(region: UserRegion | null): SupplyChainNode {
 export function resolveSupplyChain(
   product: OpenFoodFactsResult,
   region: UserRegion | null,
+  packaging?: PackagingEvidence | null,
 ): SupplyChainGraph {
   const nodes: SupplyChainNode[] = [];
 
-  resolveOrigins(product, nodes);
-  const processing = resolveProcessing(product);
+  resolveOrigins(product, nodes, packaging);
+  const processing = resolveProcessing(product, packaging?.usdaEstablishment);
   const destination = resolveDestination(region);
   nodes.push(processing, destination);
 

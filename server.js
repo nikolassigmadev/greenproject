@@ -451,9 +451,11 @@ Look for, and return VERBATIM, any of these if present:
 - FAO catch area for fish, e.g. "FAO 27", "Caught in the North East Atlantic"
 - For HONEY: the full list of origin countries WITH their percentages if shown
 - Any PDO / PGI / DOP / IGP / AOP protected designation text
+- The USDA inspection mark on US meat/poultry/egg products: the establishment
+  number printed INSIDE the mark, e.g. "EST. 34D", "P-12345", "M12345"
 
 Return STRICT JSON, no prose, no markdown fence:
-{"statements":[{"text":"<verbatim text as printed>","kind":"origin|reared|slaughtered|caught|organic_region|protected_designation","countries":["<ISO 3166-1 alpha-2>"],"percentages":{"<ISO2>":<number>}}]}
+{"statements":[{"text":"<verbatim text as printed>","kind":"origin|reared|slaughtered|caught|organic_region|protected_designation","countries":["<ISO 3166-1 alpha-2>"],"percentages":{"<ISO2>":<number>}}],"usdaEstablishment":"<number inside the USDA mark, or null>"}
 
 RULES - these matter more than finding an answer:
 - Copy text EXACTLY as printed. Do not translate, expand or tidy it.
@@ -462,6 +464,11 @@ RULES - these matter more than finding an answer:
 - "percentages" only when printed on the pack. Omit the key otherwise.
 - A distributor address ("Distributed by ... Chicago, IL") is NOT an origin.
   Do not return it. An address is not a provenance claim.
+- The USDA establishment number must be read from INSIDE the inspection mark
+  (the round or shield-shaped USDA seal). Do not take a number from anywhere
+  else on the pack. If there is no USDA mark, or you cannot read the number,
+  return null. It is an exact database key -- a wrong number resolves to a real
+  but WRONG factory, which is worse than no answer.
 - If you find nothing, return {"statements":[]}. An empty result is correct and
   useful. Never guess to fill the array.`,
   'extract-certifications': `Look for ethical and sustainability certifications/labels on this product:

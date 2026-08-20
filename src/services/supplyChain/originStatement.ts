@@ -32,26 +32,11 @@
 // origin node, however confident the model sounded.
 
 import { lookupCountryPoint } from '@/data/supplyChain/countryPoints';
-import type { SourceRef, SupplyChainNode } from './types';
+import type {
+  SourceRef, SupplyChainNode, OriginStatement, OriginStatementKind,
+} from './types';
 
-/** One origin statement as printed on the pack. */
-export interface OriginStatement {
-  /** Verbatim, exactly as printed. Shown to the user unaltered (INVARIANTS §7). */
-  text: string;
-  kind: OriginStatementKind;
-  /** ISO 3166-1 alpha-2, only where the country is NAMED on the pack. */
-  countries: string[];
-  /** Declared share per country. Only where printed — honey, mainly. */
-  percentages?: Record<string, number>;
-}
-
-export type OriginStatementKind =
-  | 'origin'
-  | 'reared'
-  | 'slaughtered'
-  | 'caught'
-  | 'organic_region'
-  | 'protected_designation';
+export type { OriginStatement, OriginStatementKind } from './types';
 
 const KINDS: readonly OriginStatementKind[] = [
   'origin', 'reared', 'slaughtered', 'caught', 'organic_region', 'protected_designation',
@@ -351,4 +336,35 @@ export function originStatementNodes(
 
 function slug(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 48);
+}
+
+/**
+ * Read the USDA establishment number out of the model's reply.
+ *
+ * Kept separate from parseOriginStatements() because it is a different KIND of
+ * claim: the statements are about ingredient origin, this is about the
+ * processing facility. Returns null on anything it cannot read — the number is
+ * an exact database key, and a wrong one resolves to a real but WRONG factory,
+ * which is worse than no answer at all.
+ */
+export function parseUsdaEstablishment(raw: string | null | undefined): string | null {
+  if (!raw || typeof raw !== 'string') return null;
+  const unfenced = raw.replace(/```(?:json)?/gi, '').trim();
+  for (const candidate of [unfenced, sliceBalanced(unfenced, '{', '}')]) {
+    if (!candidate) continue;
+    try {
+      const parsed = JSON.parse(candidate) as { usdaEstablishment?: unknown };
+      const v = parsed?.usdaEstablishment;
+      if (typeof v !== 'string') return null;
+      const cleaned = v.trim().toUpperCase()
+        .replace(/EST(ABLISHMENT)?\.?\s*/g, '')
+        .replace(/[\s-]/g, '');
+      // A plausible establishment number: digits, optionally with a leading
+      // activity letter and/or trailing letters. Anything else is not one.
+      return /^[MPVG]?[0-9]{1,5}[A-Z]{0,3}$/.test(cleaned) ? cleaned : null;
+    } catch {
+      // Try the next shape.
+    }
+  }
+  return null;
 }
