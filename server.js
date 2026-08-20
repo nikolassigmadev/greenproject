@@ -27,6 +27,7 @@ import {
   countScansForAnonId, deleteScansForAnonId, logPushSubscription, deletePushSubscription,
   recordStoreSighting, getStoreSightingCounts,
 } from './db/scanStore.js';
+import { initOriginIndex, getOriginRecord, originIndexReady } from './db/originIndex.js';
 
 console.log('server.js: imports loaded');
 
@@ -66,6 +67,7 @@ for (const file of ENV_FILES) {
 // Fire-and-forget: if DATABASE_URL is unset or unreachable it stays disabled
 // and the server runs normally. Inserts are gated on its ready flag.
 initScanStore();
+initOriginIndex();
 
 // Which files were read, and whether the three variables that silently disable
 // major subsystems actually resolved. Printing "not set" here is the difference
@@ -534,6 +536,62 @@ const CHAT_TASK_PROMPTS = {
   'fix-product-query': 'You are a search-query fixer for a food product database. The user typed a product name, possibly with typos. Fix spelling and capitalization ONLY. Rules: (1) NEVER drop words — flavor/variant words like "zero", "diet", "light", "cool ranch", "salt & vinegar" identify the exact product and MUST stay; (2) NEVER add words the user did not type or clearly imply; (3) correct obvious brand misspellings to the canonical brand name. Examples: "cocacl ola zero" → "Coca-Cola Zero", "nuttela" → "Nutella", "lays clasic chips" → "Lay\'s Classic Chips", "doritos col ranch" → "Doritos Cool Ranch", "ben and jerrys fish food" → "Ben & Jerry\'s Phish Food", "chupa chps" → "Chupa Chups". Return ONLY the corrected query, nothing else. If the input is already correct, return it as-is with proper capitalization.',
   'product-barcode': 'You are a barcode resolver for a food and drink database. The user gives you a product name (possibly with typos). If — and ONLY if — you are highly confident of that product\'s standard retail barcode, return ONLY the barcode digits (an EAN-13, UPC-A, or EAN-8 — no spaces, no letters, no other text). If you are not certain of the EXACT barcode, return exactly the word NONE. NEVER guess, approximate, or fabricate digits: a wrong barcode is far worse than NONE, so when in doubt return NONE. Many products have region-specific barcodes — only answer when one canonical retail barcode is well known (e.g. "Nutella" or "Coca-Cola"). Output: only digits, or NONE.',
 };
+
+// =====================================================
+// PRECOMPUTED ORIGIN INDEX
+// =====================================================
+
+/**
+ * GET /api/origin/:barcode
+ *
+ * Returns the precomputed origin-provenance record for one barcode, or 404.
+ *
+ * Touches no external API — every join happened offline in
+ * scripts/supplychain/build_origin_index.py — so it stays fast and cheap and is
+ * safe behind the ordinary search rate limit.
+ *
+ * 404 is an ORDINARY outcome, not an error: most products carry no
+ * origin-bearing field at all, and the client is expected to carry on and
+ * render the graph from the product record alone. Same for a disabled store:
+ * the feature degrades to "no precomputed record" rather than failing the page.
+ */
+app.get('/api/origin/:barcode', searchLimiter, async (req, res) => {
+  const barcode = String(req.params.barcode || '').replace(/\D/g, '').slice(0, 20);
+  if (!barcode) {
+    return res.status(400).json({ success: false, error: 'Invalid barcode' });
+  }
+  if (!originIndexReady()) {
+    // 503 rather than 404: "we cannot answer" and "we answered, there is
+    // nothing" are different facts, and a client that cannot tell them apart
+    // would cache an absence that was really an outage.
+    return res.status(503).json({
+      success: false,
+      error: 'Precomputed origin index is not available',
+    });
+  }
+  try {
+    const row = await getOriginRecord(barcode);
+    if (!row) {
+      return res.status(404).json({ success: false, error: 'No precomputed origin record' });
+    }
+    return res.json({
+      success: true,
+      origin: {
+        code: row.code,
+        market: row.market,
+        brand: row.brand,
+        bestTier: row.best_tier,
+        commodities: row.commodities ? String(row.commodities).split(',') : [],
+        claims: typeof row.claims === 'string' ? JSON.parse(row.claims) : row.claims,
+        nClaims: row.n_claims,
+        builtAt: row.built_at,
+      },
+    });
+  } catch (e) {
+    console.error('origin lookup failed:', e.message);
+    return res.status(500).json({ success: false, error: 'Origin lookup failed' });
+  }
+});
 
 // =====================================================
 // ADMIN AUTH ENDPOINTS
