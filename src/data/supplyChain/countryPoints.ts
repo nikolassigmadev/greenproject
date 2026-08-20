@@ -215,3 +215,41 @@ export function lookupCountryPoint(iso2: string | null | undefined): CountryPoin
   if (!iso2) return null;
   return COUNTRY_POINTS[iso2.trim().toUpperCase()] ?? null;
 }
+
+/** Normalised name -> ISO2, built once. 'united-states-of-america' -> 'US'. */
+const BY_NAME: Record<string, string> = (() => {
+  const m: Record<string, string> = {};
+  for (const [iso2, p] of Object.entries(COUNTRY_POINTS)) {
+    m[normaliseCountryName(p.name)] = iso2;
+  }
+  return m;
+})();
+
+/**
+ * Fold a country name to a comparison key: lowercase, accents stripped,
+ * everything non-alphanumeric collapsed to a single hyphen. Lets an Open
+ * Food Facts tag ('en:france', 'fr:cote-d-ivoire') meet a Natural Earth
+ * display name ("France", "Côte d'Ivoire") without either being edited.
+ */
+export function normaliseCountryName(name: string): string {
+  return name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+/**
+ * Look up a country point by NAME. Exact match on the normalised name only —
+ * no fuzzy matching, because 'Guinea' vs 'Guinea-Bissau' vs 'Equatorial
+ * Guinea' and 'Niger' vs 'Nigeria' are exactly the pairs a fuzzy matcher gets
+ * wrong, and a wrong country here is an invented origin.
+ */
+export function lookupCountryByName(
+  name: string | null | undefined,
+): { iso2: string; point: CountryPoint } | null {
+  if (!name) return null;
+  const iso2 = BY_NAME[normaliseCountryName(name)];
+  return iso2 ? { iso2, point: COUNTRY_POINTS[iso2] } : null;
+}

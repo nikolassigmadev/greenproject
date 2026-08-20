@@ -1,0 +1,5 @@
+[A2 lift] sample: 2100 EU products (Search-a-licious)
+[A2 lift] field presence: free-text origins 0 (0.0%), origins_tags 436 (20.8%)
+[A2 lift] BEFORE (rung A1 only): 456 (21.7%)
+[A2 lift] AFTER  (A1 + A2):      575 (27.4%)
+[A2 lift] covered ONLY because of A2: 119 (5.7%)

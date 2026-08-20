@@ -29,7 +29,7 @@ import {
   ICCO_STATISTICS, companyCocoaSource, OFF_LABEL, EU_ORGANIC_REGULATION,
   EU_QUALITY_SCHEMES,
 } from '@/data/supplyChain/sources';
-import { lookupCountryPoint } from '@/data/supplyChain/countryPoints';
+import { lookupCountryPoint, lookupCountryByName } from '@/data/supplyChain/countryPoints';
 import type {
   SupplyChainGraph, SupplyChainNode, SupplyChainEdge, ProvenanceTier, SourceRef,
 } from './types';
@@ -207,6 +207,19 @@ function labelTags(product: OpenFoodFactsResult): string[] {
     .map((l) => `en:${l.trim().toLowerCase().replace(/\s+/g, '-')}`);
 }
 
+/** Canonical origin tags from the raw record, lowercased. */
+function originsTags(product: OpenFoodFactsResult): string[] {
+  const raw = product.rawProduct as unknown as Record<string, unknown> | null;
+  const tags = raw?.origins_tags;
+  if (!Array.isArray(tags)) return [];
+  return tags.filter((t): t is string => typeof t === 'string').map((t) => t.toLowerCase());
+}
+
+/** 'en:cote-d-ivoire' -> "cote d ivoire". Strips the language prefix only. */
+function humanizeOriginTag(tag: string): string {
+  return tag.replace(/^[a-z]{2,3}:/i, '').replace(/-/g, ' ').trim();
+}
+
 // ── Origin nodes ─────────────────────────────────────────────────────────────
 
 function resolveOrigins(
@@ -275,6 +288,41 @@ function resolveOrigins(
           `The product label declares an origin of "${region.trim()}".`,
           [OFF_SOURCE]);
       }
+    }
+  }
+
+  // 1a. DECLARED — origins_tags, the CANONICAL origins field.
+  //
+  // This rung was named "OFF origins_tags" from the start and was reading the
+  // free-text `origins` string only. The two are not interchangeable: Open Food
+  // Facts normalises contributor input into `origins_tags` ('en:france',
+  // "fr:cote-d-ivoire"), and a large share of products carry the tags with the
+  // free-text field EMPTY. Every one of those was scoring zero origin coverage
+  // while the data sat one field away.
+  //
+  // Matched exactly, never fuzzily, and skipped when unmatched — the same
+  // contract as the free-text path above. A sub-national tag ('fr:midi-pyrenees')
+  // or a catch area ('fr:fao-27') is a real declaration we simply cannot place,
+  // and inventing a point for it would be the failure this file exists to
+  // prevent. It is left for rung A4, which can read what the pack actually says.
+  for (const tag of originsTags(product)) {
+    const name = humanizeOriginTag(tag);
+    // Prefer the curated production point: it carries the commodity region and
+    // the TVPRA linkage, which a bare country centroid does not.
+    const m = matchOriginPoint(name);
+    if (m) {
+      push(m.key, m.point, 'declared', 0.9,
+        `Open Food Facts records a declared origin of "${name}" for this product.`,
+        [OFF_SOURCE]);
+      continue;
+    }
+    const c = lookupCountryByName(name);
+    if (c) {
+      push(`country:${c.iso2}`,
+        { name: c.point.name, lon: c.point.lon, lat: c.point.lat, iso2: c.iso2 },
+        'declared', 0.9,
+        `Open Food Facts records a declared origin of "${name}" for this product.`,
+        [OFF_SOURCE]);
     }
   }
 

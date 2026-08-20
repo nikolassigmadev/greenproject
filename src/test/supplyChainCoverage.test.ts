@@ -19,8 +19,10 @@ import { resolveSupplyChain } from '@/services/supplyChain/resolve';
 import type { OpenFoodFactsResult } from '@/services/openfoodfacts/types';
 
 /** Minimal product stub. Only the fields the resolver reads are populated. */
-function stub(over: Partial<OpenFoodFactsResult> & { labels_tags?: string[] } = {}): OpenFoodFactsResult {
-  const { labels_tags, ...rest } = over;
+function stub(
+  over: Partial<OpenFoodFactsResult> & { labels_tags?: string[]; origins_tags?: string[] } = {},
+): OpenFoodFactsResult {
+  const { labels_tags, origins_tags, ...rest } = over;
   return {
     found: true,
     barcode: '0000000000000',
@@ -31,13 +33,62 @@ function stub(over: Partial<OpenFoodFactsResult> & { labels_tags?: string[] } = 
     carbonFootprint100g: null, carbonFootprintProduct: null, carbonFootprintServing: null,
     labels: [], categories: [], origins: null, ingredientsText: null,
     imageUrl: null, ecoscoreData: null,
-    rawProduct: (labels_tags ? { labels_tags } : {}) as never,
+    rawProduct: { ...(labels_tags ? { labels_tags } : {}), ...(origins_tags ? { origins_tags } : {}) } as never,
     ...rest,
   } as OpenFoodFactsResult;
 }
 
+/** Coerce an Open Food Facts field that may be a string, an array, or absent. */
+function text(v: unknown): string | null {
+  if (Array.isArray(v)) return v.filter((x) => typeof x === 'string').join(', ') || null;
+  return typeof v === 'string' && v.trim() ? v : null;
+}
+
 const origins = (p: OpenFoodFactsResult) =>
   resolveSupplyChain(p, null).nodes.filter((n) => n.kind === 'origin');
+
+// ── Rung A1: the canonical origins field ─────────────────────────────────────
+describe('rung A1 — origins_tags', () => {
+  it('resolves a canonical origin tag when the free-text field is empty', () => {
+    // The common real-world shape: Open Food Facts normalises contributor input
+    // into origins_tags and leaves `origins` null. Reading only the free-text
+    // field scored every one of these as zero coverage.
+    const nodes = origins(stub({ origins: null, origins_tags: ['en:indonesia'] }));
+    expect(nodes).toHaveLength(1);
+    expect(nodes[0].tier).toBe('declared');
+    expect(nodes[0].confidence).toBe(0.9);
+  });
+
+  it('matches a country tag by name', () => {
+    const nodes = origins(stub({ origins: null, origins_tags: ['en:mexico'] }));
+    expect(nodes).toHaveLength(1);
+    expect(nodes[0].label).toContain('Mexico');
+  });
+
+  it('skips a tag it cannot place rather than inventing a point', () => {
+    // A sub-national region and a FAO catch area are real declarations we have
+    // no coordinates for. INVARIANTS §6: the answer is nothing, not a guess.
+    const nodes = origins(stub({
+      origins: null,
+      origins_tags: ['fr:midi-pyrenees', 'fr:fao-27', 'fr:atlantique-nord-est'],
+    }));
+    expect(nodes).toEqual([]);
+  });
+
+  it('never lets a near-miss country name match the wrong country', () => {
+    // 'Niger' vs 'Nigeria' and the three Guineas are exactly what a fuzzy
+    // matcher gets wrong, and a wrong country here is an invented origin.
+    const niger = origins(stub({ origins: null, origins_tags: ['en:niger'] }));
+    const nigeria = origins(stub({ origins: null, origins_tags: ['en:nigeria'] }));
+    expect(niger[0]?.label).toBe('Niger');
+    expect(nigeria[0]?.label).toBe('Nigeria');
+  });
+
+  it('does not double-count when free text and tags agree', () => {
+    const nodes = origins(stub({ origins: 'Ghana', origins_tags: ['en:ghana'] }));
+    expect(nodes).toHaveLength(1);
+  });
+});
 
 // ── Rung A2: regulated on-pack labels ────────────────────────────────────────
 //
@@ -196,70 +247,99 @@ async function fetchCategory(cat: string, attempt = 0): Promise<OpenFoodFactsRes
  */
 describe('rung A2 lift (live)', () => {
   it.skipIf(!ENABLED)('measures EU coverage before and after A2', async () => {
+    // Search-a-licious, NOT the legacy /api/v2/search endpoint. v2 search was
+    // returning 503 for every request while this was being built (barcode
+    // lookup on the same host was fine, so it was the search index, not us),
+    // and Search-a-licious is this repo's documented primary search anyway.
     const EU = ['france', 'italy', 'germany', 'spain', 'belgium', 'netherlands', 'poland'];
+    const FIELDS = 'code,product_name,brands,origins,origins_tags,labels_tags,categories_tags';
     const products: OpenFoodFactsResult[] = [];
 
     for (const country of EU) {
-      for (let page = 1; page <= 2; page++) {
+      for (let page = 1; page <= 3; page++) {
         const url =
-          `https://world.openfoodfacts.org/api/v2/search?countries_tags_en=${country}` +
-          `&fields=code,product_name,brands,origins,labels_tags,categories_tags,ingredients_text` +
-          `&page_size=100&page=${page}&json=1`;
-        try {
-          const r = await fetch(url, { headers: { 'User-Agent': 'GoodScan-a2-harness/1.0' } });
-          if (!r.ok) { await sleep(6000); continue; }
-          const j = (await r.json()) as { products?: Record<string, unknown>[] };
-          for (const p of j.products ?? []) {
-            products.push({
-              found: true,
-              barcode: String(p.code ?? ''),
-              productName: (p.product_name as string) || null,
-              brand: (p.brands as string) || null,
-              ecoscoreGrade: null, ecoscoreScore: null,
-              nutriscoreGrade: null, nutriscoreScore: null, novaGroup: null,
-              carbonFootprint100g: null, carbonFootprintProduct: null, carbonFootprintServing: null,
-              labels: [], categories: (p.categories_tags as string[]) ?? [],
-              origins: (p.origins as string) || null,
-              ingredientsText: (p.ingredients_text as string) || null,
-              imageUrl: null, ecoscoreData: null,
-              rawProduct: p as never,
-            } as OpenFoodFactsResult);
+          `https://search.openfoodfacts.org/search?q=${encodeURIComponent(`countries_tags:"en:${country}"`)}` +
+          `&fields=${FIELDS}&page_size=100&page=${page}`;
+        let hits: Record<string, unknown>[] = [];
+        for (let attempt = 0; attempt < 3; attempt++) {
+          try {
+            const r = await fetch(url, { headers: { 'User-Agent': 'GoodScan-a2-harness/1.0' } });
+            if (!r.ok) { await sleep(5000 * (attempt + 1)); continue; }
+            const j = (await r.json()) as { hits?: Record<string, unknown>[] };
+            hits = j.hits ?? [];
+            break;
+          } catch {
+            await sleep(5000 * (attempt + 1));
           }
-        } catch { /* a dropped page shrinks the sample; the guard below catches it */ }
-        await sleep(4000);
+        }
+        for (const p of hits) {
+          products.push({
+            found: true,
+            barcode: String(p.code ?? ''),
+            productName: text(p.product_name),
+            // Search-a-licious returns `brands` as an ARRAY, and the app's own
+            // mapper joins it (joinIfArray) before anything downstream sees it.
+            // Casting it to string here instead lied to the compiler and blew up
+            // at runtime inside commoditySupplyChains' strip(), which reasonably
+            // assumes a string. Coerce the same way the app does.
+            brand: text(p.brands),
+            ecoscoreGrade: null, ecoscoreScore: null,
+            nutriscoreGrade: null, nutriscoreScore: null, novaGroup: null,
+            carbonFootprint100g: null, carbonFootprintProduct: null, carbonFootprintServing: null,
+            labels: [], categories: (p.categories_tags as string[]) ?? [],
+            origins: text(p.origins),
+            ingredientsText: null,
+            imageUrl: null, ecoscoreData: null,
+            rawProduct: p as never,
+          } as OpenFoodFactsResult);
+        }
+        await sleep(1500);
       }
     }
 
     // Guard the denominator: a truncated sample turns the percentage into a
     // fiction, and a fiction that looks like a measurement is worse than none.
+    // This guard has already earned its place once — it caught a 200-product
+    // sample when 1,400 were requested and the endpoint was quietly 503ing.
     expect(products.length).toBeGreaterThan(500);
 
+    // Attribute each product to the STRONGEST rung that covered it, so the
+    // rungs cannot double-count and the lift is the real marginal gain.
+    //
+    // The free-text count is reported separately because it is the number the
+    // resolver used to run on ALONE, and it turns out to be the whole story:
+    // Open Food Facts normalises origins into origins_tags and leaves the
+    // free-text field empty on most records.
+    let hasFreeText = 0, hasTags = 0;
     let a1 = 0, both = 0, a2Only = 0;
     for (const p of products) {
+      const raw = p.rawProduct as unknown as Record<string, unknown>;
+      if (p.origins) hasFreeText++;
+      if (Array.isArray(raw?.origins_tags) && raw.origins_tags.length) hasTags++;
       const nodes = resolveSupplyChain(p, null).nodes.filter((n) => n.kind === 'origin');
-      const fromA2 = nodes.filter((n) => n.id.startsWith('origin:label:'));
-      const fromA1 = nodes.filter((n) => !n.id.startsWith('origin:label:'));
-      if (fromA1.length) a1++;
+      const fromA2 = nodes.some((n) => n.id.startsWith('origin:label:'));
+      const fromA1 = nodes.some((n) => !n.id.startsWith('origin:label:'));
+      if (fromA1) a1++;
       if (nodes.length) both++;
-      if (!fromA1.length && fromA2.length) a2Only++;
+      if (!fromA1 && fromA2) a2Only++;
     }
 
     const pct = (n: number) => ((n / products.length) * 100).toFixed(1);
     const report = [
-      '',
-      `[A2 lift] sample: ${products.length} EU products`,
+      `[A2 lift] sample: ${products.length} EU products (Search-a-licious)`,
+      `[A2 lift] field presence: free-text origins ${hasFreeText} (${pct(hasFreeText)}%), ` +
+        `origins_tags ${hasTags} (${pct(hasTags)}%)`,
       `[A2 lift] BEFORE (rung A1 only): ${a1} (${pct(a1)}%)`,
       `[A2 lift] AFTER  (A1 + A2):      ${both} (${pct(both)}%)`,
-      `[A2 lift] products covered ONLY because of A2: ${a2Only} (${pct(a2Only)}%)`,
-      '',
+      `[A2 lift] covered ONLY because of A2: ${a2Only} (${pct(a2Only)}%)`,
     ].join('\n');
-    console.log(report);
-    writeFileSync('docs/a2-lift-measured.txt', report.trimStart());
+    console.log('\n' + report + '\n');
+    writeFileSync('docs/a2-lift-measured.txt', report + '\n');
 
-    // The whole point of the rung. If this does not hold, A2 is not earning
-    // its place and should be removed rather than kept for the look of it.
+    // The whole point of the rung. If this does not hold, A2 is not earning its
+    // place and should be removed rather than kept for the look of it.
     expect(both).toBeGreaterThan(a1);
-  }, 600_000);
+  }, 900_000);
 });
 
 describe('supply-chain map coverage', () => {
