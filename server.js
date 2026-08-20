@@ -442,6 +442,28 @@ CRITICAL rules -- this output is used to query the Open Food Facts database:
 - Good: "Lays Chilli Chips", "Cadbury Dairy Milk Fruit & Nut", "Coca-Cola Zero Sugar", "Nestle KitKat Chunky", "Doritos Cool Ranch"
 - Bad: "Chilli Chips" (no brand), "Cadbury Chocolate" (flavor lost), "Doritos" (flavor lost), "KitKat Chunky 40g" (size included)
 Return just the "Brand ProductName Flavor" string, nothing else. If the brand is unreadable or missing, return "UNKNOWN".`,
+  'extract-origin-statement': `You are reading the packaging of a food product to find ORIGIN statements that are legally required to be printed on it.
+
+Look for, and return VERBATIM, any of these if present:
+- "Product of X", "Made in X", "Produce of X", "Origin: X", "Country of origin: X"
+- "Reared in: X", "Slaughtered in: X", "Born in: X" (EU meat labelling)
+- "EU Agriculture", "non-EU Agriculture", "EU/non-EU Agriculture" (EU organic mark)
+- FAO catch area for fish, e.g. "FAO 27", "Caught in the North East Atlantic"
+- For HONEY: the full list of origin countries WITH their percentages if shown
+- Any PDO / PGI / DOP / IGP / AOP protected designation text
+
+Return STRICT JSON, no prose, no markdown fence:
+{"statements":[{"text":"<verbatim text as printed>","kind":"origin|reared|slaughtered|caught|organic_region|protected_designation","countries":["<ISO 3166-1 alpha-2>"],"percentages":{"<ISO2>":<number>}}]}
+
+RULES - these matter more than finding an answer:
+- Copy text EXACTLY as printed. Do not translate, expand or tidy it.
+- "countries" only when the country is NAMED on the pack. Never infer it from
+  the language on the packaging, the brand's nationality, or the barcode.
+- "percentages" only when printed on the pack. Omit the key otherwise.
+- A distributor address ("Distributed by ... Chicago, IL") is NOT an origin.
+  Do not return it. An address is not a provenance claim.
+- If you find nothing, return {"statements":[]}. An empty result is correct and
+  useful. Never guess to fill the array.`,
   'extract-certifications': `Look for ethical and sustainability certifications/labels on this product:
 - Organic (USDA, EU, etc.)
 - Fair Trade
@@ -1342,13 +1364,26 @@ app.post('/api/openai/analyze-image', openaiLimiter, largeBody, openaiBudget, as
                 type: 'image_url',
                 image_url: {
                   url: `data:image/jpeg;base64,${imageBase64}`,
-                  detail: task === 'scan-shelf' ? 'high' : 'low',
+                  // Origin statements are FINE PRINT. detail:'low' internally
+                  // resizes to ~512px, which is right for reading a brand logo
+                  // and wrong for reading the 6pt "Product of Mexico" line on
+                  // the back of a pack. Sending this task at 'low' would return
+                  // {"statements":[]} almost every time -- a silent, total
+                  // failure that looks exactly like "this pack says nothing".
+                  detail: (task === 'scan-shelf' || task === 'extract-origin-statement')
+                    ? 'high'
+                    : 'low',
                 },
               },
             ],
           },
         ],
-        max_tokens: task === 'scan-product' ? 60 : task === 'scan-shelf' ? 700 : 300,
+        // Honey must list EVERY origin country with its percentage (Dir. (EU)
+        // 2024/1438), so this task's output is the longest of the JSON tasks.
+        max_tokens: task === 'scan-product' ? 60
+          : task === 'scan-shelf' ? 700
+          : task === 'extract-origin-statement' ? 700
+          : 300,
       }),
     });
 

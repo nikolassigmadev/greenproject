@@ -229,6 +229,47 @@ export const extractCertifications = async (imageDataUrl: string): Promise<strin
 };
 
 /**
+ * Extract ORIGIN statements that are legally required to be printed on the pack.
+ *
+ * Rung A4 — the highest-coverage rung available, because origin is mandated
+ * ON-PACK far more often than it is recorded in any database (EU Reg. 1169/2011
+ * Art. 26(2)(a), Reg. (EU) 2018/775, Dir. (EU) 2024/1438 for honey; US 19
+ * U.S.C. §1304 for imported articles). It works on exactly the products the
+ * databases miss — Indonesian snacks, US store brands, anything not French.
+ *
+ * Note the image handling, which differs from every other task here on purpose:
+ * we send 1280px, not the usual 512px. The other tasks read brand logos, where
+ * the backend's detail:'low' (~512px internal resize) is free and sufficient.
+ * This task reads 6pt small print on the BACK of a pack. At 512px that text is
+ * gone, and the model returns an empty array — a silent total failure that is
+ * indistinguishable from a pack that genuinely says nothing. The backend sends
+ * this task at detail:'high' to match.
+ *
+ * Returns the raw model text; parsing lives in
+ * src/services/supplyChain/originStatement.ts so it stays pure and testable.
+ */
+export const extractOriginStatement = async (imageDataUrl: string): Promise<string> => {
+  try {
+    const base64Image = await compressImage(imageDataUrl, 1280);
+
+    const response = await fetch(`${getBackendUrl()}/api/openai/analyze-image`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imageBase64: base64Image, task: 'extract-origin-statement' }),
+    });
+
+    if (!response.ok) throw new Error(`Backend error: ${response.status}`);
+    const data = await response.json();
+    return (data.content || '') as string;
+  } catch (error) {
+    // An unreadable pack is an expected outcome, not an exceptional one: the
+    // caller treats '' exactly like {"statements":[]}.
+    console.error('Failed to extract origin statement:', error);
+    return '';
+  }
+};
+
+/**
  * Check API connection and health
  */
 export const checkOpenAIHealth = async (): Promise<boolean> => {

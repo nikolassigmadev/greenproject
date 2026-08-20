@@ -36,6 +36,18 @@ export interface SupplyChainNode {
   sources: SourceRef[];
   /** Commodity this origin relates to, e.g. "cocoa". Origins only. */
   commodity?: string;
+  /**
+   * Declared share of this origin, 0-100, ONLY where the pack prints it.
+   *
+   * In practice this is honey: since 14 June 2026, Dir. (EU) 2024/1438 requires
+   * every jar to list each origin country in descending order WITH its
+   * percentage. That makes honey the one category where a complete, verified,
+   * percentage-weighted breakdown is possible today.
+   *
+   * Never estimated, never normalised to sum to 100. Absent means the pack did
+   * not say, which is the ordinary case for every other category.
+   */
+  declaredShare?: number;
   /** True when this commodity+country appears on the US DOL TVPRA list. */
   tvpraFlagged?: boolean;
 }
