@@ -23,7 +23,9 @@ import type {
 } from '@/services/supplyChain/types';
 import { getBackendUrl } from '@/config/backend';
 import landPolygons from '@/data/supplyChain/landPolygons.json';
-import { BASE_SOURCES, SOURCES_VERIFIED_ON } from '@/data/supplyChain/sources';
+import {
+  BASE_SOURCES, SOURCES_VERIFIED_ON, REQUIRED_ATTRIBUTION,
+} from '@/data/supplyChain/sources';
 
 const LAND = landPolygons as [number, number][][][];
 const RAD = Math.PI / 180;
@@ -444,6 +446,19 @@ export function SupplyChainMap({ product, region, packaging }: Props) {
           here was fetched and returned 200 on the date shown; a citation that
           404s is worse than none, because it implies there was something to
           check. Open Food Facts attribution is an ODbL licence condition. */}
+      {/*
+        ALWAYS VISIBLE. ODbL (Open Food Facts) and CC BY-SA (Sugar UML) require
+        attribution as a licence CONDITION, not a courtesy, and a credit that
+        only appears once the user opens a collapsed <details> is not obviously
+        discharging it. This project cannot be sloppy about the one thing it
+        asks brands to be rigorous about.
+      */}
+      <p style={{
+        fontSize: 10, color: DS.muted, lineHeight: 1.5, margin: '8px 0 0',
+      }}>
+        {REQUIRED_ATTRIBUTION}
+      </p>
+
       <details style={{ marginTop: 8 }}>
         <summary style={{
           cursor: 'pointer', fontSize: 10.5, fontWeight: 700, color: DS.muted,

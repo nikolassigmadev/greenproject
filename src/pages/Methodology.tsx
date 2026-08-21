@@ -451,6 +451,82 @@ export default function Methodology() {
           </div>
         </Section>
 
+        {/* 09 — Where origin data comes from, and what we publish back */}
+        <Section id="origin-provenance" icon={Scale} iconColor={ACCENT} number="09"
+                 title="Where Origin Data Comes From">
+          <p style={{ fontSize: "0.82rem", color: DS.muted, lineHeight: 1.65, marginBottom: 12 }}>
+            Roughly 3–5% of food products declare an ingredient origin, and the ones that
+            do skew heavily French. For the US market it is closer to 0.1%. That ceiling is
+            not a scraping problem and cannot be raised by engineering — manufacturers
+            largely do not publish this data and largely are not required to. Cocoa from
+            thousands of smallholders is bulked at the co-op, mixed at the port and blended
+            at the processor, so lot identity is destroyed long before it reaches a barcode.
+          </p>
+          <p style={{ fontSize: "0.82rem", color: DS.muted, lineHeight: 1.65, marginBottom: 12 }}>
+            So we do not try to trace every product to a farm — nobody can, including the
+            brands. We say something true about every product and state how strong the
+            evidence is. Each claim on the sourcing map carries a rung:
+          </p>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 12 }}>
+            {[
+              ["A1", "The record declares an origin", "Open Food Facts origins_tags"],
+              ["A2", "A regulated on-pack mark states it", "PDO/PGI, Made-in-X, EU/non-EU Agriculture"],
+              ["A3", "Processed here — a different claim", "Packager codes, manufacturing places"],
+              ["A4", "The pack itself says so", "Read from your photo by OCR"],
+              ["B1", "The company is documented sourcing here", "Not a claim about this product"],
+              ["C",  "Not disclosed", "Shown as a node, never as a line"],
+            ].map(([rung, claim, src], i) => (
+              <div key={rung} style={{
+                display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 12px",
+                borderRadius: 10, background: i % 2 === 0 ? DS.bg : DS.card,
+              }}>
+                <span style={{
+                  color: ACCENT, fontWeight: 700, fontSize: "0.75rem", flexShrink: 0,
+                  lineHeight: 1.6, minWidth: 22,
+                }}>{rung}</span>
+                <p style={{ fontSize: "0.78rem", color: DS.ink, lineHeight: 1.6 }}>
+                  {claim}
+                  <span style={{ color: DS.muted }}> — {src}</span>
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <p style={{ fontSize: "0.82rem", color: DS.muted, lineHeight: 1.65, marginBottom: 12 }}>
+            Honey is the instructive exception. Since 14 June 2026, EU law has required
+            every jar to list each origin country in descending order with its percentage.
+            Where the law forces disclosure onto the pack, real traceability follows. Where
+            it does not, no amount of engineering substitutes for it.
+          </p>
+
+          <p style={{ fontSize: "0.82rem", color: DS.muted, lineHeight: 1.65, marginBottom: 12 }}>
+            <strong style={{ color: DS.ink }}>What we never do:</strong> derive origin from
+            a barcode prefix (GS1 states plainly that the prefix identifies the issuing GS1
+            member organisation, not a country of origin — this is the mechanism behind
+            recurring viral boycott hoaxes), treat the countries a product is sold in as
+            where it came from, or fill an empty map with plausible guesses.
+          </p>
+
+          <p style={{ fontSize: "0.82rem", color: DS.muted, lineHeight: 1.65 }}>
+            Product data comes from Open Food Facts under the Open Database Licence, which
+            is share-alike. Our combined origin index is a derived database, so we publish
+            it back under the same licence.{" "}
+            <a
+              href="https://github.com/nikolassigmadev/greenproject/blob/main/data/README.md"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                color: DS.ink, textDecoration: "underline", display: "inline-flex",
+                alignItems: "center", gap: 3,
+              }}
+            >
+              Schema and licence notice
+              <ExternalLink size={11} />
+            </a>
+          </p>
+        </Section>
+
         {/* 07 — Limitations */}
         <div style={{
           background: DS.warnBg, borderRadius: 18,

@@ -33,7 +33,12 @@ dist-ssr
 
 # Server runtime data (disputes, OpenAI call logs, etc.) — never commit.
 # Anchor to project root so it does NOT match src/data/ (where shipped data lives).
-/data/
+#
+# Excluding the DIRECTORY would stop git descending into it at all, so the
+# negation below could never match. Exclude the CONTENTS instead, then re-admit
+# the one file we do publish.
+/data/*
+!/data/README.md
 
 # Claude Code internal worktrees — accidentally tracked as submodules; never commit.
 .claude/worktrees/
@@ -51,6 +56,6 @@ git-commands.txt
 # Generated demo data for the impact card (regenerate with scripts/mock/make-demo-backup.mjs)
 goodscan-demo-backup.json
 
-# Raw reference datasets — refetched with scripts/supplychain/fetch_reference_data.sh.
-# The BUNDLED, converted forms in src/data/supplyChain/ are committed instead.
-data/reference/
+# Raw reference datasets live in data/reference/ and are already covered by
+# /data/* above. Refetch them with scripts/supplychain/fetch_reference_data.sh;
+# the BUNDLED, converted forms in src/data/supplyChain/ are committed instead.

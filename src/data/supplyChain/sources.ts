@@ -166,6 +166,19 @@ export const RSPO: SourceRef = {
   url: 'https://rspo.org/',
 };
 
+/**
+ * Sugar mills — the first aggregation point, where cane or beet from many farms
+ * is crushed together. Lot identity is destroyed there, which is exactly why
+ * mill-level is the finest honest granularity for sugar.
+ *
+ * CC BY-SA 4.0. Share-alike: anything derived from it and redistributed
+ * inherits the obligation.
+ */
+export const SUGAR_UML: SourceRef = {
+  label: 'Sugar Collaboration Group / Proforest — Universal Mill List (CC BY-SA 4.0)',
+  url: 'https://www.sugarcollaborationgroup.net/mill-list',
+};
+
 // ── Where the coordinates come from ──────────────────────────────────────────
 
 /**
@@ -200,6 +213,25 @@ export const NATURAL_EARTH: SourceRef = {
  */
 export const BASE_SOURCES: SourceRef[] = [
   OFF_PRODUCT,
+  OFF_LABEL,
   FAOSTAT_PRODUCTION,
   NATURAL_EARTH,
+  FSIS_DIRECTORY,
+  SUGAR_UML,
+  EU_ORGANIC_REGULATION,
+  EU_QUALITY_SCHEMES,
+  EU_HONEY_DIRECTIVE,
 ];
+
+/**
+ * The attribution that must be VISIBLE, not tucked inside a disclosure widget.
+ *
+ * Open Food Facts is ODbL and Sugar UML is CC BY-SA 4.0; both require
+ * attribution as a licence CONDITION rather than as a courtesy. A credit that
+ * only appears after the user opens a collapsed <details> element is not obviously
+ * discharging that condition, and this project cannot afford to be sloppy about
+ * the one thing it asks brands to be rigorous about.
+ */
+export const REQUIRED_ATTRIBUTION =
+  'Product data from Open Food Facts, licensed under ODbL. ' +
+  'Sugar mill locations © Sugar Collaboration Group and Proforest, CC BY-SA 4.0.';
