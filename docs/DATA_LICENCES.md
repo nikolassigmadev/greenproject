@@ -89,9 +89,16 @@ to the map.
 
 **Country outlines** for the globe. Natural Earth is explicitly public domain.
 
-Being vendored into the repo as part of Session 5 — today `public/sourcing-map.html`
-loads it from jsdelivr at runtime, which means **the globe is blank offline**, and
-this is a Capacitor app used in shops with poor signal.
+**Vendored 2026-08-20** into `public/vendor/`. The bug was broader than recorded
+here: `public/sourcing-map.html` pulled THREE things from jsdelivr — d3,
+topojson-client and the world-atlas TopoJSON — so vendoring the base map alone
+would have fixed nothing. All three are now served from the app's own origin,
+verified in the browser.
+
+Also used to generate `src/data/supplyChain/countryPoints.ts`: 175 country
+points COMPUTED from the 1:110m admin-0 geometry rather than typed from memory,
+which INVARIANTS §6 forbids. Rebuild with
+`scripts/supplychain/build_country_points.py`.
 
 ---
 
@@ -101,6 +108,84 @@ Considered as the FAOSTAT fallback. Not needed now that FAOSTAT is confirmed
 CC BY 4.0. If it is ever revisited, check its redistribution terms first: the
 free tier restricts bulk republication, which is exactly what a bundled
 precomputed table would be.
+
+---
+
+## USDA FSIS Meat, Poultry and Egg Product Inspection Directory — public domain ✅ (checked 2026-08-20)
+
+A work of the US Government, so **public domain / CC0**. No licence friction at all.
+
+7,237 establishments, every one with real coordinates, keyed on the
+establishment number printed **inside the USDA inspection mark**. That is a
+genuine, non-fuzzy, package-readable join.
+
+Bundled as `src/data/supplyChain/fsisEstablishments.ts` (13,290 numbers — one
+facility can hold several grants, and the pack prints only one).
+
+> Fetch note: `fsis.usda.gov` sits behind bot protection that rejects curl's TLS
+> fingerprint with 403 regardless of headers. Node's `fetch` goes through, which
+> is why `scripts/supplychain/fetch_reference_data.sh` uses it.
+
+---
+
+## Sugar Collaboration Group / Proforest Universal Mill List — CC BY-SA 4.0 ✅ (checked 2026-08-20)
+
+Stated verbatim on <https://www.sugarcollaborationgroup.net/mill-list>:
+
+> "Sugar Universal Mill List © 2025 by Sugar Collaboration Group and Proforest
+> is licensed under CC BY-SA 4.0"
+
+1,170 mills with coordinates. **Share-alike**, so:
+
+1. Attribution must be VISIBLE wherever mill data is shown — it is in
+   `REQUIRED_ATTRIBUTION`, rendered uncollapsed under the map.
+2. Anything we derive from it and redistribute inherits the same obligation.
+
+---
+
+## Palm-oil Universal Mill List (Rainforest Alliance) — ⛔ BLOCKED, no stated licence
+
+**Not ingested.** There is no licence statement anywhere on the distribution
+page. It is the prize for Indonesia — it carries `uml_id`, which joins cleanly
+to Trase's Indonesia mill dataset, the only clean cross-source join in this
+landscape — and it stays out until terms arrive **in writing**.
+
+- **Action (human, H1):** email `palmoil_traceability@ra.org` and get terms in writing.
+- **Status as of 2026-08-20:** not sent. An agent should not open correspondence
+  on the project's behalf; this needs a person.
+
+---
+
+## Trase trade-flow data — ⛔ BLOCKED, commercial use needs written permission
+
+**Not ingested.** Trase explicitly requires written permission for commercial
+use. This is what rung B2 (commodity → trade-flow statistics) depends on, so
+B2 stays unbuilt until it is resolved.
+
+- **Action (human, H2):** email `info@trase.earth`.
+- **Status as of 2026-08-20:** not sent.
+
+---
+
+## Rejected outright — do not revisit without a reason
+
+| Source | Why |
+|---|---|
+| **Global Fishing Watch** | **CC BY-NC — non-commercial only.** Hard blocker; do not build on it and hope. |
+| **Open Supply Hub** | API returns 401 without a key; $2,700/yr minimum; ~zero agriculture coverage. |
+| **EU health-mark registries** (`eucode.info`) | Snapshots are from 2012–13. A decade stale. |
+| **Verified by GS1** | Returns country of **sale**, not origin. GEPIR retired December 2023. |
+
+---
+
+## Outstanding human decisions
+
+| # | Task | Why it blocks |
+|---|---|---|
+| H1 | Email `palmoil_traceability@ra.org` — confirm UML licence terms | No stated licence. Blocks Indonesian mill data. |
+| H2 | Email `info@trase.earth` — commercial-use permission | Explicitly required. Blocks rung B2. |
+| H3 | Verify the FAOSTAT licence properly | Recorded CC BY 4.0 above (checked 2026-08-17), but it has historically been CC BY-NC-SA 3.0 IGO in places. An NC clause blocks B2 if GoodScan ever monetises. |
+| H4 | Legal review of ODbL share-alike vs. any commercial plan | Structural. Decide before it is baked in — see `data/README.md`. |
 
 ---
 
