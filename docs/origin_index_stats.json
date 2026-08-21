@@ -1,0 +1,26 @@
+{
+  "total": 523825,
+  "by_tier": {
+    "declared": 523825
+  },
+  "by_market": {
+    "EU": 444097,
+    "OTHER": 69866,
+    "US": 9519,
+    "ID": 343
+  },
+  "with_percentages": 0,
+  "built_at": "2026-08-21T03:42:09.608896+00:00",
+  "source": "/private/tmp/claude-501/-Users-nikolasdzhovanis-Downloads-ethical-shopper-main-copy-2/0eef6aaa-aead-4827-bd7c-e98ea268e94e/scratchpad/food.parquet",
+  "columns_verified": [
+    "code",
+    "origins_tags",
+    "labels_tags",
+    "countries_tags",
+    "brands",
+    "categories_tags",
+    "emb_codes",
+    "manufacturing_places"
+  ],
+  "note": "Derived from Open Food Facts (ODbL). Redistribution of this index carries the ODbL share-alike obligation and must attribute Open Food Facts."
+}

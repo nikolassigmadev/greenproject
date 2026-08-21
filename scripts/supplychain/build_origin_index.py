@@ -225,11 +225,36 @@ def main():
             "claims": json.dumps(claims, ensure_ascii=False),
             "n_claims": len(claims),
         })
-        stats["total"] += 1
-        stats["by_tier"][best] = stats["by_tier"].get(best, 0) + 1
-        stats["by_market"][market] = stats["by_market"].get(market, 0) + 1
+
+
+    # DEDUPLICATE ON BARCODE.
+    #
+    # `code` is the primary key of the published table, and Open Food Facts
+    # genuinely contains duplicate barcodes — 60 in 4.68M products, which became
+    # 8 duplicated rows here. Postgres rejects the whole batch with SQLSTATE
+    # 21000 ("ON CONFLICT DO UPDATE cannot affect row a second time") the moment
+    # two of them land in the same INSERT, so this is not cosmetic.
+    #
+    # Keep the most informative row (most claims), and break ties on the claims
+    # text so the choice is deterministic and two builds of the same corpus
+    # produce byte-identical output.
+    best = {}
+    for r in out:
+        prev = best.get(r["code"])
+        if prev is None or (r["n_claims"], r["claims"]) > (prev["n_claims"], prev["claims"]):
+            best[r["code"]] = r
+    dropped = len(out) - len(best)
+    out = sorted(best.values(), key=lambda r: r["code"])
+    if dropped:
+        print("[index] dropped %d duplicate barcode(s)" % dropped, file=sys.stderr)
 
     print("[index] %d rows built" % len(out), file=sys.stderr)
+
+    # Counted AFTER dedup, so the stats describe what is actually published.
+    for r in out:
+        stats["total"] += 1
+        stats["by_tier"][r["best_tier"]] = stats["by_tier"].get(r["best_tier"], 0) + 1
+        stats["by_market"][r["market"]] = stats["by_market"].get(r["market"], 0) + 1
 
     con.execute("CREATE TABLE idx (code TEXT, market TEXT, brand TEXT, "
                 "best_tier TEXT, commodities TEXT, claims TEXT, n_claims INT)")

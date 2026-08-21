@@ -66,7 +66,21 @@ export async function initOriginIndex() {
       ssl: useSsl ? { rejectUnauthorized: false } : false,
       max: 3,
       idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 8000,
+      // 8s was not enough against a hosted pooler under load — the bulk load
+      // could not reconnect after its first connection dropped, while a 15s
+      // client connected fine at the same moment.
+      connectionTimeoutMillis: 20000,
+      // A hosted pooler can drop a connection without closing the socket. With
+      // no timeout, `pg` then waits forever: the bulk load stalled at 289k rows
+      // with 0% CPU and no error, which is the worst way for this to fail —
+      // indistinguishable from slow progress. query_timeout makes it fail loudly.
+      //
+      // query_timeout ONLY. `statement_timeout` here is sent as a startup
+      // parameter, and Supabase's transaction-mode pooler rejects it — every
+      // connection then failed with "connection timeout" while a client without
+      // it connected fine at the same moment. query_timeout is enforced by `pg`
+      // client-side and never touches the wire.
+      query_timeout: 120000,
     });
     pool.on('error', (e) => console.error('originIndex: pool error —', e.message));
     await pool.query(SCHEMA);
@@ -112,32 +126,53 @@ export async function getOriginRecord(barcode) {
   }
 }
 
-/** Bulk-load rows from the generated CSV. Used by the nightly rebuild. */
-export async function upsertOriginRecords(records = []) {
+/**
+ * Bulk-load rows. Used by the nightly rebuild.
+ *
+ * MULTI-ROW inserts, not one statement per row. The index is on the order of a
+ * million rows, and a round trip each would take hours against a hosted
+ * Postgres — this is entirely network latency, not database work. One statement
+ * carrying ~500 rows turns that into minutes.
+ *
+ * Postgres caps a statement at 65,535 bound parameters. At 7 columns per row
+ * that is 9,362 rows; 500 keeps a wide margin and keeps each statement small
+ * enough to retry cheaply.
+ */
+export async function upsertOriginRecords(records = [], { batchSize = 500 } = {}) {
   if (!ready || !pool) throw new Error('originIndex is not connected');
   if (!records.length) return 0;
+
+  const COLS = 7;
   const client = await pool.connect();
+  let written = 0;
   try {
-    await client.query('BEGIN');
-    for (const r of records) {
+    for (let i = 0; i < records.length; i += batchSize) {
+      const chunk = records.slice(i, i + batchSize);
+      const values = [];
+      const params = [];
+      chunk.forEach((r, n) => {
+        const b = n * COLS;
+        values.push(`($${b + 1},$${b + 2},$${b + 3},$${b + 4},$${b + 5},$${b + 6},$${b + 7},now())`);
+        params.push(
+          r.code, r.market, r.brand, r.best_tier, r.commodities,
+          typeof r.claims === 'string' ? r.claims : JSON.stringify(r.claims),
+          r.n_claims ?? 0,
+        );
+      });
       await client.query(
-        `INSERT INTO origin_index (code, market, brand, best_tier, commodities, claims, n_claims, built_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7, now())
+        `INSERT INTO origin_index
+           (code, market, brand, best_tier, commodities, claims, n_claims, built_at)
+         VALUES ${values.join(',')}
          ON CONFLICT (code) DO UPDATE SET
            market = EXCLUDED.market, brand = EXCLUDED.brand,
            best_tier = EXCLUDED.best_tier, commodities = EXCLUDED.commodities,
            claims = EXCLUDED.claims, n_claims = EXCLUDED.n_claims,
            built_at = now()`,
-        [r.code, r.market, r.brand, r.best_tier, r.commodities,
-         typeof r.claims === 'string' ? r.claims : JSON.stringify(r.claims),
-         r.n_claims ?? 0],
+        params,
       );
+      written += chunk.length;
     }
-    await client.query('COMMIT');
-    return records.length;
-  } catch (e) {
-    await client.query('ROLLBACK');
-    throw e;
+    return written;
   } finally {
     client.release();
   }
